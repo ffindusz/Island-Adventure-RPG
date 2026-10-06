@@ -1,0 +1,14 @@
+{
+  // The boundary of the Game core, enforced by the compiler. This program contains only src/core and src/content and
+  // is a closed world: no DOM or Node typings (so no window, document, localStorage, setTimeout, performance, Audio),
+  // and noResolve means a file can import only other files of this program (so no phaser, no src/adapter, no packages).
+  // The one gap: Date and Math.random are part of the language itself. The Game core takes time as fixed steps and
+  // randomness as an injected source, and must not call them.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": [],
+    "noResolve": true
+  },
+  "include": ["src/core", "src/content"]
+}
