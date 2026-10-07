@@ -119,6 +119,26 @@ describe('the size of a projectile, which is a setting of its type', () => {
   });
 });
 
+describe('a hero who walks into the way of a projectile in flight', () => {
+  it('is hurt when its body comes to overlap the projectile as it passes by, and not before', () => {
+    // The hero has stepped up 6 times before the shot, to y = 2.75, so its bottom edge is at y = 3. The projectile flies
+    // along y = 3.5, with its top edge at y = 3.375, and its body is level with the hero's from move 59 to move 69. The
+    // hero's bottom edge meets that after 3 steps down, and reaches 0.125 into the projectile after the 4th.
+    const game = enemyField([shooterAt('shooter-1', 2, 3)]);
+    walk(game, 'up', 6);
+    advance(game, 24);
+    expect(game.step()).toEqual([{ type: 'monster-fired', monsterId: 'shooter-1', direction: 'right' }]); // step 31
+    advance(game, 58);
+    expect(playingView(game).arrows).toEqual([{ position: { x: 6.125, y: 3.5 }, ...MONSTER_SHOT }]);
+
+    expect(walk(game, 'down', 3)).toEqual([]);
+    expect(playingView(game).hero.health).toBe(10);
+
+    expect(walk(game, 'down', 1)).toEqual([{ type: 'hero-hit', monsterId: 'shooter-1', damage: 4, health: 6 }]);
+    expect(playingView(game).arrows).toEqual([]);
+  });
+});
+
 describe('a projectile and the arrows of the hero', () => {
   /** The hero has opened the cache below it, has the bow in hand and faces left, toward the shooter on its left. */
   function archerAgainst(shooter: RangedMonsterDefinition): Game {
