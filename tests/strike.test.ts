@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameEvent } from '../src/core';
-import { dummyAt, face, newGameWithMonsters, playingView, walk } from './fixtures';
+import { advance, COOLDOWN_STEPS, dummyAt, face, newGameWithMonsters, playingView, walk } from './fixtures';
 
 // The hero stands at (3.5, 3.5) with a body 0.5 wide, so its body spans 3.25 to 3.75 each way. Its strike reaches
 // 1 tile beyond the body and is 1 tile wide, centred on the hero. Its Attack is 1 and a dummy has Health 3.
@@ -83,5 +83,54 @@ describe('striking', () => {
 
     expect(types(events)).toEqual(['hero-attacked', 'monster-hit', 'monster-hit']);
     expect(playingView(game).monsters.map((monster) => monster.health)).toEqual([2, 2]);
+  });
+});
+
+// The attack cooldown is 400 ms, which is 24 fixed steps.
+describe('the attack cooldown', () => {
+  it('refuses a second strike straight after the first', () => {
+    const game = newGameWithMonsters(dummyAt('dummy-1', 4, 3));
+    face(game, 'right');
+    game.send({ type: 'attack' });
+
+    const events = game.send({ type: 'attack' });
+
+    expect(events).toEqual([]);
+    expect(playingView(game).monsters[0]?.health).toBe(2);
+  });
+
+  it('still refuses a strike one step before the cooldown is over', () => {
+    const game = newGameWithMonsters(dummyAt('dummy-1', 4, 3));
+    face(game, 'right');
+    game.send({ type: 'attack' });
+    advance(game, COOLDOWN_STEPS - 1);
+
+    const events = game.send({ type: 'attack' });
+
+    expect(events).toEqual([]);
+    expect(playingView(game).monsters[0]?.health).toBe(2);
+  });
+
+  it('allows the next strike once the cooldown is over', () => {
+    const game = newGameWithMonsters(dummyAt('dummy-1', 4, 3));
+    face(game, 'right');
+    game.send({ type: 'attack' });
+    advance(game, COOLDOWN_STEPS);
+
+    const events = game.send({ type: 'attack' });
+
+    expect(types(events)).toEqual(['hero-attacked', 'monster-hit']);
+    expect(playingView(game).monsters[0]?.health).toBe(1);
+  });
+
+  it('starts when the hero swings at nothing', () => {
+    const game = newGameWithMonsters();
+    face(game, 'up');
+
+    const first = game.send({ type: 'attack' });
+    const second = game.send({ type: 'attack' });
+
+    expect(types(first)).toEqual(['hero-attacked']);
+    expect(second).toEqual([]);
   });
 });

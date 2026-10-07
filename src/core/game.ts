@@ -1,4 +1,4 @@
-import { heroStrikes } from './combat';
+import { coolDownHero, heroStrikes } from './combat';
 import { loadContent } from './content';
 import type { Direction } from './geometry';
 import type { Game, GameOptions } from './interface';
@@ -40,6 +40,7 @@ export function createGame(options: GameOptions): Game {
     },
     step() {
       if (state.phase === 'playing') {
+        coolDownHero(state);
         walkHero(state, content, held.at(-1));
       }
       return [];
