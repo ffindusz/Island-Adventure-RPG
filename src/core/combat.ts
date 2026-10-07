@@ -17,8 +17,11 @@ export function heroStrikes(state: PlayState, content: Content): GameEvent[] {
   for (const monster of livingMonsters(state)) {
     if (overlaps(zone, monsterBody(monster, content))) {
       const damage = content.hero.attack;
-      monster.health -= damage;
+      monster.health = Math.max(0, monster.health - damage);
       events.push({ type: 'monster-hit', monsterId: monster.id, damage, health: monster.health });
+      if (monster.health === 0) {
+        events.push({ type: 'monster-defeated', monsterId: monster.id });
+      }
     }
   }
   return events;

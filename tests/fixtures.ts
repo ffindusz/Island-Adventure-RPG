@@ -4,6 +4,7 @@ import type {
   Direction,
   Game,
   GameEvent,
+  HeroDefinition,
   MonsterPlacement,
   PlayingView,
   Snapshot,
@@ -35,10 +36,17 @@ interface ArenaOptions {
   readonly monsters?: readonly MonsterPlacement[];
   readonly layout?: readonly string[];
   readonly start?: ContentDefinition['start'];
+  /** Replaces parts of the hero's definition, for tests about a differently built hero. */
+  readonly hero?: Partial<HeroDefinition>;
 }
 
 export function arena(options: ArenaOptions = {}): ContentDefinition {
-  const { monsters = [], layout = ARENA_LAYOUT, start = { area: 'arena', tile: { col: 3, row: 3 } } } = options;
+  const {
+    monsters = [],
+    layout = ARENA_LAYOUT,
+    start = { area: 'arena', tile: { col: 3, row: 3 } },
+    hero = {},
+  } = options;
   return {
     terrain: {
       '#': { kind: 'wall', solid: true },
@@ -52,6 +60,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
       attack: 1,
       attackCooldownMs: 400,
       meleeWeapon: { reach: 1, width: 1 },
+      ...hero,
     },
     monsterTypes: {
       dummy: { health: 3, size: 0.5 },
@@ -92,6 +101,12 @@ export function walk(game: Game, direction: Direction, steps: number): void {
   game.send({ type: 'move', direction });
   advance(game, steps);
   game.send({ type: 'stop', direction });
+}
+
+/** Waits out the attack cooldown, then strikes. Returns the strike's events. */
+export function strike(game: Game): readonly GameEvent[] {
+  advance(game, COOLDOWN_STEPS);
+  return game.send({ type: 'attack' });
 }
 
 /** Turns the hero on the spot: the key goes down and up again before any step, so the hero does not move. */
