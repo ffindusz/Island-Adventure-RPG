@@ -1,7 +1,8 @@
 // The public face of the Game core. Import from here, never from the files behind it.
 export { createGame } from './game';
 export { STEP_MS, STEPS_PER_SECOND } from './time';
-export { SNAPSHOT_VERSION } from './state';
+export { PAGE_IDS, SNAPSHOT_VERSION } from './state';
+export { STAT_IDS } from './definitions';
 export type {
   AreaDefinition,
   ChaserMonsterDefinition,

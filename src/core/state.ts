@@ -51,8 +51,9 @@ export interface HeroState {
   statPoints: Record<StatId, number>;
 }
 
-/** A page that can be open over the game, one at a time. A new page is one more id here and one more view. */
-export type PageId = 'stats';
+/** The pages that can be open over the game, one at a time. A new page is one more id here and one more view. */
+export const PAGE_IDS = ['stats'] as const;
+export type PageId = (typeof PAGE_IDS)[number];
 
 export interface PlayState {
   readonly phase: 'playing';
