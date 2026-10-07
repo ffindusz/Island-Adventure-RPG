@@ -21,6 +21,8 @@ import type { ArenaOptions } from './fixtures';
 //                       shot 800 ms (48 steps); its projectile does 4 damage, is 0.25 tile wide, flies 3.75 tiles a
 //                       second, which is 0.0625 tile a step (16 steps to cross one tile, slower than the hero's walk
 //                       of 0.125), and falls 5 tiles from the shooter's centre (80 steps)
+//   monster "keeper"    the shooter, but it keeps 3 tiles between its body and the hero's: it walks 3.75 tiles a second,
+//                       which is 0.0625 tile a step, toward the hero when it is farther than that and away when nearer
 
 export const CHARGER: ChargerMonsterDefinition = {
   behavior: 'charger',
@@ -47,6 +49,11 @@ export const SHOOTER: RangedMonsterDefinition = {
   projectile: { damage: 4, speedTilesPerSecond: 3.75, range: 5, size: 0.25 },
 };
 
+export const KEEPER: RangedMonsterDefinition = {
+  ...SHOOTER,
+  keepsDistance: { preferredDistance: 3, speedTilesPerSecond: 3.75 },
+};
+
 export const WIND_UP_STEPS = 30;
 export const CHARGER_RECOVERY_STEPS = 48;
 export const DASH_STEP = 0.25;
@@ -61,14 +68,18 @@ export function shooterAt(id: string, col: number, row: number): MonsterPlacemen
   return { id, type: 'shooter', tile: { col, row } };
 }
 
-/** The content of a wide field with the charger type known, where the hero begins at (6.5, 3.5). */
+export function keeperAt(id: string, col: number, row: number): MonsterPlacement {
+  return { id, type: 'keeper', tile: { col, row } };
+}
+
+/** The content of a wide field with the types of this file known, where the hero begins at (6.5, 3.5). */
 export function enemyContent(monsters: readonly MonsterPlacement[], options: ArenaOptions = {}): ContentDefinition {
   return arena({
     layout: FIELD_LAYOUT,
     start: { area: 'arena', tile: { col: 6, row: 3 } },
     ...options,
     monsters,
-    monsterTypes: { charger: CHARGER, shooter: SHOOTER, ...options.monsterTypes },
+    monsterTypes: { charger: CHARGER, shooter: SHOOTER, keeper: KEEPER, ...options.monsterTypes },
   });
 }
 
