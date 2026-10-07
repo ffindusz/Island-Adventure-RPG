@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { createGame } from '../src/core';
-import { arena, dummyAt, fixedRandom, newGame, newGameWithMonsters, playingView } from './fixtures';
+import {
+  ARENA_LAYOUT,
+  arena,
+  dummyAt,
+  face,
+  fixedRandom,
+  newGame,
+  newGameWithMonsters,
+  playingView,
+  walk,
+} from './fixtures';
 
 describe('starting a game', () => {
   it('is at the title until a game is started', () => {
@@ -36,5 +46,27 @@ describe('starting a game', () => {
         ['wall', 'wall', 'wall', 'wall', 'wall', 'wall', 'wall'],
       ],
     });
+  });
+});
+
+describe('the world of each Adventure Area', () => {
+  // Were they in the arena, the cellar's monsters would be right where the hero strikes and right where it walks.
+  const cellar = {
+    id: 'cellar',
+    name: 'Cellar',
+    layout: ARENA_LAYOUT,
+    monsters: [dummyAt('in-reach', 4, 3), dummyAt('in-the-way', 3, 4)],
+  };
+
+  it('holds only its own monsters: those of another area are not shown, not struck and not in the way', () => {
+    const game = newGame(arena({ monsters: [dummyAt('local', 3, 1)], otherAreas: [cellar] }));
+
+    expect(playingView(game).monsters.map((monster) => monster.id)).toEqual(['local']);
+
+    face(game, 'right');
+    expect(game.send({ type: 'attack' }).map((event) => event.type)).toEqual(['hero-attacked']);
+
+    walk(game, 'down', 8);
+    expect(playingView(game).hero.position).toEqual({ x: 3.5, y: 4.5 });
   });
 });

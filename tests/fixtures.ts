@@ -1,5 +1,6 @@
 import { createGame } from '../src/core';
 import type {
+  AreaDefinition,
   ContentDefinition,
   Direction,
   Game,
@@ -30,11 +31,13 @@ export const HERO_STEP = 0.125;
 export const STEPS_PER_TILE = 8;
 export const COOLDOWN_STEPS = 24;
 
-const ARENA_LAYOUT = ['#######', '#.....#', '#.~...#', '#.....#', '#...,.#', '#######'];
+export const ARENA_LAYOUT = ['#######', '#.....#', '#.~...#', '#.....#', '#...,.#', '#######'];
 
 interface ArenaOptions {
   readonly monsters?: readonly MonsterPlacement[];
   readonly layout?: readonly string[];
+  /** More Adventure Areas besides the arena, which the hero never reaches in these tests. */
+  readonly otherAreas?: readonly AreaDefinition[];
   readonly start?: ContentDefinition['start'];
   /** Replaces parts of the hero's definition, for tests about a differently built hero. */
   readonly hero?: Partial<HeroDefinition>;
@@ -44,6 +47,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
   const {
     monsters = [],
     layout = ARENA_LAYOUT,
+    otherAreas = [],
     start = { area: 'arena', tile: { col: 3, row: 3 } },
     hero = {},
   } = options;
@@ -65,7 +69,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     monsterTypes: {
       dummy: { health: 3, size: 0.5 },
     },
-    areas: [{ id: 'arena', name: 'Arena', layout, monsters }],
+    areas: [{ id: 'arena', name: 'Arena', layout, monsters }, ...otherAreas],
     start,
   };
 }
@@ -78,9 +82,14 @@ export function dummyAt(id: string, col: number, row: number): MonsterPlacement 
 export const fixedRandom = (): number => 0.5;
 
 export function newGame(content: ContentDefinition = arena()): Game {
-  const game = createGame({ content, random: fixedRandom });
+  const game = gameAtTitle(content);
   game.send({ type: 'new-game' });
   return game;
+}
+
+/** A game that has not begun: it shows the title until it gets a session command. */
+export function gameAtTitle(content: ContentDefinition = arena()): Game {
+  return createGame({ content, random: fixedRandom });
 }
 
 export function newGameWithMonsters(...monsters: MonsterPlacement[]): Game {

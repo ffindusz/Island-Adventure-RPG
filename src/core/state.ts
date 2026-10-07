@@ -64,6 +64,14 @@ export function newPlayState(content: Content): PlayState {
   };
 }
 
+/**
+ * A deep copy. The state is plain data, so a round trip through JSON copies every field there is, and every field
+ * that later tickets add, without a copy function that has to be kept in step with the state.
+ */
+export function copyState(state: PlayState): PlayState {
+  return JSON.parse(JSON.stringify(state)) as PlayState;
+}
+
 /** The world state of the Adventure Area the hero is in. */
 export function currentAreaState(state: PlayState): AreaState {
   const area = state.areas[state.areaId];

@@ -3,7 +3,7 @@ import { loadContent } from './content';
 import type { Direction } from './geometry';
 import type { Game, GameOptions } from './interface';
 import { walkHero } from './movement';
-import { newPlayState } from './state';
+import { newPlayState, SNAPSHOT_VERSION, copyState } from './state';
 import type { GameState } from './state';
 import { buildView } from './view';
 
@@ -20,6 +20,10 @@ export function createGame(options: GameOptions): Game {
           state = newPlayState(content);
           held = [];
           return [];
+        case 'continue':
+          state = copyState(command.snapshot.state);
+          held = [];
+          return [];
         case 'move':
           held = [...held.filter((direction) => direction !== command.direction), command.direction];
           if (state.phase === 'playing') {
@@ -34,8 +38,6 @@ export function createGame(options: GameOptions): Game {
           return [];
         case 'attack':
           return state.phase === 'playing' ? heroStrikes(state, content) : [];
-        default:
-          return [];
       }
     },
     step() {
@@ -47,7 +49,10 @@ export function createGame(options: GameOptions): Game {
     },
     view: () => buildView(state, content),
     snapshot: () => {
-      throw new Error('There is nothing to save at the title');
+      if (state.phase !== 'playing') {
+        throw new Error('There is nothing to save at the title');
+      }
+      return { version: SNAPSHOT_VERSION, state: copyState(state) };
     },
   };
 }
