@@ -32,7 +32,12 @@ const BEHAVIORS: { readonly [B in MonsterType['behavior']]: Behavior<Extract<Mon
 export function stepMonsters(state: PlayState, content: Content): GameEvent[] {
   const events: GameEvent[] = [];
   for (const monster of livingMonsters(state)) {
-    events.push(...stepMonster(monster, monsterTypeOf(content, monster.type), state, content));
+    const happened = stepMonster(monster, monsterTypeOf(content, monster.type), state, content);
+    events.push(...happened);
+    if (happened.some((event) => event.type === 'hero-defeated')) {
+      // The hero is back at its return point and the monsters are new ones: the rest of this list is out of date.
+      break;
+    }
   }
   return events;
 }
