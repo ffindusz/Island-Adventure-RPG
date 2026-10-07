@@ -87,6 +87,21 @@ describe('a charger lining up with the hero', () => {
     expect(monsterAction(game, 'charger-1')).toEqual({ type: 'winding-up', progress: 0, zone });
   });
 
+  it.each([
+    { where: 'below it, to its right', charger: { col: 4, row: 1 }, position: { x: 4.5, y: 1.5625 } },
+    { where: 'below it, to its left', charger: { col: 8, row: 1 }, position: { x: 8.5, y: 1.5625 } },
+    { where: 'above it, to its right', charger: { col: 4, row: 5 }, position: { x: 4.5, y: 5.4375 } },
+    { where: 'above it, to its left', charger: { col: 8, row: 5 }, position: { x: 8.5, y: 5.4375 } },
+  ])('lines up for a lane across when the hero is as far across as down: the hero is $where', (c) => {
+    // The hero in tile (6, 3) is exactly 2 tiles across and 2 tiles down from each of these chargers. A charger goes
+    // for the lane along its row then, and so walks up or down, not sideways.
+    const game = enemyField([chargerAt('charger-1', c.charger.col, c.charger.row)]);
+
+    game.step();
+
+    expect(monsterNamed(game, 'charger-1')).toMatchObject({ position: c.position, action: { type: 'chasing' } });
+  });
+
   it('walks toward a hero who is level with it but out of reach of its lane, until the lane reaches', () => {
     // The charger dashes 2 tiles at most: its lane ends at x = 4.75, and the hero's body begins at x = 6.25. Each step
     // takes the lane 0.0625 tile nearer: it touches the hero after 24 steps and overlaps it after the 25th.

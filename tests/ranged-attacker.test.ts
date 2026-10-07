@@ -120,6 +120,20 @@ describe('a ranged attacker firing', () => {
       { position: { x: 5.5, y: 1.5 }, direction: 'down', size: 0.25, shooter: 'monster' },
     ]);
   });
+
+  it.each([
+    { where: 'below it, to its right', shooter: { col: 4, row: 1 }, direction: 'right' },
+    { where: 'below it, to its left', shooter: { col: 8, row: 1 }, direction: 'left' },
+    { where: 'above it, to its right', shooter: { col: 4, row: 5 }, direction: 'right' },
+    { where: 'above it, to its left', shooter: { col: 8, row: 5 }, direction: 'left' },
+  ] as const)('fires along its row when the hero is as far across as down: the hero is $where', (c) => {
+    // The hero in tile (6, 3) is exactly 2 tiles across and 2 tiles down from each of these shooters.
+    const game = enemyField([shooterAt('shooter-1', c.shooter.col, c.shooter.row)]);
+
+    const events = untilFired(game);
+
+    expect(events).toEqual([{ type: 'monster-fired', monsterId: 'shooter-1', direction: c.direction }]);
+  });
 });
 
 describe('a projectile in flight', () => {
