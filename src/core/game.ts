@@ -1,3 +1,4 @@
+import { crossExits } from './areas';
 import { stepMonsters } from './behaviors';
 import { coolDownHero, heroStrikes } from './combat';
 import { loadContent } from './content';
@@ -74,6 +75,11 @@ export function createGame(options: GameOptions): Game {
       walkHero(state, content, held.at(-1));
       // The hero is where it walked to when it reaches a milestone, and that comes before the monsters act.
       const milestoneEvents = reachMilestones(state, content);
+      // A hero that walks into an exit is taken to the other area, and the step ends there.
+      const areaEvents = crossExits(state, content);
+      if (areaEvents.length > 0) {
+        return [...milestoneEvents, ...areaEvents];
+      }
       return [...milestoneEvents, ...stepMonsters(state, content)];
     },
     view: () => buildView(state, content),

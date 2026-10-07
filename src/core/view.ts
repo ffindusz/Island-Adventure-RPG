@@ -26,6 +26,7 @@ export function buildView(state: GameState, content: Content): GameView {
   return {
     phase: 'playing',
     area: { id: area.id, name: area.name, width: area.width, height: area.height, terrain: area.terrain },
+    exits: area.exits.map((exit) => ({ id: exit.id, zone: { ...exit.zone } })),
     hero: {
       position: { x: state.hero.position.x, y: state.hero.position.y },
       size: content.hero.size,

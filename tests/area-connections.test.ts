@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGame } from '../src/core';
 import type { AreaDefinition, ContentDefinition, EntranceDefinition, ExitDefinition } from '../src/core';
-import { ARENA_LAYOUT, arena, fixedRandom } from './fixtures';
+import { ARENA_LAYOUT, advance, arena, fixedRandom, newGame, playingView, walk } from './fixtures';
 
 // The test world: the arena and a cellar, both 7 x 6 tiles (see fixtures.ts), each with an exit into the other.
 //
@@ -38,6 +38,76 @@ const CELLAR: AreaDefinition = {
 function expectRefused(content: ContentDefinition, message: string): void {
   expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
 }
+
+/** The arena and the cellar, with the hero in the arena at (3.5, 3.5). */
+function world(): ContentDefinition {
+  return arena({ entrances: [FROM_CELLAR], exits: [TO_CELLAR], otherAreas: [CELLAR] });
+}
+
+describe('Moving between Adventure Areas', () => {
+  it('takes the hero into the other area, to the entrance the exit leads to, when its body overlaps the exit', () => {
+    const game = newGame(world());
+
+    // After 10 steps the hero's right edge is at x = 5, touching the exit without overlapping it.
+    expect(walk(game, 'right', 10)).not.toContainEqual({ type: 'area-changed', areaId: 'cellar' });
+    expect(playingView(game).area.id).toBe('arena');
+
+    expect(walk(game, 'right', 1)).toContainEqual({ type: 'area-changed', areaId: 'cellar' });
+    const view = playingView(game);
+    expect(view.area.id).toBe('cellar');
+    expect(view.area.name).toBe('Cellar');
+    expect(view.hero.position).toEqual({ x: 2.5, y: 3.5 });
+  });
+
+  it('takes the hero back the way it came, to the entrance of the area it left', () => {
+    const game = newGame(world());
+    walk(game, 'right', 11);
+
+    // From (2.5, 3.5) the hero's left edge is at x = 2.25. It reaches x = 2 after 2 steps and overlaps the exit on the 3rd.
+    expect(walk(game, 'left', 2)).not.toContainEqual({ type: 'area-changed', areaId: 'arena' });
+    expect(walk(game, 'left', 1)).toContainEqual({ type: 'area-changed', areaId: 'arena' });
+    const view = playingView(game);
+    expect(view.area.id).toBe('arena');
+    expect(view.hero.position).toEqual({ x: 4.5, y: 3.5 });
+  });
+
+  it('keeps the hero walking in the same direction after it arrives, if the key is still down', () => {
+    const game = newGame(world());
+    game.send({ type: 'move', direction: 'right' });
+
+    advance(game, 12);
+
+    expect(playingView(game).area.id).toBe('cellar');
+    expect(playingView(game).hero.position).toEqual({ x: 2.625, y: 3.5 });
+    expect(playingView(game).hero.facing).toBe('right');
+  });
+
+  it('takes the hero through the first listed exit when its body overlaps two at once', () => {
+    const toSide: ExitDefinition = {
+      id: 'to-side',
+      zone: { col: 5, row: 4, width: 1, height: 1 },
+      to: { area: 'cellar', entrance: 'side' },
+    };
+    const cellar: AreaDefinition = { ...CELLAR, entrances: [FROM_ARENA, { id: 'side', tile: { col: 2, row: 1 } }] };
+    const game = newGame(arena({ entrances: [FROM_CELLAR], exits: [toSide, TO_CELLAR], otherAreas: [cellar] }));
+
+    // At y = 4 the hero's body covers the bottom half of row 3 and the top half of row 4, so it meets both exits.
+    walk(game, 'down', 4);
+    walk(game, 'right', 11);
+
+    expect(playingView(game).hero.position).toEqual({ x: 2.5, y: 1.5 });
+  });
+
+  it('shows the exits of the area the hero is in, as boxes in tile units, so they can be drawn', () => {
+    const game = newGame(world());
+
+    expect(playingView(game).exits).toEqual([{ id: 'to-cellar', zone: { minX: 5, minY: 3, maxX: 6, maxY: 4 } }]);
+
+    walk(game, 'right', 11);
+
+    expect(playingView(game).exits).toEqual([{ id: 'to-arena', zone: { minX: 1, minY: 3, maxX: 2, maxY: 4 } }]);
+  });
+});
 
 describe('Content validation of connected Adventure Areas', () => {
   it('refuses an Adventure Area that has no entrance', () => {

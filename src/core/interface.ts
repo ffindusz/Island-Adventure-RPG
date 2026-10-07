@@ -76,6 +76,8 @@ export type GameEvent =
   | { readonly type: 'level-up'; readonly level: number }
   /** The hero's body first overlapped the zone of this milestone, and the reward follows. It happens once per game. */
   | { readonly type: 'milestone-reached'; readonly milestoneId: string }
+  /** The hero walked into an exit and is now in this Adventure Area, standing at the entrance the exit leads to. */
+  | { readonly type: 'area-changed'; readonly areaId: string }
   /** The hero opened this chest. What was inside follows as a pickup. A chest opens once. */
   | { readonly type: 'chest-opened'; readonly chestId: string }
   /** The hero took an item and now has it. */
@@ -156,6 +158,12 @@ export interface AreaView {
   readonly terrain: readonly (readonly string[])[];
 }
 
+/** An exit of the Adventure Area the hero is in. Its zone is a box in tile units, so that it can be drawn. */
+export interface ExitView {
+  readonly id: string;
+  readonly zone: Box;
+}
+
 export interface TitleView {
   readonly phase: 'title';
 }
@@ -227,6 +235,8 @@ export interface LevelUpView {
 export interface PlayingView {
   readonly phase: 'playing';
   readonly area: AreaView;
+  /** The exits of the Adventure Area the hero is in. */
+  readonly exits: readonly ExitView[];
   readonly hero: HeroView;
   readonly monsters: readonly MonsterView[];
   /** The interactables of the Adventure Area the hero is in, such as chests, opened ones included. */

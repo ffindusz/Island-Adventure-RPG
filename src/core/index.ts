@@ -33,6 +33,7 @@ export type {
   AreaView,
   ChestView,
   Command,
+  ExitView,
   Game,
   GameEvent,
   GameOptions,
