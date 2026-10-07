@@ -1,14 +1,14 @@
 import type { Content } from './content';
 import { overlaps, zoneInFront } from './geometry';
 import type { Box, Direction, Point } from './geometry';
-import type { GameEvent } from './interface';
+import type { GameEvent, RandomSource } from './interface';
 import { hurtMonster } from './monster-damage';
 import { livingMonsters, monsterBody } from './state';
 import type { PlayState } from './state';
 import { heroAttack } from './stats';
 
 /** The hero strikes with the Melee Weapon in the direction it faces. Returns what happened, in order. */
-export function heroStrikes(state: PlayState, content: Content): GameEvent[] {
+export function heroStrikes(state: PlayState, content: Content, random: RandomSource): GameEvent[] {
   if (state.hero.attackCooldown > 0) {
     return [];
   }
@@ -18,7 +18,7 @@ export function heroStrikes(state: PlayState, content: Content): GameEvent[] {
   const events: GameEvent[] = [{ type: 'hero-attacked', direction, zone }];
   for (const monster of livingMonsters(state)) {
     if (overlaps(zone, monsterBody(monster, content))) {
-      events.push(...hurtMonster(state, content, monster, heroAttack(state, content, 'melee-weapon')));
+      events.push(...hurtMonster(state, content, monster, heroAttack(state, content, 'melee-weapon'), random));
     }
   }
   return events;

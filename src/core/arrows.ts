@@ -3,7 +3,7 @@ import type { Content } from './content';
 import { boxAround, EPSILON, overlaps } from './geometry';
 import type { Box, Direction } from './geometry';
 import { interactableObstacles } from './interactables';
-import type { GameEvent } from './interface';
+import type { GameEvent, RandomSource } from './interface';
 import { hurtMonster } from './monster-damage';
 import { gapAhead, moveBody } from './movement';
 import { livingMonsters, monsterBody } from './state';
@@ -39,7 +39,7 @@ export function heroShoots(state: PlayState, content: Content): GameEvent[] {
  * flies on until solid terrain or a chest stops it, or its range is spent, and then it is gone. Arrows of an Adventure
  * Area the hero has left are gone too: an arrow only flies in the area it was shot in, and the hero is in one.
  */
-export function flyArrows(state: PlayState, content: Content): GameEvent[] {
+export function flyArrows(state: PlayState, content: Content, random: RandomSource): GameEvent[] {
   const area = areaOf(content, state.areaId);
   const { arrowSpeedPerStep, arrowSize } = content.hero.rangedWeapon;
   const obstacles = interactableObstacles(state, content);
@@ -55,7 +55,7 @@ export function flyArrows(state: PlayState, content: Content): GameEvent[] {
     const body = boxAround(arrow.position, arrowSize);
     const target = firstMonsterReached(state, content, body, arrow.direction, travelled);
     if (target !== undefined) {
-      events.push(...hurtMonster(state, content, target, heroAttack(state, content, 'ranged-weapon')));
+      events.push(...hurtMonster(state, content, target, heroAttack(state, content, 'ranged-weapon'), random));
       continue;
     }
     arrow.position = end;

@@ -16,6 +16,7 @@ import type {
   MonsterView,
   PlayingView,
   ProgressionDefinition,
+  RandomSource,
   Snapshot,
   StationaryMonsterDefinition,
   Tile,
@@ -264,18 +265,51 @@ export function defeatPrize(game: Game, prize: number): readonly GameEvent[] {
   return strike(game);
 }
 
-/** The random source for tests: no rule uses randomness yet, so any fixed value will do. */
+/** The random source for the tests that are not about drops: any fixed value will do. */
 export const fixedRandom = (): number => 0.5;
 
-export function newGame(content: ContentDefinition = arena()): Game {
-  const game = gameAtTitle(content);
+/** A random source that gives the scripted values in turn, and counts how many of them the game has asked for. */
+export interface ScriptedRandom {
+  readonly random: RandomSource;
+  asked(): number;
+}
+
+/** Fails when the game asks for more values than were scripted: a roll nobody planned for is a bug to see. */
+export function scriptedRandom(...values: number[]): ScriptedRandom {
+  let asked = 0;
+  return {
+    random: () => {
+      const value = values[asked];
+      if (value === undefined) {
+        throw new Error(`The game asked for random value ${asked + 1}, but only ${values.length} were scripted`);
+      }
+      asked += 1;
+      return value;
+    },
+    asked: () => asked,
+  };
+}
+
+/** A seeded random source (mulberry32): the same seed always gives the same values, from 0 up to but below 1. */
+export function seededRandom(seed: number): RandomSource {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let mixed = Math.imul(state ^ (state >>> 15), state | 1);
+    mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
+    return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function newGame(content: ContentDefinition = arena(), random: RandomSource = fixedRandom): Game {
+  const game = gameAtTitle(content, random);
   game.send({ type: 'new-game' });
   return game;
 }
 
 /** A game that has not begun: it shows the title until it gets a session command. */
-export function gameAtTitle(content: ContentDefinition = arena()): Game {
-  return createGame({ content, random: fixedRandom });
+export function gameAtTitle(content: ContentDefinition = arena(), random: RandomSource = fixedRandom): Game {
+  return createGame({ content, random });
 }
 
 export function newGameWithMonsters(...monsters: MonsterPlacement[]): Game {

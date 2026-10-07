@@ -46,7 +46,9 @@ export function createGame(options: GameOptions): Game {
           }
           return [];
         case 'attack':
-          return state.phase === 'playing' && !isPaused(state, content) ? heroAttacks(state, content) : [];
+          return state.phase === 'playing' && !isPaused(state, content)
+            ? heroAttacks(state, content, options.random)
+            : [];
         case 'interact':
           return state.phase === 'playing' && !isPaused(state, content) ? heroInteracts(state, content) : [];
         case 'open-page':
@@ -78,7 +80,7 @@ export function createGame(options: GameOptions): Game {
       walkHero(state, content, held.at(-1));
       // The hero is where it walked to when it reaches a milestone. Then the arrows fly, and then the monsters act.
       const milestoneEvents = reachMilestones(state, content);
-      const arrowEvents = flyArrows(state, content);
+      const arrowEvents = flyArrows(state, content, options.random);
       const monsterEvents = stepMonsters(state, content);
       if (monsterEvents.some((event) => event.type === 'hero-defeated')) {
         // Defeat sends the hero back and the monsters back to where they began: the arrows of that life do not fly on.

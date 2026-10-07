@@ -6,6 +6,7 @@ import type {
   ChestDefinition,
   ConsumableId,
   ContentDefinition,
+  DropDefinition,
   GearDefinition,
   GearSlot,
   InteractableDefinition,
@@ -16,7 +17,6 @@ import type {
   MonsterTypeDefinition,
   ProgressionDefinition,
   RangedWeaponDefinition,
-  StationaryMonsterDefinition,
   TileRect,
 } from './definitions';
 import type { Box, Tile } from './geometry';
@@ -60,13 +60,23 @@ export interface Area {
   readonly interactables: readonly Interactable[];
 }
 
-export type StationaryMonsterType = StationaryMonsterDefinition;
+/** A stationary monster type as the rules use it. */
+export interface StationaryMonsterType {
+  readonly behavior: 'stationary';
+  readonly health: number;
+  readonly size: number;
+  readonly experience: number;
+  /** Never absent: a type without a drop table has an empty one. */
+  readonly drops: readonly DropDefinition[];
+}
 
 export interface ChaserMonsterType {
   readonly behavior: 'chaser';
   readonly health: number;
   readonly size: number;
   readonly experience: number;
+  /** Never absent: a type without a drop table has an empty one. */
+  readonly drops: readonly DropDefinition[];
   readonly damage: number;
   /** Tiles walked in one fixed step. */
   readonly speedPerStep: number;
@@ -217,6 +227,7 @@ function loadProgression(definition: ProgressionDefinition): ProgressionDefiniti
 
 function loadMonsterType(name: string, definition: MonsterTypeDefinition): MonsterType {
   requireZeroOrMore(`Monster type "${name}": experience`, definition.experience);
+  const drops = loadDrops(name, definition.drops ?? []);
   switch (definition.behavior) {
     case 'stationary':
       return {
@@ -224,12 +235,27 @@ function loadMonsterType(name: string, definition: MonsterTypeDefinition): Monst
         health: definition.health,
         size: definition.size,
         experience: definition.experience,
+        drops,
       };
     case 'chaser':
-      return loadChaser(name, definition);
+      return loadChaser(name, definition, drops);
     default:
       return refuseBehavior(name, definition);
   }
+}
+
+function loadDrops(name: string, definitions: readonly DropDefinition[]): readonly DropDefinition[] {
+  return definitions.map((drop, index) => {
+    const field = (fieldName: string) => `Monster type "${name}": drops[${index}]${fieldName}`;
+    if (!isConsumableId(drop.consumable)) {
+      throw new Error(`${field('')} gives unknown consumable "${String(drop.consumable)}"`);
+    }
+    if (!(drop.chance >= 0 && drop.chance <= 1)) {
+      throw new Error(`${field('.chance')} must be from 0 to 1, but it is ${drop.chance}`);
+    }
+    requireWholeNumberOfOneOrMore(field('.amount'), drop.amount);
+    return { consumable: drop.consumable, chance: drop.chance, amount: drop.amount };
+  });
 }
 
 /** Only content that got past the compiler gets here. Its parameter type makes a behavior without a case a compile error. */
@@ -238,7 +264,11 @@ function refuseBehavior(name: string, definition: never): never {
   throw new Error(`Monster type "${name}" has unknown behavior "${String(behavior)}"`);
 }
 
-function loadChaser(name: string, definition: ChaserMonsterDefinition): ChaserMonsterType {
+function loadChaser(
+  name: string,
+  definition: ChaserMonsterDefinition,
+  drops: readonly DropDefinition[],
+): ChaserMonsterType {
   const field = (fieldName: string) => `Monster type "${name}": ${fieldName}`;
   requireMoreThanZero(field('damage'), definition.damage);
   requireZeroOrMore(field('speedTilesPerSecond'), definition.speedTilesPerSecond);
@@ -255,6 +285,7 @@ function loadChaser(name: string, definition: ChaserMonsterDefinition): ChaserMo
     health: definition.health,
     size: definition.size,
     experience: definition.experience,
+    drops,
     damage: definition.damage,
     speedPerStep: definition.speedTilesPerSecond / STEPS_PER_SECOND,
     noticingDistance: definition.noticingDistance,

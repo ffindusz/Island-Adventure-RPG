@@ -88,6 +88,18 @@ export interface HeroDefinition {
   readonly startingGear: Readonly<Partial<Record<GearSlot, string>>>;
 }
 
+/**
+ * One chance, in a monster type's drop table, that a defeated monster leaves some of a consumable behind. The hero
+ * takes what it leaves at once. Each entry is rolled on its own, so a table can leave several things.
+ */
+export interface DropDefinition {
+  readonly consumable: ConsumableId;
+  /** From 0 (never) to 1 (always): the chance of this drop. It is left when the roll is below it. */
+  readonly chance: number;
+  /** How much of the consumable the hero takes when the drop is left: a whole number of 1 or more. */
+  readonly amount: number;
+}
+
 /** What every kind of monster has, whatever its behavior. */
 export interface MonsterTypeBase {
   readonly health: number;
@@ -95,6 +107,11 @@ export interface MonsterTypeBase {
   readonly size: number;
   /** The Experience the hero earns each time it defeats a monster of this type. */
   readonly experience: number;
+  /**
+   * What the hero may find when it defeats a monster of this type. Every entry is rolled once, in order, each time a
+   * monster of the type is defeated. Without a table nothing is left, and no roll is made.
+   */
+  readonly drops?: readonly DropDefinition[];
 }
 
 /** A monster that stays where it was placed and never attacks. */

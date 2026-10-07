@@ -2,7 +2,7 @@ import { heroShoots } from './arrows';
 import { heroStrikes } from './combat';
 import type { Content } from './content';
 import type { WeaponSlot } from './definitions';
-import type { GameEvent } from './interface';
+import type { GameEvent, RandomSource } from './interface';
 import type { PlayState } from './state';
 
 /**
@@ -20,10 +20,10 @@ export function switchWeapon(state: PlayState): GameEvent[] {
 }
 
 /** The hero attacks with the weapon in hand: a strike with the sword, a shot with the bow. */
-export function heroAttacks(state: PlayState, content: Content): GameEvent[] {
+export function heroAttacks(state: PlayState, content: Content, random: RandomSource): GameEvent[] {
   switch (state.hero.activeWeapon) {
     case 'melee-weapon':
-      return heroStrikes(state, content);
+      return heroStrikes(state, content, random);
     case 'ranged-weapon':
       return heroShoots(state, content);
   }

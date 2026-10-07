@@ -17,7 +17,10 @@ export type RandomSource = () => number;
 export interface GameOptions {
   /** The map, hero and monsters. Checked when the game is created; an invalid definition throws. */
   readonly content: ContentDefinition;
-  /** The only source of randomness. No rule uses it yet; monster drops will be the first. */
+  /**
+   * The only source of randomness. The rules use it for one thing: when a monster is defeated, each entry of the drop
+   * table of its type is rolled once. Nothing else in the rules is random.
+   */
   readonly random: RandomSource;
 }
 

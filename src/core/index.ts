@@ -10,6 +10,7 @@ export type {
   ChestDefinition,
   ConsumableId,
   ContentDefinition,
+  DropDefinition,
   GearDefinition,
   GearSlot,
   GearStat,
