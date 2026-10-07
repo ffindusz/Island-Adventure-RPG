@@ -5,8 +5,8 @@
 export const TILE_SIZE = 16;
 
 /**
- * The canvas shows this many tiles. The shipped placeholder area is exactly this size, so the whole area is on
- * screen. An area larger than this needs a camera that follows the hero.
+ * The canvas shows this many tiles. An area exactly this size is all on screen (the shipped coast is); a larger one
+ * scrolls with the camera that follows the hero (camera.ts), and a smaller one sits in the middle of the screen.
  */
 export const VIEW_TILES_WIDE = 20;
 export const VIEW_TILES_HIGH = 12;

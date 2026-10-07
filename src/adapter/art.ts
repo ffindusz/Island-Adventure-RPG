@@ -1,5 +1,15 @@
 import type Phaser from 'phaser';
-import type { AreaView, Box, ChestView, Direction, HeroView, InteractableView, MonsterView, Point } from '../core';
+import type {
+  AreaView,
+  Box,
+  ChestView,
+  Direction,
+  ExitView,
+  HeroView,
+  InteractableView,
+  MonsterView,
+  Point,
+} from '../core';
 import { TILE_SIZE } from './config';
 
 // The placeholder look of the game: flat shapes drawn from the state view. Real art replaces this module; the
@@ -35,6 +45,7 @@ const CHEST_COLOUR = 0xa0692b;
 const CHEST_OPENED_COLOUR = 0x5a3a1a;
 const CHEST_INSIDE_COLOUR = 0x1a0f06;
 const CHEST_LATCH_COLOUR = 0xf2c94c;
+const EXIT_COLOUR = 0xbfeaff;
 
 /** Side of the square on the hero that shows which way it faces, in pixels. */
 const FACING_MARKER_SIZE = 4;
@@ -85,6 +96,23 @@ export function drawTerrain(graphics: Graphics, area: AreaView): void {
       graphics.fillRect(x + TILE_SIZE - 1, y, 1, TILE_SIZE - 1);
     });
   });
+}
+
+/**
+ * Marks where the hero can leave the area: a pale, see-through patch with a bright edge, over the ground. Draw it
+ * once per area, after the terrain, because exits do not change.
+ */
+export function drawExits(graphics: Graphics, exits: readonly ExitView[]): void {
+  for (const exit of exits) {
+    const rect = zoneRect(exit.zone);
+    graphics.fillStyle(EXIT_COLOUR, 0.3);
+    graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
+    graphics.fillStyle(EXIT_COLOUR, 0.9);
+    graphics.fillRect(rect.x, rect.y, rect.width, 1);
+    graphics.fillRect(rect.x, rect.y + rect.height - 1, rect.width, 1);
+    graphics.fillRect(rect.x, rect.y + 1, 1, rect.height - 2);
+    graphics.fillRect(rect.x + rect.width - 1, rect.y + 1, 1, rect.height - 2);
+  }
 }
 
 /** Draws what the hero can interact with. Real art replaces this, one kind at a time. */
