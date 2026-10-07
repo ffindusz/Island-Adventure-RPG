@@ -1,5 +1,6 @@
 // The public face of the Game core. Import from here, never from the files behind it.
 export { createGame } from './game';
+export { COVERED_CORNER, SCREEN_TILES } from './covered-corner';
 export { STEP_MS, STEPS_PER_SECOND } from './time';
 export { PAGE_IDS, SNAPSHOT_VERSION } from './state';
 export { CONSUMABLE_IDS, GEAR_SLOT_STAT, GEAR_SLOTS, STAT_IDS, WEAPON_SLOTS } from './definitions';
