@@ -7,11 +7,16 @@ import type {
   Game,
   GameEvent,
   HeroDefinition,
+  MilestoneDefinition,
   MonsterPlacement,
   MonsterTypeDefinition,
   MonsterView,
   PlayingView,
+  ProgressionDefinition,
   Snapshot,
+  StationaryMonsterDefinition,
+  Tile,
+  TileRect,
 } from '../src/core';
 
 // The test arena. Its numbers are chosen so that every expected value in the tests can be worked out by hand,
@@ -26,11 +31,13 @@ import type {
 //   hero                    body 0.5 tiles; walks 7.5 tiles a second, which is 0.125 tile a fixed step
 //                           (8 steps to cross one tile); Health 10; Defense 0; Attack 1; attack cooldown 400 ms,
 //                           which is 24 steps; strike reaches 1 tile beyond the body and is 1 tile wide
-//   monster "dummy"         stationary: it never moves or attacks; body 0.5 tiles; Health 3
-//   monster "biter"         a chaser; body 0.5 tiles; Health 3; damage 5; walks 3.75 tiles a second, which is
-//                           0.0625 tile a step (16 steps to cross one tile); notices the hero within 2 tiles of its
-//                           body; its attack reaches 0.75 tile beyond its body; the wind-up lasts 500 ms (30 steps)
-//                           and the recovery after a strike 400 ms (24 steps)
+//   Levels                  the Experience that raises the hero to Levels 2 to 6 is 10, 25, 45, 70 and 100 in all;
+//                           each Stat Point adds 3 to Health, 2 to Attack or 1 to Defense
+//   monster "dummy"         stationary: it never moves or attacks; body 0.5 tiles; Health 3; worth 5 Experience
+//   monster "biter"         a chaser; body 0.5 tiles; Health 3; worth 8 Experience; damage 5; walks 3.75 tiles a
+//                           second, which is 0.0625 tile a step (16 steps to cross one tile); notices the hero within
+//                           2 tiles of its body; its attack reaches 0.75 tile beyond its body; the wind-up lasts
+//                           500 ms (30 steps) and the recovery after a strike 400 ms (24 steps)
 //
 // Because the hero's half-width is 0.25, its centre can reach x = 1.25 to 5.75 and y = 1.25 to 4.75.
 
@@ -63,6 +70,7 @@ export const BITER: ChaserMonsterDefinition = {
   behavior: 'chaser',
   health: 3,
   size: 0.5,
+  experience: 8,
   damage: 5,
   speedTilesPerSecond: 3.75,
   noticingDistance: 2,
@@ -83,6 +91,10 @@ interface ArenaOptions {
   readonly monsterTypes?: Readonly<Record<string, MonsterTypeDefinition>>;
   /** The least damage the hero takes from a hit. Leave it out to get the default. */
   readonly minimumDamage?: number;
+  /** Replaces parts of how the hero grows, such as the Level thresholds. */
+  readonly progression?: Partial<ProgressionDefinition>;
+  /** The milestones of the arena. There are none unless a test gives some. */
+  readonly milestones?: readonly MilestoneDefinition[];
 }
 
 export function arena(options: ArenaOptions = {}): ContentDefinition {
@@ -94,6 +106,8 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     hero = {},
     monsterTypes = {},
     minimumDamage,
+    progression = {},
+    milestones = [],
   } = options;
   return {
     terrain: {
@@ -113,14 +127,24 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
       ...hero,
     },
     ...(minimumDamage === undefined ? {} : { minimumDamage }),
+    progression: {
+      levelThresholds: [10, 25, 45, 70, 100],
+      statPointValue: { health: 3, attack: 2, defense: 1 },
+      ...progression,
+    },
     monsterTypes: {
-      dummy: { behavior: 'stationary', health: 3, size: 0.5 },
+      dummy: { behavior: 'stationary', health: 3, size: 0.5, experience: 5 },
       biter: BITER,
       ...monsterTypes,
     },
-    areas: [{ id: 'arena', name: 'Arena', layout, monsters }, ...otherAreas],
+    areas: [{ id: 'arena', name: 'Arena', layout, monsters, milestones }, ...otherAreas],
     start,
   };
+}
+
+/** A milestone that gives the given Experience when the hero's body first overlaps the block of tiles `zone`. */
+export function milestone(id: string, zone: TileRect, experience: number): MilestoneDefinition {
+  return { id, zone, reward: { experience } };
 }
 
 /** A game in the wide field, with the hero at (6.5, 3.5). */
@@ -139,6 +163,52 @@ export function dummyAt(id: string, col: number, row: number): MonsterPlacement 
 
 export function biterAt(id: string, col: number, row: number): MonsterPlacement {
   return { id, type: 'biter', tile: { col, row } };
+}
+
+/** A stationary monster that a single strike defeats, worth the given Experience. */
+export function frailMonster(experience: number): StationaryMonsterDefinition {
+  return { behavior: 'stationary', health: 1, size: 0.5, experience };
+}
+
+/** The tiles next to the hero's start where prizes stand, in order: below it, right of it, left of it, above it. */
+const PRIZE_TILES: readonly Tile[] = [
+  { col: 3, row: 4 },
+  { col: 4, row: 3 },
+  { col: 2, row: 3 },
+  { col: 3, row: 2 },
+];
+const PRIZE_SIDES: readonly Direction[] = ['down', 'right', 'left', 'up'];
+
+/** What the arena needs for frail monsters worth the given Experience, standing around the hero (see PRIZE_TILES). */
+export function prizes(...experiences: number[]): {
+  monsters: MonsterPlacement[];
+  monsterTypes: Record<string, MonsterTypeDefinition>;
+} {
+  const monsterTypes: Record<string, MonsterTypeDefinition> = {};
+  const monsters = experiences.map((experience, index): MonsterPlacement => {
+    const tile = PRIZE_TILES[index];
+    if (tile === undefined) {
+      throw new Error('The arena has room for four prizes around the hero');
+    }
+    monsterTypes[`prize-${index + 1}`] = frailMonster(experience);
+    return { id: `prize-${index + 1}`, type: `prize-${index + 1}`, tile };
+  });
+  return { monsters, monsterTypes };
+}
+
+/** A game in the arena where the hero stands among prizes: the first below it, where it faces, the second to its right. */
+export function gameWithPrizes(...experiences: number[]): Game {
+  return newGame(arena(prizes(...experiences)));
+}
+
+/** Turns to the prize (counted from 1), waits out the cooldown and strikes it down. Returns the strike's events. */
+export function defeatPrize(game: Game, prize: number): readonly GameEvent[] {
+  const side = PRIZE_SIDES[prize - 1];
+  if (side === undefined) {
+    throw new Error(`There is no prize ${prize}`);
+  }
+  face(game, side);
+  return strike(game);
 }
 
 /** The random source for tests: no rule uses randomness yet, so any fixed value will do. */

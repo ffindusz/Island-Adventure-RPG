@@ -157,7 +157,7 @@ describe('defeating a monster', () => {
 
     const events = strike(game);
 
-    expect(types(events)).toEqual(['hero-attacked', 'monster-hit', 'monster-defeated']);
+    expect(types(events)).toEqual(['hero-attacked', 'monster-hit', 'monster-defeated', 'experience-gained']);
     expect(events[1]).toEqual({ type: 'monster-hit', monsterId: 'dummy-1', damage: 1, health: 0 });
     expect(events[2]).toEqual({ type: 'monster-defeated', monsterId: 'dummy-1' });
     expect(playingView(game).monsters).toEqual([]);

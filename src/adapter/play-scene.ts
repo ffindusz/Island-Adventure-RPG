@@ -4,14 +4,20 @@ import { drawHero, drawMonster, drawStrike, drawSwing, drawTelegraph, drawTerrai
 import { Feedback } from './feedback';
 import { FixedStepClock } from './fixed-step';
 import { Hud } from './hud';
+import { Overlay } from './overlay';
 import { PlayerInput } from './player-input';
 
 /** How long the screen takes to fade in after the hero is defeated and returned, in milliseconds. */
 const DEFEAT_FADE_MS = 500;
 
+/** Whether the player can be looking at the game: its tab is showing and its window has the keyboard focus. */
+function playerIsWatching(): boolean {
+  return document.hasFocus() && !document.hidden;
+}
+
 /**
  * The play screen. Every frame it turns the keyboard into commands, runs the Game core's fixed steps, and draws
- * what the core's view says. It decides nothing about the game.
+ * what the core's view says. It decides nothing about the game, except that no step runs while nobody is watching.
  */
 export class PlayScene extends Phaser.Scene {
   private readonly core: Game;
@@ -19,6 +25,7 @@ export class PlayScene extends Phaser.Scene {
   private readonly feedback = new Feedback();
   private playerInput!: PlayerInput;
   private hud!: Hud;
+  private overlay!: Overlay;
   private terrainLayer!: Phaser.GameObjects.Graphics;
   private telegraphLayer!: Phaser.GameObjects.Graphics;
   private entityLayer!: Phaser.GameObjects.Graphics;
@@ -32,12 +39,13 @@ export class PlayScene extends Phaser.Scene {
 
   create(): void {
     // Added in drawing order: ground, then the telegraphs of monster attacks, then hero and monsters, then the
-    // swings and strikes on top. The HUD draws above them all.
+    // swings and strikes on top. The HUD draws above them all, and the overlay above the HUD.
     this.terrainLayer = this.add.graphics();
     this.telegraphLayer = this.add.graphics();
     this.entityLayer = this.add.graphics();
     this.effectLayer = this.add.graphics();
     this.hud = new Hud(this);
+    this.overlay = new Overlay(this);
     const keyboard = this.input.keyboard;
     if (keyboard === null) {
       throw new Error('The keyboard plugin is not available, so nothing could control the hero.');
@@ -46,11 +54,12 @@ export class PlayScene extends Phaser.Scene {
   }
 
   override update(_time: number, frameMs: number): void {
+    const watching = playerIsWatching();
     const events: GameEvent[] = [];
     for (const command of this.playerInput.poll()) {
       events.push(...this.core.send(command));
     }
-    for (let steps = this.clock.stepsDue(frameMs); steps > 0; steps -= 1) {
+    for (let steps = this.clock.stepsDue(frameMs, watching); steps > 0; steps -= 1) {
       events.push(...this.core.step());
     }
     this.feedback.age(frameMs);
@@ -59,10 +68,10 @@ export class PlayScene extends Phaser.Scene {
       // The core has already put the hero back; the fade hides the cut. The world keeps running while it plays.
       this.cameras.main.fadeIn(DEFEAT_FADE_MS, 0, 0, 0);
     }
-    this.draw(this.core.view());
+    this.draw(this.core.view(), watching);
   }
 
-  private draw(view: GameView): void {
+  private draw(view: GameView, watching: boolean): void {
     if (view.phase !== 'playing') {
       return;
     }
@@ -87,5 +96,6 @@ export class PlayScene extends Phaser.Scene {
       drawStrike(this.effectLayer, zone);
     }
     this.hud.draw(view);
+    this.overlay.draw(view, watching);
   }
 }

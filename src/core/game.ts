@@ -3,7 +3,11 @@ import { coolDownHero, heroStrikes } from './combat';
 import { loadContent } from './content';
 import type { Direction } from './geometry';
 import type { Game, GameOptions } from './interface';
+import { reachMilestones } from './milestones';
 import { walkHero } from './movement';
+import { closePage, openPage } from './pages';
+import { isPaused } from './pause';
+import { assignStatPoint } from './progression';
 import { newPlayState, SNAPSHOT_VERSION, copyState } from './state';
 import type { GameState } from './state';
 import { buildView } from './view';
@@ -38,16 +42,33 @@ export function createGame(options: GameOptions): Game {
           }
           return [];
         case 'attack':
-          return state.phase === 'playing' ? heroStrikes(state, content) : [];
+          return state.phase === 'playing' && !isPaused(state, content) ? heroStrikes(state, content) : [];
+        case 'open-page':
+          if (state.phase === 'playing') {
+            openPage(state, content, command.page);
+          }
+          return [];
+        case 'close-page':
+          if (state.phase === 'playing') {
+            closePage(state, command.page);
+          }
+          return [];
+        case 'assign-stat-point':
+          if (state.phase === 'playing') {
+            assignStatPoint(state, content, command.stat);
+          }
+          return [];
       }
     },
     step() {
-      if (state.phase !== 'playing') {
+      if (state.phase !== 'playing' || isPaused(state, content)) {
         return [];
       }
       coolDownHero(state);
       walkHero(state, content, held.at(-1));
-      return stepMonsters(state, content);
+      // The hero is where it walked to when it reaches a milestone, and that comes before the monsters act.
+      const milestoneEvents = reachMilestones(state, content);
+      return [...milestoneEvents, ...stepMonsters(state, content)];
     },
     view: () => buildView(state, content),
     snapshot: () => {

@@ -23,6 +23,11 @@ On Windows PowerShell, `npm` and `npx` can be blocked by the execution policy: u
 | ---------------------- | ------------------------------------------------------------------------------- |
 | W A S D or arrow keys  | Walk. The hero faces the direction pressed last.                                |
 | Space                  | Strike with the sword in the facing direction. One swing per press, then a short cooldown. |
+| C                      | Open the stat page: Level, Experience, Health, Attack and Defense.              |
+| Esc                    | Close the open page.                                                            |
+| 1, 2, 3 (or keypad)    | At a level-up, put the Stat Point into Health, Attack or Defense. The choice is final. |
+
+The game waits while a page is open, while a level-up choice waits, and while the browser tab or window is not focused.
 
 ## Project layout
 
@@ -30,7 +35,7 @@ On Windows PowerShell, `npm` and `npx` can be blocked by the execution policy: u
 src/
   core/      The Game core: every gameplay rule, headless. Its public face is core/index.ts.
   content/   The game's content as plain data: terrain, hero, monsters, areas.
-  adapter/   The Phaser adapter: keys to commands, the fixed-step loop, drawing, the HUD. It holds no rules.
+  adapter/   The Phaser adapter: keys to commands, the fixed-step loop, drawing, the HUD and the overlay. It holds no rules.
   main.ts    The composition root: builds the Game core from the content and starts the adapter.
 tests/       Vitest tests of the Game core's interface, and fixtures.ts, a tiny arena to test in.
 docs/adr/    Decision records.
@@ -44,7 +49,23 @@ Dependencies point one way: `main.ts` uses the adapter, the content and the core
 - **A chaser's numbers** are monster type fields. Distances are in tiles from the monster's body, times are in milliseconds: `damage`, `speedTilesPerSecond`, `noticingDistance`, `reach`, `windUpMs` (at least one fixed step), `recoveryMs`, with `health` and `size`. The attack zone is the square around the body that `reach` describes. It is fixed when the wind-up starts and is in the view (`action` is `winding-up`, with `zone` and `progress`); the damage lands when the wind-up ends, and only if the hero overlaps the zone then. There is no line of sight and no pathfinding: a chaser walks straight at the hero and stops at what is in the way.
 - **Hero numbers.** `health` (the maximum) and `defense` in `src/content/hero.ts`; `minimumDamage` (default 1) on the content itself. A hit takes off its damage minus Defense, never less than `minimumDamage`. Health never comes back by itself.
 - **Defeat.** At 0 Health the core emits `hero-defeated` in that same step, puts the hero back at the content's start with full Health, and resets the Adventure Area's monsters to full Health at their starting places, defeated ones included. Where the hero returns to is decided in one place, `returnHero` in `src/core/hero-damage.ts`. The adapter fades the screen in when it sees the event.
-- **HUD.** `src/adapter/hud.ts` draws the hero's Health from the view and nothing else, fixed to the screen. Its digits are a tiny bitmap font drawn with rectangles, because Phaser's `Text` blurs at this size.
+- **HUD.** `src/adapter/hud.ts` draws the hero's Health from the view and nothing else, fixed to the screen. Its digits come from a tiny bitmap font drawn with rectangles, because Phaser's `Text` blurs at this size; the font is `src/adapter/pixel-font.ts`.
+
+## Experience, Levels and Stat Points
+
+- **Experience.** Each monster type has an `experience` value (`src/content/monsters.ts`) that the hero earns every time it defeats one, a monster that a defeat reset included. A milestone is ground in an Adventure Area (`milestones`, in `src/content/areas/`) that gives its `reward` once: the first time the hero's body overlaps its `zone`, a block of whole tiles. That it was reached is kept with the area, so it survives a defeat and a snapshot. The reward is separate from the zone so that later rewards can sit beside Experience.
+- **Levels.** `levelThresholds` in `src/content/progression.ts` is the total Experience for Level 2, Level 3 and so on. The highest Level is one more than the number of thresholds, so the five shipped give Level 6, and Experience past the last threshold is not counted. The Level is worked out from the Experience, never stored.
+- **Stat Points.** The hero has one for each Level above 1, and `statPointValue` in the same file is what one adds to Health, Attack or Defense. The points not yet assigned are worked out too (the Level less 1, less those assigned), so there can be no more and no fewer than one per Level. A Health point raises the current Health by as much as the maximum. Every stat is worked out in `src/core/stats.ts`: no rule reads a base number from the content, so gear can add there later.
+- **The numbers are placeholders**, picked so that the first stretch of the shipwreck coast (the gap in the rock wall and one crab) gives a level-up. Tuning them is for a later pass.
+- **Events** `experience-gained`, `level-up` (one for each Level reached) and `milestone-reached` are for presentation. The view's `levelUp` is the truth about a choice that waits.
+
+## Pages and the pause
+
+- **A page** is shown over the game, one at a time: the stat page now, the inventory and the Automap later. Which page is open is core state (`page`: a page id, or none), changed by the `open-page` and `close-page` commands; the view's `page` holds what to draw. A snapshot taken with a page open restores it open.
+- **To add a page,** add its id to `PAGE_IDS` in `src/core/state.ts`. The compiler then points at what is missing: the page's view in `src/core/interface.ts` and `src/core/view.ts`, its key in `src/adapter/player-input.ts` and its drawing in `src/adapter/overlay.ts`.
+- **The pause.** The game waits while a page is open or a Stat Point waits to be assigned (`isPaused` in `src/core/pause.ts`): `step` advances nothing, `attack` does nothing, and `open-page` is ignored, so a page is closed before another opens. `move` and `stop` still keep track of the keys that are down, so the hero does not walk on by itself afterwards. The level-up choice cannot be closed. Several at once are asked one after another, the lowest Level first.
+- **An unfocused tab** is the adapter's business, not the core's. `FixedStepClock` in `src/adapter/fixed-step.ts` is told every frame whether the player is watching (`document.hasFocus()` and the tab not hidden, read in `play-scene.ts`). While nobody is, it runs no steps and forgets the time that passed, so the game does not rush to catch up.
+- **The overlay.** `src/adapter/overlay.ts` draws the level-up choice, the open page and a PAUSED notice from the view, over the dimmed game. Its text uses the bitmap font, which has the capital letters, the digits and a few signs: add a glyph to `pixel-font.ts` before using a new character.
 
 ## How the tests work
 
@@ -52,8 +73,8 @@ The Game core's interface is the only automated test seam (see `docs/adr/0002-ga
 
 - `tests/fixtures.ts` builds a small arena whose numbers can be worked out by hand. Expected values in tests are such hand-worked examples, never the rule run again, and test names use the glossary's words.
 - A new rule starts as a failing test that creates a game with `createGame`, sends commands, steps, and asserts on the view, the events or the snapshot. Rules are tested against fixtures, so retuning the real content does not break them.
-- `tests/shipped-content.test.ts` checks the real content with generic validity checks only (it loads, the hero can start and walk, and no monster can hurt a hero who stays at the start).
-- Not tested automatically: Phaser drawing, key mapping, audio and art. A ticket that touches the adapter has a manual play check instead.
+- `tests/shipped-content.test.ts` checks the real content with generic validity checks only (it loads, the hero can start and walk, there are six Levels, and no monster can hurt a hero who stays at the start).
+- Not tested automatically: Phaser drawing, key mapping, the pause on an unfocused tab, audio and art. A ticket that touches the adapter has a manual play check instead.
 
 ## Keeping the core independent
 

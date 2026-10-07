@@ -1,13 +1,18 @@
+import { STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
   ChaserMonsterDefinition,
   ContentDefinition,
   MeleeWeaponDefinition,
+  MilestoneDefinition,
+  MilestoneReward,
   MonsterPlacement,
   MonsterTypeDefinition,
+  ProgressionDefinition,
   StationaryMonsterDefinition,
+  TileRect,
 } from './definitions';
-import type { Tile } from './geometry';
+import type { Box, Tile } from './geometry';
 import { msToSteps, STEP_MS, STEPS_PER_SECOND } from './time';
 
 // Content as the rules use it: checked once when the game is created, with the lookups prepared and
@@ -15,6 +20,13 @@ import { msToSteps, STEP_MS, STEPS_PER_SECOND } from './time';
 
 /** Used when the content does not set a minimum damage: a hit always takes at least 1 Health. */
 const DEFAULT_MINIMUM_DAMAGE = 1;
+
+/** A milestone as the rules use it: its zone is a box in tile units, like the bodies it is compared with. */
+export interface Milestone {
+  readonly id: string;
+  readonly zone: Box;
+  readonly reward: MilestoneReward;
+}
 
 export interface Area {
   readonly id: string;
@@ -26,6 +38,7 @@ export interface Area {
   /** Whether each tile is solid, indexed [row][col]. */
   readonly solid: readonly (readonly boolean[])[];
   readonly monsters: readonly MonsterPlacement[];
+  readonly milestones: readonly Milestone[];
 }
 
 export type StationaryMonsterType = StationaryMonsterDefinition;
@@ -34,6 +47,7 @@ export interface ChaserMonsterType {
   readonly behavior: 'chaser';
   readonly health: number;
   readonly size: number;
+  readonly experience: number;
   readonly damage: number;
   /** Tiles walked in one fixed step. */
   readonly speedPerStep: number;
@@ -57,6 +71,7 @@ export interface Content {
     readonly attackCooldownSteps: number;
     readonly meleeWeapon: MeleeWeaponDefinition;
   };
+  readonly progression: ProgressionDefinition;
   /** The least damage a hit does to the hero, however high its Defense. */
   readonly minimumDamage: number;
   readonly monsterTypes: Readonly<Record<string, MonsterType>>;
@@ -70,17 +85,18 @@ export function loadContent(definition: ContentDefinition): Content {
   requireZeroOrMore("The hero's defense", definition.hero.defense);
   const minimumDamage = definition.minimumDamage ?? DEFAULT_MINIMUM_DAMAGE;
   requireZeroOrMore('The minimum damage', minimumDamage);
+  const progression = loadProgression(definition.progression);
   const monsterTypes: Record<string, MonsterType> = {};
   for (const [name, monsterType] of Object.entries(definition.monsterTypes)) {
     monsterTypes[name] = loadMonsterType(name, monsterType);
   }
   const areas: Record<string, Area> = {};
-  const monsterIds = new Set<string>();
+  const usedIds = { monsters: new Set<string>(), milestones: new Set<string>() };
   for (const area of definition.areas) {
     if (areas[area.id] !== undefined) {
       throw new Error(`Area id "${area.id}" is used more than once`);
     }
-    areas[area.id] = loadArea(area, definition, monsterIds);
+    areas[area.id] = loadArea(area, definition, usedIds);
   }
   const startArea = areas[definition.start.area];
   if (startArea === undefined) {
@@ -101,6 +117,7 @@ export function loadContent(definition: ContentDefinition): Content {
       attackCooldownSteps: msToSteps(definition.hero.attackCooldownMs),
       meleeWeapon: definition.hero.meleeWeapon,
     },
+    progression,
     minimumDamage,
     monsterTypes,
     areas,
@@ -108,10 +125,39 @@ export function loadContent(definition: ContentDefinition): Content {
   };
 }
 
+function loadProgression(definition: ProgressionDefinition): ProgressionDefinition {
+  const { levelThresholds } = definition;
+  if (levelThresholds.length === 0) {
+    throw new Error('The Level thresholds must give the Experience for at least Level 2');
+  }
+  levelThresholds.forEach((experience, index) => {
+    const level = index + 2;
+    const before = levelThresholds[index - 1];
+    if (before === undefined) {
+      requireMoreThanZero(`The Experience for Level ${level}`, experience);
+    } else if (!(experience > before)) {
+      throw new Error(
+        `The Experience for Level ${level} must be more than the ${before} of Level ${level - 1}, but it is ${experience}`,
+      );
+    }
+  });
+  for (const stat of STAT_IDS) {
+    requireMoreThanZero(`The value of a Stat Point in ${stat}`, definition.statPointValue[stat]);
+  }
+  const { health, attack, defense } = definition.statPointValue;
+  return { levelThresholds: [...levelThresholds], statPointValue: { health, attack, defense } };
+}
+
 function loadMonsterType(name: string, definition: MonsterTypeDefinition): MonsterType {
+  requireZeroOrMore(`Monster type "${name}": experience`, definition.experience);
   switch (definition.behavior) {
     case 'stationary':
-      return { behavior: 'stationary', health: definition.health, size: definition.size };
+      return {
+        behavior: 'stationary',
+        health: definition.health,
+        size: definition.size,
+        experience: definition.experience,
+      };
     case 'chaser':
       return loadChaser(name, definition);
     default:
@@ -141,6 +187,7 @@ function loadChaser(name: string, definition: ChaserMonsterDefinition): ChaserMo
     behavior: 'chaser',
     health: definition.health,
     size: definition.size,
+    experience: definition.experience,
     damage: definition.damage,
     speedPerStep: definition.speedTilesPerSecond / STEPS_PER_SECOND,
     noticingDistance: definition.noticingDistance,
@@ -163,7 +210,13 @@ function requireZeroOrMore(what: string, value: number): void {
   }
 }
 
-function loadArea(area: AreaDefinition, definition: ContentDefinition, monsterIds: Set<string>): Area {
+/** The ids used so far, which are unique across all Adventure Areas. */
+interface UsedIds {
+  readonly monsters: Set<string>;
+  readonly milestones: Set<string>;
+}
+
+function loadArea(area: AreaDefinition, definition: ContentDefinition, usedIds: UsedIds): Area {
   const firstRowWidth = Array.from(area.layout[0] ?? '').length;
   const tiles = area.layout.map((row, rowIndex) => {
     const symbols = Array.from(row);
@@ -182,20 +235,23 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition, monsterId
       return terrain;
     });
   });
+  const width = tiles[0]?.length ?? 0;
+  const height = tiles.length;
   const loaded: Area = {
     id: area.id,
     name: area.name,
-    width: tiles[0]?.length ?? 0,
-    height: tiles.length,
+    width,
+    height,
     terrain: tiles.map((row) => row.map((terrain) => terrain.kind)),
     solid: tiles.map((row) => row.map((terrain) => terrain.solid)),
     monsters: area.monsters,
+    milestones: (area.milestones ?? []).map((milestone) => loadMilestone(area.id, milestone, width, height, usedIds)),
   };
   for (const monster of area.monsters) {
     if (definition.monsterTypes[monster.type] === undefined) {
       throw new Error(`Area "${area.id}": monster "${monster.id}" has unknown type "${monster.type}"`);
     }
-    if (monsterIds.has(monster.id)) {
+    if (usedIds.monsters.has(monster.id)) {
       throw new Error(`Monster id "${monster.id}" is used more than once`);
     }
     if (isSolid(loaded, monster.tile)) {
@@ -203,9 +259,41 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition, monsterId
         `Area "${area.id}": monster "${monster.id}" is placed at ${describeTile(monster.tile)}, which is ${NOT_WALKABLE}`,
       );
     }
-    monsterIds.add(monster.id);
+    usedIds.monsters.add(monster.id);
   }
   return loaded;
+}
+
+/** `width` and `height` are the size of the map of the Adventure Area, in tiles. */
+function loadMilestone(
+  areaId: string,
+  milestone: MilestoneDefinition,
+  width: number,
+  height: number,
+  usedIds: UsedIds,
+): Milestone {
+  if (usedIds.milestones.has(milestone.id)) {
+    throw new Error(`Milestone id "${milestone.id}" is used more than once`);
+  }
+  usedIds.milestones.add(milestone.id);
+  const { zone } = milestone;
+  const what = `Area "${areaId}": the zone of milestone "${milestone.id}" ${describeZone(zone)}`;
+  if (![zone.col, zone.row, zone.width, zone.height].every(Number.isInteger) || zone.width < 1 || zone.height < 1) {
+    throw new Error(`${what} must be whole tiles, at least one wide and one high`);
+  }
+  if (zone.col < 0 || zone.row < 0 || zone.col + zone.width > width || zone.row + zone.height > height) {
+    throw new Error(`${what} reaches outside the map`);
+  }
+  requireZeroOrMore(`Milestone "${milestone.id}": experience`, milestone.reward.experience);
+  return {
+    id: milestone.id,
+    zone: { minX: zone.col, minY: zone.row, maxX: zone.col + zone.width, maxY: zone.row + zone.height },
+    reward: milestone.reward,
+  };
+}
+
+function describeZone(zone: TileRect): string {
+  return `(col ${zone.col}, row ${zone.row}, ${zone.width} wide, ${zone.height} high)`;
 }
 
 const NOT_WALKABLE = 'solid terrain or outside the map';

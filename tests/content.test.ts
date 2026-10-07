@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { createGame } from '../src/core';
-import type { ChaserMonsterDefinition, ContentDefinition, MonsterTypeDefinition } from '../src/core';
-import { ARENA_LAYOUT, arena, BITER, dummyAt, fixedRandom } from './fixtures';
+import type { ChaserMonsterDefinition, ContentDefinition, MonsterTypeDefinition, TileRect } from '../src/core';
+import { ARENA_LAYOUT, arena, BITER, dummyAt, fixedRandom, frailMonster, milestone } from './fixtures';
 
 function expectRefused(content: ContentDefinition, message: string): void {
   expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
+}
+
+/** A milestone in the arena, whose map is 7 tiles wide and 6 high. */
+function arenaWithMilestone(zone: TileRect, experience = 4): ContentDefinition {
+  return arena({ milestones: [milestone('gate', zone, experience)] });
 }
 
 describe('content that does not make sense is refused when the game is created', () => {
@@ -41,6 +46,22 @@ describe('content that does not make sense is refused when the game is created',
     expectRefused(arena({ otherAreas: [second] }), 'Area id "arena" is used more than once');
   });
 
+  it('two milestones have the same id, even in different Adventure Areas', () => {
+    const zone = { col: 1, row: 1, width: 1, height: 1 };
+    const cellar = {
+      id: 'cellar',
+      name: 'Cellar',
+      layout: ARENA_LAYOUT,
+      monsters: [],
+      milestones: [milestone('gate', zone, 1)],
+    };
+
+    expectRefused(
+      arena({ milestones: [milestone('gate', zone, 1)], otherAreas: [cellar] }),
+      'Milestone id "gate" is used more than once',
+    );
+  });
+
   it('the game starts in an Adventure Area that does not exist', () => {
     const start = { area: 'nowhere', tile: { col: 3, row: 3 } };
 
@@ -68,7 +89,7 @@ describe('content that does not make sense is refused when the game is created',
 
   it('a monster type has a behavior that does not exist', () => {
     // Content read from a file could say this, and the compiler would not notice.
-    const ghost = { behavior: 'teleporter', health: 3, size: 0.5 } as unknown as MonsterTypeDefinition;
+    const ghost = { behavior: 'teleporter', health: 3, size: 0.5, experience: 1 } as unknown as MonsterTypeDefinition;
 
     expectRefused(arena({ monsterTypes: { ghost } }), 'Monster type "ghost" has unknown behavior "teleporter"');
   });
@@ -124,6 +145,83 @@ describe('numbers the rules cannot work with are refused when the game is create
       content: biterWith({ recoveryMs: -1 }),
       message: 'Monster type "biter": recoveryMs must be 0 or more, but it is -1',
     },
+    {
+      what: 'a monster that earns the hero negative Experience',
+      content: biterWith({ experience: -1 }),
+      message: 'Monster type "biter": experience must be 0 or more, but it is -1',
+    },
+    {
+      what: 'a stationary monster that earns the hero negative Experience',
+      content: arena({ monsterTypes: { dummy: frailMonster(-5) } }),
+      message: 'Monster type "dummy": experience must be 0 or more, but it is -5',
+    },
+    {
+      what: 'a Level curve with no thresholds, which leaves the hero no Level to reach',
+      content: arena({ progression: { levelThresholds: [] } }),
+      message: 'The Level thresholds must give the Experience for at least Level 2',
+    },
+    {
+      what: 'a Level that takes no Experience',
+      content: arena({ progression: { levelThresholds: [0, 10] } }),
+      message: 'The Experience for Level 2 must be more than 0, but it is 0',
+    },
+    {
+      what: 'a Level that takes as much Experience as the one before',
+      content: arena({ progression: { levelThresholds: [10, 10, 30] } }),
+      message: 'The Experience for Level 3 must be more than the 10 of Level 2, but it is 10',
+    },
+    {
+      what: 'a Level that takes less Experience than the one before',
+      content: arena({ progression: { levelThresholds: [10, 25, 20] } }),
+      message: 'The Experience for Level 4 must be more than the 25 of Level 3, but it is 20',
+    },
+    {
+      what: 'a Stat Point that adds nothing to Health',
+      content: arena({ progression: { statPointValue: { health: 0, attack: 2, defense: 1 } } }),
+      message: 'The value of a Stat Point in health must be more than 0, but it is 0',
+    },
+    {
+      what: 'a Stat Point that adds nothing to Attack',
+      content: arena({ progression: { statPointValue: { health: 3, attack: 0, defense: 1 } } }),
+      message: 'The value of a Stat Point in attack must be more than 0, but it is 0',
+    },
+    {
+      what: 'a Stat Point that takes away from Defense',
+      content: arena({ progression: { statPointValue: { health: 3, attack: 2, defense: -1 } } }),
+      message: 'The value of a Stat Point in defense must be more than 0, but it is -1',
+    },
+    {
+      what: 'a milestone zone with no width, which no hero can be in',
+      content: arenaWithMilestone({ col: 5, row: 3, width: 0, height: 1 }),
+      message:
+        'Area "arena": the zone of milestone "gate" (col 5, row 3, 0 wide, 1 high) must be whole tiles, at least one wide and one high',
+    },
+    {
+      what: 'a milestone zone that starts between two tiles',
+      content: arenaWithMilestone({ col: 5.5, row: 3, width: 1, height: 1 }),
+      message:
+        'Area "arena": the zone of milestone "gate" (col 5.5, row 3, 1 wide, 1 high) must be whole tiles, at least one wide and one high',
+    },
+    {
+      what: 'a milestone zone that reaches past the right edge of the map',
+      content: arenaWithMilestone({ col: 5, row: 3, width: 3, height: 1 }),
+      message: 'Area "arena": the zone of milestone "gate" (col 5, row 3, 3 wide, 1 high) reaches outside the map',
+    },
+    {
+      what: 'a milestone zone that reaches past the bottom edge of the map',
+      content: arenaWithMilestone({ col: 3, row: 4, width: 1, height: 3 }),
+      message: 'Area "arena": the zone of milestone "gate" (col 3, row 4, 1 wide, 3 high) reaches outside the map',
+    },
+    {
+      what: 'a milestone zone that starts before the map does',
+      content: arenaWithMilestone({ col: -1, row: 3, width: 2, height: 1 }),
+      message: 'Area "arena": the zone of milestone "gate" (col -1, row 3, 2 wide, 1 high) reaches outside the map',
+    },
+    {
+      what: 'a milestone that takes Experience away',
+      content: arenaWithMilestone({ col: 5, row: 3, width: 1, height: 1 }, -1),
+      message: 'Milestone "gate": experience must be 0 or more, but it is -1',
+    },
   ])('$what', ({ content, message }) => {
     expectRefused(content, message);
   });
@@ -132,8 +230,21 @@ describe('numbers the rules cannot work with are refused when the game is create
     const content = arena({
       hero: { defense: 0 },
       minimumDamage: 0,
+      progression: { levelThresholds: [1], statPointValue: { health: 1, attack: 1, defense: 1 } },
+      milestones: [
+        milestone('whole-map', { col: 0, row: 0, width: 7, height: 6 }, 0),
+        milestone('last-tile', { col: 6, row: 5, width: 1, height: 1 }, 0),
+      ],
       monsterTypes: {
-        biter: { ...BITER, speedTilesPerSecond: 0, noticingDistance: 0, recoveryMs: 0, windUpMs: 1000 / 60 },
+        biter: {
+          ...BITER,
+          speedTilesPerSecond: 0,
+          noticingDistance: 0,
+          recoveryMs: 0,
+          windUpMs: 1000 / 60,
+          experience: 0,
+        },
+        dummy: frailMonster(0),
       },
     });
 

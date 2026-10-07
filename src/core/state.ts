@@ -1,5 +1,6 @@
 import type { Area, Content } from './content';
 import { monsterTypeOf } from './content';
+import type { StatId } from './definitions';
 import type { Box, Direction, Point } from './geometry';
 import { boxAround, centerOf } from './geometry';
 import { heroMaxHealth } from './stats';
@@ -33,6 +34,8 @@ export type MonsterAction =
 export interface AreaState {
   /** Every monster placed in the Adventure Area, defeated ones included (at 0 Health), so that they stay defeated. */
   monsters: MonsterState[];
+  /** The ids of the milestones of this Adventure Area that the hero has reached. They stay reached, defeat included. */
+  reachedMilestones: string[];
 }
 
 export interface HeroState {
@@ -42,13 +45,23 @@ export interface HeroState {
   health: number;
   /** Fixed steps left before the hero can attack again; 0 means ready. */
   attackCooldown: number;
+  /** The Experience the hero has earned in all. The Level is worked out from it (see stats.ts). */
+  experience: number;
+  /** The Stat Points the hero has assigned to each stat. The ones it has still to assign are worked out (stats.ts). */
+  statPoints: Record<StatId, number>;
 }
+
+/** The pages that can be open over the game, one at a time. A new page is one more id here and one more view. */
+export const PAGE_IDS = ['stats'] as const;
+export type PageId = (typeof PAGE_IDS)[number];
 
 export interface PlayState {
   readonly phase: 'playing';
   /** The Adventure Area the hero is in. */
   areaId: string;
   hero: HeroState;
+  /** The page that is open over the game, if any. While one is open the game is paused (see pages.ts). */
+  page: PageId | null;
   /** World state is kept per Adventure Area, by area id. */
   areas: Record<string, AreaState>;
 }
@@ -63,14 +76,25 @@ export type GameState = TitleState | PlayState;
 export function newPlayState(content: Content): PlayState {
   const areas: Record<string, AreaState> = {};
   for (const area of Object.values(content.areas)) {
-    areas[area.id] = { monsters: freshMonsters(area, content) };
+    areas[area.id] = { monsters: freshMonsters(area, content), reachedMilestones: [] };
   }
-  return {
+  const state: PlayState = {
     phase: 'playing',
     areaId: content.start.areaId,
-    hero: { position: centerOf(content.start.tile), facing: 'down', health: heroMaxHealth(content), attackCooldown: 0 },
+    hero: {
+      position: centerOf(content.start.tile),
+      facing: 'down',
+      health: 0,
+      attackCooldown: 0,
+      experience: 0,
+      statPoints: { health: 0, attack: 0, defense: 0 },
+    },
+    page: null,
     areas,
   };
+  // The most Health there is can only be worked out from the state, which is why it is set once the state exists.
+  state.hero.health = heroMaxHealth(state, content);
+  return state;
 }
 
 /** Every monster of an Adventure Area as the content places it: at full Health, on its starting tile, doing nothing. */

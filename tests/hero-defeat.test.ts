@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advance, arena, biterAt, monsterNamed, newGame, playingView, strike, walk } from './fixtures';
+import { advance, arena, biterAt, frailMonster, monsterNamed, newGame, playingView, strike, walk } from './fixtures';
 
 // A biter's hit does 5 damage, and the arena's hero has no Defense. A biter beside the hero, at tile (4, 3), hits it on
 // step 31. The hero starts at (3.5, 3.5), and that is where defeat sends it back to.
@@ -48,7 +48,7 @@ describe('the hero being defeated', () => {
     const game = newGame(
       arena({
         hero: { health: 5 },
-        monsterTypes: { weakling: { behavior: 'stationary', health: 1, size: 0.5 } },
+        monsterTypes: { weakling: frailMonster(0) },
         monsters: [{ id: 'weakling-1', type: 'weakling', tile: { col: 3, row: 4 } }, biterAt('biter-1', 5, 3)],
       }),
     );

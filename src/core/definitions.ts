@@ -39,6 +39,8 @@ export interface MonsterTypeBase {
   readonly health: number;
   /** Width and height of the monster's body, in tiles. */
   readonly size: number;
+  /** The Experience the hero earns each time it defeats a monster of this type. */
+  readonly experience: number;
 }
 
 /** A monster that stays where it was placed and never attacks. */
@@ -80,18 +82,63 @@ export interface MonsterPlacement {
   readonly tile: Tile;
 }
 
+/** A block of whole tiles in an Adventure Area, counted from the top-left corner of its map. */
+export interface TileRect {
+  readonly col: number;
+  readonly row: number;
+  /** How many tiles wide, at least 1. */
+  readonly width: number;
+  /** How many tiles high, at least 1. */
+  readonly height: number;
+}
+
+/** What reaching a milestone gives the hero. Kept apart from the trigger, so later rewards can sit beside Experience. */
+export interface MilestoneReward {
+  /** The Experience the hero earns, 0 or more. */
+  readonly experience: number;
+}
+
+/** Ground that rewards the hero the first time its body overlaps it. The reward is given once for the whole game. */
+export interface MilestoneDefinition {
+  /** Unique across all Adventure Areas: events and saves refer to the milestone by it. */
+  readonly id: string;
+  /** The tiles that trigger it, which must lie within the map. */
+  readonly zone: TileRect;
+  readonly reward: MilestoneReward;
+}
+
 export interface AreaDefinition {
   readonly id: string;
   readonly name: string;
   /** One string per row of tiles, one terrain symbol per tile. Every row has the same length. */
   readonly layout: readonly string[];
   readonly monsters: readonly MonsterPlacement[];
+  /** The milestones of this Adventure Area. Leave it out for none. */
+  readonly milestones?: readonly MilestoneDefinition[];
+}
+
+/** The stats a Stat Point can be spent on. */
+export const STAT_IDS = ['health', 'attack', 'defense'] as const;
+export type StatId = (typeof STAT_IDS)[number];
+
+/** How the hero grows, as data a designer can tune. */
+export interface ProgressionDefinition {
+  /**
+   * The total Experience that raises the hero to each Level above 1: the first number is for Level 2, the second for
+   * Level 3, and so on. Each is more than the one before. The last is the cap: the hero's highest Level is one more
+   * than the number of thresholds, and Experience beyond the last threshold changes nothing.
+   */
+  readonly levelThresholds: readonly number[];
+  /** What each Stat Point adds to the stat it is spent on. Each is more than 0. */
+  readonly statPointValue: Readonly<Record<StatId, number>>;
 }
 
 export interface ContentDefinition {
   /** The terrain legend: every symbol a layout may use. */
   readonly terrain: Readonly<Record<string, TerrainDefinition>>;
   readonly hero: HeroDefinition;
+  /** How the hero's Levels are reached, and what they are worth. */
+  readonly progression: ProgressionDefinition;
   /** The least damage a hit does to the hero, however high its Defense. Leave it out for the default of 1. */
   readonly minimumDamage?: number;
   readonly monsterTypes: Readonly<Record<string, MonsterTypeDefinition>>;

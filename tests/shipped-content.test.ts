@@ -37,6 +37,14 @@ describe('the content the game ships with', () => {
     expect(free).not.toEqual([]);
   });
 
+  it('has six Levels: Level 6 is the highest the hero can reach', () => {
+    const game = newShippedGame();
+
+    game.send({ type: 'open-page', page: 'stats' });
+
+    expect(playingView(game).page).toMatchObject({ level: 1, maxLevel: 6 });
+  });
+
   it('keeps the monsters away from the start: a hero who stays there is never hurt', () => {
     const game = newShippedGame();
     const events: GameEvent[] = [];
