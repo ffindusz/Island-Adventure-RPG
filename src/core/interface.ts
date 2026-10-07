@@ -302,6 +302,13 @@ export interface LevelUpView {
   readonly options: readonly StatChoiceView[];
 }
 
+/** How far the hero has come, for the in-play HUD: the same Level and Experience progress the stat page shows. */
+export interface ProgressView {
+  readonly level: number;
+  /** Progress toward the next Level: `earned` of the `needed` Experience since the last. Null at the highest Level. */
+  readonly experience: { readonly earned: number; readonly needed: number } | null;
+}
+
 /** Everything the player can see while playing. Monsters that are defeated are not listed. */
 export interface PlayingView {
   readonly phase: 'playing';
@@ -311,6 +318,8 @@ export interface PlayingView {
   /** The short text of the Adventure Area while it is shown: for a few seconds after the hero first comes in. */
   readonly areaText: string | null;
   readonly hero: HeroView;
+  /** The hero's Level and Experience progress, so that they can be shown without opening the stat page. */
+  readonly progress: ProgressView;
   readonly monsters: readonly MonsterView[];
   /** The arrows in flight in the Adventure Area the hero is in, in the order they were shot. */
   readonly arrows: readonly ArrowView[];

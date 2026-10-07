@@ -59,6 +59,7 @@ export type {
   PickedUpItem,
   PickupView,
   PlayingView,
+  ProgressView,
   RandomSource,
   Snapshot,
   StatChoiceView,
