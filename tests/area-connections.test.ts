@@ -409,6 +409,37 @@ describe('Area text', () => {
   });
 });
 
+describe('Saving a game across several Adventure Areas', () => {
+  it('restores the area the hero is in and what happened in each area, and then plays on the same', () => {
+    const content = world(
+      {
+        text: 'The wreck.',
+        monsters: [{ id: 'arena-weakling', type: 'weakling', tile: { col: 3, row: 4 } }],
+        monsterTypes: WEAKLING,
+      },
+      { text: 'A damp cellar.', interactables: [chestAt('cellar-chest', 4, 3, 'iron-sword')] },
+    );
+    const game = newGame(content);
+    strike(game);
+    walk(game, 'right', 11);
+    walk(game, 'right', 10);
+    game.send({ type: 'interact' });
+
+    const resumed = gameAtTitle(content);
+    resumed.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
+
+    expect(resumed.view()).toEqual(game.view());
+    expect(playingView(resumed).interactables).toEqual([expect.objectContaining({ id: 'cellar-chest', opened: true })]);
+
+    // Back in the arena, the weakling is still defeated and the text is not shown again, in both games alike.
+    const eventsAfter = walk(resumed, 'left', 13);
+    expect(eventsAfter).toEqual(walk(game, 'left', 13));
+    expect(eventsAfter.map((event) => event.type)).not.toContain('area-text');
+    expect(resumed.view()).toEqual(game.view());
+    expect(playingView(resumed).monsters).toEqual([]);
+  });
+});
+
 describe('Content validation of connected Adventure Areas', () => {
   it('refuses an Adventure Area that has no entrance', () => {
     expectRefused(arena({ entrances: [], exits: [TO_CELLAR], otherAreas: [CELLAR] }), 'Area "arena" has no entrance');
