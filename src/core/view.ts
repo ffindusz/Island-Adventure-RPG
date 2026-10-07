@@ -1,3 +1,4 @@
+import { arrowSizeOf } from './arrows';
 import { areaOf, monsterTypeOf } from './content';
 import type { Content, Interactable } from './content';
 import { STAT_IDS } from './definitions';
@@ -54,7 +55,8 @@ export function buildView(state: GameState, content: Content): GameView {
       .map((arrow) => ({
         position: { x: arrow.position.x, y: arrow.position.y },
         direction: arrow.direction,
-        size: content.hero.rangedWeapon.arrowSize,
+        size: arrowSizeOf(arrow, content),
+        shooter: arrow.shotBy === undefined ? 'hero' : 'monster',
       })),
     interactables: area.interactables.flatMap((interactable) => interactableView(interactable, state) ?? []),
     page: pageView(state, content),

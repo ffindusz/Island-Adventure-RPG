@@ -20,6 +20,7 @@ import type {
   MonsterTypeDefinition,
   PickupDefinition,
   ProgressionDefinition,
+  RangedMonsterDefinition,
   RangedWeaponDefinition,
 } from './definitions';
 import type { Box, Tile } from './geometry';
@@ -140,8 +141,37 @@ export interface ChargerMonsterType {
   readonly recoverySteps: number;
 }
 
+/** How the projectile of a ranged attacker flies and what it does, as the rules use it. */
+export interface MonsterProjectile {
+  readonly damage: number;
+  /** Tiles it flies in one fixed step. */
+  readonly speedPerStep: number;
+  /** Tiles it flies from the shooter's centre before it falls. */
+  readonly range: number;
+  readonly size: number;
+}
+
+export interface RangedMonsterType {
+  readonly behavior: 'ranged';
+  readonly health: number;
+  readonly size: number;
+  readonly experience: number;
+  /** Never absent: a type without a drop table has an empty one. */
+  readonly drops: readonly DropDefinition[];
+  readonly noticingDistance: number;
+  readonly windUpSteps: number;
+  readonly recoverySteps: number;
+  readonly projectile: MonsterProjectile;
+  /** How it keeps its distance from the hero, or null when it stands still. */
+  readonly keepsDistance: {
+    readonly preferredDistance: number;
+    /** Tiles walked in one fixed step. */
+    readonly speedPerStep: number;
+  } | null;
+}
+
 /** A monster type as the rules use it, one member for each behavior. */
-export type MonsterType = StationaryMonsterType | ChaserMonsterType | ChargerMonsterType;
+export type MonsterType = StationaryMonsterType | ChaserMonsterType | ChargerMonsterType | RangedMonsterType;
 
 /** The hero's Ranged Weapon as the rules use it. */
 export interface RangedWeapon {
@@ -308,6 +338,8 @@ function loadMonsterType(name: string, definition: MonsterTypeDefinition): Monst
       return loadChaser(name, definition, drops);
     case 'charger':
       return loadCharger(name, definition, drops);
+    case 'ranged':
+      return loadRanged(name, definition, drops);
     default:
       return refuseBehavior(name, definition);
   }
@@ -386,6 +418,55 @@ function loadCharger(
     dashSpeedPerStep: definition.dashSpeedTilesPerSecond / STEPS_PER_SECOND,
     dashRange: definition.dashRange,
     recoverySteps: msToSteps(definition.recoveryMs),
+  };
+}
+
+function loadRanged(
+  name: string,
+  definition: RangedMonsterDefinition,
+  drops: readonly DropDefinition[],
+): RangedMonsterType {
+  const field = (fieldName: string) => `Monster type "${name}": ${fieldName}`;
+  requireZeroOrMore(field('noticingDistance'), definition.noticingDistance);
+  requireAtLeastOneStep(field('windUpMs'), definition.windUpMs);
+  requireZeroOrMore(field('recoveryMs'), definition.recoveryMs);
+  const { projectile, keepsDistance } = definition;
+  requireMoreThanZero(field('projectile.damage'), projectile.damage);
+  requireMoreThanZero(field('projectile.speedTilesPerSecond'), projectile.speedTilesPerSecond);
+  requireMoreThanZero(field('projectile.range'), projectile.range);
+  requireMoreThanZero(field('projectile.size'), projectile.size);
+  // It leaves from the shooter's centre, so a larger one would begin inside whatever the shooter stands against.
+  if (projectile.size > definition.size) {
+    throw new Error(
+      `${field('projectile.size')} must be at most the monster's size of ${definition.size}, but it is ${projectile.size}`,
+    );
+  }
+  if (keepsDistance !== undefined) {
+    requireZeroOrMore(field('keepsDistance.preferredDistance'), keepsDistance.preferredDistance);
+    requireMoreThanZero(field('keepsDistance.speedTilesPerSecond'), keepsDistance.speedTilesPerSecond);
+  }
+  return {
+    behavior: 'ranged',
+    health: definition.health,
+    size: definition.size,
+    experience: definition.experience,
+    drops,
+    noticingDistance: definition.noticingDistance,
+    windUpSteps: msToSteps(definition.windUpMs),
+    recoverySteps: msToSteps(definition.recoveryMs),
+    projectile: {
+      damage: projectile.damage,
+      speedPerStep: projectile.speedTilesPerSecond / STEPS_PER_SECOND,
+      range: projectile.range,
+      size: projectile.size,
+    },
+    keepsDistance:
+      keepsDistance === undefined
+        ? null
+        : {
+            preferredDistance: keepsDistance.preferredDistance,
+            speedPerStep: keepsDistance.speedTilesPerSecond / STEPS_PER_SECOND,
+          },
   };
 }
 
