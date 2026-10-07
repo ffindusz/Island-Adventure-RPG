@@ -8,7 +8,18 @@ import type {
   ExitDefinition,
   Game,
 } from '../src/core';
-import { ARENA_LAYOUT, FIELD_LAYOUT, advance, arena, gameAtTitle, milestone, newGame, playingView, walk } from './fixtures';
+import {
+  ARENA_LAYOUT,
+  FIELD_LAYOUT,
+  advance,
+  arena,
+  gameAtTitle,
+  milestone,
+  newGame,
+  playingView,
+  throughStorage,
+  walk,
+} from './fixtures';
 import type { ArenaOptions } from './fixtures';
 
 // The Automap, tested at the Game core's interface: commands and steps in, the page view and the snapshot out.
@@ -538,5 +549,41 @@ describe('The Automap page', () => {
     game.send({ type: 'close-page', page: 'stats' });
 
     expect(playingView(game).page).toMatchObject({ id: 'automap' });
+  });
+});
+
+describe('The Automap in a saved game', () => {
+  const content = (): ContentDefinition => route({ automapRevealDistance: 1.5 });
+
+  /** A game that has been through two of the three areas and walked a little way into the second. */
+  function exploredGame(): Game {
+    const game = newGame(content());
+    crossExit(game, 'right');
+    walk(game, 'right', 3);
+    return game;
+  }
+
+  /** A game continued from the snapshot of another, which has been through storage as a saved game would be. */
+  function continuedFrom(game: Game): Game {
+    const continued = gameAtTitle(content());
+    continued.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
+    return continued;
+  }
+
+  it('keeps every discovery when the game is saved and continued', () => {
+    const game = exploredGame();
+    expect(automap(game).areas.map((area) => area.discovered)).toEqual([true, true, false]);
+
+    expect(automap(continuedFrom(game))).toEqual(automap(game));
+  });
+
+  it('is open again when the game is saved with the page open', () => {
+    const game = exploredGame();
+    game.send(OPEN_AUTOMAP);
+
+    const continued = continuedFrom(game);
+
+    expect(playingView(continued).page).toMatchObject({ id: 'automap' });
+    expect(playingView(continued).page).toEqual(playingView(game).page);
   });
 });
