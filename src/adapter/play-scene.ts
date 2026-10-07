@@ -71,12 +71,12 @@ export class PlayScene extends Phaser.Scene {
         events.push(...this.core.send(command));
       }
     };
-    const view = this.core.view();
-    const waiting = gameIsWaiting(view);
+    const viewAtStart = this.core.view();
+    const waiting = gameIsWaiting(viewAtStart);
     if (!waiting) {
       send(this.playerInput.pollWalking());
     }
-    send(this.inventoryMenu.update(view, this.playerInput.pollMenu()));
+    send(this.inventoryMenu.update(viewAtStart, this.playerInput.pollMenu()));
     send(this.playerInput.pollActions());
     if (waiting && !gameIsWaiting(this.core.view())) {
       // The wait ended just now. The walk keys were left alone during it, so the hero walks by the keys that are down
@@ -92,7 +92,12 @@ export class PlayScene extends Phaser.Scene {
       // The core has already put the hero back; the fade hides the cut. The world keeps running while it plays.
       this.cameras.main.fadeIn(DEFEAT_FADE_MS, 0, 0, 0);
     }
-    this.draw(this.core.view(), watching);
+    const view = this.core.view();
+    if (gameIsWaiting(view)) {
+      // A page or a Stat Point covers the notice, and the player is already where it pointed them.
+      this.feedback.dismissPickup();
+    }
+    this.draw(view, watching);
   }
 
   private draw(view: GameView, watching: boolean): void {

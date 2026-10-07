@@ -97,6 +97,11 @@ export class Feedback {
   pickupNotice(): PickedUpItem | null {
     return this.pickup === null ? null : this.pickup.item;
   }
+
+  /** Stops telling the player about what the hero found: they have moved on to something that covers it. */
+  dismissPickup(): void {
+    this.pickup = null;
+  }
 }
 
 function remaining(flashes: readonly ZoneFlash[], frameMs: number): ZoneFlash[] {
