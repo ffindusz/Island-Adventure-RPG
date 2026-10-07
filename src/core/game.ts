@@ -10,6 +10,7 @@ import { reachMilestones } from './milestones';
 import { walkHero } from './movement';
 import { closePage, openPage } from './pages';
 import { isPaused } from './pause';
+import { collectPickups } from './pickups';
 import { assignStatPoint } from './progression';
 import { newPlayState, SNAPSHOT_VERSION, copyState } from './state';
 import type { GameState } from './state';
@@ -78,15 +79,17 @@ export function createGame(options: GameOptions): Game {
       }
       coolDownHero(state);
       walkHero(state, content, held.at(-1));
-      // The hero is where it walked to when it reaches a milestone. Then the arrows fly, and then the monsters act.
+      // The hero is where it walked to when it reaches a milestone or takes a pickup. Then the arrows fly, and then the
+      // monsters act.
       const milestoneEvents = reachMilestones(state, content);
+      const pickupEvents = collectPickups(state, content);
       const arrowEvents = flyArrows(state, content, options.random);
       const monsterEvents = stepMonsters(state, content);
       if (monsterEvents.some((event) => event.type === 'hero-defeated')) {
         // Defeat sends the hero back and the monsters back to where they began: the arrows of that life do not fly on.
         state.arrows = [];
       }
-      return [...milestoneEvents, ...arrowEvents, ...monsterEvents];
+      return [...milestoneEvents, ...pickupEvents, ...arrowEvents, ...monsterEvents];
     },
     view: () => buildView(state, content),
     snapshot: () => {

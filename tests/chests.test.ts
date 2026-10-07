@@ -6,6 +6,7 @@ import {
   arena,
   biterAt,
   chestAt,
+  chestViews,
   face,
   gameAtTitle,
   milestone,
@@ -155,7 +156,7 @@ describe('the chest Interact acts on when several are in reach', () => {
     face(game, 'down');
 
     expect(opens(game)).toEqual(['right']);
-    expect(playingView(game).interactables.map((chest) => [chest.id, chest.opened])).toEqual(
+    expect(chestViews(game).map((chest) => [chest.id, chest.opened])).toEqual(
       interactables.map((chest) => [chest.id, chest.id === 'right']),
     );
   });

@@ -115,7 +115,7 @@ export interface PickedUpGear extends GearInfo {
   readonly kind: 'gear';
 }
 
-/** Some of a consumable the hero took, such as the Ammunition of a cache. It is added to the count the hero has. */
+/** Some of a consumable the hero took, such as the Ammunition of a cache or the potions lying on the ground. */
 export interface PickedUpConsumable {
   readonly kind: 'consumable';
   readonly id: ConsumableId;
@@ -189,8 +189,20 @@ export interface ChestView {
   readonly holds: 'gear' | ConsumableId;
 }
 
-/** Something the hero can interact with, one member for each kind. */
-export type InteractableView = ChestView;
+/** Something placed in the Adventure Area, for the adapter to draw: one member for each kind. */
+export type InteractableView = ChestView | PickupView;
+
+/** A pickup lying on the ground, for the adapter to draw. One that the hero has taken is not listed any more. */
+export interface PickupView {
+  readonly kind: 'pickup';
+  readonly id: string;
+  /** The centre of the tile it lies on. */
+  readonly position: Point;
+  /** Width and height of the tile it lies on, in tiles. */
+  readonly size: number;
+  /** What kind of consumable it is, so that it can be drawn as that. It never says how many. */
+  readonly consumable: ConsumableId;
+}
 
 export interface AreaView {
   readonly id: string;
@@ -279,7 +291,7 @@ export interface PlayingView {
   readonly monsters: readonly MonsterView[];
   /** The arrows in flight in the Adventure Area the hero is in, in the order they were shot. */
   readonly arrows: readonly ArrowView[];
-  /** The interactables of the Adventure Area the hero is in, such as chests, opened ones included. */
+  /** The interactables of the Adventure Area the hero is in: chests, opened ones included, and the pickups left. */
   readonly interactables: readonly InteractableView[];
   /** The page that is open over the game, if any. While one is open the game is paused. */
   readonly page: PageView | null;

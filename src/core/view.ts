@@ -54,13 +54,14 @@ export function buildView(state: GameState, content: Content): GameView {
         direction: arrow.direction,
         size: content.hero.rangedWeapon.arrowSize,
       })),
-    interactables: area.interactables.map((interactable) => interactableView(interactable, state)),
+    interactables: area.interactables.flatMap((interactable) => interactableView(interactable, state) ?? []),
     page: pageView(state, content),
     levelUp: levelUpView(state, content),
   };
 }
 
-function interactableView(interactable: Interactable, state: PlayState): InteractableView {
+/** What shows an interactable: nothing for a pickup the hero has taken, since it no longer lies there. */
+function interactableView(interactable: Interactable, state: PlayState): InteractableView | null {
   switch (interactable.kind) {
     case 'chest':
       return {
@@ -68,9 +69,19 @@ function interactableView(interactable: Interactable, state: PlayState): Interac
         id: interactable.id,
         position: centerOfBox(interactable.body),
         size: interactable.body.maxX - interactable.body.minX,
-        opened: interactableStateOf(state, interactable.id).opened,
+        opened: interactableStateOf(state, interactable).opened,
         holds: interactable.contents.kind === 'gear' ? 'gear' : interactable.contents.consumable,
       };
+    case 'pickup':
+      return interactableStateOf(state, interactable).collected
+        ? null
+        : {
+            kind: 'pickup',
+            id: interactable.id,
+            position: centerOfBox(interactable.body),
+            size: interactable.body.maxX - interactable.body.minX,
+            consumable: interactable.consumable,
+          };
   }
 }
 

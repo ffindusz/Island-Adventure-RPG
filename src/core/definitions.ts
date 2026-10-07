@@ -204,11 +204,26 @@ export interface ChestDefinition {
 }
 
 /**
- * Something in an Adventure Area that the hero acts on with Interact. Its `kind` names the rules it follows (see
- * interactables.ts); the other fields are what that kind needs. Adding a kind means adding a member here and an entry
- * in the interaction registry.
+ * Some of a consumable lying on a tile: the hero takes all of it by walking onto it, with no key to press, and it is
+ * gone for good. It is not solid: the hero, the monsters and the arrows pass over it.
  */
-export type InteractableDefinition = ChestDefinition;
+export interface PickupDefinition {
+  readonly kind: 'pickup';
+  /** Unique across all interactables of all Adventure Areas: saves refer to the pickup by it. */
+  readonly id: string;
+  /** The tile it lies on. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+  readonly consumable: ConsumableId;
+  /** How many the hero takes: a whole number of 1 or more. */
+  readonly amount: number;
+}
+
+/**
+ * Something in an Adventure Area that the hero acts on with Interact, or takes by walking onto it (a pickup). Its
+ * `kind` names the rules it follows (see interactables.ts); the other fields are what that kind needs. Adding a kind
+ * means adding a member here and the cases the recipe in interactables.ts lists.
+ */
+export type InteractableDefinition = ChestDefinition | PickupDefinition;
 
 export interface AreaDefinition {
   readonly id: string;
@@ -218,7 +233,7 @@ export interface AreaDefinition {
   readonly monsters: readonly MonsterPlacement[];
   /** The milestones of this Adventure Area. Leave it out for none. */
   readonly milestones?: readonly MilestoneDefinition[];
-  /** The interactables of this Adventure Area, such as chests. Leave it out for none. */
+  /** The interactables of this Adventure Area, such as chests and pickups. Leave it out for none. */
   readonly interactables?: readonly InteractableDefinition[];
 }
 

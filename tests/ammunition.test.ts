@@ -6,6 +6,7 @@ import {
   arena,
   cacheAt,
   chestAt,
+  chestViews,
   face,
   fixedRandom,
   gameAtTitle,
@@ -65,7 +66,7 @@ describe('Ammunition', () => {
     const game = newGame(
       arena({ interactables: [cacheAt('cache-1', 3, 4, 6), chestAt('chest-1', 4, 3, 'iron-sword')] }),
     );
-    const holds = () => playingView(game).interactables.map((item) => [item.id, item.holds]);
+    const holds = () => chestViews(game).map((item) => [item.id, item.holds]);
 
     expect(holds()).toEqual([
       ['cache-1', 'ammunition'],

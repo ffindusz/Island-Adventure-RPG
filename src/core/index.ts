@@ -21,6 +21,7 @@ export type {
   MilestoneReward,
   MonsterPlacement,
   MonsterTypeDefinition,
+  PickupDefinition,
   ProgressionDefinition,
   RangedWeaponDefinition,
   StatId,
@@ -51,6 +52,7 @@ export type {
   PickedUpConsumable,
   PickedUpGear,
   PickedUpItem,
+  PickupView,
   PlayingView,
   RandomSource,
   Snapshot,
@@ -67,5 +69,6 @@ export type {
   MonsterAction,
   MonsterState,
   PageId,
+  PickupState,
   PlayState,
 } from './state';

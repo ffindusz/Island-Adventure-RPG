@@ -2,6 +2,7 @@ import { createGame } from '../src/core';
 import type {
   AreaDefinition,
   ChaserMonsterDefinition,
+  ChestView,
   ConsumableId,
   ContentDefinition,
   Direction,
@@ -196,6 +197,17 @@ export function cacheAt(
   return { kind: 'chest', id, tile: { col, row }, contents: { kind: 'consumable', consumable, amount } };
 }
 
+/** A pickup on the tile (col, row): some Healing Potions, or another consumable if one is named, walked onto to take. */
+export function pickupAt(
+  id: string,
+  col: number,
+  row: number,
+  amount: number,
+  consumable: ConsumableId = 'healing-potion',
+): InteractableDefinition {
+  return { kind: 'pickup', id, tile: { col, row }, consumable, amount };
+}
+
 /** A milestone that gives the given Experience when the hero's body first overlaps the block of tiles `zone`. */
 export function milestone(id: string, zone: TileRect, experience: number): MilestoneDefinition {
   return { id, zone, reward: { experience } };
@@ -351,6 +363,11 @@ export function playingView(game: Game): PlayingView {
     throw new Error(`Expected a game in play, but it is at the ${view.phase}`);
   }
   return view;
+}
+
+/** The chests the view shows, opened ones included, in the order the content places them. */
+export function chestViews(game: Game): ChestView[] {
+  return playingView(game).interactables.filter((item): item is ChestView => item.kind === 'chest');
 }
 
 /** A monster as the view shows it. */

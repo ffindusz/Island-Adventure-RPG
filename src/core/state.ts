@@ -38,8 +38,14 @@ export interface ChestState {
   opened: boolean;
 }
 
+/** What changes about a pickup: whether the hero has taken it. A pickup that was taken stays taken. */
+export interface PickupState {
+  readonly kind: 'pickup';
+  collected: boolean;
+}
+
 /** What changes about an interactable during the game, one member for each kind. */
-export type InteractableState = ChestState;
+export type InteractableState = ChestState | PickupState;
 
 export interface AreaState {
   /** Every monster placed in the Adventure Area, defeated ones included (at 0 Health), so that they stay defeated. */
@@ -154,7 +160,7 @@ export function freshMonsters(area: Area, content: Content): MonsterState[] {
   }));
 }
 
-/** Every interactable of an Adventure Area as the content places it: nothing opened or used yet. */
+/** Every interactable of an Adventure Area as the content places it: nothing opened, taken or used yet. */
 export function freshInteractables(area: Area): Record<string, InteractableState> {
   const fresh: Record<string, InteractableState> = {};
   for (const interactable of area.interactables) {
@@ -167,6 +173,8 @@ function freshInteractable(interactable: Interactable): InteractableState {
   switch (interactable.kind) {
     case 'chest':
       return { kind: 'chest', opened: false };
+    case 'pickup':
+      return { kind: 'pickup', collected: false };
   }
 }
 
@@ -187,13 +195,23 @@ export function currentAreaState(state: PlayState): AreaState {
   return area;
 }
 
-/** The state of an interactable of the current Adventure Area. It fails loudly for a snapshot the content does not fit. */
-export function interactableStateOf(state: PlayState, interactableId: string): InteractableState {
-  const found = currentAreaState(state).interactables[interactableId];
+/**
+ * The state of an interactable of the current Adventure Area, of the kind that interactable is. It fails loudly for a
+ * snapshot the content does not fit.
+ */
+export function interactableStateOf<T extends Interactable>(
+  state: PlayState,
+  interactable: T,
+): Extract<InteractableState, { kind: T['kind'] }> {
+  const found = currentAreaState(state).interactables[interactable.id];
   if (found === undefined) {
-    throw new Error(`The state has no interactable "${interactableId}" in area "${state.areaId}"`);
+    throw new Error(`The state has no interactable "${interactable.id}" in area "${state.areaId}"`);
   }
-  return found;
+  if (found.kind !== interactable.kind) {
+    throw new Error(`The state of interactable "${interactable.id}" is that of a ${found.kind}, not a ${interactable.kind}`);
+  }
+  // The kinds match, so this is the state that was made for this kind.
+  return found as Extract<InteractableState, { kind: T['kind'] }>;
 }
 
 /** The monsters of the current Adventure Area that have not been defeated. */
