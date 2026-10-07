@@ -1,4 +1,5 @@
 import type { ContentDefinition } from '../core';
+import { overgrownTrail } from './areas/overgrown-trail';
 import { shipwreckCoast } from './areas/shipwreck-coast';
 import { gear } from './gear';
 import { hero } from './hero';
@@ -17,6 +18,6 @@ export const gameContent: ContentDefinition = {
   minimumDamage: 1,
   gear,
   monsterTypes,
-  areas: [shipwreckCoast],
+  areas: [shipwreckCoast, overgrownTrail],
   start: { area: shipwreckCoast.id, tile: { col: 4, row: 5 } },
 };
