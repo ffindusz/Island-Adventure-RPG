@@ -87,6 +87,38 @@ describe('where a projectile stops', () => {
   });
 });
 
+describe('the size of a projectile, which is a setting of its type', () => {
+  // The hero has stepped down 3 times before the shot, to y = 3.875, so its top edge is at y = 3.625. A projectile
+  // 0.25 wide flies along y = 3.5 with its bottom edge there: edges that meet do not overlap, and it flies by the hero.
+  // One that is 0.5 wide reaches 0.125 into the hero. It is as wide as the shooter, which is as wide as it may be.
+  const BROAD: RangedMonsterDefinition = { ...SHOOTER, projectile: { ...SHOOTER.projectile, size: 0.5 } };
+
+  function firedAtAHeroBelowTheRow(shooter: RangedMonsterDefinition): Game {
+    const game = enemyField([shooterAt('shooter-1', 2, 3)], { monsterTypes: { shooter } });
+    walk(game, 'down', 3);
+    advance(game, 27);
+    expect(game.step()).toEqual([{ type: 'monster-fired', monsterId: 'shooter-1', direction: 'right' }]); // step 31
+    return game;
+  }
+
+  it('flies by a hero whose top edge only meets its bottom edge', () => {
+    const game = firedAtAHeroBelowTheRow(SHOOTER);
+
+    expect(advance(game, 70)).toEqual([]); // steps 32 to 101: its back edge has passed the hero's right edge
+    expect(playingView(game).arrows).toEqual([{ position: { x: 6.875, y: 3.5 }, ...MONSTER_SHOT }]);
+    expect(playingView(game).hero.health).toBe(10);
+  });
+
+  it('is drawn as wide as its type says, and reaches into that hero when it is broader', () => {
+    const game = firedAtAHeroBelowTheRow(BROAD);
+    expect(playingView(game).arrows).toEqual([{ position: { x: 2.5, y: 3.5 }, ...MONSTER_SHOT, size: 0.5 }]);
+
+    // Its front edge, at x = 2.75 + 0.0625 k, meets the hero's left edge at x = 6.25 after 56 moves, and it touches the hero.
+    expect(advance(game, 55)).toEqual([]);
+    expect(game.step()).toEqual([{ type: 'hero-hit', monsterId: 'shooter-1', damage: 4, health: 6 }]); // step 87
+  });
+});
+
 describe('a projectile and the arrows of the hero', () => {
   /** The hero has opened the cache below it, has the bow in hand and faces left, toward the shooter on its left. */
   function archerAgainst(shooter: RangedMonsterDefinition): Game {
