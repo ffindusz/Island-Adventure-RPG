@@ -101,6 +101,15 @@ export interface AreaTextState {
   stepsLeft: number;
 }
 
+/**
+ * The Checkpoint that defeat sends the hero back to: the last one it touched, or the start of the adventure before it
+ * has touched any. It is a place, not a Checkpoint of the content, since the start need not be one.
+ */
+export interface CheckpointState {
+  readonly areaId: string;
+  readonly tile: Tile;
+}
+
 export interface PlayState {
   readonly phase: 'playing';
   /** The Adventure Area the hero is in. */
@@ -110,6 +119,8 @@ export interface PlayState {
    * one place to change when Checkpoints send the hero somewhere else.
    */
   arrivedAt: Tile;
+  /** Where defeat sends the hero. It does not change until the hero touches a Checkpoint (see checkpoints.ts). */
+  checkpoint: CheckpointState;
   /** The text of the Adventure Area that is shown now, if any. It runs down while the game is not paused. */
   areaText: AreaTextState | null;
   hero: HeroState;
@@ -145,6 +156,7 @@ export function newPlayState(content: Content): PlayState {
     phase: 'playing',
     areaId: content.start.areaId,
     arrivedAt: { ...content.start.tile },
+    checkpoint: { areaId: content.start.areaId, tile: { ...content.start.tile } },
     areaText: null,
     hero: {
       position: centerOf(content.start.tile),

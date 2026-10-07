@@ -1,7 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { createGame } from '../src/core';
-import type { AreaDefinition, ContentDefinition, EntranceDefinition, ExitDefinition } from '../src/core';
-import { ARENA_LAYOUT, arena, chestAt, dummyAt, fixedRandom, pickupAt } from './fixtures';
+import type {
+  AreaDefinition,
+  CheckpointDefinition,
+  ContentDefinition,
+  EntranceDefinition,
+  ExitDefinition,
+} from '../src/core';
+import {
+  ARENA_LAYOUT,
+  advance,
+  arena,
+  biterAt,
+  chestAt,
+  dummyAt,
+  fixedRandom,
+  newGame,
+  pickupAt,
+  playingView,
+  walk,
+} from './fixtures';
 import type { ArenaOptions } from './fixtures';
 
 // The test world: the arena and a cellar, both 7 x 6 tiles (see fixtures.ts), each with an exit into the other.
@@ -93,5 +111,53 @@ describe('Checkpoints in the content', () => {
       arena({ checkpoints: [{ id: 'gate', tile: { col: 2, row: 3 } }], monsters: [dummyAt('dummy', 2, 3)] }),
       'Area "arena": Checkpoint "gate" is placed at (col 2, row 3), where monster "dummy" starts',
     );
+  });
+});
+
+// The hero stands at (3.5, 3.5) and the camp is the tile below it. Walking down, the bottom edge of the hero's body
+// reaches the camp, at y = 4, after 2 steps and overlaps it on the 3rd.
+const CAMP: CheckpointDefinition = { id: 'camp', tile: { col: 3, row: 4 } };
+const CAMP_VIEW = { id: 'camp', position: { x: 3.5, y: 4.5 }, size: 1 };
+const CAMP_ACTIVATED = { type: 'checkpoint-activated', checkpointId: 'camp' } as const;
+
+// A biter beside the hero: it starts its wind-up on the 1st step with the hero in its zone, and strikes on the 31st
+// step for 5 damage. The zone stays where it was, and it still covers the hero at the camp.
+const BITER_BESIDE_HERO = biterAt('biter', 4, 3);
+const BITE = { type: 'hero-hit', monsterId: 'biter', damage: 5, health: 5 } as const;
+
+describe('Touching a Checkpoint', () => {
+  it('activates it, which the event and the view say', () => {
+    const game = newGame(arena({ checkpoints: [CAMP] }));
+    expect(playingView(game).checkpoints).toEqual([{ ...CAMP_VIEW, active: false }]);
+
+    expect(walk(game, 'down', 2)).not.toContainEqual(CAMP_ACTIVATED);
+    expect(playingView(game).checkpoints).toEqual([{ ...CAMP_VIEW, active: false }]);
+
+    expect(walk(game, 'down', 1)).toContainEqual(CAMP_ACTIVATED);
+    expect(playingView(game).checkpoints).toEqual([{ ...CAMP_VIEW, active: true }]);
+  });
+
+  it('restores the hero to full Health', () => {
+    const game = newGame(arena({ checkpoints: [CAMP], monsters: [BITER_BESIDE_HERO] }));
+    expect(advance(game, 31)).toContainEqual(BITE);
+    expect(playingView(game).hero.health).toBe(5);
+
+    walk(game, 'down', 3);
+
+    expect(playingView(game).hero.health).toBe(10);
+  });
+
+  it('happens as the hero comes onto it: standing there does nothing more, and coming back does', () => {
+    const game = newGame(arena({ checkpoints: [CAMP], monsters: [BITER_BESIDE_HERO] }));
+    walk(game, 'down', 3);
+
+    const standing = advance(game, 28);
+    expect(standing).toContainEqual(BITE);
+    expect(standing).not.toContainEqual(CAMP_ACTIVATED);
+    expect(playingView(game).hero.health).toBe(5);
+
+    walk(game, 'up', 3);
+    expect(walk(game, 'down', 3)).toContainEqual(CAMP_ACTIVATED);
+    expect(playingView(game).hero.health).toBe(10);
   });
 });

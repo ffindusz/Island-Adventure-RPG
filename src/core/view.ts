@@ -1,5 +1,6 @@
 import { areaOf, monsterTypeOf } from './content';
 import type { Content, Interactable } from './content';
+import { isActive } from './checkpoints';
 import { STAT_IDS } from './definitions';
 import { carriedGear } from './gear';
 import { centerOfBox } from './geometry';
@@ -27,6 +28,12 @@ export function buildView(state: GameState, content: Content): GameView {
     phase: 'playing',
     area: { id: area.id, name: area.name, width: area.width, height: area.height, terrain: area.terrain },
     exits: area.exits.map((exit) => ({ id: exit.id, zone: { ...exit.zone } })),
+    checkpoints: area.checkpoints.map((checkpoint) => ({
+      id: checkpoint.id,
+      position: centerOfBox(checkpoint.body),
+      size: checkpoint.body.maxX - checkpoint.body.minX,
+      active: isActive(state, area.id, checkpoint),
+    })),
     areaText: state.areaText?.text ?? null,
     hero: {
       position: { x: state.hero.position.x, y: state.hero.position.y },

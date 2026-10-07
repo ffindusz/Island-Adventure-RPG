@@ -114,6 +114,11 @@ export type GameEvent =
   /** The hero took this weapon in hand. */
   | { readonly type: 'weapon-switched'; readonly weapon: WeaponSlot }
   /**
+   * The hero came onto this Checkpoint. It is the one defeat sends the hero back to now, and the hero's Health is
+   * restored to full. Nothing else is restored: the Ammunition and the Healing Potions the hero has stay as they are.
+   */
+  | { readonly type: 'checkpoint-activated'; readonly checkpointId: string }
+  /**
    * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health where
    * defeat sends it, and the monsters of the Adventure Area it is in are back as they began: the view shows the new
    * state. The monsters of other Adventure Areas are as they were.
@@ -233,6 +238,17 @@ export interface ExitView {
   readonly zone: Box;
 }
 
+/** A Checkpoint of the Adventure Area the hero is in, for the adapter to draw. */
+export interface CheckpointView {
+  readonly id: string;
+  /** The centre of the tile it stands on. */
+  readonly position: Point;
+  /** Width and height of the tile it stands on, in tiles. */
+  readonly size: number;
+  /** Whether defeat sends the hero back here now: it is the last one the hero touched, or the start of the adventure. */
+  readonly active: boolean;
+}
+
 export interface TitleView {
   readonly phase: 'title';
 }
@@ -308,6 +324,8 @@ export interface PlayingView {
   readonly area: AreaView;
   /** The exits of the Adventure Area the hero is in. */
   readonly exits: readonly ExitView[];
+  /** The Checkpoints of the Adventure Area the hero is in, in the order the content places them. */
+  readonly checkpoints: readonly CheckpointView[];
   /** The short text of the Adventure Area while it is shown: for a few seconds after the hero first comes in. */
   readonly areaText: string | null;
   readonly hero: HeroView;
