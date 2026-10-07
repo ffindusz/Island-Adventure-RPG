@@ -4,7 +4,7 @@
 
 **Blocked by:** 05: Gear and the inventory
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 38, 47, 48
 
@@ -16,6 +16,8 @@
 - [ ] Reviewer play check (manual, in a browser): take damage, open the inventory, use a potion, and confirm the Health and the count.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 429bccd
 
 ### What was built
 
