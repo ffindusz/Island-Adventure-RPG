@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import type { Command, Game, GameEvent, GameView } from '../core';
+import { AreaBanner } from './area-banner';
 import {
   drawArrow,
+  drawExits,
   drawHero,
   drawInteractable,
   drawMonster,
@@ -10,6 +12,7 @@ import {
   drawTelegraph,
   drawTerrain,
 } from './art';
+import { scrollFor } from './camera';
 import { Feedback } from './feedback';
 import { FixedStepClock } from './fixed-step';
 import { Hud } from './hud';
@@ -20,6 +23,9 @@ import { PlayerInput } from './player-input';
 
 /** How long the screen takes to fade in after the hero is defeated and returned, in milliseconds. */
 const DEFEAT_FADE_MS = 500;
+
+/** How long the screen takes to fade in after the hero comes into another Adventure Area, in milliseconds. */
+const AREA_FADE_MS = 250;
 
 /** Whether the player can be looking at the game: its tab is showing and its window has the keyboard focus. */
 function playerIsWatching(): boolean {
@@ -42,6 +48,7 @@ export class PlayScene extends Phaser.Scene {
   private readonly inventoryMenu = new InventoryMenu();
   private playerInput!: PlayerInput;
   private hud!: Hud;
+  private banner!: AreaBanner;
   private notice!: Notice;
   private overlay!: Overlay;
   private terrainLayer!: Phaser.GameObjects.Graphics;
@@ -57,12 +64,14 @@ export class PlayScene extends Phaser.Scene {
 
   create(): void {
     // Added in drawing order: ground, then the telegraphs of monster attacks, then chests, hero and monsters, then the
-    // swings and strikes on top. The HUD draws above them all, the notice above the HUD, and the overlay above that.
+    // swings and strikes on top. The HUD draws above them all, then the text of the area, the notice above that, and the
+    // overlay above that. The world scrolls with the camera; the HUD, the text, the notice and the overlay do not.
     this.terrainLayer = this.add.graphics();
     this.telegraphLayer = this.add.graphics();
     this.entityLayer = this.add.graphics();
     this.effectLayer = this.add.graphics();
     this.hud = new Hud(this);
+    this.banner = new AreaBanner(this);
     this.notice = new Notice(this);
     this.overlay = new Overlay(this);
     const keyboard = this.input.keyboard;
@@ -100,6 +109,9 @@ export class PlayScene extends Phaser.Scene {
     if (events.some((event) => event.type === 'hero-defeated')) {
       // The core has already put the hero back; the fade hides the cut. The world keeps running while it plays.
       this.cameras.main.fadeIn(DEFEAT_FADE_MS, 0, 0, 0);
+    } else if (events.some((event) => event.type === 'area-changed')) {
+      // The core has already put the hero into the next area; a short fade hides the cut. The world keeps running.
+      this.cameras.main.fadeIn(AREA_FADE_MS, 0, 0, 0);
     }
     const view = this.core.view();
     if (gameIsWaiting(view)) {
@@ -115,8 +127,12 @@ export class PlayScene extends Phaser.Scene {
     }
     if (this.drawnAreaId !== view.area.id) {
       drawTerrain(this.terrainLayer, view.area);
+      drawExits(this.terrainLayer, view.exits);
       this.drawnAreaId = view.area.id;
     }
+    // The camera follows the hero, and shows a small area in the middle of the screen.
+    const scroll = scrollFor(view.hero.position, view.area);
+    this.cameras.main.setScroll(scroll.x, scroll.y);
     this.telegraphLayer.clear();
     this.entityLayer.clear();
     for (const interactable of view.interactables) {
@@ -140,6 +156,8 @@ export class PlayScene extends Phaser.Scene {
       drawStrike(this.effectLayer, zone);
     }
     this.hud.draw(view);
+    // A page or a Stat Point covers the text of the area; the core keeps its time frozen, so it is back afterwards.
+    this.banner.draw(gameIsWaiting(view) ? null : view.areaText);
     this.notice.draw(this.feedback.notice());
     this.overlay.draw(view, watching, this.inventoryMenu.position);
   }

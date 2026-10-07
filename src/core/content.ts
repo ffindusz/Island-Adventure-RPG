@@ -1,3 +1,4 @@
+import { checkConnections, loadEntrances, loadExits } from './connections';
 import { CONSUMABLE_IDS, GEAR_SLOTS, STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
@@ -19,16 +20,19 @@ import type {
   PickupDefinition,
   ProgressionDefinition,
   RangedWeaponDefinition,
-  TileRect,
 } from './definitions';
 import type { Box, Tile } from './geometry';
 import { msToSteps, STEP_MS, STEPS_PER_SECOND } from './time';
+import { zoneBox } from './zones';
 
 // Content as the rules use it: checked once when the game is created, with the lookups prepared and
 // durations and speeds converted to fixed steps. This is where new kinds of content get validated.
 
 /** Used when the content does not set a minimum damage: a hit always takes at least 1 Health. */
 const DEFAULT_MINIMUM_DAMAGE = 1;
+
+/** Used when the content does not set how long area text stays on the screen. */
+const DEFAULT_AREA_TEXT_MS = 4000;
 
 /** A milestone as the rules use it: its zone is a box in tile units, like the bodies it is compared with. */
 export interface Milestone {
@@ -57,6 +61,19 @@ export interface Pickup {
 /** An interactable as the rules use it, one member for each kind. */
 export type Interactable = Chest | Pickup;
 
+/** An entrance as the rules use it: the hero arrives standing at the centre of its tile. */
+export interface Entrance {
+  readonly id: string;
+  readonly tile: Tile;
+}
+
+/** An exit as the rules use it: its zone is a box in tile units, like the bodies it is compared with. */
+export interface Exit {
+  readonly id: string;
+  readonly zone: Box;
+  readonly to: { readonly areaId: string; readonly entranceId: string };
+}
+
 export interface Area {
   readonly id: string;
   readonly name: string;
@@ -69,6 +86,12 @@ export interface Area {
   readonly monsters: readonly MonsterPlacement[];
   readonly milestones: readonly Milestone[];
   readonly interactables: readonly Interactable[];
+  /** Where the hero can arrive: at least one. */
+  readonly entrances: readonly Entrance[];
+  /** Where the hero can leave: the exits, each leading to an entrance of another area. */
+  readonly exits: readonly Exit[];
+  /** A short text shown the first time the hero enters, or null for none. */
+  readonly text: string | null;
 }
 
 /** A stationary monster type as the rules use it. */
@@ -132,6 +155,8 @@ export interface Content {
   readonly gear: Readonly<Record<string, GearDefinition>>;
   readonly monsterTypes: Readonly<Record<string, MonsterType>>;
   readonly areas: Readonly<Record<string, Area>>;
+  /** How many fixed steps the text of an Adventure Area stays on the screen. */
+  readonly areaTextSteps: number;
   readonly start: { readonly areaId: string; readonly tile: Tile };
 }
 
@@ -143,6 +168,12 @@ export function loadContent(definition: ContentDefinition): Content {
   const rangedWeapon = loadRangedWeapon(definition.hero.rangedWeapon, definition.hero.size);
   const minimumDamage = definition.minimumDamage ?? DEFAULT_MINIMUM_DAMAGE;
   requireZeroOrMore('The minimum damage', minimumDamage);
+  const areaTextMs = definition.areaTextMs ?? DEFAULT_AREA_TEXT_MS;
+  if (!(areaTextMs >= STEP_MS)) {
+    throw new Error(
+      `The area text duration must be at least one fixed step (${STEP_MS.toFixed(1)} ms), but it is ${areaTextMs}`,
+    );
+  }
   const progression = loadProgression(definition.progression);
   requireMoreThanZero('The Health a Healing Potion restores', definition.healingPotion.restores);
   const monsterTypes: Record<string, MonsterType> = {};
@@ -173,6 +204,7 @@ export function loadContent(definition: ContentDefinition): Content {
       `The start tile ${describeTile(definition.start.tile)} of area "${startArea.id}" is ${NOT_WALKABLE}`,
     );
   }
+  checkConnections(areas, definition.hero.size);
   return {
     hero: {
       size: definition.hero.size,
@@ -192,6 +224,7 @@ export function loadContent(definition: ContentDefinition): Content {
     gear,
     monsterTypes,
     areas,
+    areaTextSteps: msToSteps(areaTextMs),
     start: { areaId: definition.start.area, tile: definition.start.tile },
   };
 }
@@ -411,6 +444,7 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition, usedIds: 
   });
   const width = tiles[0]?.length ?? 0;
   const height = tiles.length;
+  const isWalkable = (tile: Tile) => tiles[tile.row]?.[tile.col]?.solid === false;
   const loaded: Omit<Area, 'interactables'> = {
     id: area.id,
     name: area.name,
@@ -420,6 +454,9 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition, usedIds: 
     solid: tiles.map((row) => row.map((terrain) => terrain.solid)),
     monsters: area.monsters,
     milestones: (area.milestones ?? []).map((milestone) => loadMilestone(area.id, milestone, width, height, usedIds)),
+    entrances: loadEntrances(area, isWalkable),
+    exits: loadExits(area, width, height),
+    text: loadAreaText(area),
   };
   for (const monster of area.monsters) {
     if (definition.monsterTypes[monster.type] === undefined) {
@@ -438,6 +475,17 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition, usedIds: 
   return { ...loaded, interactables: loadInteractables(area, definition, loaded, usedIds) };
 }
 
+/** The text of an Adventure Area, or null when it has none. */
+function loadAreaText(area: AreaDefinition): string | null {
+  if (area.text === undefined) {
+    return null;
+  }
+  if (area.text.trim() === '') {
+    throw new Error(`Area "${area.id}": the area text is blank`);
+  }
+  return area.text;
+}
+
 /** `width` and `height` are the size of the map of the Adventure Area, in tiles. */
 function loadMilestone(
   areaId: string,
@@ -450,24 +498,9 @@ function loadMilestone(
     throw new Error(`Milestone id "${milestone.id}" is used more than once`);
   }
   usedIds.milestones.add(milestone.id);
-  const { zone } = milestone;
-  const what = `Area "${areaId}": the zone of milestone "${milestone.id}" ${describeZone(zone)}`;
-  if (![zone.col, zone.row, zone.width, zone.height].every(Number.isInteger) || zone.width < 1 || zone.height < 1) {
-    throw new Error(`${what} must be whole tiles, at least one wide and one high`);
-  }
-  if (zone.col < 0 || zone.row < 0 || zone.col + zone.width > width || zone.row + zone.height > height) {
-    throw new Error(`${what} reaches outside the map`);
-  }
+  const zone = zoneBox(`Area "${areaId}": the zone of milestone "${milestone.id}"`, milestone.zone, width, height);
   requireZeroOrMore(`Milestone "${milestone.id}": experience`, milestone.reward.experience);
-  return {
-    id: milestone.id,
-    zone: { minX: zone.col, minY: zone.row, maxX: zone.col + zone.width, maxY: zone.row + zone.height },
-    reward: milestone.reward,
-  };
-}
-
-function describeZone(zone: TileRect): string {
-  return `(col ${zone.col}, row ${zone.row}, ${zone.width} wide, ${zone.height} high)`;
+  return { id: milestone.id, zone, reward: milestone.reward };
 }
 
 /**

@@ -6,6 +6,7 @@ import type {
   ChestView,
   ConsumableId,
   Direction,
+  ExitView,
   HeroView,
   InteractableView,
   MonsterView,
@@ -56,6 +57,7 @@ const FLASK_LIQUID_COLOUR = 0xe0455f;
 const FLASK_SHINE_COLOUR = 0xffffff;
 const ARROW_SHAFT_COLOUR = 0xf0e6c8;
 const ARROW_HEAD_COLOUR = 0xffffff;
+const EXIT_COLOUR = 0xbfeaff;
 
 /** The shape of an arrow in flight, in pixels: how far the shaft and the head reach back from the tip, and how wide. */
 const ARROW_SHAFT_LENGTH = 12;
@@ -112,6 +114,23 @@ export function drawTerrain(graphics: Graphics, area: AreaView): void {
       graphics.fillRect(x + TILE_SIZE - 1, y, 1, TILE_SIZE - 1);
     });
   });
+}
+
+/**
+ * Marks where the hero can leave the area: a pale, see-through patch with a bright edge, over the ground. Draw it
+ * once per area, after the terrain, because exits do not change.
+ */
+export function drawExits(graphics: Graphics, exits: readonly ExitView[]): void {
+  for (const exit of exits) {
+    const rect = zoneRect(exit.zone);
+    graphics.fillStyle(EXIT_COLOUR, 0.3);
+    graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
+    graphics.fillStyle(EXIT_COLOUR, 0.9);
+    graphics.fillRect(rect.x, rect.y, rect.width, 1);
+    graphics.fillRect(rect.x, rect.y + rect.height - 1, rect.width, 1);
+    graphics.fillRect(rect.x, rect.y + 1, 1, rect.height - 2);
+    graphics.fillRect(rect.x + rect.width - 1, rect.y + 1, 1, rect.height - 2);
+  }
 }
 
 /** Draws what the hero can interact with or walk onto. Real art replaces this, one kind at a time. */

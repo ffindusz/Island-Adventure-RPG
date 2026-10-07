@@ -49,15 +49,23 @@ export class Feedback {
         case 'out-of-ammunition':
           this.told = { content: { kind: 'out-of-ammunition' }, msLeft: NOTICE_MS };
           break;
+        case 'area-changed':
+          this.clearFight();
+          break;
         case 'hero-defeated':
           // The fight is over and the monsters are back as they began: nothing of it should linger on the new scene.
-          this.swings = [];
-          this.strikes = [];
-          this.flashes.clear();
+          this.clearFight();
           this.heroHurtMsLeft = 0;
           break;
       }
     }
+  }
+
+  /** Forgets the swings, strikes and flashes of a fight, such as when its monsters are left behind in another area. */
+  private clearFight(): void {
+    this.swings = [];
+    this.strikes = [];
+    this.flashes.clear();
   }
 
   /** Lets one frame's time pass; feedback that has run out disappears. */

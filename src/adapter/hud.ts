@@ -52,6 +52,17 @@ function countWidth(count: string): number {
   return Math.max(textWidthOf(count), textWidthOf('0'.repeat(COUNT_DIGITS)));
 }
 
+/** The height of the row of the heart and the numbers of Health. */
+const HEALTH_ROW_HEIGHT = bitmapHeight(HEART);
+/** The height of the panel: its rows one under the other with a gap between, inside the padding. Add a new row here. */
+const PANEL_HEIGHT = HEALTH_ROW_HEIGHT + GAP + BAR_HEIGHT + GAP + WEAPON_HEIGHT + 2 * PADDING;
+
+/**
+ * The canvas pixel row where the HUD ends. What else sits at the top of the screen, the text of an Adventure Area for
+ * one, starts below it and so follows when the panel grows.
+ */
+export const HUD_BOTTOM = MARGIN + PANEL_HEIGHT;
+
 /**
  * The hero's Health, as a heart, "current/maximum" and a bar, and under it the weapon in hand, the Ammunition and the
  * Healing Potions.
@@ -88,10 +99,9 @@ export class Hud {
     const arrowWidth = bitmapWidth(ARROW);
     const potionWidth = bitmapWidth(POTION);
     const healthWidth = heartWidth + GAP + textWidth;
-    const rowHeight = bitmapHeight(HEART);
     const left = MARGIN + PADDING;
     const top = MARGIN + PADDING;
-    const barTop = top + rowHeight + GAP;
+    const barTop = top + HEALTH_ROW_HEIGHT + GAP;
     const weaponTop = barTop + BAR_HEIGHT + GAP;
     const arrowLeft = left + WEAPON_WIDTH + GAP;
     const ammunitionLeft = arrowLeft + arrowWidth + GAP;
@@ -103,14 +113,9 @@ export class Hud {
     const graphics = this.graphics;
     graphics.clear();
     graphics.fillStyle(PANEL_COLOUR, PANEL_ALPHA);
-    graphics.fillRect(
-      MARGIN,
-      MARGIN,
-      contentWidth + 2 * PADDING,
-      rowHeight + GAP + BAR_HEIGHT + GAP + WEAPON_HEIGHT + 2 * PADDING,
-    );
+    graphics.fillRect(MARGIN, MARGIN, contentWidth + 2 * PADDING, PANEL_HEIGHT);
     drawBitmap(graphics, HEART, left, top, HEART_COLOUR);
-    const textTop = top + (rowHeight - TEXT_HEIGHT) / 2;
+    const textTop = top + (HEALTH_ROW_HEIGHT - TEXT_HEIGHT) / 2;
     drawText(graphics, `${current}/${maximum}`, left + heartWidth + GAP, textTop, TEXT_COLOUR);
     graphics.fillStyle(BAR_TRACK_COLOUR);
     graphics.fillRect(left, barTop, contentWidth, BAR_HEIGHT);
