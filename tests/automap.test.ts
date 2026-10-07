@@ -8,7 +8,7 @@ import type {
   ExitDefinition,
   Game,
 } from '../src/core';
-import { ARENA_LAYOUT, FIELD_LAYOUT, arena, gameAtTitle, newGame, playingView, walk } from './fixtures';
+import { ARENA_LAYOUT, FIELD_LAYOUT, advance, arena, gameAtTitle, milestone, newGame, playingView, walk } from './fixtures';
 import type { ArenaOptions } from './fixtures';
 
 // The Automap, tested at the Game core's interface: commands and steps in, the page view and the snapshot out.
@@ -470,5 +470,73 @@ describe('The Automap on arrival in another Adventure Area', () => {
     ]);
     expect(exitIds(game, 'cellar')).toEqual(['to-arena', 'to-attic']);
     expect(automap(game).areas.map((area) => area.discovered)).toEqual([true, true, true]);
+  });
+});
+
+describe('The Automap page', () => {
+  const OPEN_STATS = { type: 'open-page', page: 'stats' } as const;
+
+  it('opens over the game when asked to and closes when asked to', () => {
+    const game = newGame(route());
+    expect(playingView(game).page).toBeNull();
+
+    game.send(OPEN_AUTOMAP);
+    expect(playingView(game).page).toMatchObject({ id: 'automap' });
+
+    game.send(CLOSE_AUTOMAP);
+    expect(playingView(game).page).toBeNull();
+  });
+
+  it('pauses the game: with a key held, stepping neither walks the hero nor reveals more', () => {
+    const game = newGame(route({ automapRevealDistance: 1.5 }));
+    game.send({ type: 'move', direction: 'right' });
+    advance(game, 2);
+    game.send(OPEN_AUTOMAP);
+    const before = game.snapshot();
+
+    const events = advance(game, 200);
+
+    expect(events).toEqual([]);
+    expect(game.snapshot()).toEqual(before);
+
+    // Closed, the page lets the walk go on from where it stopped: the 4th step reaches tile (4, 3), next to the exit.
+    game.send(CLOSE_AUTOMAP);
+    advance(game, 2);
+    expect(exitIds(game, 'arena')).toEqual(['to-cellar']);
+  });
+
+  it('does not open over a Stat Point that waits to be assigned, and opens once it is assigned', () => {
+    const game = newGame(route({ milestones: [milestone('start', { col: 3, row: 3, width: 1, height: 1 }, 10)] }));
+    advance(game, 1);
+    expect(playingView(game).levelUp).not.toBeNull();
+
+    expect(game.send(OPEN_AUTOMAP)).toEqual([]);
+    expect(playingView(game).page).toBeNull();
+
+    game.send({ type: 'assign-stat-point', stat: 'attack' });
+    game.send(OPEN_AUTOMAP);
+    expect(playingView(game).page).toMatchObject({ id: 'automap' });
+  });
+
+  it('does not open over another page, and no other page opens over it', () => {
+    const game = newGame(route());
+
+    game.send(OPEN_STATS);
+    game.send(OPEN_AUTOMAP);
+    expect(playingView(game).page).toMatchObject({ id: 'stats' });
+    game.send({ type: 'close-page', page: 'stats' });
+
+    game.send(OPEN_AUTOMAP);
+    game.send(OPEN_STATS);
+    expect(playingView(game).page).toMatchObject({ id: 'automap' });
+  });
+
+  it('is closed by closing the Automap, and not by closing another page', () => {
+    const game = newGame(route());
+    game.send(OPEN_AUTOMAP);
+
+    game.send({ type: 'close-page', page: 'stats' });
+
+    expect(playingView(game).page).toMatchObject({ id: 'automap' });
   });
 });
