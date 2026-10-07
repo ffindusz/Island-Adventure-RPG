@@ -28,8 +28,6 @@ const BOW_POSE_MS = 180;
 const HURT_MS = 200;
 const HURT_BLINK_MS = 60;
 const HURT_COLOUR = 0xff3b3b;
-/** How long the hero lies there after it was defeated, unless it moves or attacks first. */
-const DEFEATED_MS = 700;
 
 /** Where the hand is in the attack pose of each direction, in pixels from the middle of the hero. */
 const HAND: Readonly<Record<Direction, Point>> = {
@@ -78,7 +76,7 @@ export class HeroSprite {
   private readonly arrows: Phaser.GameObjects.Image[] = [];
   private pose: Pose | null = null;
   private hurtMsIn: number | null = null;
-  private defeatedMsLeft = 0;
+  private lying = false;
   private walkMs = 0;
   private movingMsLeft = 0;
   private lastPosition: Point | null = null;
@@ -110,19 +108,27 @@ export class HeroSprite {
           this.lastPosition = null;
           break;
         case 'hero-defeated':
-          // The Game core has already put the hero back at its start, whole again: it lies there until it moves.
+          // The hero lies where the last frame drew it until the scene says the fall is over (see getUp). The blink of
+          // the blow that did it goes on meanwhile.
           this.pose = null;
-          this.hurtMsIn = null;
-          this.defeatedMsLeft = DEFEATED_MS;
-          this.lastPosition = null;
+          this.lying = true;
           break;
       }
     }
   }
 
+  /** The fall is over and the hero stands at its Checkpoint, whole again: nothing of the life that ended shows on it. */
+  getUp(): void {
+    this.lying = false;
+    this.pose = null;
+    this.hurtMsIn = null;
+    this.lastPosition = null;
+    this.movingMsLeft = 0;
+    this.walkMs = 0;
+  }
+
   private startPose(weapon: Weapon, direction: Direction): void {
     this.pose = { weapon, direction, msIn: 0 };
-    this.defeatedMsLeft = 0;
   }
 
   /** Lets one frame's time pass. */
@@ -139,7 +145,6 @@ export class HeroSprite {
         this.hurtMsIn = null;
       }
     }
-    this.defeatedMsLeft = Math.max(0, this.defeatedMsLeft - frameMs);
     this.movingMsLeft = Math.max(0, this.movingMsLeft - frameMs);
     this.walkMs = this.movingMsLeft > 0 ? this.walkMs + frameMs : 0;
   }
@@ -167,13 +172,12 @@ export class HeroSprite {
     const last = this.lastPosition;
     if (last !== null && (last.x !== position.x || last.y !== position.y)) {
       this.movingMsLeft = MOVING_HOLD_MS;
-      this.defeatedMsLeft = 0;
     }
     this.lastPosition = { x: position.x, y: position.y };
   }
 
   private heroFrame(facing: Direction): number {
-    if (this.defeatedMsLeft > 0) {
+    if (this.lying) {
       return DEAD_FRAME;
     }
     if (this.pose !== null) {

@@ -19,6 +19,7 @@ export class Feedback {
   private strikes: ZoneFlash[] = [];
   private readonly flashes = new Map<string, number>();
   private told: { readonly content: NoticeContent; readonly msLeft: number } | null = null;
+  private falling = false;
 
   /** Starts the feedback for events the Game core just reported. */
   show(events: readonly GameEvent[]): void {
@@ -43,17 +44,26 @@ export class Feedback {
           this.told = { content: { kind: 'checkpoint' }, msLeft: NOTICE_MS };
           break;
         case 'area-changed':
-          this.clearFight();
+          // After a defeat the return to another area is shown only when the fall is over: see endFall.
+          if (!this.falling) {
+            this.clearFight();
+          }
           break;
         case 'hero-defeated':
-          // The fight is over and the monsters are back as they began: nothing of it should linger on the new scene.
-          // The notice on the screen told of what happened before the fall, and what the hero found since the Checkpoint
-          // is back where it was, so it goes too.
-          this.clearFight();
+          // The blow that did it stays on the screen while the hero lies where it fell, and the fight goes at endFall.
+          // The notice told of what happened before the fall, and what the hero found since the Checkpoint is back where
+          // it was, so it goes now.
+          this.falling = true;
           this.told = null;
           break;
       }
     }
+  }
+
+  /** The hero's fall is over: the fight that ended it is left behind, in the place the hero fell in. */
+  endFall(): void {
+    this.falling = false;
+    this.clearFight();
   }
 
   /** Forgets the strikes and flashes of a fight, such as when its monsters are left behind in another area. */

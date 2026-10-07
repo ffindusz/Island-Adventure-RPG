@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { Command, Game, GameEvent, GameView } from '../core';
+import type { Command, Game, GameEvent, GameView, PlayingView } from '../core';
 import { AreaBanner } from './area-banner';
 import {
   drawCheckpoints,
@@ -15,6 +15,7 @@ import { ARTWORK } from './artwork';
 import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import { scrollFor } from './camera';
 import { DEPTH } from './depths';
+import { Fall, FALL_FADE_OUT_MS } from './fall';
 import { Feedback } from './feedback';
 import { FixedStepClock } from './fixed-step';
 import { HeroSprite } from './hero-sprite';
@@ -61,6 +62,11 @@ export class PlayScene extends Phaser.Scene {
   private entityLayer!: Phaser.GameObjects.Graphics;
   private effectLayer!: Phaser.GameObjects.Graphics;
   private drawnAreaId: string | null = null;
+  /** The last frame drawn of the game in play, which is what the screen shows of the place the hero falls in. */
+  private lastPlaying: PlayingView | null = null;
+  /** The fall of the hero that is on the screen now, if any: no step of the Game core runs until it is over. */
+  private fall: Fall | null = null;
+  private fadingOut = false;
 
   constructor(core: Game) {
     super('play');
@@ -81,6 +87,9 @@ export class PlayScene extends Phaser.Scene {
     // above that, and the overlay above that. The world scrolls with the camera; the HUD, the text, the notice and the
     // overlay do not.
     this.terrainLayer = this.add.graphics();
+    this.drawnAreaId = null;
+    this.lastPlaying = null;
+    this.fall = null;
     this.telegraphLayer = this.add.graphics();
     this.entityLayer = this.add.graphics();
     this.heroSprite = new HeroSprite(this);
@@ -98,6 +107,14 @@ export class PlayScene extends Phaser.Scene {
 
   override update(_time: number, frameMs: number): void {
     const watching = playerIsWatching();
+    if (this.fall !== null) {
+      this.fall.age(frameMs);
+      if (this.fall.stage !== 'over') {
+        this.showFall(this.fall, frameMs, watching);
+        return;
+      }
+      this.endFall();
+    }
     const events: GameEvent[] = [];
     const send = (commands: readonly Command[]): void => {
       for (const command of commands) {
@@ -117,25 +134,63 @@ export class PlayScene extends Phaser.Scene {
       send(this.playerInput.pollWalking());
     }
     for (let steps = this.clock.stepsDue(frameMs, watching); steps > 0; steps -= 1) {
-      events.push(...this.core.step());
+      const happened = this.core.step();
+      events.push(...happened);
+      if (happened.some((event) => event.type === 'hero-defeated')) {
+        // The steps that remain would run in the place the hero returned to, which the player has yet to see.
+        break;
+      }
     }
     this.feedback.age(frameMs);
     this.heroSprite.age(frameMs);
     this.feedback.show(events);
     this.heroSprite.show(events);
-    if (events.some((event) => event.type === 'hero-defeated')) {
-      // The core has already put the hero back; the fade hides the cut. The world keeps running while it plays.
-      this.cameras.main.fadeIn(DEFEAT_FADE_MS, 0, 0, 0);
-    } else if (events.some((event) => event.type === 'area-changed')) {
+    const view = this.core.view();
+    if (view.phase === 'playing' && events.some((event) => event.type === 'hero-defeated')) {
+      // The core has already put the hero back at its Checkpoint, which may be in another area. The screen first shows
+      // the place the hero fell in (see fall.ts).
+      this.fall = new Fall(this.lastPlaying ?? view);
+      this.fadingOut = false;
+      this.draw(this.fall.view, watching);
+      return;
+    }
+    if (events.some((event) => event.type === 'area-changed')) {
       // The core has already put the hero into the next area; a short fade hides the cut. The world keeps running.
       this.cameras.main.fadeIn(AREA_FADE_MS, 0, 0, 0);
     }
-    const view = this.core.view();
     if (gameIsWaiting(view)) {
       // A page or a Stat Point covers the notice, and the player is already where it pointed them.
       this.feedback.dismissNotice();
     }
     this.draw(view, watching);
+    if (view.phase === 'playing') {
+      this.lastPlaying = view;
+    }
+  }
+
+  /** One frame of a fall: the world stands still with the hero lying in it, and at the end the screen fades out. */
+  private showFall(fall: Fall, frameMs: number, watching: boolean): void {
+    // What the player presses meanwhile does not count. The walk keys are read again when the fall is over.
+    this.playerInput.pollMenu();
+    this.playerInput.pollActions();
+    this.feedback.age(frameMs);
+    this.heroSprite.age(frameMs);
+    if (fall.stage === 'fading-out' && !this.fadingOut) {
+      this.fadingOut = true;
+      this.cameras.main.fadeOut(FALL_FADE_OUT_MS, 0, 0, 0);
+    }
+    this.draw(fall.view, watching);
+  }
+
+  /** The screen is black: the hero stands at its Checkpoint, whole again, and the place it returned to fades in. */
+  private endFall(): void {
+    this.fall = null;
+    this.lastPlaying = null;
+    this.heroSprite.getUp();
+    this.feedback.endFall();
+    // Whether the hero returned to another area or to this one, the ground is drawn afresh.
+    this.drawnAreaId = null;
+    this.cameras.main.fadeIn(DEFEAT_FADE_MS, 0, 0, 0);
   }
 
   private draw(view: GameView, watching: boolean): void {
