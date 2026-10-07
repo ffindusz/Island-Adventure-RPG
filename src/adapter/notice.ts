@@ -4,10 +4,15 @@ import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { CONSUMABLE_NAMES, shown, STAT_NAMES } from './labels';
 import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Graphics } from './pixel-font';
-import { pageKeyLabel } from './player-input';
+import { pageKeyLabel, switchWeaponKeyLabel } from './player-input';
 
-// The notice of what the hero just found, low on the screen where it covers neither the hero nor the HUD. It is drawn
-// from the pickup the Game core reported and nothing else.
+// The notice of what the hero just found, or that the bow has nothing to shoot, low on the screen where it covers
+// neither the hero nor the HUD. It is drawn from what the Game core reported and nothing else.
+
+/** What the notice tells the player: the item the hero picked up, or that an arrow was asked for and there is none. */
+export type NoticeContent =
+  | { readonly kind: 'pickup'; readonly item: PickedUpItem }
+  | { readonly kind: 'out-of-ammunition' };
 
 /** Above the HUD, below the overlay: a page that opens covers the notice. */
 const NOTICE_DEPTH = 150;
@@ -22,13 +27,14 @@ const BORDER_COLOUR = 0x6a6a7a;
 const TITLE_COLOUR = 0xf2c94c;
 const GAIN_COLOUR = 0x7bd35f;
 const HINT_COLOUR = 0xa0a0b0;
+const WARNING_COLOUR = 0xe8505b;
 
 interface Line {
   readonly text: string;
   readonly colour: number;
 }
 
-/** Tells the player what the hero picked up. */
+/** Tells the player what the hero picked up, or that the bow is out of Ammunition. */
 export class Notice {
   private readonly graphics: Graphics;
   private shown = 'null';
@@ -37,21 +43,33 @@ export class Notice {
     this.graphics = scene.add.graphics().setScrollFactor(0).setDepth(NOTICE_DEPTH);
   }
 
-  /** Shows the item, or nothing. It draws again only when what it shows has changed. */
-  draw(item: PickedUpItem | null): void {
-    const key = JSON.stringify(item);
+  /** Shows the content, or nothing. It draws again only when what it shows has changed. */
+  draw(content: NoticeContent | null): void {
+    const key = JSON.stringify(content);
     if (key === this.shown) {
       return;
     }
     this.shown = key;
     this.graphics.clear();
-    if (item !== null) {
-      drawLines(this.graphics, linesFor(item));
+    if (content !== null) {
+      drawLines(this.graphics, linesFor(content));
     }
   }
 }
 
-function linesFor(item: PickedUpItem): Line[] {
+function linesFor(content: NoticeContent): Line[] {
+  switch (content.kind) {
+    case 'pickup':
+      return pickupLines(content.item);
+    case 'out-of-ammunition':
+      return [
+        { text: 'OUT OF AMMUNITION', colour: WARNING_COLOUR },
+        { text: `PRESS ${switchWeaponKeyLabel()} TO SWITCH`, colour: HINT_COLOUR },
+      ];
+  }
+}
+
+function pickupLines(item: PickedUpItem): Line[] {
   switch (item.kind) {
     case 'gear':
       return [

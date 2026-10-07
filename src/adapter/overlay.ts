@@ -1,7 +1,8 @@
 import type Phaser from 'phaser';
+import { CONSUMABLE_IDS } from '../core';
 import type { InventoryPageView, LevelUpView, PageView, PlayingView, StatPageView } from '../core';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
-import { GEAR_STAT_ABBREVIATIONS, shown, STAT_NAMES } from './labels';
+import { CONSUMABLE_NAMES, GEAR_STAT_ABBREVIATIONS, shown, STAT_NAMES } from './labels';
 import { bitmapWidth, drawBitmap, drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Bitmap, Graphics } from './pixel-font';
 import { statKeyLabel } from './player-input';
@@ -164,6 +165,9 @@ function inventoryPagePanel(page: InventoryPageView, cursor: number): Panel {
   }
   rows.push(
     { kind: 'space' },
+    ...CONSUMABLE_IDS.map(
+      (id): Row => ({ kind: 'stat', label: CONSUMABLE_NAMES[id], value: String(page.consumables[id]), gain: null }),
+    ),
     { kind: 'text', text: `ATTACK ${shown(page.attack)}  DEFENSE ${shown(page.defense)}`, colour: TEXT_COLOUR },
     { kind: 'space' },
     { kind: 'text', text: 'UP/DOWN PICK ENTER EQUIP', colour: HINT_COLOUR },
