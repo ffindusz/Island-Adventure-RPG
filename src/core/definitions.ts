@@ -26,6 +26,8 @@ export interface HeroDefinition {
   readonly speedTilesPerSecond: number;
   /** The hero's base Health: the most Health the hero can have. */
   readonly health: number;
+  /** The hero's base Defense: how much it takes off the damage of every hit the hero receives. */
+  readonly defense: number;
   /** The hero's base Attack: the damage of one strike. */
   readonly attack: number;
   readonly attackCooldownMs: number;
@@ -90,6 +92,8 @@ export interface ContentDefinition {
   /** The terrain legend: every symbol a layout may use. */
   readonly terrain: Readonly<Record<string, TerrainDefinition>>;
   readonly hero: HeroDefinition;
+  /** The least damage a hit does to the hero, however high its Defense. Leave it out for the default of 1. */
+  readonly minimumDamage?: number;
   readonly monsterTypes: Readonly<Record<string, MonsterTypeDefinition>>;
   readonly areas: readonly AreaDefinition[];
   /** Where a new game begins: the hero stands at the centre of this tile, which must not be solid. */

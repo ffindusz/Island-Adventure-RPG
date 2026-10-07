@@ -1,9 +1,11 @@
 import type { Content } from './content';
 import type { GameEvent } from './interface';
 import type { PlayState } from './state';
+import { heroDefense } from './stats';
 
-/** The hero takes damage from a monster's attack. Returns what happened, in order. */
-export function hurtHero(state: PlayState, _content: Content, monsterId: string, damage: number): GameEvent[] {
-  state.hero.health = Math.max(0, state.hero.health - damage);
-  return [{ type: 'hero-hit', monsterId, damage, health: state.hero.health }];
+/** The hero takes a hit of `damage` before Defense. Returns what happened, in order. */
+export function hurtHero(state: PlayState, content: Content, monsterId: string, damage: number): GameEvent[] {
+  const received = Math.max(content.minimumDamage, damage - heroDefense(content));
+  state.hero.health = Math.max(0, state.hero.health - received);
+  return [{ type: 'hero-hit', monsterId, damage: received, health: state.hero.health }];
 }

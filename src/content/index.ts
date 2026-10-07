@@ -11,6 +11,7 @@ import { terrain } from './terrain';
 export const gameContent: ContentDefinition = {
   terrain,
   hero,
+  minimumDamage: 1,
   monsterTypes,
   areas: [shipwreckCoast],
   start: { area: shipwreckCoast.id, tile: { col: 4, row: 5 } },

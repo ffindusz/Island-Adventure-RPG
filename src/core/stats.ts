@@ -7,3 +7,8 @@ import type { Content } from './content';
 export function heroMaxHealth(content: Content): number {
   return content.hero.health;
 }
+
+/** How much each hit's damage is reduced by. */
+export function heroDefense(content: Content): number {
+  return content.hero.defense;
+}

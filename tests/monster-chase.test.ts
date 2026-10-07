@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { Game, MonsterPlacement, MonsterTypeDefinition } from '../src/core';
 import {
   advance,
   arena,
   BITER,
   biterAt,
+  fieldGame,
   monsterAction,
   monsterNamed,
   newGame,
@@ -15,29 +15,8 @@ import {
 // A biter notices the hero within 2 tiles of its body, walks 0.0625 tile a step (16 steps to cross a tile) and
 // attacks once the hero is within 0.75 tile of its body. Its body is 0.5 wide, like the hero's.
 //
-// Most of these tests use a wide field, so that monsters can be farther from the hero than they can notice it:
-//
-//   ##############      14 x 7 tiles, walkable in columns 1 to 12 and rows 1 to 5.
-//   #............#      The hero starts in the middle of tile (6, 3), at (6.5, 3.5): its body spans x 6.25 to 6.75
-//   #............#      and y 3.25 to 3.75.
-//   #............#
-//   #............#
-//   #............#
-//   ##############
-
-const FIELD = [
-  '##############',
-  '#............#',
-  '#............#',
-  '#............#',
-  '#............#',
-  '#............#',
-  '##############',
-];
-
-function fieldGame(monsters: readonly MonsterPlacement[], monsterTypes?: Record<string, MonsterTypeDefinition>): Game {
-  return newGame(arena({ layout: FIELD, start: { area: 'arena', tile: { col: 6, row: 3 } }, monsters, monsterTypes }));
-}
+// Most of these tests use the wide field of the fixtures, so that monsters can be farther from the hero than they can
+// notice it. The hero starts there in the middle of tile (6, 3), at (6.5, 3.5).
 
 describe('a monster noticing the hero', () => {
   it('stays idle and in place while the hero is farther away than its noticing distance', () => {

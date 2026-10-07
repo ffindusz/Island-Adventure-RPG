@@ -13,6 +13,9 @@ import { msToSteps, STEPS_PER_SECOND } from './time';
 // Content as the rules use it: checked once when the game is created, with the lookups prepared and
 // durations and speeds converted to fixed steps. This is where new kinds of content get validated.
 
+/** Used when the content does not set a minimum damage: a hit always takes at least 1 Health. */
+const DEFAULT_MINIMUM_DAMAGE = 1;
+
 export interface Area {
   readonly id: string;
   readonly name: string;
@@ -49,10 +52,13 @@ export interface Content {
     /** Tiles walked in one fixed step. */
     readonly speedPerStep: number;
     readonly health: number;
+    readonly defense: number;
     readonly attack: number;
     readonly attackCooldownSteps: number;
     readonly meleeWeapon: MeleeWeaponDefinition;
   };
+  /** The least damage a hit does to the hero, however high its Defense. */
+  readonly minimumDamage: number;
   readonly monsterTypes: Readonly<Record<string, MonsterType>>;
   readonly areas: Readonly<Record<string, Area>>;
   readonly start: { readonly areaId: string; readonly tile: Tile };
@@ -86,10 +92,12 @@ export function loadContent(definition: ContentDefinition): Content {
       size: definition.hero.size,
       speedPerStep: definition.hero.speedTilesPerSecond / STEPS_PER_SECOND,
       health: definition.hero.health,
+      defense: definition.hero.defense,
       attack: definition.hero.attack,
       attackCooldownSteps: msToSteps(definition.hero.attackCooldownMs),
       meleeWeapon: definition.hero.meleeWeapon,
     },
+    minimumDamage: definition.minimumDamage ?? DEFAULT_MINIMUM_DAMAGE,
     monsterTypes,
     areas,
     start: { areaId: definition.start.area, tile: definition.start.tile },

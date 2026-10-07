@@ -24,8 +24,8 @@ import type {
 //                           #...,.#      The hero starts in the middle of tile (3, 3), at (3.5, 3.5).
 //                           #######
 //   hero                    body 0.5 tiles; walks 7.5 tiles a second, which is 0.125 tile a fixed step
-//                           (8 steps to cross one tile); Attack 1; attack cooldown 400 ms, which is 24 steps;
-//                           strike reaches 1 tile beyond the body and is 1 tile wide
+//                           (8 steps to cross one tile); Health 10; Defense 0; Attack 1; attack cooldown 400 ms,
+//                           which is 24 steps; strike reaches 1 tile beyond the body and is 1 tile wide
 //   monster "dummy"         stationary: it never moves or attacks; body 0.5 tiles; Health 3
 //   monster "biter"         a chaser; body 0.5 tiles; Health 3; damage 5; walks 3.75 tiles a second, which is
 //                           0.0625 tile a step (16 steps to cross one tile); notices the hero within 2 tiles of its
@@ -39,6 +39,25 @@ export const STEPS_PER_TILE = 8;
 export const COOLDOWN_STEPS = 24;
 
 export const ARENA_LAYOUT = ['#######', '#.....#', '#.~...#', '#.....#', '#...,.#', '#######'];
+
+// A wide, empty field for tests that need room, such as monsters being farther from the hero than they can notice it:
+//
+//   ##############      14 x 7 tiles, walkable in columns 1 to 12 and rows 1 to 5.
+//   #............#      The hero starts in the middle of tile (6, 3), at (6.5, 3.5): its body spans x 6.25 to 6.75
+//   #............#      and y 3.25 to 3.75.
+//   #............#
+//   #............#
+//   #............#
+//   ##############
+export const FIELD_LAYOUT = [
+  '##############',
+  '#............#',
+  '#............#',
+  '#............#',
+  '#............#',
+  '#............#',
+  '##############',
+];
 
 export const BITER: ChaserMonsterDefinition = {
   behavior: 'chaser',
@@ -62,6 +81,8 @@ interface ArenaOptions {
   readonly hero?: Partial<HeroDefinition>;
   /** More monster types besides the dummy and the biter, or in place of them. */
   readonly monsterTypes?: Readonly<Record<string, MonsterTypeDefinition>>;
+  /** The least damage the hero takes from a hit. Leave it out to get the default. */
+  readonly minimumDamage?: number;
 }
 
 export function arena(options: ArenaOptions = {}): ContentDefinition {
@@ -72,6 +93,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     start = { area: 'arena', tile: { col: 3, row: 3 } },
     hero = {},
     monsterTypes = {},
+    minimumDamage,
   } = options;
   return {
     terrain: {
@@ -84,11 +106,13 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
       size: 0.5,
       speedTilesPerSecond: 7.5,
       health: 10,
+      defense: 0,
       attack: 1,
       attackCooldownMs: 400,
       meleeWeapon: { reach: 1, width: 1 },
       ...hero,
     },
+    ...(minimumDamage === undefined ? {} : { minimumDamage }),
     monsterTypes: {
       dummy: { behavior: 'stationary', health: 3, size: 0.5 },
       biter: BITER,
@@ -97,6 +121,16 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     areas: [{ id: 'arena', name: 'Arena', layout, monsters }, ...otherAreas],
     start,
   };
+}
+
+/** A game in the wide field, with the hero at (6.5, 3.5). */
+export function fieldGame(
+  monsters: readonly MonsterPlacement[],
+  monsterTypes?: Readonly<Record<string, MonsterTypeDefinition>>,
+): Game {
+  return newGame(
+    arena({ layout: FIELD_LAYOUT, start: { area: 'arena', tile: { col: 6, row: 3 } }, monsters, monsterTypes }),
+  );
 }
 
 export function dummyAt(id: string, col: number, row: number): MonsterPlacement {
