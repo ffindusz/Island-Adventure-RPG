@@ -4,7 +4,7 @@
 
 **Blocked by:** 06: The bow: Ammunition and quick-switching; 07: Healing Potions; 08: Connected Adventure Areas and backtracking
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 40, 49, 77-84
 
@@ -19,6 +19,8 @@
 - [ ] Reviewer play check (manual, in a browser): activate a Checkpoint, spend Ammunition and a potion, collect a cache, die, and confirm what returns and what persists.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 9376d3a
 
 ### What was built
 
