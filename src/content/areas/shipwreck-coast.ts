@@ -8,6 +8,7 @@ import type { AreaDefinition } from '../../core';
 export const shipwreckCoast: AreaDefinition = {
   id: 'shipwreck-coast',
   name: 'Shipwreck Coast',
+  entrances: [{ id: 'from-trail', tile: { col: 18, row: 5 } }],
   layout: [
     '~~~~~~~~~~~~~~~~~~~~',
     '~.........#,,,,,,,,~',
