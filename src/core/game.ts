@@ -88,6 +88,7 @@ export function createGame(options: GameOptions): Game {
       coolDownHero(state);
       const touchedBefore = touchedCheckpoints(state, content);
       walkHero(state, content, held.at(-1));
+      revealAroundHero(state, content);
       // The hero is where it walked to when it reaches a milestone, takes a pickup or comes onto a Checkpoint: the
       // pickups come first, so that a Checkpoint is activated with them taken. Then the arrows fly, a hero that
       // walked into an exit goes through it, and otherwise the monsters act.

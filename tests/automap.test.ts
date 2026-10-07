@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AreaDefinition, AutomapAreaView, AutomapPageView, Game } from '../src/core';
-import { ARENA_LAYOUT, arena, newGame, playingView } from './fixtures';
+import { ARENA_LAYOUT, arena, newGame, playingView, walk } from './fixtures';
 
 // The Automap, tested at the Game core's interface: commands and steps in, the page view and the snapshot out.
 //
@@ -81,5 +81,61 @@ describe('The Automap at the start of the adventure', () => {
 
     expect(cellar).toMatchObject({ name: null, discovered: false, current: false, width: 7, height: 6 });
     expect(picture(cellar)).toEqual(Array<string>(6).fill('       '));
+  });
+});
+
+describe('The Automap while the hero walks', () => {
+  const START = ['       ', '       ', '  ~..  ', '  ...  ', '  ..,  ', '       '];
+
+  it('reveals more terrain only once the hero is on another tile', () => {
+    const game = newGame(arena({ automapRevealDistance: 1.5 }));
+
+    // The hero starts in the middle of tile (3, 3) and moves an eighth of a tile each step: after 3 steps it is at
+    // x 3.875, still on tile 3, and the 4th step brings it to x 4.0, which is the first point of tile 4.
+    walk(game, 'right', 3);
+    expect(picture(areaOnMap(game, 'arena'))).toEqual(START);
+
+    walk(game, 'right', 1);
+    expect(picture(areaOnMap(game, 'arena'))).toEqual([
+      '       ',
+      '       ',
+      '  ~... ',
+      '  .... ',
+      '  ..,. ',
+      '       ',
+    ]);
+  });
+
+  it('keeps the terrain it has revealed when the hero walks away from it', () => {
+    const game = newGame(arena({ automapRevealDistance: 1.5 }));
+
+    // To x 4.0 and back to x 2.0: on tile 2 the hero sees tiles 1 to 3, and the tile 5 it saw from tile 4 stays.
+    walk(game, 'right', 4);
+    walk(game, 'left', 16);
+
+    expect(picture(areaOnMap(game, 'arena'))).toEqual([
+      '       ',
+      '       ',
+      ' .~... ',
+      ' ..... ',
+      ' ...,. ',
+      '       ',
+    ]);
+  });
+
+  it('reveals a wall like any other terrain: nothing blocks the hero from seeing it', () => {
+    const game = newGame(arena({ automapRevealDistance: 1.5 }));
+
+    // Down to y 4.0, which is the first point of row 4, so that the bottom wall in row 5 is within reach.
+    walk(game, 'down', 4);
+
+    expect(picture(areaOnMap(game, 'arena'))).toEqual([
+      '       ',
+      '       ',
+      '  ~..  ',
+      '  ...  ',
+      '  ..,  ',
+      '  ###  ',
+    ]);
   });
 });
