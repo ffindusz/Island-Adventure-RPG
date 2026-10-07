@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import type { Game } from '../src/core';
-import { advance, chestAt, dummyAt, face, monsterAction, monsterNamed, playingView, walk } from './fixtures';
-import { chargerAt, CHARGER_RECOVERY_STEPS, enemyField } from './enemy-fixtures';
+import type { AreaDefinition, ExitDefinition, Game } from '../src/core';
+import {
+  ARENA_LAYOUT,
+  advance,
+  chestAt,
+  dummyAt,
+  face,
+  monsterAction,
+  monsterNamed,
+  newGame,
+  playingView,
+  walk,
+} from './fixtures';
+import { chargerAt, CHARGER_RECOVERY_STEPS, enemyContent, enemyField } from './enemy-fixtures';
 
 // A charger in tile (2, 3) stands at (2.5, 3.5), so its body spans x 2.25 to 2.75 and y 3.25 to 3.75. The hero stands at
 // (6.5, 3.5): its body spans x 6.25 to 6.75 and y 3.25 to 3.75, in the same row of space. The charger's lane to the
@@ -208,5 +219,48 @@ describe('a charger recovering', () => {
 
     expect(events).toContainEqual({ type: 'monster-hit', monsterId: 'charger-1', damage: 1, health: 2 });
     expect(monsterAction(game, 'charger-1')).toEqual({ type: 'recovering' });
+  });
+});
+
+describe('a charger and the Adventure Areas', () => {
+  // The hero goes through an exit on the tile (8, 3): it is in the exit on its 11th step, and back in the arena, at
+  // (7.5, 3.5), 3 steps after it came into the cellar.
+  const TO_CELLAR: ExitDefinition = {
+    id: 'to-cellar',
+    zone: { col: 8, row: 3, width: 1, height: 1 },
+    to: { area: 'cellar', entrance: 'from-arena' },
+  };
+  const TO_ARENA: ExitDefinition = {
+    id: 'to-arena',
+    zone: { col: 1, row: 3, width: 1, height: 1 },
+    to: { area: 'arena', entrance: 'from-cellar' },
+  };
+  const CELLAR: AreaDefinition = {
+    id: 'cellar',
+    name: 'Cellar',
+    layout: ARENA_LAYOUT,
+    monsters: [],
+    entrances: [{ id: 'from-arena', tile: { col: 2, row: 3 } }],
+    exits: [TO_ARENA],
+  };
+
+  it('forgets a wind-up that the hero walked out of: it starts over when the hero is back', () => {
+    const game = newGame(
+      enemyContent([chargerAt('charger-1', 2, 3)], {
+        entrances: [{ id: 'from-cellar', tile: { col: 7, row: 3 } }],
+        exits: [TO_CELLAR],
+        otherAreas: [CELLAR],
+      }),
+    );
+    walk(game, 'right', 11); // the charger has wound up for 9 steps
+    expect(playingView(game).area.id).toBe('cellar');
+    walk(game, 'left', 3);
+    expect(playingView(game).area.id).toBe('arena');
+    expect(monsterAction(game, 'charger-1')).toEqual({ type: 'idle' });
+
+    game.step();
+    expect(monsterAction(game, 'charger-1')).toEqual({ type: 'winding-up', progress: 0, zone: LANE_RIGHT });
+    expect(advance(game, 29)).toEqual([]);
+    expect(game.step()).toEqual([{ type: 'monster-attacked', monsterId: 'charger-1', zone: LANE_RIGHT }]);
   });
 });
