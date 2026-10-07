@@ -88,7 +88,7 @@ function launchDash(monster: MonsterState, windUp: WindingUp): GameEvent[] {
   if (direction === undefined) {
     throw new Error(`Charger "${monster.id}" wound up with no direction to dash in`);
   }
-  monster.action = { type: 'dashing', direction, rangeLeft: laneLength(zone, direction) };
+  monster.action = { type: 'dashing', direction: 'right', rangeLeft: laneLength(zone, direction) };
   return [{ type: 'monster-attacked', monsterId: monster.id, zone }];
 }
 

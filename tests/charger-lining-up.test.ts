@@ -32,6 +32,49 @@ describe('a charger lining up with the hero', () => {
     });
   });
 
+  // The walk to the lane goes whichever way the lane has to move: the lane takes 24 steps to touch the hero's body,
+  // and overlaps it after the 25th. The first test above is the case where the hero is below the charger.
+  it.each([
+    {
+      goes: 'up, to a hero above it, when its lane runs across',
+      charger: { col: 2, row: 3 },
+      hero: { col: 6, row: 1 },
+      position: { x: 2.5, y: 1.9375 },
+      zone: { minX: 2.75, minY: 1.6875, maxX: 8.75, maxY: 2.1875 },
+    },
+    {
+      goes: 'left, to a hero on its left, when its lane runs down',
+      charger: { col: 6, row: 1 },
+      hero: { col: 4, row: 5 },
+      position: { x: 4.9375, y: 1.5 },
+      zone: { minX: 4.6875, minY: 1.75, maxX: 5.1875, maxY: 6 },
+    },
+    {
+      goes: 'right, to a hero on its right, when its lane runs down',
+      charger: { col: 2, row: 1 },
+      hero: { col: 4, row: 5 },
+      position: { x: 4.0625, y: 1.5 },
+      zone: { minX: 3.8125, minY: 1.75, maxX: 4.3125, maxY: 6 },
+    },
+    {
+      goes: 'right, to a hero on its right, when its lane runs up',
+      charger: { col: 2, row: 5 },
+      hero: { col: 4, row: 1 },
+      position: { x: 4.0625, y: 5.5 },
+      zone: { minX: 3.8125, minY: 1, maxX: 4.3125, maxY: 5.25 },
+    },
+  ])('walks $goes', ({ charger, hero, position, zone }) => {
+    const game = enemyField([chargerAt('charger-1', charger.col, charger.row)], {
+      start: { area: 'arena', tile: hero },
+    });
+
+    advance(game, 25);
+    expect(monsterNamed(game, 'charger-1')).toMatchObject({ position, action: { type: 'chasing' } });
+
+    game.step();
+    expect(monsterAction(game, 'charger-1')).toEqual({ type: 'winding-up', progress: 0, zone });
+  });
+
   it('walks toward a hero who is level with it but out of reach of its lane, until the lane reaches', () => {
     // The charger dashes 2 tiles at most: its lane ends at x = 4.75, and the hero's body begins at x = 6.25. Each step
     // takes the lane 0.0625 tile nearer: it touches the hero after 24 steps and overlaps it after the 25th.
