@@ -4,7 +4,7 @@
 
 **Blocked by:** 05: Gear and the inventory
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 10, 12, 25, 26, 53, 106
 
@@ -20,6 +20,8 @@
 - [ ] Reviewer play check (manual, in a browser): defeat a monster, open a chest, leave through the exit, come back, and confirm both are still done. Walk to the edges of the larger area and confirm the view stops at them while the HUD stays put.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at cd5495f
 
 ### What was built
 
