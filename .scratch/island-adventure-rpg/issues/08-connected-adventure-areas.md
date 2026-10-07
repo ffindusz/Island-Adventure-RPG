@@ -12,7 +12,7 @@
 
 - [x] Two connected placeholder Adventure Areas (they later grow into the coast and the woods) demonstrate exits in both directions, with the hero arriving at the matching entrance.
 - [x] An Adventure Area can be larger than the canvas: the view follows the hero and stops at the area's edges, so no empty space shows beyond the map, and the HUD stays fixed on the screen. An area smaller than the canvas is shown centered. The Game core's interface does not change for this (the area's size is already in the state view). One of the two placeholder areas is larger than the canvas to show it.
-- [ ] Monsters defeated, and chests, Ammunition caches, and potion pickups collected, in an area stay that way after leaving and returning.
+- [x] Monsters defeated, and chests, Ammunition caches, and potion pickups collected, in an area stay that way after leaving and returning.
 - [x] A short area text (content data) appears on first entry only and does not pause or block play.
 - [x] The set of areas and their connections is data-driven: adding an area to the route needs only content.
 - [x] Content validation runs when content loads and rejects, with a clear message, an exit that leads nowhere or lacks a matching return exit, and an area without an entrance. Later tickets add more rules.
@@ -22,6 +22,8 @@
 ## Comments
 
 Resolved on integration/island-adventure-rpg at cd5495f
+
+Criterion 3 ticked after ticket 07 merged (integration `429bccd`). Potion pickups are covered by the test "keeps a pickup taken in either area taken, and the pickup of the other area where it lay" in `tests\area-connections.test.ts`, which ticket 07's merge rehearsal added next to the monster, chest and Ammunition cache tests of this ticket (resetting the taken pickups on entering an area makes it fail). A second rehearsal test pins that a pickup taken on the very step that takes the hero through an exit still reports its event. A pickup across a defeat has no test of its own: ticket 09 re-specifies what a defeat keeps and rolls back.
 
 ### What was built
 
@@ -79,7 +81,7 @@ Resolved on integration/island-adventure-rpg at cd5495f
 ### Left for manual review
 
 - The reviewer play check (the last criterion) stays unticked. In the browser I opened chests and went there and back, and drove a defeat through `window.gameCore`, but I did not play by hand, and I did not defeat a monster and come back to see it still defeated: that rests on the core tests.
-- The memory criterion (the third) stays unticked because it also names potion pickups, which ticket 07 builds in parallel and which are not on this branch. Monsters, chests and Ammunition caches are now covered at the Game core's interface across a trip to another area and back and across a defeat (opened stays opened per area, the other area's cache is as it was). Once 07 has merged, the same two cache tests (trip and defeat, in `area-connections.test.ts`) can be copied for a potion pickup and the box ticked.
+- The memory criterion (the third) was left unticked on this branch because it also names potion pickups, which ticket 07 builds in parallel and which were not on this branch (ticked after 07 merged: see the first note under Comments). Monsters, chests and Ammunition caches are now covered at the Game core's interface across a trip to another area and back and across a defeat (opened stays opened per area, the other area's cache is as it was). Once 07 has merged, the same two cache tests (trip and defeat, in `area-connections.test.ts`) can be copied for a potion pickup and the box ticked.
 - A defeat on the trail was driven in the browser only through the core's commands, not with the keys; the core tests cover where the hero returns and what is reset.
 - How the banner, the fade, the exit patches and the camera feel to a person, and the banner touching the hero's head at the trail's entrance for the 4 seconds the text is up. The art is placeholder until ticket 22.
 
