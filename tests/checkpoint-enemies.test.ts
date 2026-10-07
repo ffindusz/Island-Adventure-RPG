@@ -210,6 +210,40 @@ describe('a hero defeated in the cellar with its Checkpoint in the cellar', () =
   });
 });
 
+describe('a shot in flight when the dash of a charger defeats the hero', () => {
+  // The shooter on the tile (2, 5), below the place where the hero arrives, fires in step 31 and its shot would meet the
+  // hero there in step 57. The charger on the tile (7, 3), in the row of the hero, hits with its dash in step 49.
+  const KILLER_AND_SHOOTER = [chargerAt('killer', 7, 3), shooterAt('shooter-1', 2, 5)];
+
+  it.each([
+    { where: 'in the arena', checkpoint: CELLAR_CORNER },
+    { where: 'in the cellar', checkpoint: CELLAR_DOOR },
+  ])('takes the shot out of the air, with the Checkpoint $where', ({ checkpoint }) => {
+    const game = newGame(world(KILLER_AND_SHOOTER, checkpoint));
+    intoTheCellar(game);
+    advance(game, 48);
+    expect(playingView(game).arrows).toHaveLength(1);
+
+    const events = game.step();
+
+    expect(events).toContainEqual({ type: 'hero-defeated' });
+    expect(playingView(game).arrows).toEqual([]);
+    expect(game.snapshot().state.arrows).toEqual([]);
+  });
+
+  it('does not let that shot meet the hero who is back at the door of the cellar', () => {
+    const game = newGame(world(KILLER_AND_SHOOTER, CELLAR_DOOR));
+    intoTheCellar(game);
+    advance(game, 49);
+
+    // The new monsters are still winding up for 30 steps, and the old shot would hit in the 8th.
+    const events = advance(game, 30);
+
+    expect(events).not.toContainEqual(expect.objectContaining({ type: 'hero-hit' }));
+    expect(playingView(game).hero.health).toBe(4);
+  });
+});
+
 describe('a projectile that defeats a hero in the step it walks into an exit', () => {
   // The shooter on the tile (9, 3), behind the exit, fires in step 31 along the row of the hero, which waits until step 40
   // and then walks right: it is in the exit on the 11th step, step 51. The tip of the projectile is at 8.125 in that step,
