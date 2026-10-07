@@ -349,6 +349,18 @@ describe('an arrow that meets a monster', () => {
     expect(monsterNamed(game, 'far').health).toBe(10);
   });
 
+  it('hurts the first monster even when one step of its flight carries it past both', () => {
+    const fast = { arrowSpeedTilesPerSecond: 120, range: 4, arrowSize: 0.25 };
+    const game = archer(3, { ...twoPosts, hero: { rangedWeapon: fast } });
+    face(game, 'right');
+    game.send(ATTACK);
+
+    expect(advance(game, 1)).toEqual([{ type: 'monster-hit', monsterId: 'near', damage: 3, health: 7 }]);
+
+    expect(monsterNamed(game, 'far').health).toBe(10);
+    expect(arrowsOf(game)).toEqual([]);
+  });
+
   it('is hurt by the bow and not by the sword: the bonus of the sword is for strikes only', () => {
     const game = archer(3, {
       ...twoPosts,
