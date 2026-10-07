@@ -4,7 +4,7 @@
 
 **Blocked by:** 02: Verify the art base first-hand; 06: The bow: Ammunition and quick-switching; 07: Healing Potions
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 94, 96, 102
 
@@ -16,6 +16,8 @@
 - [ ] Reviewer play check (manual, in a browser): walk in all four directions, attack with both weapons, take a hit, be defeated, and review the HUD and both pages for a finished, consistent look.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 44c1520
 
 ### What was built
 
