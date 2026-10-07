@@ -113,7 +113,7 @@ describe('the Adventure Areas the game ships with', () => {
   });
 
   it('leads east from the coast into the second area, where the hero arrives at the entrance the exit names', () => {
-    const game = gameBeginningAt(COAST, 17, 5);
+    const game = gameComingInBy(COAST, 'from-trail');
 
     const events = walkThroughExit(game, 'right');
 
@@ -145,7 +145,7 @@ describe('the Adventure Areas the game ships with', () => {
   });
 
   it('shows the text of an area the first time the hero comes in, and not on a later visit', () => {
-    const game = gameBeginningAt(COAST, 17, 5);
+    const game = gameComingInBy(COAST, 'from-trail');
     const trailText = areaNamed(TRAIL).text;
 
     walkThroughExit(game, 'right');
@@ -188,7 +188,7 @@ describe('the Adventure Areas the game ships with', () => {
   });
 
   it('touches the Checkpoint of the trail when the hero comes in from the coast', () => {
-    const game = gameBeginningAt(COAST, 17, 5);
+    const game = gameComingInBy(COAST, 'from-trail');
 
     const events = walkThroughExit(game, 'right');
 

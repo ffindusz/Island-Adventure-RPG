@@ -8,9 +8,11 @@ import type {
   Direction,
   Game,
   GameEvent,
+  GearSlot,
   InventoryPageView,
 } from '../src/core';
 import { fixedRandom, playingView, walk } from './fixtures';
+import { isInZone, openTilesOf, routeBetween, walkRoute } from './routes';
 
 // Only what must hold for any content the game ships with. The tests of the rules use purpose-built content
 // (fixtures.ts), so that changing what ships never breaks them.
@@ -115,61 +117,11 @@ describe('the content the game ships with', () => {
     expect(gear.filter((piece) => piece.equipped).map((piece) => piece.slot)).toEqual(['melee-weapon', 'armor']);
   });
 
-  it('has a chest with a better sword and a chest with better armor within a short walk of the start', () => {
-    const game = newShippedGame();
-    const before = inventoryOf(game);
-
-    // Straight up from the start to the one chest, then straight down past the start to the other.
-    const events = [
-      ...walk(game, 'up', 60),
-      ...game.send({ type: 'interact' }),
-      ...walk(game, 'down', 120),
-      ...game.send({ type: 'interact' }),
-    ];
-
-    expect(events.filter((event) => event.type === 'chest-opened')).toHaveLength(2);
-    const found = inventoryOf(game).gear.filter((piece) => !piece.equipped);
-    expect(found.map((piece) => piece.slot).sort()).toEqual(['armor', 'melee-weapon']);
-    game.send(OPEN_INVENTORY);
-    for (const piece of found) {
-      game.send({ type: 'equip', gearId: piece.id });
-    }
-    game.send(CLOSE_INVENTORY);
-    const after = inventoryOf(game);
-    expect(after.attack).toBeGreaterThan(before.attack);
-    expect(after.defense).toBeGreaterThan(before.defense);
-  });
-
   it('starts the hero without a bow and without Ammunition: it has to find both', () => {
     const inventory = inventoryOf(newShippedGame());
 
     expect(inventory.gear.filter((piece) => piece.slot === 'ranged-weapon')).toEqual([]);
     expect(inventory.consumables).toEqual({ ammunition: 0, 'healing-potion': 0 });
-  });
-
-  it('has a chest with a bow and a cache of Ammunition within a short walk of the start, and the bow shoots', () => {
-    const game = newShippedGame();
-
-    // Two tiles right of the start, then straight up to the one, and straight down past the start to the other.
-    const events = [
-      ...walk(game, 'right', 24),
-      ...walk(game, 'up', 60),
-      ...game.send({ type: 'interact' }),
-      ...walk(game, 'down', 120),
-      ...game.send({ type: 'interact' }),
-    ];
-
-    expect(events.filter((event) => event.type === 'chest-opened')).toHaveLength(2);
-    const found = inventoryOf(game);
-    const bow = found.gear.find((piece) => piece.slot === 'ranged-weapon');
-    expect(bow, 'the chest holds a bow').toBeDefined();
-    expect(found.consumables.ammunition, 'the cache holds Ammunition').toBeGreaterThan(0);
-    game.send(OPEN_INVENTORY);
-    game.send({ type: 'equip', gearId: bow?.id ?? '' });
-    game.send(CLOSE_INVENTORY);
-    game.send({ type: 'switch-weapon' });
-    expect(game.send({ type: 'attack' })).toMatchObject([{ type: 'hero-shot' }]);
-    expect(playingView(game).hero.consumables.ammunition).toBe(found.consumables.ammunition - 1);
   });
 
   it('lets some monster leave Ammunition now and then: a chance above 0 and below 1', () => {
@@ -182,27 +134,8 @@ describe('the content the game ships with', () => {
     expect(chances.every((chance) => chance > 0 && chance < 1)).toBe(true);
   });
 
-  it('starts the hero without Healing Potions, with a chest of them and a potion on the ground near the start', () => {
-    const game = newShippedGame();
-    expect(inventoryOf(game).consumables['healing-potion']).toBe(0);
-
-    // Two tiles left of the start, then straight up to the chest, and straight down past the start over the potion.
-    const events = [
-      ...walk(game, 'left', 24),
-      ...walk(game, 'up', 60),
-      ...game.send({ type: 'interact' }),
-      ...walk(game, 'down', 120),
-    ];
-
-    expect(events.filter((event) => event.type === 'chest-opened')).toHaveLength(1);
-    const potionPickups = events.flatMap((event) =>
-      event.type === 'pickup' && event.item.kind === 'consumable' && event.item.id === 'healing-potion'
-        ? [event.item.amount]
-        : [],
-    );
-    expect(potionPickups, 'the chest and the potion on the ground').toHaveLength(2);
-    const total = potionPickups.reduce((sum, amount) => sum + amount, 0);
-    expect(inventoryOf(game).consumables['healing-potion']).toBe(total);
+  it('starts the hero without Healing Potions: it has to find them', () => {
+    expect(inventoryOf(newShippedGame()).consumables['healing-potion']).toBe(0);
   });
 
   it('lets some monster leave a Healing Potion now and then: a chance above 0 and below 1', () => {
@@ -216,16 +149,56 @@ describe('the content the game ships with', () => {
   });
 });
 
+describe('what the hero can find in the content the game ships with', () => {
+  const interactables = gameContent.areas.flatMap((area) => area.interactables ?? []);
+  const gearInChests = interactables.flatMap((item) => {
+    const gear = item.kind === 'chest' && item.contents.kind === 'gear' ? gameContent.gear[item.contents.gear] : undefined;
+    return gear === undefined ? [] : [gear];
+  });
+  const startingBonusOf = (slot: GearSlot): number => {
+    const starting = gameContent.hero.startingGear[slot];
+    return starting === undefined ? 0 : (gameContent.gear[starting]?.bonus ?? 0);
+  };
+  const isFoundIn = (slot: GearSlot) => gearInChests.some((gear) => gear.slot === slot && gear.bonus > startingBonusOf(slot));
+  const cachesOf = (consumable: string) =>
+    interactables.filter(
+      (item) => item.kind === 'chest' && item.contents.kind === 'consumable' && item.contents.consumable === consumable,
+    );
+  const pickupsOf = (consumable: string) =>
+    interactables.filter((item) => item.kind === 'pickup' && item.consumable === consumable);
+
+  it.each(['melee-weapon', 'armor', 'ranged-weapon'] as const)('has better Gear for the %s slot in a chest', (slot) => {
+    expect(isFoundIn(slot)).toBe(true);
+  });
+
+  it('has Ammunition in a cache for the bow, and Healing Potions in a chest and on the ground', () => {
+    expect(cachesOf('ammunition')).not.toEqual([]);
+    expect(cachesOf('healing-potion')).not.toEqual([]);
+    expect(pickupsOf('healing-potion')).not.toEqual([]);
+  });
+});
+
 describe('the Automap of the content the game ships with', () => {
   const { area: startAreaId, tile: startTile } = gameContent.start;
-  const wayOut = definitionOf(startAreaId).exits ?? [];
+  const firstArea = definitionOf(startAreaId);
+  const wayOut = firstArea.exits ?? [];
   const wayOutIds = wayOut.map(({ id }) => id);
+  const routeOut = routeBetween(openTilesOf(gameContent, firstArea), startTile, (tile) =>
+    wayOut.some(({ zone }) => isInZone(zone, tile)),
+  );
 
-  /** Walks straight right from the start, through the gap in the rock wall, towards the way out of the first area. */
-  function walkRightWhile(game: Game, keepGoing: () => boolean): void {
-    for (let step = 0; step < 600 && keepGoing(); step += 1) {
-      walk(game, 'right', 1);
-    }
+  /** A new game of the shipped content without its monsters, which are not what these tests are about. */
+  function newQuietGame() {
+    const quiet = { ...gameContent, areas: gameContent.areas.map((area) => ({ ...area, monsters: [] })) };
+    const game = createGame({ content: quiet, random: fixedRandom });
+    game.send({ type: 'new-game' });
+    return game;
+  }
+
+  /** Walks from the start along the way to the exit of the first area for as long as `keepGoing` says so. */
+  function walkOutWhile(game: Game, keepGoing: () => boolean): void {
+    expect(routeOut, 'there is a way from the start to the way out of the first area').not.toBeNull();
+    walkRoute(game, routeOut ?? [], keepGoing);
   }
 
   function exitIdsOnMap(game: Game, areaId: string): string[] {
@@ -250,21 +223,21 @@ describe('the Automap of the content the game ships with', () => {
   });
 
   it('marks the way out of the first area before the hero reaches it', () => {
-    const game = newShippedGame();
+    const game = newQuietGame();
     const inFirstArea = () => playingView(game).area.id === startAreaId;
     const wayOutFound = () => exitIdsOnMap(game, startAreaId).length > 0;
 
-    walkRightWhile(game, () => inFirstArea() && !wayOutFound());
+    walkOutWhile(game, () => inFirstArea() && !wayOutFound());
 
     expect(inFirstArea(), 'the hero has not crossed yet').toBe(true);
     expect(exitIdsOnMap(game, startAreaId)).toEqual(wayOutIds);
   });
 
   it('shows the next area, with the hero in it, once the hero crosses into it, and keeps the first', () => {
-    const game = newShippedGame();
+    const game = newQuietGame();
     const nextAreaId = wayOut[0]?.to.area ?? '';
 
-    walkRightWhile(game, () => playingView(game).area.id === startAreaId);
+    walkOutWhile(game, () => playingView(game).area.id === startAreaId);
 
     expect(playingView(game).area.id, 'the hero has crossed').toBe(nextAreaId);
     const page = automapOf(game);

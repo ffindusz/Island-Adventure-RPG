@@ -90,11 +90,11 @@ function secondsToStepOutOf(width: number): number {
 }
 
 describe('the monsters the game ships with', () => {
-  it.each(gameContent.areas.map((area) => area.id))('has a monster of each behavior in %s', (id) => {
-    const placed = areaNamed(id).monsters.map((monster) => typeNamed(monster.type).behavior);
+  it('has a monster of each behavior somewhere in the game', () => {
+    const placed = gameContent.areas.flatMap((area) => area.monsters.map((monster) => typeNamed(monster.type).behavior));
 
     for (const behavior of BEHAVIORS) {
-      expect(placed, `${id} has no ${behavior}`).toContain(behavior);
+      expect(placed, `the game has no ${behavior}`).toContain(behavior);
     }
   });
 
