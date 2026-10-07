@@ -1,6 +1,7 @@
 import { areaOf } from './content';
 import type { Checkpoint, Content } from './content';
 import { calmMonsters, enterArea } from './areas';
+import { recordConsumables, rollBackConsumables } from './consumable-rollback';
 import { centerOf, overlaps } from './geometry';
 import type { GameEvent } from './interface';
 import { currentAreaState, freshMonsters, heroBody } from './state';
@@ -33,9 +34,16 @@ export function activateCheckpoints(state: PlayState, content: Content, touchedB
   return events;
 }
 
-/** Defeat now sends the hero back here, and the hero is restored to full Health. */
+/**
+ * Defeat now sends the hero back here, with the consumables it has now (see consumable-rollback.ts), and the hero is
+ * restored to full Health.
+ */
 function activate(state: PlayState, content: Content, checkpoint: Checkpoint): void {
-  state.checkpoint = { areaId: state.areaId, tile: { ...checkpoint.tile } };
+  state.checkpoint = {
+    areaId: state.areaId,
+    tile: { ...checkpoint.tile },
+    ...recordConsumables(state, content),
+  };
   state.hero.health = heroMaxHealth(state, content);
 }
 
@@ -50,8 +58,9 @@ export function isActive(state: PlayState, areaId: string, checkpoint: Checkpoin
 
 /**
  * Defeat sends the hero back to the Checkpoint it touched last, or to the start of the adventure before it touched
- * any, at full Health. When that is in another Adventure Area the hero goes there. Called with the hero's Health at 0.
- * Returns what happened: the change of area, if any.
+ * any, at full Health. When that is in another Adventure Area the hero goes there. The consumables found since are
+ * taken back (see consumable-rollback.ts); everything else the hero has earned stays. Called with the hero's Health at
+ * 0. Returns what happened: the change of area, if any.
  */
 export function recoverHero(state: PlayState, content: Content): GameEvent[] {
   const { areaId, tile } = state.checkpoint;
@@ -63,6 +72,7 @@ export function recoverHero(state: PlayState, content: Content): GameEvent[] {
   }
   state.hero.position = centerOf(tile);
   state.hero.health = heroMaxHealth(state, content);
+  rollBackConsumables(state, content);
   currentAreaState(state).monsters = freshMonsters(areaOf(content, areaId), content);
   return events;
 }

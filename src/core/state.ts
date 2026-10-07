@@ -32,13 +32,19 @@ export type MonsterAction =
   /** Resting after an attack, for this many more steps. */
   | { readonly type: 'recovering'; stepsLeft: number };
 
-/** What changes about a chest: whether it has been opened. An opened chest stays opened, defeat included. */
+/**
+ * What changes about a chest: whether it has been opened. An opened chest stays opened, defeat included, unless it holds
+ * a consumable and the hero opened it after the Checkpoint defeat sends it back to (see consumable-rollback.ts).
+ */
 export interface ChestState {
   readonly kind: 'chest';
   opened: boolean;
 }
 
-/** What changes about a pickup: whether the hero has taken it. A pickup that was taken stays taken. */
+/**
+ * What changes about a pickup: whether the hero has taken it. A pickup that was taken stays taken, unless the hero took
+ * it after the Checkpoint defeat sends it back to (see consumable-rollback.ts).
+ */
 export interface PickupState {
   readonly kind: 'pickup';
   collected: boolean;
@@ -103,11 +109,16 @@ export interface AreaTextState {
 
 /**
  * The Checkpoint that defeat sends the hero back to: the last one it touched, or the start of the adventure before it
- * has touched any. It is a place, not a Checkpoint of the content, since the start need not be one.
+ * has touched any. It is a place, not a Checkpoint of the content, since the start need not be one. It also records
+ * the consumables the hero had when it touched the Checkpoint, which defeat gives back (see consumable-rollback.ts).
  */
 export interface CheckpointState {
   readonly areaId: string;
   readonly tile: Tile;
+  /** How many of each consumable the hero had then. */
+  readonly consumables: Readonly<Record<ConsumableId, number>>;
+  /** The ids of the pickups and of the chests of consumables that had been taken then, in all Adventure Areas. */
+  readonly collected: readonly string[];
 }
 
 export interface PlayState {
@@ -136,6 +147,9 @@ export interface TitleState {
 
 export type GameState = TitleState | PlayState;
 
+/** What the hero has of each consumable when the adventure begins: none. */
+const NO_CONSUMABLES: Readonly<Record<ConsumableId, number>> = { ammunition: 0, 'healing-potion': 0 };
+
 /** The state of a game that has just begun: the hero at the start with its starting Gear, every monster unhurt. */
 export function newPlayState(content: Content): PlayState {
   const areas: Record<string, AreaState> = {};
@@ -150,7 +164,12 @@ export function newPlayState(content: Content): PlayState {
   const state: PlayState = {
     phase: 'playing',
     areaId: content.start.areaId,
-    checkpoint: { areaId: content.start.areaId, tile: { ...content.start.tile } },
+    checkpoint: {
+      areaId: content.start.areaId,
+      tile: { ...content.start.tile },
+      consumables: { ...NO_CONSUMABLES },
+      collected: [],
+    },
     areaText: null,
     hero: {
       position: centerOf(content.start.tile),
@@ -162,7 +181,7 @@ export function newPlayState(content: Content): PlayState {
       gear: GEAR_SLOTS.flatMap((slot) => content.hero.startingGear[slot] ?? []),
       equipped: { ...content.hero.startingGear },
       activeWeapon: 'melee-weapon',
-      consumables: { ammunition: 0, 'healing-potion': 0 },
+      consumables: { ...NO_CONSUMABLES },
     },
     arrows: [],
     page: null,
@@ -210,26 +229,32 @@ export function copyState(state: PlayState): PlayState {
   return JSON.parse(JSON.stringify(state)) as PlayState;
 }
 
-/** The world state of the Adventure Area the hero is in. */
-export function currentAreaState(state: PlayState): AreaState {
-  const area = state.areas[state.areaId];
+/** The world state of the Adventure Area `areaId`. */
+export function areaStateOf(state: PlayState, areaId: string): AreaState {
+  const area = state.areas[areaId];
   if (area === undefined) {
-    throw new Error(`The state has no world for area "${state.areaId}"`);
+    throw new Error(`The state has no world for area "${areaId}"`);
   }
   return area;
 }
 
+/** The world state of the Adventure Area the hero is in. */
+export function currentAreaState(state: PlayState): AreaState {
+  return areaStateOf(state, state.areaId);
+}
+
 /**
- * The state of an interactable of the current Adventure Area, of the kind that interactable is. It fails loudly for a
+ * The state of an interactable of the Adventure Area `areaId`, of the kind that interactable is. It fails loudly for a
  * snapshot the content does not fit.
  */
-export function interactableStateOf<T extends Interactable>(
+export function interactableStateIn<T extends Interactable>(
   state: PlayState,
+  areaId: string,
   interactable: T,
 ): Extract<InteractableState, { kind: T['kind'] }> {
-  const found = currentAreaState(state).interactables[interactable.id];
+  const found = areaStateOf(state, areaId).interactables[interactable.id];
   if (found === undefined) {
-    throw new Error(`The state has no interactable "${interactable.id}" in area "${state.areaId}"`);
+    throw new Error(`The state has no interactable "${interactable.id}" in area "${areaId}"`);
   }
   if (found.kind !== interactable.kind) {
     throw new Error(
@@ -238,6 +263,14 @@ export function interactableStateOf<T extends Interactable>(
   }
   // The kinds match, so this is the state that was made for this kind.
   return found as Extract<InteractableState, { kind: T['kind'] }>;
+}
+
+/** The state of an interactable of the current Adventure Area, of the kind that interactable is. */
+export function interactableStateOf<T extends Interactable>(
+  state: PlayState,
+  interactable: T,
+): Extract<InteractableState, { kind: T['kind'] }> {
+  return interactableStateIn(state, state.areaId, interactable);
 }
 
 /** The monsters of the current Adventure Area that have not been defeated. */

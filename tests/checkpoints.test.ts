@@ -10,14 +10,19 @@ import type {
 } from '../src/core';
 import {
   ARENA_LAYOUT,
+  BITER,
+  WITH_BOW,
   advance,
   arena,
   biterAt,
+  cacheAt,
   chestAt,
+  chestViews,
   dummyAt,
   face,
   fixedRandom,
   frailMonster,
+  milestone,
   newGame,
   pickupAt,
   playingView,
@@ -145,6 +150,40 @@ const DOOR_ACTIVATED = { type: 'checkpoint-activated', checkpointId: 'cellar-doo
 
 const WEAKLING = { weakling: frailMonster(0) };
 
+// The lookout is the tile up and to the right of the hero's start. Walking up from the start, the hero's body overlaps
+// the tile (3, 2) on the 3rd step, and walking right from there it overlaps the lookout, on the tile (4, 2), on the 3rd.
+const LOOKOUT: CheckpointDefinition = { id: 'lookout', tile: { col: 4, row: 2 } };
+const LOOKOUT_ACTIVATED = { type: 'checkpoint-activated', checkpointId: 'lookout' } as const;
+
+const INTERACT = { type: 'interact' } as const;
+const ATTACK = { type: 'attack' } as const;
+const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
+const CLOSE_INVENTORY = { type: 'close-page', page: 'inventory' } as const;
+const USE_POTION = { type: 'use-healing-potion' } as const;
+
+function tookPotions(amount: number) {
+  return { type: 'pickup', item: { kind: 'consumable', id: 'healing-potion', amount } } as const;
+}
+
+function tookArrows(amount: number) {
+  return { type: 'pickup', item: { kind: 'consumable', id: 'ammunition', amount } } as const;
+}
+
+/** The ids of the pickups lying on the ground in the hero's Adventure Area. */
+function pickupIds(game: Game): string[] {
+  return playingView(game).interactables.flatMap((item) => (item.kind === 'pickup' ? [item.id] : []));
+}
+
+/** Steps the game until the hero is defeated, which has to happen within 300 steps. */
+function untilDefeated(game: Game): void {
+  for (let step = 0; step < 300; step += 1) {
+    if (game.step().some((event) => event.type === 'hero-defeated')) {
+      return;
+    }
+  }
+  throw new Error('The hero was not defeated within 300 steps');
+}
+
 describe('Touching a Checkpoint', () => {
   it('activates it, which the event and the view say', () => {
     const game = newGame(arena({ checkpoints: [CAMP] }));
@@ -179,6 +218,29 @@ describe('Touching a Checkpoint', () => {
     walk(game, 'up', 3);
     expect(walk(game, 'down', 3)).toContainEqual(CAMP_ACTIVATED);
     expect(playingView(game).hero.health).toBe(10);
+  });
+
+  it('leaves what the hero carries, opened and took as it is: Ammunition does not come back, nothing is put back', () => {
+    // The hero opens the cache below it (5 arrows), takes the bow in hand, shoots one arrow to the left, takes the 2
+    // potions on the tile (3, 2) and touches the lookout.
+    const game = newGame(
+      arena({
+        hero: { startingGear: WITH_BOW },
+        checkpoints: [LOOKOUT],
+        interactables: [cacheAt('arena-cache', 3, 4, 5), pickupAt('arena-potions-1', 3, 2, 2)],
+      }),
+    );
+    game.send(INTERACT);
+    game.send({ type: 'switch-weapon' });
+    face(game, 'left');
+    game.send(ATTACK);
+    walk(game, 'up', 3);
+
+    expect(walk(game, 'right', 3)).toContainEqual(LOOKOUT_ACTIVATED);
+
+    expect(playingView(game).hero.consumables).toEqual({ ammunition: 4, 'healing-potion': 2 });
+    expect(chestViews(game)).toEqual([expect.objectContaining({ id: 'arena-cache', opened: true })]);
+    expect(pickupIds(game)).toEqual([]);
   });
 });
 
@@ -302,5 +364,231 @@ describe('Monsters and Checkpoints', () => {
 
     expect(playingView(game).area.id).toBe('arena');
     expect(playingView(game).monsters).toEqual([]);
+  });
+});
+
+describe('Defeat and the consumables', () => {
+  /**
+   * The hero opens the cache of the arena (5 arrows) and takes the bow in hand, takes the 2 potions on the tile (3, 2)
+   * and touches the lookout, which records 5 arrows and 2 potions. It takes the potion on the tile (5, 2) on its way
+   * through the exit to the cellar, where it arrives at (2.5, 3.5): it takes the 2 potions on the tile (2, 4), opens the
+   * cache of 3 arrows beside them and shoots an arrow. The biter hits on the 31st step after the arrival, taking 5 of
+   * the hero's 10 Health, the hero drinks a potion, and the biter finishes it some time later.
+   *
+   *   arrows   5 -> 8 -> 7        potions   2 -> 3 -> 5 -> 4
+   */
+  function fallInTheCellar(): Game {
+    const game = newGame(
+      world(
+        {
+          hero: { startingGear: WITH_BOW },
+          checkpoints: [LOOKOUT],
+          interactables: [
+            cacheAt('arena-cache', 3, 4, 5),
+            pickupAt('arena-potions-1', 3, 2, 2),
+            pickupAt('arena-potions-2', 5, 2, 1),
+          ],
+        },
+        {
+          monsters: [biterAt('cellar-biter', 3, 3)],
+          interactables: [pickupAt('cellar-potions', 2, 4, 2), cacheAt('cellar-cache', 3, 4, 3)],
+        },
+      ),
+    );
+    game.send(INTERACT);
+    game.send({ type: 'switch-weapon' });
+    walk(game, 'up', 3);
+    expect(walk(game, 'right', 3)).toContainEqual(LOOKOUT_ACTIVATED);
+    walk(game, 'right', 8);
+    expect(playingView(game).area.id).toBe('cellar');
+    walk(game, 'down', 3);
+    face(game, 'right');
+    game.send(INTERACT);
+    face(game, 'left');
+    game.send(ATTACK);
+    expect(advance(game, 28)).toContainEqual({ type: 'hero-hit', monsterId: 'cellar-biter', damage: 5, health: 5 });
+    game.send(OPEN_INVENTORY);
+    game.send(USE_POTION);
+    game.send(CLOSE_INVENTORY);
+    expect(playingView(game).hero).toMatchObject({ health: 8, consumables: { ammunition: 7, 'healing-potion': 4 } });
+    untilDefeated(game);
+    return game;
+  }
+
+  it('gives back the Ammunition and the Healing Potions the hero had at the Checkpoint: what it spent comes back, what it found goes', () => {
+    const game = fallInTheCellar();
+
+    const view = playingView(game);
+    expect(view.area.id).toBe('arena');
+    expect(view.hero).toMatchObject({
+      position: { x: 4.5, y: 2.5 },
+      health: 10,
+      consumables: { ammunition: 5, 'healing-potion': 2 },
+    });
+  });
+
+  /**
+   * The hero is on the lookout again after the fall. It takes the potion on the tile (5, 2), which its 3rd step to the
+   * right reaches, and its 3rd step down is in the exit: it arrives in the cellar at (2.5, 3.5).
+   */
+  function backToTheCellar(game: Game): void {
+    walk(game, 'right', 3);
+    walk(game, 'down', 3);
+    expect(playingView(game).area.id).toBe('cellar');
+  }
+
+  it('puts a pickup the hero took after the Checkpoint back on the ground in the area of the Checkpoint', () => {
+    const game = fallInTheCellar();
+    expect(pickupIds(game)).toEqual(['arena-potions-2']);
+
+    expect(walk(game, 'right', 3)).toEqual([tookPotions(1)]);
+  });
+
+  it('puts a pickup the hero took after the Checkpoint back on the ground in the area where it fell, too', () => {
+    const game = fallInTheCellar();
+    backToTheCellar(game);
+    expect(pickupIds(game)).toEqual(['cellar-potions']);
+
+    expect(walk(game, 'down', 3)).toEqual([tookPotions(2)]);
+  });
+
+  it('closes a cache the hero opened after the Checkpoint again, and leaves open one it opened before', () => {
+    const game = fallInTheCellar();
+    expect(chestViews(game)).toEqual([expect.objectContaining({ id: 'arena-cache', opened: true })]);
+    backToTheCellar(game);
+    expect(chestViews(game)).toEqual([expect.objectContaining({ id: 'cellar-cache', opened: false })]);
+
+    walk(game, 'down', 3);
+    face(game, 'right');
+    expect(game.send(INTERACT)).toEqual([{ type: 'chest-opened', chestId: 'cellar-cache' }, tookArrows(3)]);
+    expect(playingView(game).hero.consumables).toEqual({ ammunition: 8, 'healing-potion': 5 });
+  });
+
+  it('does not put back a pickup the hero took before the Checkpoint', () => {
+    const game = fallInTheCellar();
+
+    // The hero is on the lookout, and its 3rd step to the left is onto the tile (3, 2), where it took 2 potions.
+    expect(walk(game, 'left', 3)).toEqual([]);
+
+    expect(playingView(game).hero.consumables).toEqual({ ammunition: 5, 'healing-potion': 2 });
+  });
+
+  it('does the same every time the hero falls: what it finds again in its next life goes as well', () => {
+    // The hero has 5 Health. It touches the camp, opens the cache to its left (5 arrows) and walks onto the beach (3
+    // potions), and the biter's hit on the 31st step defeats it. The biter is whole again and hits 31 steps after
+    // the fall, which leaves the hero the time to find the same things again.
+    const game = newGame(
+      arena({
+        hero: { health: 5 },
+        checkpoints: [CAMP],
+        monsters: [BITER_BESIDE_HERO],
+        interactables: [cacheAt('cache', 2, 4, 5), pickupAt('potions', 4, 4, 3)],
+      }),
+    );
+    function findThem(): void {
+      face(game, 'left');
+      game.send(INTERACT);
+      walk(game, 'right', 3);
+      expect(playingView(game).hero.consumables).toEqual({ ammunition: 5, 'healing-potion': 3 });
+    }
+    function expectNoneFound(): void {
+      expect(playingView(game).hero.consumables).toEqual({ ammunition: 0, 'healing-potion': 0 });
+      expect(chestViews(game)).toEqual([expect.objectContaining({ id: 'cache', opened: false })]);
+      expect(pickupIds(game)).toEqual(['potions']);
+    }
+
+    walk(game, 'down', 3);
+    findThem();
+    untilDefeated(game);
+    expectNoneFound();
+
+    findThem();
+    untilDefeated(game);
+    expectNoneFound();
+  });
+});
+
+describe('Defeat and what the hero keeps', () => {
+  /**
+   * The hero touches the camp and goes through the exit to the cellar. There it reaches the milestone on the entrance
+   * (4 Experience), opens the chest (an iron sword), defeats the weakling (10 Experience, which makes it Level 2),
+   * assigns the Stat Point to Health and equips the iron sword. The biter then hits for far more than the hero's Health.
+   */
+  function growInTheCellarAndFall(): Game {
+    const game = newGame(
+      world(
+        { checkpoints: [CAMP], monsterTypes: { weakling: frailMonster(10), biter: { ...BITER, damage: 100 } } },
+        {
+          monsters: [{ id: 'cellar-weakling', type: 'weakling', tile: { col: 1, row: 4 } }, biterAt('cellar-biter', 3, 3)],
+          milestones: [milestone('landing', { col: 2, row: 3, width: 1, height: 1 }, 4)],
+          interactables: [chestAt('cellar-chest', 3, 4, 'iron-sword')],
+        },
+      ),
+    );
+    walk(game, 'down', 3);
+    walk(game, 'right', 11);
+    walk(game, 'down', 3);
+    face(game, 'right');
+    game.send(INTERACT);
+    face(game, 'left');
+    expect(game.send(ATTACK)).toContainEqual({ type: 'monster-defeated', monsterId: 'cellar-weakling' });
+    game.send({ type: 'assign-stat-point', stat: 'health' });
+    game.send(OPEN_INVENTORY);
+    game.send({ type: 'equip', gearId: 'iron-sword' });
+    game.send(CLOSE_INVENTORY);
+    expect(playingView(game).hero).toMatchObject({ health: 13, maxHealth: 13 });
+    untilDefeated(game);
+    expect(playingView(game).area.id).toBe('arena');
+    return game;
+  }
+
+  it('keeps the Level, the Experience and the Stat Points the hero assigned', () => {
+    const game = growInTheCellarAndFall();
+
+    game.send({ type: 'open-page', page: 'stats' });
+
+    expect(playingView(game).page).toMatchObject({
+      id: 'stats',
+      level: 2,
+      experience: { earned: 4, needed: 15 },
+      health: 13,
+      maxHealth: 13,
+    });
+  });
+
+  it('keeps all the Gear the hero carries, what it has equipped and the chest of Gear it opened', () => {
+    const game = growInTheCellarAndFall();
+
+    game.send(OPEN_INVENTORY);
+    expect(playingView(game).page).toMatchObject({
+      id: 'inventory',
+      gear: [
+        { id: 'basic-sword', equipped: false },
+        { id: 'iron-sword', equipped: true },
+        { id: 'basic-armor', equipped: true },
+      ],
+      attack: 3,
+    });
+    game.send(CLOSE_INVENTORY);
+
+    // The hero goes back to the cellar, to the chest at (3, 4).
+    walk(game, 'up', 3);
+    walk(game, 'right', 11);
+    walk(game, 'down', 3);
+    face(game, 'right');
+    expect(chestViews(game)).toEqual([expect.objectContaining({ id: 'cellar-chest', opened: true })]);
+    expect(game.send(INTERACT)).toEqual([]);
+  });
+
+  it('keeps the milestones the hero reached: they give nothing a second time', () => {
+    const game = growInTheCellarAndFall();
+
+    // The hero goes back to the cellar, to the entrance, which is the tile of the milestone.
+    walk(game, 'up', 3);
+    walk(game, 'right', 11);
+    expect(advance(game, 2)).toEqual([]);
+
+    game.send({ type: 'open-page', page: 'stats' });
+    expect(playingView(game).page).toMatchObject({ level: 2, experience: { earned: 4, needed: 15 } });
   });
 });

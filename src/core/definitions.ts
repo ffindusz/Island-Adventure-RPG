@@ -199,7 +199,10 @@ export type ChestContents =
   | { readonly kind: 'gear'; readonly gear: string }
   | { readonly kind: 'consumable'; readonly consumable: ConsumableId; readonly amount: number };
 
-/** A chest: the hero opens it once by interacting with it and takes what is inside. It fills one tile and is solid. */
+/**
+ * A chest: the hero opens it once by interacting with it and takes what is inside. It fills one tile and is solid.
+ * Defeat closes it again when it holds a consumable that the hero took after its Checkpoint (see consumable-rollback.ts).
+ */
 export interface ChestDefinition {
   readonly kind: 'chest';
   /** Unique across all interactables of all Adventure Areas: events and saves refer to the chest by it. */
@@ -211,7 +214,8 @@ export interface ChestDefinition {
 
 /**
  * Some of a consumable lying on a tile: the hero takes all of it by walking onto it, with no key to press, and it is
- * gone for good. It is not solid: the hero, the monsters and the arrows pass over it.
+ * gone, unless defeat puts it back (see consumable-rollback.ts). It is not solid: the hero, the monsters and the arrows
+ * pass over it.
  */
 export interface PickupDefinition {
   readonly kind: 'pickup';

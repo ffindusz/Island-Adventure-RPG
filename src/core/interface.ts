@@ -118,14 +118,18 @@ export type GameEvent =
   | { readonly type: 'weapon-switched'; readonly weapon: WeaponSlot }
   /**
    * The hero came onto this Checkpoint. It is the one defeat sends the hero back to now, and the hero's Health is
-   * restored to full. Nothing else is restored: the Ammunition and the Healing Potions the hero has stay as they are.
+   * restored to full. Nothing else changes: the Ammunition and the Healing Potions the hero has stay as they are, and
+   * they are what defeat gives back later, along with the pickups and the caches taken so far.
    */
   | { readonly type: 'checkpoint-activated'; readonly checkpointId: string }
   /**
    * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health at the
    * Checkpoint it touched last (the start of the adventure before it touched any), and the monsters of that Adventure
    * Area are back as they began: the view shows the new state. When that Checkpoint is in another area, `area-changed`
-   * follows this event. The monsters of other Adventure Areas are as they were.
+   * follows this event. The monsters of other Adventure Areas keep their Health, defeated ones stay defeated, and the
+   * ones that were after the hero stop. The Ammunition and the Healing Potions are as many as they were at that
+   * Checkpoint, and the pickups and the caches taken since are there again, in every area; the Level, the Experience,
+   * the Stat Points, the Gear and the chests of Gear that were opened stay.
    */
   | { readonly type: 'hero-defeated' };
 

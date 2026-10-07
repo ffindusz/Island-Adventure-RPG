@@ -495,7 +495,7 @@ describe('Defeat in a connected Adventure Area', () => {
       return game;
     }
 
-    it('takes the arrows in the air and nothing else from the hero: it keeps the bow in hand and the Ammunition', () => {
+    it('takes the arrows in the air and the Ammunition found since the start from the hero, and nothing else: it keeps the bow in hand', () => {
       const game = aboutToFallWithTheBow();
       expect(playingView(game).arrows, 'in the air just before the hit').toHaveLength(1);
 
@@ -507,22 +507,22 @@ describe('Defeat in a connected Adventure Area', () => {
         position: { x: 3.5, y: 3.5 },
         health: 5,
         activeWeapon: 'ranged-weapon',
-        consumables: { ammunition: 7 },
+        consumables: { ammunition: 0 },
       });
       expect(view.arrows).toEqual([]);
       advance(game, 10);
       expect(playingView(game).arrows).toEqual([]);
     });
 
-    it('leaves the caches the hero opened open, in both areas: dying gives no new arrows', () => {
+    it('closes the caches the hero opened since the start again, in both areas: the arrows in them can be taken again', () => {
       const game = aboutToFallWithTheBow();
       advance(game, 1);
 
-      expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'arena-cache', opened: true })]);
+      expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'arena-cache', opened: false })]);
       walk(game, 'right', 11);
       expect(playingView(game).area.id).toBe('cellar');
-      expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'cellar-cache', opened: true })]);
-      expect(playingView(game).hero.consumables.ammunition).toBe(7);
+      expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'cellar-cache', opened: false })]);
+      expect(playingView(game).hero.consumables.ammunition).toBe(0);
     });
   });
 });
