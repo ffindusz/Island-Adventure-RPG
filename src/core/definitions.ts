@@ -21,6 +21,19 @@ export interface MeleeWeaponDefinition {
 }
 
 /**
+ * The hero's Ranged Weapon: how its arrows fly. A bow only adds to Attack (see GearDefinition), so the arrows fly the
+ * same whichever bow the hero has equipped.
+ */
+export interface RangedWeaponDefinition {
+  /** How fast an arrow flies, in tiles per second. Must be more than 0. */
+  readonly arrowSpeedTilesPerSecond: number;
+  /** How far an arrow flies from the hero's centre before it falls, in tiles. Must be more than 0. */
+  readonly range: number;
+  /** Width and height of an arrow's body, in tiles. Must be more than 0, and at most the hero's own size. */
+  readonly arrowSize: number;
+}
+
+/**
  * Where Gear is equipped: the hero carries as many pieces as it finds and has one equipped in each slot. The list is
  * open: a new slot is one more entry here and in GEAR_SLOT_STAT.
  */
@@ -65,6 +78,7 @@ export interface HeroDefinition {
   readonly attack: number;
   readonly attackCooldownMs: number;
   readonly meleeWeapon: MeleeWeaponDefinition;
+  readonly rangedWeapon: RangedWeaponDefinition;
   /**
    * How far the hero reaches beyond its body, in tiles, to interact with something in front of it, such as a chest.
    * It is as wide as the hero's body. Must be more than 0.

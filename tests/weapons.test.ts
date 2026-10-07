@@ -83,7 +83,7 @@ describe('the bow', () => {
 describe('Attack with a sword and a bow', () => {
   const steelSwordAndBow = { 'melee-weapon': 'steel-sword', 'ranged-weapon': 'short-bow' } as const;
 
-  it('does not count the bow in a strike: the bonus of the bow is for arrows, a strike has only that of the sword', () => {
+  it('does not count the bow in a strike: only the bonus of the sword counts there', () => {
     const game = newGame(
       arena({
         monsters: [{ id: 'post', type: 'sturdy', tile: { col: 3, row: 4 } }],

@@ -47,6 +47,13 @@ export function buildView(state: GameState, content: Content): GameView {
         action: actionView(monster.action),
       };
     }),
+    arrows: state.arrows
+      .filter((arrow) => arrow.areaId === state.areaId)
+      .map((arrow) => ({
+        position: { x: arrow.position.x, y: arrow.position.y },
+        direction: arrow.direction,
+        size: content.hero.rangedWeapon.arrowSize,
+      })),
     interactables: area.interactables.map((interactable) => interactableView(interactable, state)),
     page: pageView(state, content),
     levelUp: levelUpView(state, content),

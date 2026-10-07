@@ -75,11 +75,28 @@ export interface HeroState {
 export const PAGE_IDS = ['stats', 'inventory'] as const;
 export type PageId = (typeof PAGE_IDS)[number];
 
+/** An arrow in flight. Like all state it is plain data, so the arrows in the air are saved with the game. */
+export interface ArrowState {
+  /** The Adventure Area it was shot in: it flies and hits only there. */
+  readonly areaId: string;
+  /** The centre of its body. */
+  position: Point;
+  /** The way it flies, fixed when it was shot. */
+  readonly direction: Direction;
+  /** How far it can still fly before it falls, in tiles. */
+  rangeLeft: number;
+}
+
 export interface PlayState {
   readonly phase: 'playing';
   /** The Adventure Area the hero is in. */
   areaId: string;
   hero: HeroState;
+  /**
+   * The arrows in flight, in the order they were shot. No damage is kept with an arrow: it does the hero's Attack as
+   * it is when the arrow hits.
+   */
+  arrows: ArrowState[];
   /** The page that is open over the game, if any. While one is open the game is paused (see pages.ts). */
   page: PageId | null;
   /** World state is kept per Adventure Area, by area id. */
@@ -117,6 +134,7 @@ export function newPlayState(content: Content): PlayState {
       activeWeapon: 'melee-weapon',
       consumables: { ammunition: 0 },
     },
+    arrows: [],
     page: null,
     areas,
   };

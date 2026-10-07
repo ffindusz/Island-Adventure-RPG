@@ -21,6 +21,7 @@ export type {
   MonsterPlacement,
   MonsterTypeDefinition,
   ProgressionDefinition,
+  RangedWeaponDefinition,
   StatId,
   StationaryMonsterDefinition,
   TerrainDefinition,
@@ -30,6 +31,7 @@ export type {
 export type { Box, Direction, Point, Tile } from './geometry';
 export type {
   AreaView,
+  ArrowView,
   ChestView,
   Command,
   Game,
@@ -57,6 +59,7 @@ export type {
 } from './interface';
 export type {
   AreaState,
+  ArrowState,
   ChestState,
   HeroState,
   InteractableState,

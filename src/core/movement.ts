@@ -69,7 +69,7 @@ function travelBeforeObstacle(body: Box, direction: Direction, distance: number,
 }
 
 /** The free space between a body and an obstacle that lies in its way, or undefined if the obstacle is not in the way. */
-function gapAhead(body: Box, direction: Direction, obstacle: Box): number | undefined {
+export function gapAhead(body: Box, direction: Direction, obstacle: Box): number | undefined {
   switch (direction) {
     case 'right':
       return overlapsVertically(body, obstacle) && obstacle.minX >= body.maxX - EPSILON

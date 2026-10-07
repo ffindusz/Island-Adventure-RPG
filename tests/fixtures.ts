@@ -33,8 +33,10 @@ import type {
 //                           #######
 //   hero                    body 0.5 tiles; walks 7.5 tiles a second, which is 0.125 tile a fixed step
 //                           (8 steps to cross one tile); Health 10; Defense 0; Attack 1; attack cooldown 400 ms,
-//                           which is 24 steps; strike reaches 1 tile beyond the body and is 1 tile wide; interacts with
-//                           what is within 0.5 tile beyond its body, in the width of its body
+//                           which is 24 steps; strike reaches 1 tile beyond the body and is 1 tile wide;
+//                           interacts with what is within 0.5 tile beyond its body, in the width of its body; its
+//                           arrows are 0.25 tile wide, fly 15 tiles a second, which is 0.25 tile a step, and fall
+//                           4 tiles from the hero's centre (16 steps)
 //   Levels                  the Experience that raises the hero to Levels 2 to 6 is 10, 25, 45, 70 and 100 in all;
 //                           each Stat Point adds 3 to Health, 2 to Attack or 1 to Defense
 //   Gear                    the hero begins with a basic sword and basic armor, which add nothing. The arena has more
@@ -104,7 +106,7 @@ export const WITH_BOW = {
   armor: 'basic-armor',
 } as const;
 
-interface ArenaOptions {
+export interface ArenaOptions {
   readonly monsters?: readonly MonsterPlacement[];
   readonly layout?: readonly string[];
   /** More Adventure Areas besides the arena, which the hero never reaches in these tests. */
@@ -155,6 +157,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
       attack: 1,
       attackCooldownMs: 400,
       meleeWeapon: { reach: 1, width: 1 },
+      rangedWeapon: { arrowSpeedTilesPerSecond: 15, range: 4, arrowSize: 0.25 },
       interactionReach: 0.5,
       startingGear: { 'melee-weapon': 'basic-sword', armor: 'basic-armor' },
       ...hero,

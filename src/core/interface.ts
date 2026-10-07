@@ -31,7 +31,11 @@ export type Command =
   | { readonly type: 'move'; readonly direction: Direction }
   /** A direction key came up. */
   | { readonly type: 'stop'; readonly direction: Direction }
-  /** Strike with the Melee Weapon in the facing direction, unless the attack cooldown is still running. */
+  /**
+   * Attack with the weapon in hand, unless the attack cooldown is still running: strike with the Melee Weapon in the
+   * facing direction, or shoot an arrow that way from the Ranged Weapon, which costs one Ammunition. With the Ranged
+   * Weapon in hand and no Ammunition nothing is fired and the cooldown does not start: the hero is told instead.
+   */
   | { readonly type: 'attack' }
   /**
    * Interact with what is in front of the hero within its reach, such as opening a chest. When several interactables
@@ -68,7 +72,11 @@ export type Command =
 export type GameEvent =
   /** The hero swung. `zone` is the area the strike covered. */
   | { readonly type: 'hero-attacked'; readonly direction: Direction; readonly zone: Box }
-  /** A monster took damage; `health` is what it has left. */
+  /** The hero loosed an arrow in this direction, spending one Ammunition. The arrow flies on in the view. */
+  | { readonly type: 'hero-shot'; readonly direction: Direction }
+  /** The hero tried to shoot with no Ammunition. Nothing was fired, and the attack cooldown did not start. */
+  | { readonly type: 'out-of-ammunition' }
+  /** A monster took damage, from a strike or an arrow; `health` is what it has left. */
   | { readonly type: 'monster-hit'; readonly monsterId: string; readonly damage: number; readonly health: number }
   /** A monster's Health reached zero. It is gone from the view. */
   | { readonly type: 'monster-defeated'; readonly monsterId: string }
@@ -151,6 +159,16 @@ export type MonsterActionView =
   | { readonly type: 'winding-up'; readonly progress: number; readonly zone: Box }
   /** Resting after an attack. */
   | { readonly type: 'recovering' };
+
+/** An arrow in flight, for the adapter to draw. */
+export interface ArrowView {
+  /** The centre of the arrow. */
+  readonly position: Point;
+  /** The way it flies. */
+  readonly direction: Direction;
+  /** Width and height of the arrow's body, in tiles. */
+  readonly size: number;
+}
 
 /** A chest, for the adapter to draw. It stays where it is once opened. */
 export interface ChestView {
@@ -256,6 +274,8 @@ export interface PlayingView {
   readonly area: AreaView;
   readonly hero: HeroView;
   readonly monsters: readonly MonsterView[];
+  /** The arrows in flight in the Adventure Area the hero is in, in the order they were shot. */
+  readonly arrows: readonly ArrowView[];
   /** The interactables of the Adventure Area the hero is in, such as chests, opened ones included. */
   readonly interactables: readonly InteractableView[];
   /** The page that is open over the game, if any. While one is open the game is paused. */

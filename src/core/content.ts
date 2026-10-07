@@ -15,6 +15,7 @@ import type {
   MonsterPlacement,
   MonsterTypeDefinition,
   ProgressionDefinition,
+  RangedWeaponDefinition,
   StationaryMonsterDefinition,
   TileRect,
 } from './definitions';
@@ -78,6 +79,16 @@ export interface ChaserMonsterType {
 /** A monster type as the rules use it, one member for each behavior. */
 export type MonsterType = StationaryMonsterType | ChaserMonsterType;
 
+/** The hero's Ranged Weapon as the rules use it. */
+export interface RangedWeapon {
+  /** Tiles an arrow flies in one fixed step. */
+  readonly arrowSpeedPerStep: number;
+  /** Tiles an arrow flies from the hero's centre before it falls. */
+  readonly range: number;
+  /** Width and height of an arrow's body, in tiles. */
+  readonly arrowSize: number;
+}
+
 export interface Content {
   readonly hero: {
     readonly size: number;
@@ -88,6 +99,7 @@ export interface Content {
     readonly attack: number;
     readonly attackCooldownSteps: number;
     readonly meleeWeapon: MeleeWeaponDefinition;
+    readonly rangedWeapon: RangedWeapon;
     /** Tiles beyond the hero's body, in front of it, within which it interacts. */
     readonly interactionReach: number;
     readonly startingGear: Readonly<Partial<Record<GearSlot, string>>>;
@@ -106,6 +118,7 @@ export function loadContent(definition: ContentDefinition): Content {
   requireMoreThanZero("The hero's health", definition.hero.health);
   requireZeroOrMore("The hero's defense", definition.hero.defense);
   requireMoreThanZero("The hero's interaction reach", definition.hero.interactionReach);
+  const rangedWeapon = loadRangedWeapon(definition.hero.rangedWeapon, definition.hero.size);
   const minimumDamage = definition.minimumDamage ?? DEFAULT_MINIMUM_DAMAGE;
   requireZeroOrMore('The minimum damage', minimumDamage);
   const progression = loadProgression(definition.progression);
@@ -146,6 +159,7 @@ export function loadContent(definition: ContentDefinition): Content {
       attack: definition.hero.attack,
       attackCooldownSteps: msToSteps(definition.hero.attackCooldownMs),
       meleeWeapon: definition.hero.meleeWeapon,
+      rangedWeapon,
       interactionReach: definition.hero.interactionReach,
       startingGear,
     },
@@ -155,6 +169,26 @@ export function loadContent(definition: ContentDefinition): Content {
     monsterTypes,
     areas,
     start: { areaId: definition.start.area, tile: definition.start.tile },
+  };
+}
+
+/**
+ * An arrow starts at the hero's centre, so it must fit in the hero's body, which is never inside solid terrain or a
+ * chest: that is what keeps an arrow from ever starting inside something it should be stopped by.
+ */
+function loadRangedWeapon(definition: RangedWeaponDefinition, heroSize: number): RangedWeapon {
+  requireMoreThanZero("The hero's arrow speed", definition.arrowSpeedTilesPerSecond);
+  requireMoreThanZero("The hero's arrow range", definition.range);
+  requireMoreThanZero("The hero's arrow size", definition.arrowSize);
+  if (definition.arrowSize > heroSize) {
+    throw new Error(
+      `The hero's arrow size must be at most the hero's size of ${heroSize}, but it is ${definition.arrowSize}`,
+    );
+  }
+  return {
+    arrowSpeedPerStep: definition.arrowSpeedTilesPerSecond / STEPS_PER_SECOND,
+    range: definition.range,
+    arrowSize: definition.arrowSize,
   };
 }
 

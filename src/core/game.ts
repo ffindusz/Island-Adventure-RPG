@@ -1,5 +1,6 @@
+import { flyArrows } from './arrows';
 import { stepMonsters } from './behaviors';
-import { coolDownHero, heroStrikes } from './combat';
+import { coolDownHero } from './combat';
 import { loadContent } from './content';
 import { equipGear } from './gear';
 import type { Direction } from './geometry';
@@ -13,7 +14,7 @@ import { assignStatPoint } from './progression';
 import { newPlayState, SNAPSHOT_VERSION, copyState } from './state';
 import type { GameState } from './state';
 import { buildView } from './view';
-import { switchWeapon } from './weapons';
+import { heroAttacks, switchWeapon } from './weapons';
 
 export function createGame(options: GameOptions): Game {
   const content = loadContent(options.content);
@@ -45,7 +46,7 @@ export function createGame(options: GameOptions): Game {
           }
           return [];
         case 'attack':
-          return state.phase === 'playing' && !isPaused(state, content) ? heroStrikes(state, content) : [];
+          return state.phase === 'playing' && !isPaused(state, content) ? heroAttacks(state, content) : [];
         case 'interact':
           return state.phase === 'playing' && !isPaused(state, content) ? heroInteracts(state, content) : [];
         case 'open-page':
@@ -75,9 +76,15 @@ export function createGame(options: GameOptions): Game {
       }
       coolDownHero(state);
       walkHero(state, content, held.at(-1));
-      // The hero is where it walked to when it reaches a milestone, and that comes before the monsters act.
+      // The hero is where it walked to when it reaches a milestone. Then the arrows fly, and then the monsters act.
       const milestoneEvents = reachMilestones(state, content);
-      return [...milestoneEvents, ...stepMonsters(state, content)];
+      const arrowEvents = flyArrows(state, content);
+      const monsterEvents = stepMonsters(state, content);
+      if (monsterEvents.some((event) => event.type === 'hero-defeated')) {
+        // Defeat sends the hero back and the monsters back to where they began: the arrows of that life do not fly on.
+        state.arrows = [];
+      }
+      return [...milestoneEvents, ...arrowEvents, ...monsterEvents];
     },
     view: () => buildView(state, content),
     snapshot: () => {

@@ -1,9 +1,8 @@
 import type { Content } from './content';
-import { monsterTypeOf } from './content';
 import { overlaps, zoneInFront } from './geometry';
 import type { Box, Direction, Point } from './geometry';
 import type { GameEvent } from './interface';
-import { gainExperience } from './progression';
+import { hurtMonster } from './monster-damage';
 import { livingMonsters, monsterBody } from './state';
 import type { PlayState } from './state';
 import { heroAttack } from './stats';
@@ -19,13 +18,7 @@ export function heroStrikes(state: PlayState, content: Content): GameEvent[] {
   const events: GameEvent[] = [{ type: 'hero-attacked', direction, zone }];
   for (const monster of livingMonsters(state)) {
     if (overlaps(zone, monsterBody(monster, content))) {
-      const damage = heroAttack(state, content, 'melee-weapon');
-      monster.health = Math.max(0, monster.health - damage);
-      events.push({ type: 'monster-hit', monsterId: monster.id, damage, health: monster.health });
-      if (monster.health === 0) {
-        events.push({ type: 'monster-defeated', monsterId: monster.id });
-        events.push(...gainExperience(state, content, monsterTypeOf(content, monster.type).experience));
-      }
+      events.push(...hurtMonster(state, content, monster, heroAttack(state, content, 'melee-weapon')));
     }
   }
   return events;
