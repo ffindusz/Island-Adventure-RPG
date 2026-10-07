@@ -139,10 +139,77 @@ export interface ChaserMonsterDefinition extends MonsterTypeBase {
 }
 
 /**
+ * A monster that notices the hero, lines up with it, winds up and then dashes in a straight line. The wind-up
+ * telegraphs the lane the dash will follow: the strip, as wide as the monster, from its body to the first solid terrain
+ * or chest in that direction, or as far as the dash reaches. The lane is fixed when the wind-up begins. The dash hurts
+ * the hero only if the hero is in its way, and stops at whatever is: solid terrain, a chest, another monster, the hero.
+ * Afterwards the monster rests, and it can be hit like any other.
+ */
+export interface ChargerMonsterDefinition extends MonsterTypeBase {
+  readonly behavior: 'charger';
+  /** The damage of the hit when the dash reaches the hero, before the hero's Defense reduces it. */
+  readonly damage: number;
+  /** How fast the monster walks to line up with the hero. 0 makes it stand still until the hero is in its line. */
+  readonly speedTilesPerSecond: number;
+  /** How near the hero must come to the monster's body, in tiles, for the monster to notice it and line up. */
+  readonly noticingDistance: number;
+  /** How long the monster winds up before it dashes: the time the player has to leave the lane. */
+  readonly windUpMs: number;
+  /** How fast the monster dashes. */
+  readonly dashSpeedTilesPerSecond: number;
+  /** The farthest the dash goes, in tiles, if nothing stops it before. */
+  readonly dashRange: number;
+  /** How long the monster rests after its dash before it may wind up again: the time the hero can hit it freely. */
+  readonly recoveryMs: number;
+}
+
+/** How a ranged attacker's projectile flies and what it does. The projectile flies like the hero's arrows do. */
+export interface MonsterProjectileDefinition {
+  /** The damage when it hits the hero, before the hero's Defense reduces it. */
+  readonly damage: number;
+  readonly speedTilesPerSecond: number;
+  /** How far it flies from the shooter's centre before it falls, in tiles. */
+  readonly range: number;
+  /** Width and height of its body, in tiles. At most the shooter's size, since it leaves from the shooter's centre. */
+  readonly size: number;
+}
+
+/**
+ * A monster that notices the hero, winds up and shoots a projectile. The wind-up is the telegraph, shown as a flash on
+ * the monster. The projectile is aimed when it is fired, at where the hero stands then, along the axis it is farther
+ * away on; it does not turn after that. It flies straight on until it hurts the hero, or solid terrain or a chest stops
+ * it, or its range is spent, and no monster is in its way. Afterwards the monster rests, and it can be hit like any other.
+ */
+export interface RangedMonsterDefinition extends MonsterTypeBase {
+  readonly behavior: 'ranged';
+  /** How near the hero must come to the monster's body, in tiles, for the monster to notice it and wind up. */
+  readonly noticingDistance: number;
+  /** How long the monster winds up before it fires: the time the player has to leave the line of the shot. */
+  readonly windUpMs: number;
+  /** How long the monster rests after its shot before it may wind up again. */
+  readonly recoveryMs: number;
+  readonly projectile: MonsterProjectileDefinition;
+  /**
+   * Leave it out and the monster stands still wherever it is placed. Give it and the monster keeps its distance: it walks
+   * toward the hero when it is farther away than the distance it prefers, and away from it when it is nearer, and winds
+   * up when it is at that distance, or cannot get farther away.
+   */
+  readonly keepsDistance?: {
+    /** The gap the monster likes to keep between its body and the hero's, in tiles. */
+    readonly preferredDistance: number;
+    readonly speedTilesPerSecond: number;
+  };
+}
+
+/**
  * A monster type. Its `behavior` names the rules the monster follows (see behaviors.ts); the other fields are the
  * numbers that behavior needs. Adding a behavior means adding a member here and an entry in the behavior registry.
  */
-export type MonsterTypeDefinition = StationaryMonsterDefinition | ChaserMonsterDefinition;
+export type MonsterTypeDefinition =
+  | StationaryMonsterDefinition
+  | ChaserMonsterDefinition
+  | ChargerMonsterDefinition
+  | RangedMonsterDefinition;
 
 /** One monster standing in an Adventure Area. */
 export interface MonsterPlacement {

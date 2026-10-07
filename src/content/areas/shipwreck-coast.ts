@@ -1,13 +1,13 @@
 import type { AreaDefinition } from '../../core';
 
 // A placeholder that grows into the real shipwreck coast in a later ticket: a beach and a meadow, split by a wall of
-// rock with a two-tile gap, and two crabs on the meadow side, far from where the hero starts on the beach (so a hero
-// who is defeated and returns there is not at once in danger). Water and rock are solid. Passing through the gap is a
-// milestone, worth a little Experience. Two chests on the beach, one up and one down the column of the start, hold a
-// better sword and better armor. Two more, in the column two tiles right of the start, hold a short bow and a cache
-// of arrows. In the column two tiles left of it, a chest up the beach holds two Healing Potions and a third lies on the
-// ground down the beach, to be taken by walking over it. The Checkpoint of the area is where the hero starts: the start
-// of the adventure counts as the first.
+// rock with a two-tile gap, and on the meadow side two crabs, a boar and a spitter, far from where the hero starts on
+// the beach (so a hero who is defeated and returns there is not at once in danger). Water and rock are solid. Passing
+// through the gap is a milestone, worth a little Experience. Two chests on the beach, one up and one down the column of
+// the start, hold a better sword and better armor. Two more, in the column two tiles right of the start, hold a short
+// bow and a cache of arrows. In the column two tiles left of it, a chest up the beach holds two Healing Potions and a
+// third lies on the ground down the beach, to be taken by walking over it. The Checkpoint of the area is where the hero
+// starts: the start of the adventure counts as the first.
 export const shipwreckCoast: AreaDefinition = {
   id: 'shipwreck-coast',
   name: 'Shipwreck Coast',
@@ -36,10 +36,14 @@ export const shipwreckCoast: AreaDefinition = {
     '~~~~~~~~~~~~~~~~~~~~',
   ],
   // Kept clear of the entrance from the trail as well as the start with its Checkpoint, so that a hero who comes in
-  // there, or returns to the Checkpoint after a defeat, is not at once in danger.
+  // there, or returns to the Checkpoint after a defeat, is not at once in danger: no monster's noticing distance
+  // reaches a hero who stands on either (shipped-enemies.test.ts). The boar waits on the bottom row of the meadow and
+  // the spitter in its north-west corner.
   monsters: [
     { id: 'crab-1', type: 'crab', tile: { col: 12, row: 3 } },
     { id: 'crab-2', type: 'crab', tile: { col: 12, row: 8 } },
+    { id: 'boar-1', type: 'boar', tile: { col: 15, row: 10 } },
+    { id: 'spitter-1', type: 'spitter', tile: { col: 12, row: 1 } },
   ],
   milestones: [{ id: 'rock-wall-gap', zone: { col: 10, row: 5, width: 1, height: 2 }, reward: { experience: 5 } }],
   interactables: [
