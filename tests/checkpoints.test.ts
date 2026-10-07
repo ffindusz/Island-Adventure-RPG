@@ -6,6 +6,7 @@ import type {
   ContentDefinition,
   EntranceDefinition,
   ExitDefinition,
+  Game,
 } from '../src/core';
 import {
   ARENA_LAYOUT,
@@ -130,6 +131,11 @@ const CAMP_ACTIVATED = { type: 'checkpoint-activated', checkpointId: 'camp' } as
 const BITER_BESIDE_HERO = biterAt('biter', 4, 3);
 const BITE = { type: 'hero-hit', monsterId: 'biter', damage: 5, health: 5 } as const;
 
+// The beach is the tile to the right of the camp (sand, so the hero can walk on it). Walking right from the camp, the
+// hero's body overlaps it on the 3rd step.
+const BEACH: CheckpointDefinition = { id: 'beach', tile: { col: 4, row: 4 } };
+const BEACH_ACTIVATED = { type: 'checkpoint-activated', checkpointId: 'beach' } as const;
+
 describe('Touching a Checkpoint', () => {
   it('activates it, which the event and the view say', () => {
     const game = newGame(arena({ checkpoints: [CAMP] }));
@@ -189,5 +195,43 @@ describe('Arriving on a Checkpoint', () => {
 
     expect(walk(game, 'right', 11)).not.toContainEqual(expect.objectContaining({ type: 'checkpoint-activated' }));
     expect(playingView(game).checkpoints).toEqual([expect.objectContaining({ active: false })]);
+  });
+});
+
+describe('Defeat with Checkpoints', () => {
+  // The hero has 5 Health, so the biter's hit on the 31st step takes all of it. The hero stays in the biter's zone
+  // (x 3.5 to 5.5, y 2.5 to 4.5) on every walk below, and the biter's body (x 4.25 to 4.75) is never in its way.
+  function frailHeroWithCampAndBeach(): Game {
+    return newGame(arena({ hero: { health: 5 }, checkpoints: [CAMP, BEACH], monsters: [BITER_BESIDE_HERO] }));
+  }
+
+  it('sends the hero back to the Checkpoint it touched last, at full Health', () => {
+    const game = frailHeroWithCampAndBeach();
+    expect(walk(game, 'down', 3)).toContainEqual(CAMP_ACTIVATED);
+    // The hero is at (3.875, 3.875): its body overlaps the camp still, and the beach from this step on.
+    const arrival = walk(game, 'right', 3);
+    expect(arrival).toContainEqual(BEACH_ACTIVATED);
+    expect(arrival).not.toContainEqual(CAMP_ACTIVATED);
+    expect(advance(game, 24)).not.toContainEqual({ type: 'hero-defeated' });
+
+    expect(advance(game, 1)).toContainEqual({ type: 'hero-defeated' });
+
+    const { hero, area } = playingView(game);
+    expect(hero).toMatchObject({ position: { x: 4.5, y: 4.5 }, health: 5, maxHealth: 5 });
+    expect(area.id).toBe('arena');
+  });
+
+  it('counts the last Checkpoint touched, which may have been touched before another one', () => {
+    const game = frailHeroWithCampAndBeach();
+    walk(game, 'down', 3); // the camp
+    walk(game, 'right', 3); // the beach
+    walk(game, 'up', 3); // clear of both
+    walk(game, 'left', 3);
+    expect(walk(game, 'down', 3)).toEqual([CAMP_ACTIVATED]); // the camp again, at (3.5, 3.875): step 15
+    expect(advance(game, 15)).not.toContainEqual({ type: 'hero-defeated' });
+
+    expect(advance(game, 1)).toContainEqual({ type: 'hero-defeated' });
+
+    expect(playingView(game).hero).toMatchObject({ position: { x: 3.5, y: 4.5 }, health: 5 });
   });
 });

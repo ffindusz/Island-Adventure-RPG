@@ -30,7 +30,8 @@ export function hurtHero(state: PlayState, content: Content, monsterId: string, 
  * here: `step` takes them out when it sees the defeat.
  */
 function returnHero(state: PlayState, content: Content): void {
-  state.hero.position = centerOf(state.arrivedAt);
+  const checkpointIsHere = state.checkpoint.areaId === state.areaId;
+  state.hero.position = centerOf(checkpointIsHere ? state.checkpoint.tile : state.arrivedAt);
   state.hero.health = heroMaxHealth(state, content);
   currentAreaState(state).monsters = freshMonsters(areaOf(content, state.areaId), content);
 }

@@ -426,7 +426,7 @@ describe('Defeat in a connected Adventure Area', () => {
     expect(playingView(game).monsters).toEqual([]);
   });
 
-  it('sends the hero back to the entrance it last came in by, not to the start or the first entrance listed', () => {
+  it('does not send the hero back to the entrance it came in by: with no Checkpoint touched it returns to the start', () => {
     const first: EntranceDefinition = { id: 'first', tile: { col: 1, row: 1 } };
     const game = newGame(
       world({ monsters: [biterAt('arena-biter', 4, 4)], entrances: [first, FROM_CELLAR], hero: { health: 5 } }),
@@ -440,7 +440,7 @@ describe('Defeat in a connected Adventure Area', () => {
 
     expect(events.map((event) => event.type)).toContain('hero-defeated');
     expect(playingView(game).area.id).toBe('arena');
-    expect(playingView(game).hero.position).toEqual({ x: 4.5, y: 3.5 });
+    expect(playingView(game).hero.position).toEqual({ x: 3.5, y: 3.5 });
   });
 
   describe('with the bow and Ammunition found', () => {
@@ -483,7 +483,7 @@ describe('Defeat in a connected Adventure Area', () => {
       const view = playingView(game);
       expect(view.area.id).toBe('arena');
       expect(view.hero).toMatchObject({
-        position: { x: 4.5, y: 3.5 },
+        position: { x: 3.5, y: 3.5 },
         health: 5,
         activeWeapon: 'ranged-weapon',
         consumables: { ammunition: 7 },
@@ -498,7 +498,7 @@ describe('Defeat in a connected Adventure Area', () => {
       advance(game, 1);
 
       expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'arena-cache', opened: true })]);
-      walk(game, 'right', 3);
+      walk(game, 'right', 11);
       expect(playingView(game).area.id).toBe('cellar');
       expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'cellar-cache', opened: true })]);
       expect(playingView(game).hero.consumables.ammunition).toBe(7);
