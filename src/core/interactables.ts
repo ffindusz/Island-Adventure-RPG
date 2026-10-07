@@ -1,5 +1,6 @@
 import { areaOf } from './content';
 import type { Chest, Content, Interactable } from './content';
+import { grantConsumable } from './consumables';
 import type { ChestContents } from './definitions';
 import { grantGear } from './gear';
 import { centerOfBox, overlaps, zoneInFront } from './geometry';
@@ -95,5 +96,7 @@ function takeContents(contents: ChestContents, state: PlayState, content: Conten
   switch (contents.kind) {
     case 'gear':
       return grantGear(state, content, contents.gear);
+    case 'consumable':
+      return grantConsumable(state, contents.consumable, contents.amount);
   }
 }

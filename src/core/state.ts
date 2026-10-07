@@ -1,7 +1,7 @@
 import type { Area, Content, Interactable } from './content';
 import { monsterTypeOf } from './content';
 import { GEAR_SLOTS } from './definitions';
-import type { GearSlot, StatId } from './definitions';
+import type { ConsumableId, GearSlot, StatId, WeaponSlot } from './definitions';
 import type { Box, Direction, Point, Tile } from './geometry';
 import { boxAround, centerOf } from './geometry';
 import { heroMaxHealth } from './stats';
@@ -67,11 +67,27 @@ export interface HeroState {
   gear: string[];
   /** The id of the carried Gear that is equipped in each slot. A slot that has none is left out. */
   equipped: Partial<Record<GearSlot, string>>;
+  /** The weapon in hand, named by its slot: attack uses it, and the pages show its Attack. */
+  activeWeapon: WeaponSlot;
+  /** How many of each consumable the hero has. There is no limit to how much it can carry. */
+  consumables: Record<ConsumableId, number>;
 }
 
 /** The pages that can be open over the game, one at a time. A new page is one more id here and one more view. */
 export const PAGE_IDS = ['stats', 'inventory'] as const;
 export type PageId = (typeof PAGE_IDS)[number];
+
+/** An arrow in flight. Like all state it is plain data, so the arrows in the air are saved with the game. */
+export interface ArrowState {
+  /** The Adventure Area it was shot in: it flies and hits only there. */
+  readonly areaId: string;
+  /** The centre of its body. */
+  position: Point;
+  /** The way it flies, fixed when it was shot. */
+  readonly direction: Direction;
+  /** How far it can still fly before it falls, in tiles. */
+  rangeLeft: number;
+}
 
 /** The text of an Adventure Area while it is shown, and for how many more fixed steps. */
 export interface AreaTextState {
@@ -91,6 +107,11 @@ export interface PlayState {
   /** The text of the Adventure Area that is shown now, if any. It runs down while the game is not paused. */
   areaText: AreaTextState | null;
   hero: HeroState;
+  /**
+   * The arrows in flight, in the order they were shot. No damage is kept with an arrow: it does the hero's Attack as
+   * it is when the arrow hits.
+   */
+  arrows: ArrowState[];
   /** The page that is open over the game, if any. While one is open the game is paused (see pages.ts). */
   page: PageId | null;
   /** World state is kept per Adventure Area, by area id. */
@@ -128,7 +149,10 @@ export function newPlayState(content: Content): PlayState {
       statPoints: { health: 0, attack: 0, defense: 0 },
       gear: GEAR_SLOTS.flatMap((slot) => content.hero.startingGear[slot] ?? []),
       equipped: { ...content.hero.startingGear },
+      activeWeapon: 'melee-weapon',
+      consumables: { ammunition: 0 },
     },
+    arrows: [],
     page: null,
     areas,
   };

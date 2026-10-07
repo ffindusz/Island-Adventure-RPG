@@ -1,4 +1,4 @@
-import type { ContentDefinition, GearSlot, GearStat, StatId } from './definitions';
+import type { ConsumableId, ContentDefinition, GearSlot, GearStat, StatId, WeaponSlot } from './definitions';
 import type { Box, Direction, Point } from './geometry';
 import type { PageId, PlayState } from './state';
 
@@ -17,7 +17,10 @@ export type RandomSource = () => number;
 export interface GameOptions {
   /** The map, hero and monsters. Checked when the game is created; an invalid definition throws. */
   readonly content: ContentDefinition;
-  /** The only source of randomness. No rule uses it yet; monster drops will be the first. */
+  /**
+   * The only source of randomness. The rules use it for one thing: when a monster is defeated, each entry of the drop
+   * table of its type is rolled once. Nothing else in the rules is random.
+   */
   readonly random: RandomSource;
 }
 
@@ -31,7 +34,11 @@ export type Command =
   | { readonly type: 'move'; readonly direction: Direction }
   /** A direction key came up. */
   | { readonly type: 'stop'; readonly direction: Direction }
-  /** Strike with the Melee Weapon in the facing direction, unless the attack cooldown is still running. */
+  /**
+   * Attack with the weapon in hand, unless the attack cooldown is still running: strike with the Melee Weapon in the
+   * facing direction, or shoot an arrow that way from the Ranged Weapon, which costs one Ammunition. With the Ranged
+   * Weapon in hand and no Ammunition nothing is fired and the cooldown does not start: the hero is told instead.
+   */
   | { readonly type: 'attack' }
   /**
    * Interact with what is in front of the hero within its reach, such as opening a chest. When several interactables
@@ -56,13 +63,23 @@ export type Command =
    * unless the inventory page is open, and for Gear the hero does not carry or has equipped already. There is no
    * taking Gear off: equipping another piece in its slot is how it is swapped.
    */
-  | { readonly type: 'equip'; readonly gearId: string };
+  | { readonly type: 'equip'; readonly gearId: string }
+  /**
+   * Take the other weapon in hand: from the Melee Weapon to the Ranged Weapon, if the hero has one equipped, and from
+   * the Ranged Weapon back to the Melee Weapon. It takes no time: the attack cooldown is neither started nor waited
+   * for. Ignored at the title and while the game is paused, like attack.
+   */
+  | { readonly type: 'switch-weapon' };
 
 /** Something that happened, for the adapter to show or play. Events never carry rules; the state view is the truth. */
 export type GameEvent =
   /** The hero swung. `zone` is the area the strike covered. */
   | { readonly type: 'hero-attacked'; readonly direction: Direction; readonly zone: Box }
-  /** A monster took damage; `health` is what it has left. */
+  /** The hero loosed an arrow in this direction, spending one Ammunition. The arrow flies on in the view. */
+  | { readonly type: 'hero-shot'; readonly direction: Direction }
+  /** The hero tried to shoot with no Ammunition. Nothing was fired, and the attack cooldown did not start. */
+  | { readonly type: 'out-of-ammunition' }
+  /** A monster took damage, from a strike or an arrow; `health` is what it has left. */
   | { readonly type: 'monster-hit'; readonly monsterId: string; readonly damage: number; readonly health: number }
   /** A monster's Health reached zero. It is gone from the view. */
   | { readonly type: 'monster-defeated'; readonly monsterId: string }
@@ -86,6 +103,8 @@ export type GameEvent =
   | { readonly type: 'pickup'; readonly item: PickedUpItem }
   /** The hero equipped this Gear in its slot, in place of the piece there. */
   | { readonly type: 'gear-equipped'; readonly gearId: string; readonly slot: GearSlot }
+  /** The hero took this weapon in hand. */
+  | { readonly type: 'weapon-switched'; readonly weapon: WeaponSlot }
   /**
    * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health where
    * defeat sends it, and the monsters of the Adventure Area it is in are back as they began: the view shows the new
@@ -94,11 +113,19 @@ export type GameEvent =
   | { readonly type: 'hero-defeated' };
 
 /** What the hero took, as the player is told about it: one member for each kind of item. */
-export type PickedUpItem = PickedUpGear;
+export type PickedUpItem = PickedUpGear | PickedUpConsumable;
 
 /** A piece of Gear the hero took. It is carried, not equipped: the player equips it in the inventory. */
 export interface PickedUpGear extends GearInfo {
   readonly kind: 'gear';
+}
+
+/** Some of a consumable the hero took, such as the Ammunition of a cache. It is added to the count the hero has. */
+export interface PickedUpConsumable {
+  readonly kind: 'consumable';
+  readonly id: ConsumableId;
+  /** How many were added, 1 or more. */
+  readonly amount: number;
 }
 
 export interface HeroView {
@@ -110,6 +137,10 @@ export interface HeroView {
   readonly health: number;
   /** The hero's maximum Health. */
   readonly maxHealth: number;
+  /** The weapon in hand, named by its slot. */
+  readonly activeWeapon: WeaponSlot;
+  /** How many of each consumable the hero has. */
+  readonly consumables: Readonly<Record<ConsumableId, number>>;
 }
 
 export interface MonsterView {
@@ -137,6 +168,16 @@ export type MonsterActionView =
   /** Resting after an attack. */
   | { readonly type: 'recovering' };
 
+/** An arrow in flight, for the adapter to draw. */
+export interface ArrowView {
+  /** The centre of the arrow. */
+  readonly position: Point;
+  /** The way it flies. */
+  readonly direction: Direction;
+  /** Width and height of the arrow's body, in tiles. */
+  readonly size: number;
+}
+
 /** A chest, for the adapter to draw. It stays where it is once opened. */
 export interface ChestView {
   readonly kind: 'chest';
@@ -146,6 +187,11 @@ export interface ChestView {
   /** Width and height of the chest's body, in tiles. */
   readonly size: number;
   readonly opened: boolean;
+  /**
+   * What kind of thing it holds, so that it can be drawn marked: 'gear' for a chest of Gear, or the consumable that a
+   * cache holds. It never says which piece or how many, and it is the same once the chest is opened.
+   */
+  readonly holds: 'gear' | ConsumableId;
 }
 
 /** Something the hero can interact with, one member for each kind. */
@@ -210,7 +256,9 @@ export interface InventoryPageView {
   readonly id: 'inventory';
   /** The Gear the hero carries, equipped or not: by slot in the order of the slots, then in the order found. */
   readonly gear: readonly GearView[];
-  /** The hero's Attack and Defense, with the equipped Gear counted in. */
+  /** How many of each consumable the hero has. */
+  readonly consumables: Readonly<Record<ConsumableId, number>>;
+  /** The hero's Attack and Defense, with the equipped Gear counted in. The Attack is that of the weapon in hand. */
   readonly attack: number;
   readonly defense: number;
 }
@@ -244,6 +292,8 @@ export interface PlayingView {
   readonly areaText: string | null;
   readonly hero: HeroView;
   readonly monsters: readonly MonsterView[];
+  /** The arrows in flight in the Adventure Area the hero is in, in the order they were shot. */
+  readonly arrows: readonly ArrowView[];
   /** The interactables of the Adventure Area the hero is in, such as chests, opened ones included. */
   readonly interactables: readonly InteractableView[];
   /** The page that is open over the game, if any. While one is open the game is paused. */

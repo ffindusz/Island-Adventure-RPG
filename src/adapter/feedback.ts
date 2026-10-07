@@ -1,11 +1,12 @@
-import type { Box, GameEvent, PickedUpItem } from '../core';
+import type { Box, GameEvent } from '../core';
+import type { NoticeContent } from './notice';
 
 /** How long each kind of feedback stays on screen, in milliseconds. */
 const SWING_MS = 120;
 const HIT_FLASH_MS = 100;
 const STRIKE_MS = 160;
 const HERO_HURT_MS = 200;
-const PICKUP_NOTICE_MS = 3000;
+const NOTICE_MS = 3000;
 
 interface ZoneFlash {
   readonly zone: Box;
@@ -21,7 +22,7 @@ export class Feedback {
   private strikes: ZoneFlash[] = [];
   private readonly flashes = new Map<string, number>();
   private heroHurtMsLeft = 0;
-  private pickup: { readonly item: PickedUpItem; readonly msLeft: number } | null = null;
+  private told: { readonly content: NoticeContent; readonly msLeft: number } | null = null;
 
   /** Starts the feedback for events the Game core just reported. */
   show(events: readonly GameEvent[]): void {
@@ -43,7 +44,10 @@ export class Feedback {
           this.heroHurtMsLeft = HERO_HURT_MS;
           break;
         case 'pickup':
-          this.pickup = { item: event.item, msLeft: PICKUP_NOTICE_MS };
+          this.told = { content: { kind: 'pickup', item: event.item }, msLeft: NOTICE_MS };
+          break;
+        case 'out-of-ammunition':
+          this.told = { content: { kind: 'out-of-ammunition' }, msLeft: NOTICE_MS };
           break;
         case 'area-changed':
           this.clearFight();
@@ -69,9 +73,9 @@ export class Feedback {
     this.swings = remaining(this.swings, frameMs);
     this.strikes = remaining(this.strikes, frameMs);
     this.heroHurtMsLeft = Math.max(0, this.heroHurtMsLeft - frameMs);
-    if (this.pickup !== null) {
-      const { item, msLeft } = this.pickup;
-      this.pickup = msLeft > frameMs ? { item, msLeft: msLeft - frameMs } : null;
+    if (this.told !== null) {
+      const { content, msLeft } = this.told;
+      this.told = msLeft > frameMs ? { content, msLeft: msLeft - frameMs } : null;
     }
     for (const [monsterId, msLeft] of this.flashes) {
       if (msLeft <= frameMs) {
@@ -101,14 +105,14 @@ export class Feedback {
     return this.heroHurtMsLeft > 0;
   }
 
-  /** What the hero found a moment ago, for the player to be told about. */
-  pickupNotice(): PickedUpItem | null {
-    return this.pickup === null ? null : this.pickup.item;
+  /** What the player is being told about, the latest of what the hero found and that the bow has nothing to shoot. */
+  notice(): NoticeContent | null {
+    return this.told === null ? null : this.told.content;
   }
 
-  /** Stops telling the player about what the hero found: they have moved on to something that covers it. */
-  dismissPickup(): void {
-    this.pickup = null;
+  /** Stops telling the player about it: they have moved on to something that covers it. */
+  dismissNotice(): void {
+    this.told = null;
   }
 }
 

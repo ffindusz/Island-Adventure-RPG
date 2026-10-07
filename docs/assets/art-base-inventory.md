@@ -1,6 +1,6 @@
 # Art base inventory: Ninja Adventure Asset Pack
 
-Ticket 02. First-hand check of the provisional art base against the actual files, done 2026-10-07 on the archive downloaded 2026-10-06. This is a research result and a recommendation, not an approval: whether the art is acceptable is the user's call (see ADR 0004).
+Ticket 02. First-hand check of the provisional art base against the actual files, done 2026-10-07 on the archive downloaded 2026-10-06. This is a research result and a recommendation, not an approval: whether the art is acceptable is the user's call. The user approved the base with the named gaps filled on 2026-10-07 (see ADR 0004, "Decision").
 
 Paths below are relative to the archive root `Ninja Adventure - Asset Pack\` (extracted outside the repository, in `.worktrees\_assets\ninja\`). No art has been copied into the repository.
 

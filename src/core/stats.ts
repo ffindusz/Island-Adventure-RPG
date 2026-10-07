@@ -1,6 +1,6 @@
 import type { Content } from './content';
-import { GEAR_SLOT_STAT, STAT_IDS } from './definitions';
-import type { GearStat, StatId } from './definitions';
+import { GEAR_SLOT_STAT, STAT_IDS, WEAPON_SLOTS } from './definitions';
+import type { GearSlot, GearStat, StatId, WeaponSlot } from './definitions';
 import { equippedGear } from './gear';
 import type { PlayState } from './state';
 
@@ -13,11 +13,18 @@ function statPointBonus(state: PlayState, content: Content, stat: StatId): numbe
   return state.hero.statPoints[stat] * content.progression.statPointValue[stat];
 }
 
-/** What the hero's equipped Gear adds to a stat: the bonuses of the pieces whose slots raise that stat. */
-function gearBonus(state: PlayState, content: Content, stat: GearStat): number {
+/**
+ * What the hero's equipped Gear adds to a stat: the bonuses of the pieces whose slots raise that stat. Of the weapons
+ * only the one in `weapon` counts: the bonus of a bow is for arrows, and that of a sword is for strikes.
+ */
+function gearBonus(state: PlayState, content: Content, stat: GearStat, weapon: WeaponSlot): number {
   return equippedGear(state, content)
-    .filter((gear) => GEAR_SLOT_STAT[gear.slot] === stat)
+    .filter((gear) => GEAR_SLOT_STAT[gear.slot] === stat && (!isWeaponSlot(gear.slot) || gear.slot === weapon))
     .reduce((total, gear) => total + gear.bonus, 0);
+}
+
+function isWeaponSlot(slot: GearSlot): slot is WeaponSlot {
+  return (WEAPON_SLOTS as readonly GearSlot[]).includes(slot);
 }
 
 /** The most Health the hero can have. Gear does not change it. */
@@ -25,14 +32,18 @@ export function heroMaxHealth(state: PlayState, content: Content): number {
   return content.hero.health + statPointBonus(state, content, 'health');
 }
 
-/** How much damage each of the hero's strikes does to a monster. */
-export function heroAttack(state: PlayState, content: Content): number {
-  return content.hero.attack + statPointBonus(state, content, 'attack') + gearBonus(state, content, 'attack');
+/**
+ * How much damage each of the hero's attacks does to a monster, made with the weapon in the slot `weapon`. Without
+ * one it is the Attack of the weapon in hand, which is what the pages show.
+ */
+export function heroAttack(state: PlayState, content: Content, weapon: WeaponSlot = state.hero.activeWeapon): number {
+  return content.hero.attack + statPointBonus(state, content, 'attack') + gearBonus(state, content, 'attack', weapon);
 }
 
 /** How much each hit's damage is reduced by. */
 export function heroDefense(state: PlayState, content: Content): number {
-  return content.hero.defense + statPointBonus(state, content, 'defense') + gearBonus(state, content, 'defense');
+  const base = content.hero.defense + statPointBonus(state, content, 'defense');
+  return base + gearBonus(state, content, 'defense', state.hero.activeWeapon);
 }
 
 /** A stat by name, for what treats the stats alike, such as the choice of where to put a Stat Point. */

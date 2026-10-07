@@ -15,6 +15,14 @@ const ATTACK_KEY = 'SPACE';
 /** The key that interacts with what the hero faces, such as opening a chest. */
 const INTERACT_KEY = 'E';
 
+/** The key that takes the other weapon in hand, the sword or the bow. */
+const SWITCH_WEAPON_KEY = 'Q';
+
+/** The key that takes the other weapon in hand, as the player reads it. */
+export function switchWeaponKeyLabel(): string {
+  return SWITCH_WEAPON_KEY;
+}
+
 /** The key that picks the highlighted entry of a menu. The keys that walk up and down also move through a menu. */
 const CONFIRM_KEY = 'ENTER';
 
@@ -70,6 +78,7 @@ export class PlayerInput {
   private readonly walkKeys: Readonly<Record<Direction, readonly Key[]>>;
   private readonly attackKey: Key;
   private readonly interactKey: Key;
+  private readonly switchWeaponKey: Key;
   private readonly confirmKey: Key;
   private readonly pageKeys: readonly { readonly page: PageId; readonly key: Key }[];
   private readonly closePageKey: Key;
@@ -82,6 +91,7 @@ export class PlayerInput {
     this.attackKey = keyboard.addKey(ATTACK_KEY);
     // These are not captured, so the browser's own shortcuts on the same keys, such as Ctrl+C, still work.
     this.interactKey = keyboard.addKey(INTERACT_KEY, false);
+    this.switchWeaponKey = keyboard.addKey(SWITCH_WEAPON_KEY, false);
     this.confirmKey = keyboard.addKey(CONFIRM_KEY, false);
     this.pageKeys = PAGE_IDS.map((page) => ({ page, key: keyboard.addKey(PAGE_KEYS[page], false) }));
     this.closePageKey = keyboard.addKey(CLOSE_PAGE_KEY, false);
@@ -115,8 +125,8 @@ export class PlayerInput {
   }
 
   /**
-   * The commands for the attack, interact, page and Stat Point keys that were pressed again since the last call.
-   * Holding a key down does not repeat its command.
+   * The commands for the attack, interact, switch weapon, page and Stat Point keys that were pressed again since the
+   * last call. Holding a key down does not repeat its command.
    */
   pollActions(): Command[] {
     const commands: Command[] = [];
@@ -125,6 +135,9 @@ export class PlayerInput {
     }
     if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
       commands.push({ type: 'interact' });
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.switchWeaponKey)) {
+      commands.push({ type: 'switch-weapon' });
     }
     for (const { page, key } of this.pageKeys) {
       if (Phaser.Input.Keyboard.JustDown(key)) {

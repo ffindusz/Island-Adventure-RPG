@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { Command, Game, GameEvent, GameView } from '../core';
 import { AreaBanner } from './area-banner';
 import {
+  drawArrow,
   drawExits,
   drawHero,
   drawInteractable,
@@ -115,7 +116,7 @@ export class PlayScene extends Phaser.Scene {
     const view = this.core.view();
     if (gameIsWaiting(view)) {
       // A page or a Stat Point covers the notice, and the player is already where it pointed them.
-      this.feedback.dismissPickup();
+      this.feedback.dismissNotice();
     }
     this.draw(view, watching);
   }
@@ -143,6 +144,9 @@ export class PlayScene extends Phaser.Scene {
       }
       drawMonster(this.entityLayer, monster, this.feedback.isFlashing(monster.id));
     }
+    for (const arrow of view.arrows) {
+      drawArrow(this.entityLayer, arrow);
+    }
     drawHero(this.entityLayer, view.hero, this.feedback.isHeroHurt());
     this.effectLayer.clear();
     for (const zone of this.feedback.swingZones()) {
@@ -154,7 +158,7 @@ export class PlayScene extends Phaser.Scene {
     this.hud.draw(view);
     // A page or a Stat Point covers the text of the area; the core keeps its time frozen, so it is back afterwards.
     this.banner.draw(gameIsWaiting(view) ? null : view.areaText);
-    this.notice.draw(this.feedback.pickupNotice());
+    this.notice.draw(this.feedback.notice());
     this.overlay.draw(view, watching, this.inventoryMenu.position);
   }
 }

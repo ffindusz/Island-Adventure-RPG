@@ -2,6 +2,7 @@ import { createGame } from '../src/core';
 import type {
   AreaDefinition,
   ChaserMonsterDefinition,
+  ConsumableId,
   ContentDefinition,
   Direction,
   EntranceDefinition,
@@ -17,6 +18,7 @@ import type {
   MonsterView,
   PlayingView,
   ProgressionDefinition,
+  RandomSource,
   Snapshot,
   StationaryMonsterDefinition,
   Tile,
@@ -34,13 +36,15 @@ import type {
 //                           #######
 //   hero                    body 0.5 tiles; walks 7.5 tiles a second, which is 0.125 tile a fixed step
 //                           (8 steps to cross one tile); Health 10; Defense 0; Attack 1; attack cooldown 400 ms,
-//                           which is 24 steps; strike reaches 1 tile beyond the body and is 1 tile wide; interacts with
-//                           what is within 0.5 tile beyond its body, in the width of its body
+//                           which is 24 steps; strike reaches 1 tile beyond the body and is 1 tile wide;
+//                           interacts with what is within 0.5 tile beyond its body, in the width of its body; its
+//                           arrows are 0.25 tile wide, fly 15 tiles a second, which is 0.25 tile a step, and fall
+//                           4 tiles from the hero's centre (16 steps)
 //   Levels                  the Experience that raises the hero to Levels 2 to 6 is 10, 25, 45, 70 and 100 in all;
 //                           each Stat Point adds 3 to Health, 2 to Attack or 1 to Defense
 //   Gear                    the hero begins with a basic sword and basic armor, which add nothing. The arena has more
-//                           Gear to find: an iron sword (+2 Attack), a steel sword (+5), leather armor (+2 Defense)
-//                           and plate armor (+4)
+//                           Gear to find: an iron sword (+2 Attack), a steel sword (+5), leather armor (+2 Defense),
+//                           plate armor (+4), a short bow (+2 Attack, for arrows only) and a long bow (+4)
 //   monster "dummy"         stationary: it never moves or attacks; body 0.5 tiles; Health 3; worth 5 Experience
 //   monster "biter"         a chaser; body 0.5 tiles; Health 3; worth 8 Experience; damage 5; walks 3.75 tiles a
 //                           second, which is 0.0625 tile a step (16 steps to cross one tile); notices the hero within
@@ -94,12 +98,21 @@ export const ARENA_GEAR: Readonly<Record<string, GearDefinition>> = {
   'steel-sword': { name: 'Steel Sword', slot: 'melee-weapon', bonus: 5 },
   'leather-armor': { name: 'Leather Armor', slot: 'armor', bonus: 2 },
   'plate-armor': { name: 'Plate Armor', slot: 'armor', bonus: 4 },
+  'short-bow': { name: 'Short Bow', slot: 'ranged-weapon', bonus: 2 },
+  'long-bow': { name: 'Long Bow', slot: 'ranged-weapon', bonus: 4 },
 };
+
+/** The hero's starting Gear with a short bow added to the sword and the armor. */
+export const WITH_BOW = {
+  'melee-weapon': 'basic-sword',
+  'ranged-weapon': 'short-bow',
+  armor: 'basic-armor',
+} as const;
 
 /** The one entrance an Adventure Area gets unless a test gives it others. Tile (1, 1) is ground in both layouts above. */
 const DEFAULT_ENTRANCE: EntranceDefinition = { id: 'start', tile: { col: 1, row: 1 } };
 
-interface ArenaOptions {
+export interface ArenaOptions {
   readonly monsters?: readonly MonsterPlacement[];
   readonly layout?: readonly string[];
   /** More Adventure Areas besides the arena, which the hero never reaches in these tests. */
@@ -162,6 +175,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
       attack: 1,
       attackCooldownMs: 400,
       meleeWeapon: { reach: 1, width: 1 },
+      rangedWeapon: { arrowSpeedTilesPerSecond: 15, range: 4, arrowSize: 0.25 },
       interactionReach: 0.5,
       startingGear: { 'melee-weapon': 'basic-sword', armor: 'basic-armor' },
       ...hero,
@@ -201,6 +215,17 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
 /** A chest on the tile (col, row) that holds the piece of Gear with the given id. */
 export function chestAt(id: string, col: number, row: number, gear: string): InteractableDefinition {
   return { kind: 'chest', id, tile: { col, row }, contents: { kind: 'gear', gear } };
+}
+
+/** A cache on the tile (col, row): a chest that holds some Ammunition, or another consumable if one is named. */
+export function cacheAt(
+  id: string,
+  col: number,
+  row: number,
+  amount: number,
+  consumable: ConsumableId = 'ammunition',
+): InteractableDefinition {
+  return { kind: 'chest', id, tile: { col, row }, contents: { kind: 'consumable', consumable, amount } };
 }
 
 /** A milestone that gives the given Experience when the hero's body first overlaps the block of tiles `zone`. */
@@ -272,18 +297,51 @@ export function defeatPrize(game: Game, prize: number): readonly GameEvent[] {
   return strike(game);
 }
 
-/** The random source for tests: no rule uses randomness yet, so any fixed value will do. */
+/** The random source for the tests that are not about drops: any fixed value will do. */
 export const fixedRandom = (): number => 0.5;
 
-export function newGame(content: ContentDefinition = arena()): Game {
-  const game = gameAtTitle(content);
+/** A random source that gives the scripted values in turn, and counts how many of them the game has asked for. */
+export interface ScriptedRandom {
+  readonly random: RandomSource;
+  asked(): number;
+}
+
+/** Fails when the game asks for more values than were scripted: a roll nobody planned for is a bug to see. */
+export function scriptedRandom(...values: number[]): ScriptedRandom {
+  let asked = 0;
+  return {
+    random: () => {
+      const value = values[asked];
+      if (value === undefined) {
+        throw new Error(`The game asked for random value ${asked + 1}, but only ${values.length} were scripted`);
+      }
+      asked += 1;
+      return value;
+    },
+    asked: () => asked,
+  };
+}
+
+/** A seeded random source (mulberry32): the same seed always gives the same values, from 0 up to but below 1. */
+export function seededRandom(seed: number): RandomSource {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let mixed = Math.imul(state ^ (state >>> 15), state | 1);
+    mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
+    return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function newGame(content: ContentDefinition = arena(), random: RandomSource = fixedRandom): Game {
+  const game = gameAtTitle(content, random);
   game.send({ type: 'new-game' });
   return game;
 }
 
 /** A game that has not begun: it shows the title until it gets a session command. */
-export function gameAtTitle(content: ContentDefinition = arena()): Game {
-  return createGame({ content, random: fixedRandom });
+export function gameAtTitle(content: ContentDefinition = arena(), random: RandomSource = fixedRandom): Game {
+  return createGame({ content, random });
 }
 
 export function newGameWithMonsters(...monsters: MonsterPlacement[]): Game {

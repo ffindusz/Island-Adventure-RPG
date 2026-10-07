@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import type {
   AreaView,
+  ArrowView,
   Box,
   ChestView,
   Direction,
@@ -45,7 +46,18 @@ const CHEST_COLOUR = 0xa0692b;
 const CHEST_OPENED_COLOUR = 0x5a3a1a;
 const CHEST_INSIDE_COLOUR = 0x1a0f06;
 const CHEST_LATCH_COLOUR = 0xf2c94c;
+const CACHE_COLOUR = 0x6b7a3a;
+const CACHE_ARROW_COLOUR = 0xe8d8a8;
+const CACHE_ARROW_HEAD_COLOUR = 0xffffff;
+const ARROW_SHAFT_COLOUR = 0xf0e6c8;
+const ARROW_HEAD_COLOUR = 0xffffff;
 const EXIT_COLOUR = 0xbfeaff;
+
+/** The shape of an arrow in flight, in pixels: how far the shaft and the head reach back from the tip, and how wide. */
+const ARROW_SHAFT_LENGTH = 12;
+const ARROW_SHAFT_WIDTH = 2;
+const ARROW_HEAD_LENGTH = 3;
+const ARROW_HEAD_WIDTH = 4;
 
 /** Side of the square on the hero that shows which way it faces, in pixels. */
 const FACING_MARKER_SIZE = 4;
@@ -124,20 +136,73 @@ export function drawInteractable(graphics: Graphics, interactable: InteractableV
   }
 }
 
-/** A closed chest is a brown box with a gold latch on its lid. Once opened it is dark, with an empty inside. */
+/**
+ * A closed chest is a brown box with a gold latch on its lid. A cache is a green crate with arrows standing in it.
+ * Once opened either is dark, with an empty inside.
+ */
 function drawChest(graphics: Graphics, chest: ChestView): void {
   const body = bodyRect(chest.position, chest.size);
   const lidY = body.y + Math.floor(body.height * 0.4);
-  fillWithOutline(graphics, body, chest.opened ? CHEST_OPENED_COLOUR : CHEST_COLOUR);
+  const closedColour = chest.holds === 'gear' ? CHEST_COLOUR : CACHE_COLOUR;
+  fillWithOutline(graphics, body, chest.opened ? CHEST_OPENED_COLOUR : closedColour);
   if (chest.opened) {
     graphics.fillStyle(CHEST_INSIDE_COLOUR);
     graphics.fillRect(body.x + 2, body.y + 2, body.width - 4, lidY - body.y - 2);
+    return;
+  }
+  if (chest.holds !== 'gear') {
+    drawArrowsInCrate(graphics, body);
     return;
   }
   graphics.fillStyle(OUTLINE_COLOUR);
   graphics.fillRect(body.x + 1, lidY, body.width - 2, 1);
   graphics.fillStyle(CHEST_LATCH_COLOUR);
   graphics.fillRect(body.x + Math.floor(body.width / 2) - 2, lidY - 1, 4, 4);
+}
+
+/** Three arrows standing in a crate, their heads up. */
+function drawArrowsInCrate(graphics: Graphics, body: Rect): void {
+  for (const share of [1, 2, 3]) {
+    const x = body.x + Math.round((body.width * share) / 4) - 1;
+    graphics.fillStyle(CACHE_ARROW_COLOUR);
+    graphics.fillRect(x, body.y + 3, 2, body.height - 6);
+    graphics.fillStyle(CACHE_ARROW_HEAD_COLOUR);
+    graphics.fillRect(x, body.y + 3, 2, 2);
+  }
+}
+
+/**
+ * Draws an arrow in flight as a thin shaft with a head, outlined so that it shows on any ground. Its tip is at the
+ * front of the arrow's body, so it touches what it hits; the shaft trails behind.
+ */
+export function drawArrow(graphics: Graphics, arrow: ArrowView): void {
+  const step = FACING_STEP[arrow.direction];
+  const tip = {
+    x: px(arrow.position.x + (step.x * arrow.size) / 2),
+    y: px(arrow.position.y + (step.y * arrow.size) / 2),
+  };
+  const part = (behind: number, length: number, width: number, colour: number): void => {
+    const rect = arrowPart(tip, step, behind, length, width);
+    graphics.fillStyle(colour);
+    graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
+  };
+  part(-1, ARROW_SHAFT_LENGTH + 2, ARROW_SHAFT_WIDTH + 2, OUTLINE_COLOUR);
+  part(-1, ARROW_HEAD_LENGTH + 2, ARROW_HEAD_WIDTH + 2, OUTLINE_COLOUR);
+  part(0, ARROW_SHAFT_LENGTH, ARROW_SHAFT_WIDTH, ARROW_SHAFT_COLOUR);
+  part(0, ARROW_HEAD_LENGTH, ARROW_HEAD_WIDTH, ARROW_HEAD_COLOUR);
+}
+
+/**
+ * The part of an arrow that starts `behind` pixels back from the tip and runs `length` pixels further back, `width`
+ * pixels wide across the line the arrow flies along. A negative `behind` starts ahead of the tip.
+ */
+function arrowPart(tip: Point, step: Point, behind: number, length: number, width: number): Rect {
+  const axis = step.x !== 0 ? step.x : step.y;
+  const start = Math.min(-axis * behind, -axis * (behind + length));
+  if (step.x !== 0) {
+    return { x: tip.x + start, y: tip.y - width / 2, width: length, height: width };
+  }
+  return { x: tip.x - width / 2, y: tip.y + start, width, height: length };
 }
 
 /** Draws the hero as a square with a dark marker on the side it faces, red while it flashes from a hit. */
