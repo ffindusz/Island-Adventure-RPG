@@ -4,7 +4,7 @@
 
 **Blocked by:** 10: Automap
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 1-6
 
@@ -17,6 +17,8 @@
 - [ ] Reviewer play check (manual, in a browser): play, activate a Checkpoint, reload the page, choose Continue, and confirm the same state.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at b0a50b7
 
 ### What was built
 
