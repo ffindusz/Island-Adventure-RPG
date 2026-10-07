@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { advance, monsterAction, monsterNamed, playingView, walk } from './fixtures';
-import { enemyField, shooterAt, untilFired } from './enemy-fixtures';
+import { SHOOTER, enemyField, shooterAt, untilFired } from './enemy-fixtures';
 
 // A shooter in tile (2, 3) stands at (2.5, 3.5), so its body spans x 2.25 to 2.75 and y 3.25 to 3.75. The hero stands at
 // (6.5, 3.5): its body spans x 6.25 to 6.75 and y 3.25 to 3.75, in the same row of space.
@@ -31,6 +31,27 @@ describe('a ranged attacker that has noticed the hero', () => {
     expect(monsterAction(game, 'shooter-1')).toEqual({ type: 'idle' });
 
     walk(game, 'left', 1);
+    expect(monsterAction(game, 'shooter-1')).toMatchObject({ type: 'winding-up', progress: 0 });
+  });
+
+  it('notices from as near as its type says: a short-sighted shooter stands by a hero 3.5 tiles away', () => {
+    const game = enemyField([shooterAt('shooter-1', 2, 3)], {
+      monsterTypes: { shooter: { ...SHOOTER, noticingDistance: 3 } },
+    });
+
+    expect(advance(game, 40)).toEqual([]);
+
+    expect(monsterAction(game, 'shooter-1')).toEqual({ type: 'idle' });
+  });
+
+  it('notices from as far as its type says: a far-sighted shooter winds up for a hero 9.5 tiles away', () => {
+    const game = enemyField([shooterAt('shooter-1', 2, 3)], {
+      start: { area: 'arena', tile: { col: 12, row: 3 } },
+      monsterTypes: { shooter: { ...SHOOTER, noticingDistance: 10 } },
+    });
+
+    game.step();
+
     expect(monsterAction(game, 'shooter-1')).toMatchObject({ type: 'winding-up', progress: 0 });
   });
 
