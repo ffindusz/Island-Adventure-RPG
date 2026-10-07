@@ -6,11 +6,14 @@ export { GEAR_SLOT_STAT, GEAR_SLOTS, STAT_IDS } from './definitions';
 export type {
   AreaDefinition,
   ChaserMonsterDefinition,
+  ChestContents,
+  ChestDefinition,
   ContentDefinition,
   GearDefinition,
   GearSlot,
   GearStat,
   HeroDefinition,
+  InteractableDefinition,
   MeleeWeaponDefinition,
   MilestoneDefinition,
   MilestoneReward,
@@ -25,6 +28,7 @@ export type {
 export type { Box, Direction, Point, Tile } from './geometry';
 export type {
   AreaView,
+  ChestView,
   Command,
   Game,
   GameEvent,
@@ -33,11 +37,14 @@ export type {
   GearInfo,
   GearView,
   HeroView,
+  InteractableView,
   InventoryPageView,
   LevelUpView,
   MonsterActionView,
   MonsterView,
   PageView,
+  PickedUpGear,
+  PickedUpItem,
   PlayingView,
   RandomSource,
   Snapshot,
@@ -45,4 +52,13 @@ export type {
   StatPageView,
   TitleView,
 } from './interface';
-export type { AreaState, HeroState, MonsterAction, MonsterState, PageId, PlayState } from './state';
+export type {
+  AreaState,
+  ChestState,
+  HeroState,
+  InteractableState,
+  MonsterAction,
+  MonsterState,
+  PageId,
+  PlayState,
+} from './state';

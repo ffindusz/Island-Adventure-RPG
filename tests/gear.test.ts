@@ -116,7 +116,9 @@ describe('Attack and Defense with Gear', () => {
   });
 
   it('decide the damage of a hit the hero takes: the damage less the Defense, the armor included', () => {
-    const game = newGame(arena({ monsters: [biterAt('biter', 4, 3)], hero: { startingGear: { armor: 'plate-armor' } } }));
+    const game = newGame(
+      arena({ monsters: [biterAt('biter', 4, 3)], hero: { startingGear: { armor: 'plate-armor' } } }),
+    );
 
     const events = advance(game, 31);
 

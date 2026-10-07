@@ -34,6 +34,11 @@ export type Command =
   /** Strike with the Melee Weapon in the facing direction, unless the attack cooldown is still running. */
   | { readonly type: 'attack' }
   /**
+   * Interact with what is in front of the hero within its reach, such as opening a chest. When several interactables are
+   * in reach, the one nearest the hero is the one. Ignored while the game is paused, like attack.
+   */
+  | { readonly type: 'interact' }
+  /**
    * Open a page over the game, such as the stat page. Ignored at the title and while the game is paused already: a
    * page is open, or a Stat Point waits to be assigned. While the game is paused step() advances nothing and attack
    * does nothing; move and stop still keep track of the keys that are down.
@@ -65,11 +70,23 @@ export type GameEvent =
   | { readonly type: 'level-up'; readonly level: number }
   /** The hero's body first overlapped the zone of this milestone, and the reward follows. It happens once per game. */
   | { readonly type: 'milestone-reached'; readonly milestoneId: string }
+  /** The hero opened this chest. What was inside follows as a pickup. A chest opens once. */
+  | { readonly type: 'chest-opened'; readonly chestId: string }
+  /** The hero took an item and now has it. */
+  | { readonly type: 'pickup'; readonly item: PickedUpItem }
   /**
    * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health where
    * defeat sends it, and the monsters of the Adventure Area are back as they began: the view shows the new state.
    */
   | { readonly type: 'hero-defeated' };
+
+/** What the hero took, as the player is told about it: one member for each kind of item. */
+export type PickedUpItem = PickedUpGear;
+
+/** A piece of Gear the hero took. It is carried, not equipped: the player equips it in the inventory. */
+export interface PickedUpGear extends GearInfo {
+  readonly kind: 'gear';
+}
 
 export interface HeroView {
   readonly position: Point;
@@ -106,6 +123,20 @@ export type MonsterActionView =
   | { readonly type: 'winding-up'; readonly progress: number; readonly zone: Box }
   /** Resting after an attack. */
   | { readonly type: 'recovering' };
+
+/** A chest, for the adapter to draw. It stays where it is once opened. */
+export interface ChestView {
+  readonly kind: 'chest';
+  readonly id: string;
+  /** The centre of the chest. */
+  readonly position: Point;
+  /** Width and height of the chest's body, in tiles. */
+  readonly size: number;
+  readonly opened: boolean;
+}
+
+/** Something the hero can interact with, one member for each kind. */
+export type InteractableView = ChestView;
 
 export interface AreaView {
   readonly id: string;
@@ -158,7 +189,7 @@ export interface GearView extends GearInfo {
 /** The inventory page: everything the hero carries, and what the Gear makes of its Attack and Defense. */
 export interface InventoryPageView {
   readonly id: 'inventory';
-  /** The Gear the hero carries, equipped or not: by slot in the order of the slots, and in each slot in the order found. */
+  /** The Gear the hero carries, equipped or not: by slot in the order of the slots, then in the order found. */
   readonly gear: readonly GearView[];
   /** The hero's Attack and Defense, with the equipped Gear counted in. */
   readonly attack: number;
@@ -190,6 +221,8 @@ export interface PlayingView {
   readonly area: AreaView;
   readonly hero: HeroView;
   readonly monsters: readonly MonsterView[];
+  /** The interactables of the Adventure Area the hero is in, such as chests, opened ones included. */
+  readonly interactables: readonly InteractableView[];
   /** The page that is open over the game, if any. While one is open the game is paused. */
   readonly page: PageView | null;
   /** The Stat Point the hero has to assign, if any. While one waits the game is paused. */

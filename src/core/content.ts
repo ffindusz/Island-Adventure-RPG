@@ -2,9 +2,11 @@ import { STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
   ChaserMonsterDefinition,
+  ChestContents,
   ContentDefinition,
   GearDefinition,
   GearSlot,
+  InteractableDefinition,
   MeleeWeaponDefinition,
   MilestoneDefinition,
   MilestoneReward,
@@ -30,6 +32,17 @@ export interface Milestone {
   readonly reward: MilestoneReward;
 }
 
+/** A chest as the rules use it: its body is the box of the tile it fills, in tile units like the bodies it is compared with. */
+export interface Chest {
+  readonly kind: 'chest';
+  readonly id: string;
+  readonly body: Box;
+  readonly contents: ChestContents;
+}
+
+/** An interactable as the rules use it, one member for each kind. */
+export type Interactable = Chest;
+
 export interface Area {
   readonly id: string;
   readonly name: string;
@@ -41,6 +54,7 @@ export interface Area {
   readonly solid: readonly (readonly boolean[])[];
   readonly monsters: readonly MonsterPlacement[];
   readonly milestones: readonly Milestone[];
+  readonly interactables: readonly Interactable[];
 }
 
 export type StationaryMonsterType = StationaryMonsterDefinition;
@@ -72,6 +86,8 @@ export interface Content {
     readonly attack: number;
     readonly attackCooldownSteps: number;
     readonly meleeWeapon: MeleeWeaponDefinition;
+    /** Tiles beyond the hero's body, in front of it, within which it interacts. */
+    readonly interactionReach: number;
     readonly startingGear: Readonly<Partial<Record<GearSlot, string>>>;
   };
   readonly progression: ProgressionDefinition;
@@ -120,6 +136,7 @@ export function loadContent(definition: ContentDefinition): Content {
       attack: definition.hero.attack,
       attackCooldownSteps: msToSteps(definition.hero.attackCooldownMs),
       meleeWeapon: definition.hero.meleeWeapon,
+      interactionReach: definition.hero.interactionReach,
       startingGear: { ...definition.hero.startingGear },
     },
     progression,
@@ -252,6 +269,7 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition, usedIds: 
     solid: tiles.map((row) => row.map((terrain) => terrain.solid)),
     monsters: area.monsters,
     milestones: (area.milestones ?? []).map((milestone) => loadMilestone(area.id, milestone, width, height, usedIds)),
+    interactables: (area.interactables ?? []).map(loadInteractable),
   };
   for (const monster of area.monsters) {
     if (definition.monsterTypes[monster.type] === undefined) {
@@ -300,6 +318,21 @@ function loadMilestone(
 
 function describeZone(zone: TileRect): string {
   return `(col ${zone.col}, row ${zone.row}, ${zone.width} wide, ${zone.height} high)`;
+}
+
+/** One case for each kind of interactable: it converts the definition into the form the rules use. */
+function loadInteractable(definition: InteractableDefinition): Interactable {
+  switch (definition.kind) {
+    case 'chest': {
+      const { col, row } = definition.tile;
+      return {
+        kind: 'chest',
+        id: definition.id,
+        body: { minX: col, minY: row, maxX: col + 1, maxY: row + 1 },
+        contents: { ...definition.contents },
+      };
+    }
+  }
 }
 
 const NOT_WALKABLE = 'solid terrain or outside the map';

@@ -2,7 +2,7 @@ import { gearOf } from './content';
 import type { Content } from './content';
 import { GEAR_SLOT_STAT, GEAR_SLOTS } from './definitions';
 import type { GearDefinition } from './definitions';
-import type { GearInfo, GearView } from './interface';
+import type { GameEvent, GearInfo, GearView } from './interface';
 import type { PlayState } from './state';
 
 // Gear: what the hero carries and what it has equipped. What the equipped Gear is worth in Attack and Defense is
@@ -12,6 +12,12 @@ import type { PlayState } from './state';
 export function describeGear(content: Content, id: string): GearInfo {
   const gear = gearOf(content, id);
   return { id, name: gear.name, slot: gear.slot, stat: GEAR_SLOT_STAT[gear.slot], bonus: gear.bonus };
+}
+
+/** The hero picks up a piece of Gear. It is carried, not equipped, and there is no limit to how much the hero carries. */
+export function grantGear(state: PlayState, content: Content, id: string): GameEvent[] {
+  state.hero.gear.push(id);
+  return [{ type: 'pickup', item: { kind: 'gear', ...describeGear(content, id) } }];
 }
 
 /** The ids of the Gear the hero has equipped: at most one piece for each slot. */

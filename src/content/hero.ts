@@ -9,5 +9,6 @@ export const hero: HeroDefinition = {
   attack: 1,
   attackCooldownMs: 400,
   meleeWeapon: { reach: 0.75, width: 1 },
+  interactionReach: 0.5,
   startingGear: { 'melee-weapon': 'basic-sword', armor: 'basic-armor' },
 };

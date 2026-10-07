@@ -1,4 +1,4 @@
-import type { Area, Content } from './content';
+import type { Area, Content, Interactable } from './content';
 import { monsterTypeOf } from './content';
 import { GEAR_SLOTS } from './definitions';
 import type { GearSlot, StatId } from './definitions';
@@ -32,11 +32,22 @@ export type MonsterAction =
   /** Resting after an attack, for this many more steps. */
   | { readonly type: 'recovering'; stepsLeft: number };
 
+/** What changes about a chest: whether it has been opened. An opened chest stays opened, defeat included. */
+export interface ChestState {
+  readonly kind: 'chest';
+  opened: boolean;
+}
+
+/** What changes about an interactable during the game, one member for each kind. */
+export type InteractableState = ChestState;
+
 export interface AreaState {
   /** Every monster placed in the Adventure Area, defeated ones included (at 0 Health), so that they stay defeated. */
   monsters: MonsterState[];
   /** The ids of the milestones of this Adventure Area that the hero has reached. They stay reached, defeat included. */
   reachedMilestones: string[];
+  /** The state of every interactable placed in the Adventure Area, by id. */
+  interactables: Record<string, InteractableState>;
 }
 
 export interface HeroState {
@@ -77,11 +88,15 @@ export interface TitleState {
 
 export type GameState = TitleState | PlayState;
 
-/** The state of a game that has just begun: the hero at the start with its starting Gear, every monster at full Health. */
+/** The state of a game that has just begun: the hero at the start with its starting Gear, every monster unhurt. */
 export function newPlayState(content: Content): PlayState {
   const areas: Record<string, AreaState> = {};
   for (const area of Object.values(content.areas)) {
-    areas[area.id] = { monsters: freshMonsters(area, content), reachedMilestones: [] };
+    areas[area.id] = {
+      monsters: freshMonsters(area, content),
+      reachedMilestones: [],
+      interactables: freshInteractables(area),
+    };
   }
   const state: PlayState = {
     phase: 'playing',
@@ -115,6 +130,22 @@ export function freshMonsters(area: Area, content: Content): MonsterState[] {
   }));
 }
 
+/** Every interactable of an Adventure Area as the content places it: nothing opened or used yet. */
+export function freshInteractables(area: Area): Record<string, InteractableState> {
+  const fresh: Record<string, InteractableState> = {};
+  for (const interactable of area.interactables) {
+    fresh[interactable.id] = freshInteractable(interactable);
+  }
+  return fresh;
+}
+
+function freshInteractable(interactable: Interactable): InteractableState {
+  switch (interactable.kind) {
+    case 'chest':
+      return { kind: 'chest', opened: false };
+  }
+}
+
 /**
  * A deep copy. The state is plain data, so a round trip through JSON copies every field there is, and every field
  * that later tickets add, without a copy function that has to be kept in step with the state.
@@ -130,6 +161,15 @@ export function currentAreaState(state: PlayState): AreaState {
     throw new Error(`The state has no world for area "${state.areaId}"`);
   }
   return area;
+}
+
+/** The state of an interactable of the current Adventure Area. It fails loudly for a snapshot that does not fit the content. */
+export function interactableStateOf(state: PlayState, interactableId: string): InteractableState {
+  const found = currentAreaState(state).interactables[interactableId];
+  if (found === undefined) {
+    throw new Error(`The state has no interactable "${interactableId}" in area "${state.areaId}"`);
+  }
+  return found;
 }
 
 /** The monsters of the current Adventure Area that have not been defeated. */

@@ -57,6 +57,11 @@ export interface HeroDefinition {
   readonly attack: number;
   readonly attackCooldownMs: number;
   readonly meleeWeapon: MeleeWeaponDefinition;
+  /**
+   * How far the hero reaches beyond its body, in tiles, to interact with something in front of it, such as a chest.
+   * It is as wide as the hero's body. Must be more than 0.
+   */
+  readonly interactionReach: number;
   /** The Gear the hero begins the game with, carried and equipped: the id of the piece for each slot, if any. */
   readonly startingGear: Readonly<Partial<Record<GearSlot, string>>>;
 }
@@ -134,6 +139,26 @@ export interface MilestoneDefinition {
   readonly reward: MilestoneReward;
 }
 
+/** What a chest holds. Gear is the first kind of contents; ammunition and potions will be members beside it. */
+export type ChestContents = { readonly kind: 'gear'; readonly gear: string };
+
+/** A chest: the hero opens it once by interacting with it and takes what is inside. It fills one tile and is solid. */
+export interface ChestDefinition {
+  readonly kind: 'chest';
+  /** Unique across all interactables of all Adventure Areas: events and saves refer to the chest by it. */
+  readonly id: string;
+  /** The tile the chest fills. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+  readonly contents: ChestContents;
+}
+
+/**
+ * Something in an Adventure Area that the hero acts on with Interact. Its `kind` names the rules it follows (see
+ * interactables.ts); the other fields are what that kind needs. Adding a kind means adding a member here and an entry
+ * in the interaction registry.
+ */
+export type InteractableDefinition = ChestDefinition;
+
 export interface AreaDefinition {
   readonly id: string;
   readonly name: string;
@@ -142,6 +167,8 @@ export interface AreaDefinition {
   readonly monsters: readonly MonsterPlacement[];
   /** The milestones of this Adventure Area. Leave it out for none. */
   readonly milestones?: readonly MilestoneDefinition[];
+  /** The interactables of this Adventure Area, such as chests. Leave it out for none. */
+  readonly interactables?: readonly InteractableDefinition[];
 }
 
 /** The stats a Stat Point can be spent on. */

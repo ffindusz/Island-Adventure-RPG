@@ -36,6 +36,30 @@ export function expandBox(box: Box, margin: number): Box {
   return { minX: box.minX - margin, minY: box.minY - margin, maxX: box.maxX + margin, maxY: box.maxY + margin };
 }
 
+/** The middle of a box. */
+export function centerOfBox(box: Box): Point {
+  return { x: (box.minX + box.maxX) / 2, y: (box.minY + box.maxY) / 2 };
+}
+
+/**
+ * The ground right in front of a body of `size` centred on `position`, facing a direction: `reach` deep beyond the
+ * body and `width` wide, centred on the body.
+ */
+export function zoneInFront(position: Point, size: number, direction: Direction, reach: number, width: number): Box {
+  const body = boxAround(position, size);
+  const halfWidth = width / 2;
+  switch (direction) {
+    case 'right':
+      return { minX: body.maxX, minY: position.y - halfWidth, maxX: body.maxX + reach, maxY: position.y + halfWidth };
+    case 'left':
+      return { minX: body.minX - reach, minY: position.y - halfWidth, maxX: body.minX, maxY: position.y + halfWidth };
+    case 'down':
+      return { minX: position.x - halfWidth, minY: body.maxY, maxX: position.x + halfWidth, maxY: body.maxY + reach };
+    case 'up':
+      return { minX: position.x - halfWidth, minY: body.minY - reach, maxX: position.x + halfWidth, maxY: body.minY };
+  }
+}
+
 /** Overlaps smaller than this are rounding noise: boxes that touch edge to edge are not overlapping. */
 export const EPSILON = 1e-9;
 
