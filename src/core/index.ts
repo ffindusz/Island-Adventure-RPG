@@ -2,11 +2,14 @@
 export { createGame } from './game';
 export { STEP_MS, STEPS_PER_SECOND } from './time';
 export { PAGE_IDS, SNAPSHOT_VERSION } from './state';
-export { STAT_IDS } from './definitions';
+export { GEAR_SLOT_STAT, GEAR_SLOTS, STAT_IDS } from './definitions';
 export type {
   AreaDefinition,
   ChaserMonsterDefinition,
   ContentDefinition,
+  GearDefinition,
+  GearSlot,
+  GearStat,
   HeroDefinition,
   MeleeWeaponDefinition,
   MilestoneDefinition,
@@ -27,7 +30,10 @@ export type {
   GameEvent,
   GameOptions,
   GameView,
+  GearInfo,
+  GearView,
   HeroView,
+  InventoryPageView,
   LevelUpView,
   MonsterActionView,
   MonsterView,

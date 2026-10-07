@@ -1,6 +1,7 @@
 import type { Area, Content } from './content';
 import { monsterTypeOf } from './content';
-import type { StatId } from './definitions';
+import { GEAR_SLOTS } from './definitions';
+import type { GearSlot, StatId } from './definitions';
 import type { Box, Direction, Point } from './geometry';
 import { boxAround, centerOf } from './geometry';
 import { heroMaxHealth } from './stats';
@@ -49,10 +50,14 @@ export interface HeroState {
   experience: number;
   /** The Stat Points the hero has assigned to each stat. The ones it has still to assign are worked out (stats.ts). */
   statPoints: Record<StatId, number>;
+  /** The ids of the Gear the hero carries, in the order it found them. There is no limit to how much it can carry. */
+  gear: string[];
+  /** The id of the carried Gear that is equipped in each slot. A slot that has none is left out. */
+  equipped: Partial<Record<GearSlot, string>>;
 }
 
 /** The pages that can be open over the game, one at a time. A new page is one more id here and one more view. */
-export const PAGE_IDS = ['stats'] as const;
+export const PAGE_IDS = ['stats', 'inventory'] as const;
 export type PageId = (typeof PAGE_IDS)[number];
 
 export interface PlayState {
@@ -72,7 +77,7 @@ export interface TitleState {
 
 export type GameState = TitleState | PlayState;
 
-/** The state of a game that has just begun: the hero at the start, every monster at full Health. */
+/** The state of a game that has just begun: the hero at the start with its starting Gear, every monster at full Health. */
 export function newPlayState(content: Content): PlayState {
   const areas: Record<string, AreaState> = {};
   for (const area of Object.values(content.areas)) {
@@ -88,6 +93,8 @@ export function newPlayState(content: Content): PlayState {
       attackCooldown: 0,
       experience: 0,
       statPoints: { health: 0, attack: 0, defense: 0 },
+      gear: GEAR_SLOTS.flatMap((slot) => content.hero.startingGear[slot] ?? []),
+      equipped: { ...content.hero.startingGear },
     },
     page: null,
     areas,

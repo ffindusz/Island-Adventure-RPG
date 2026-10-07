@@ -1,5 +1,6 @@
 import type { ContentDefinition } from '../core';
 import { shipwreckCoast } from './areas/shipwreck-coast';
+import { gear } from './gear';
 import { hero } from './hero';
 import { monsterTypes } from './monsters';
 import { progression } from './progression';
@@ -14,6 +15,7 @@ export const gameContent: ContentDefinition = {
   hero,
   progression,
   minimumDamage: 1,
+  gear,
   monsterTypes,
   areas: [shipwreckCoast],
   start: { area: shipwreckCoast.id, tile: { col: 4, row: 5 } },

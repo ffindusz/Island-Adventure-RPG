@@ -20,6 +20,31 @@ export interface MeleeWeaponDefinition {
   readonly width: number;
 }
 
+/**
+ * Where Gear is equipped: the hero carries as many pieces as it finds and has one equipped in each slot. The list is
+ * open: a new slot is one more entry here and in GEAR_SLOT_STAT.
+ */
+export const GEAR_SLOTS = ['melee-weapon', 'armor'] as const;
+export type GearSlot = (typeof GEAR_SLOTS)[number];
+
+/** The stats Gear can raise. It never changes anything else. */
+export type GearStat = Extract<StatId, 'attack' | 'defense'>;
+
+/** The stat each slot raises: a Melee Weapon only ever adds to Attack, and armor only to Defense. */
+export const GEAR_SLOT_STAT: Readonly<Record<GearSlot, GearStat>> = {
+  'melee-weapon': 'attack',
+  armor: 'defense',
+};
+
+/** A piece of Gear. The content names each piece by an id, and the hero carries each piece at most once. */
+export interface GearDefinition {
+  /** What the player reads in the inventory. */
+  readonly name: string;
+  readonly slot: GearSlot;
+  /** What the Gear adds to the stat of its slot while it is equipped, 0 or more. */
+  readonly bonus: number;
+}
+
 export interface HeroDefinition {
   /** Width and height of the hero's body, in tiles. */
   readonly size: number;
@@ -32,6 +57,8 @@ export interface HeroDefinition {
   readonly attack: number;
   readonly attackCooldownMs: number;
   readonly meleeWeapon: MeleeWeaponDefinition;
+  /** The Gear the hero begins the game with, carried and equipped: the id of the piece for each slot, if any. */
+  readonly startingGear: Readonly<Partial<Record<GearSlot, string>>>;
 }
 
 /** What every kind of monster has, whatever its behavior. */
@@ -141,6 +168,8 @@ export interface ContentDefinition {
   readonly progression: ProgressionDefinition;
   /** The least damage a hit does to the hero, however high its Defense. Leave it out for the default of 1. */
   readonly minimumDamage?: number;
+  /** Every piece of Gear in the game, by id: what the hero starts with, and what is waiting to be found. */
+  readonly gear: Readonly<Record<string, GearDefinition>>;
   readonly monsterTypes: Readonly<Record<string, MonsterTypeDefinition>>;
   readonly areas: readonly AreaDefinition[];
   /** Where a new game begins: the hero stands at the centre of this tile, which must not be solid. */

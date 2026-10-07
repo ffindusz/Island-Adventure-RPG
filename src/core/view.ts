@@ -1,6 +1,7 @@
 import { areaOf, monsterTypeOf } from './content';
 import type { Content } from './content';
 import { STAT_IDS } from './definitions';
+import { carriedGear } from './gear';
 import type { GameView, LevelUpView, MonsterActionView, PageView } from './interface';
 import {
   experienceProgress,
@@ -60,6 +61,13 @@ function pageView(state: PlayState, content: Content): PageView | null {
         experience: experienceProgress(state, content) ?? null,
         health: state.hero.health,
         maxHealth: heroMaxHealth(state, content),
+        attack: heroAttack(state, content),
+        defense: heroDefense(state, content),
+      };
+    case 'inventory':
+      return {
+        id: 'inventory',
+        gear: carriedGear(state, content),
         attack: heroAttack(state, content),
         defense: heroDefense(state, content),
       };

@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import type { LevelUpView, PageView, PlayingView, StatId, StatPageView } from '../core';
+import type { InventoryPageView, LevelUpView, PageView, PlayingView, StatId, StatPageView } from '../core';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Graphics } from './pixel-font';
@@ -114,7 +114,24 @@ function pagePanel(page: PageView): Panel {
   switch (page.id) {
     case 'stats':
       return statPagePanel(page);
+    case 'inventory':
+      return inventoryPagePanel(page);
   }
+}
+
+function inventoryPagePanel(page: InventoryPageView): Panel {
+  return {
+    width: WIDE_PANEL,
+    rows: [
+      { kind: 'text', text: 'INVENTORY', colour: TITLE_COLOUR },
+      { kind: 'space' },
+      ...page.gear.map(
+        (gear): Row => ({ kind: 'stat', label: gear.name.toUpperCase(), value: `+${shown(gear.bonus)}`, gain: null }),
+      ),
+      { kind: 'space' },
+      { kind: 'text', text: 'ESC TO CLOSE', colour: HINT_COLOUR },
+    ],
+  };
 }
 
 function statPagePanel(page: StatPageView): Panel {

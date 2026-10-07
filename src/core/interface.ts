@@ -1,4 +1,4 @@
-import type { ContentDefinition, StatId } from './definitions';
+import type { ContentDefinition, GearSlot, GearStat, StatId } from './definitions';
 import type { Box, Direction, Point } from './geometry';
 import type { PageId, PlayState } from './state';
 
@@ -137,7 +137,33 @@ export interface StatPageView {
 }
 
 /** A page that is open over the game. One kind for each page id; `id` says which. */
-export type PageView = StatPageView;
+export type PageView = StatPageView | InventoryPageView;
+
+/** A piece of Gear as the player reads about it. */
+export interface GearInfo {
+  readonly id: string;
+  readonly name: string;
+  readonly slot: GearSlot;
+  /** The stat the Gear adds to, which its slot decides: a Melee Weapon adds to Attack, armor to Defense. */
+  readonly stat: GearStat;
+  readonly bonus: number;
+}
+
+/** A piece of Gear the hero carries. */
+export interface GearView extends GearInfo {
+  /** Whether it is the Gear equipped in its slot. */
+  readonly equipped: boolean;
+}
+
+/** The inventory page: everything the hero carries, and what the Gear makes of its Attack and Defense. */
+export interface InventoryPageView {
+  readonly id: 'inventory';
+  /** The Gear the hero carries, equipped or not: by slot in the order of the slots, and in each slot in the order found. */
+  readonly gear: readonly GearView[];
+  /** The hero's Attack and Defense, with the equipped Gear counted in. */
+  readonly attack: number;
+  readonly defense: number;
+}
 
 /** One place a Stat Point can go. */
 export interface StatChoiceView {

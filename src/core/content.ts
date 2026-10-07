@@ -3,6 +3,8 @@ import type {
   AreaDefinition,
   ChaserMonsterDefinition,
   ContentDefinition,
+  GearDefinition,
+  GearSlot,
   MeleeWeaponDefinition,
   MilestoneDefinition,
   MilestoneReward,
@@ -70,10 +72,12 @@ export interface Content {
     readonly attack: number;
     readonly attackCooldownSteps: number;
     readonly meleeWeapon: MeleeWeaponDefinition;
+    readonly startingGear: Readonly<Partial<Record<GearSlot, string>>>;
   };
   readonly progression: ProgressionDefinition;
   /** The least damage a hit does to the hero, however high its Defense. */
   readonly minimumDamage: number;
+  readonly gear: Readonly<Record<string, GearDefinition>>;
   readonly monsterTypes: Readonly<Record<string, MonsterType>>;
   readonly areas: Readonly<Record<string, Area>>;
   readonly start: { readonly areaId: string; readonly tile: Tile };
@@ -116,9 +120,11 @@ export function loadContent(definition: ContentDefinition): Content {
       attack: definition.hero.attack,
       attackCooldownSteps: msToSteps(definition.hero.attackCooldownMs),
       meleeWeapon: definition.hero.meleeWeapon,
+      startingGear: { ...definition.hero.startingGear },
     },
     progression,
     minimumDamage,
+    gear: { ...definition.gear },
     monsterTypes,
     areas,
     start: { areaId: definition.start.area, tile: definition.start.tile },
@@ -320,6 +326,14 @@ export function monsterTypeOf(content: Content, type: string): MonsterType {
   const found = content.monsterTypes[type];
   if (found === undefined) {
     throw new Error(`Unknown monster type "${type}"`);
+  }
+  return found;
+}
+
+export function gearOf(content: Content, id: string): GearDefinition {
+  const found = content.gear[id];
+  if (found === undefined) {
+    throw new Error(`Unknown Gear "${id}"`);
   }
   return found;
 }

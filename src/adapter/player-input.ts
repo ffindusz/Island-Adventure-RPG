@@ -13,7 +13,7 @@ const WALK_KEYS: Readonly<Record<Direction, readonly string[]>> = {
 const ATTACK_KEY = 'SPACE';
 
 /** The key that opens each page. */
-const PAGE_KEYS: Readonly<Record<PageId, string>> = { stats: 'C' };
+const PAGE_KEYS: Readonly<Record<PageId, string>> = { stats: 'C', inventory: 'I' };
 
 /** The key that closes the page that is open. */
 const CLOSE_PAGE_KEY = 'ESC';
