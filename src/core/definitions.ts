@@ -401,6 +401,12 @@ export interface ContentDefinition {
    */
   readonly automapRevealDistance?: number;
   readonly areas: readonly AreaDefinition[];
+  /**
+   * Whether loading insists that every Adventure Area, whatever its size, keeps the corner of the screen that the HUD
+   * covers (COVERED_CORNER) solid, so that a hero never stands where it is hidden. The game's own content says yes.
+   * Leave it out for no: the small maps of a test are not made for the HUD.
+   */
+  readonly checkCoveredCorner?: boolean;
   /** Where a new game begins: the hero stands at the centre of this tile, which must not be solid. */
   readonly start: { readonly area: string; readonly tile: Tile };
 }

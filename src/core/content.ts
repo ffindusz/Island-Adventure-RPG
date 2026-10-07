@@ -276,7 +276,9 @@ export function loadContent(definition: ContentDefinition): Content {
     );
   }
   checkConnections(areas, definition.hero.size);
-  checkCoveredCorners(areas);
+  if (definition.checkCoveredCorner === true) {
+    checkCoveredCorners(areas);
+  }
   return {
     hero: {
       size: definition.hero.size,
