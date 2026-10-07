@@ -2,7 +2,7 @@ import { areaOf } from './content';
 import type { Area, Content, Entrance } from './content';
 import { centerOf, overlaps } from './geometry';
 import type { GameEvent } from './interface';
-import { heroBody, livingMonsters } from './state';
+import { currentAreaState, heroBody, livingMonsters } from './state';
 import type { PlayState } from './state';
 
 // Moving between Adventure Areas: the hero walks into an exit and arrives at the entrance that exit leads to.
@@ -26,7 +26,37 @@ export function crossExits(state: PlayState, content: Content): GameEvent[] {
   const entrance = entranceOf(destination, exit.to.entranceId);
   state.arrivedAt = { ...entrance.tile };
   state.hero.position = centerOf(entrance.tile);
-  return [{ type: 'area-changed', areaId: destination.id }];
+  return [{ type: 'area-changed', areaId: destination.id }, ...enterArea(state, content)];
+}
+
+/**
+ * The hero is now in the Adventure Area `state.areaId`, whether it began the game there or walked in. What was shown
+ * of the area it left goes, and the first time the hero is in an area its text is shown. Returns what happened.
+ */
+export function enterArea(state: PlayState, content: Content): GameEvent[] {
+  const area = areaOf(content, state.areaId);
+  const world = currentAreaState(state);
+  state.areaText = null;
+  if (world.visited) {
+    return [];
+  }
+  world.visited = true;
+  if (area.text === null) {
+    return [];
+  }
+  state.areaText = { text: area.text, stepsLeft: content.areaTextSteps };
+  return [{ type: 'area-text', areaId: area.id, text: area.text }];
+}
+
+/** One fixed step of the time the text of an Adventure Area stays on the screen. It does not stop the game. */
+export function ageAreaText(state: PlayState): void {
+  if (state.areaText === null) {
+    return;
+  }
+  state.areaText.stepsLeft -= 1;
+  if (state.areaText.stepsLeft <= 0) {
+    state.areaText = null;
+  }
 }
 
 /** Cannot fail for content that loaded: loading checks that every exit leads to an entrance that exists. */

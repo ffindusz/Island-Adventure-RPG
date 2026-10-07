@@ -27,6 +27,9 @@ import { zoneBox } from './zones';
 /** Used when the content does not set a minimum damage: a hit always takes at least 1 Health. */
 const DEFAULT_MINIMUM_DAMAGE = 1;
 
+/** Used when the content does not set how long area text stays on the screen. */
+const DEFAULT_AREA_TEXT_MS = 4000;
+
 /** A milestone as the rules use it: its zone is a box in tile units, like the bodies it is compared with. */
 export interface Milestone {
   readonly id: string;
@@ -74,6 +77,8 @@ export interface Area {
   readonly entrances: readonly Entrance[];
   /** Where the hero can leave: the exits, each leading to an entrance of another area. */
   readonly exits: readonly Exit[];
+  /** A short text shown the first time the hero enters, or null for none. */
+  readonly text: string | null;
 }
 
 export type StationaryMonsterType = StationaryMonsterDefinition;
@@ -115,6 +120,8 @@ export interface Content {
   readonly gear: Readonly<Record<string, GearDefinition>>;
   readonly monsterTypes: Readonly<Record<string, MonsterType>>;
   readonly areas: Readonly<Record<string, Area>>;
+  /** How many fixed steps the text of an Adventure Area stays on the screen. */
+  readonly areaTextSteps: number;
   readonly start: { readonly areaId: string; readonly tile: Tile };
 }
 
@@ -125,6 +132,12 @@ export function loadContent(definition: ContentDefinition): Content {
   requireMoreThanZero("The hero's interaction reach", definition.hero.interactionReach);
   const minimumDamage = definition.minimumDamage ?? DEFAULT_MINIMUM_DAMAGE;
   requireZeroOrMore('The minimum damage', minimumDamage);
+  const areaTextMs = definition.areaTextMs ?? DEFAULT_AREA_TEXT_MS;
+  if (!(areaTextMs >= STEP_MS)) {
+    throw new Error(
+      `The area text duration must be at least one fixed step (${STEP_MS.toFixed(1)} ms), but it is ${areaTextMs}`,
+    );
+  }
   const progression = loadProgression(definition.progression);
   const monsterTypes: Record<string, MonsterType> = {};
   for (const [name, monsterType] of Object.entries(definition.monsterTypes)) {
@@ -172,6 +185,7 @@ export function loadContent(definition: ContentDefinition): Content {
     gear,
     monsterTypes,
     areas,
+    areaTextSteps: msToSteps(areaTextMs),
     start: { areaId: definition.start.area, tile: definition.start.tile },
   };
 }
@@ -356,6 +370,7 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition, usedIds: 
     milestones: (area.milestones ?? []).map((milestone) => loadMilestone(area.id, milestone, width, height, usedIds)),
     entrances: loadEntrances(area, isWalkable),
     exits: loadExits(area, width, height),
+    text: loadAreaText(area),
   };
   for (const monster of area.monsters) {
     if (definition.monsterTypes[monster.type] === undefined) {
@@ -372,6 +387,11 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition, usedIds: 
     usedIds.monsters.add(monster.id);
   }
   return { ...loaded, interactables: loadInteractables(area, definition, loaded, usedIds) };
+}
+
+/** The text of an Adventure Area, or null when it has none. */
+function loadAreaText(area: AreaDefinition): string | null {
+  return area.text ?? null;
 }
 
 /** `width` and `height` are the size of the map of the Adventure Area, in tiles. */

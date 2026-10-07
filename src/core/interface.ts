@@ -78,6 +78,8 @@ export type GameEvent =
   | { readonly type: 'milestone-reached'; readonly milestoneId: string }
   /** The hero walked into an exit and is now in this Adventure Area, standing at the entrance the exit leads to. */
   | { readonly type: 'area-changed'; readonly areaId: string }
+  /** The hero came into this Adventure Area for the first time: its short text is shown for a few seconds. */
+  | { readonly type: 'area-text'; readonly areaId: string; readonly text: string }
   /** The hero opened this chest. What was inside follows as a pickup. A chest opens once. */
   | { readonly type: 'chest-opened'; readonly chestId: string }
   /** The hero took an item and now has it. */
@@ -238,6 +240,8 @@ export interface PlayingView {
   readonly area: AreaView;
   /** The exits of the Adventure Area the hero is in. */
   readonly exits: readonly ExitView[];
+  /** The short text of the Adventure Area while it is shown: for a few seconds after the hero first comes in. */
+  readonly areaText: string | null;
   readonly hero: HeroView;
   readonly monsters: readonly MonsterView[];
   /** The interactables of the Adventure Area the hero is in, such as chests, opened ones included. */

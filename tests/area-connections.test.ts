@@ -290,6 +290,48 @@ describe('Defeat in a connected Adventure Area', () => {
   });
 });
 
+describe('Area text', () => {
+  const CELLAR_TEXT = 'A damp cellar.';
+
+  it('is shown when the hero first enters an area, as an event and in the view, and the hero can walk on', () => {
+    const game = newGame(world({}, { text: CELLAR_TEXT }));
+    expect(playingView(game).areaText).toBeNull();
+
+    const events = walk(game, 'right', 11);
+
+    expect(events.slice(-2)).toEqual([
+      { type: 'area-changed', areaId: 'cellar' },
+      { type: 'area-text', areaId: 'cellar', text: CELLAR_TEXT },
+    ]);
+    expect(playingView(game).areaText).toBe(CELLAR_TEXT);
+
+    // Nothing is paused or blocked while it shows.
+    walk(game, 'right', 2);
+    expect(playingView(game).hero.position).toEqual({ x: 2.75, y: 3.5 });
+    expect(playingView(game).areaText).toBe(CELLAR_TEXT);
+  });
+
+  it('is shown only on the first entry, not when the hero comes back to the area', () => {
+    const game = newGame(world({}, { text: CELLAR_TEXT }));
+    goThereAndBack(game);
+
+    const events = walk(game, 'right', 3);
+
+    expect(events).toContainEqual({ type: 'area-changed', areaId: 'cellar' });
+    expect(events.map((event) => event.type)).not.toContain('area-text');
+    expect(playingView(game).areaText).toBeNull();
+  });
+
+  it('is nothing for an area that has none', () => {
+    const game = newGame(world());
+
+    const events = walk(game, 'right', 11);
+
+    expect(events.map((event) => event.type)).not.toContain('area-text');
+    expect(playingView(game).areaText).toBeNull();
+  });
+});
+
 describe('Content validation of connected Adventure Areas', () => {
   it('refuses an Adventure Area that has no entrance', () => {
     expectRefused(arena({ entrances: [], exits: [TO_CELLAR], otherAreas: [CELLAR] }), 'Area "arena" has no entrance');

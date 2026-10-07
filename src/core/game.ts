@@ -1,4 +1,4 @@
-import { crossExits } from './areas';
+import { ageAreaText, crossExits, enterArea } from './areas';
 import { stepMonsters } from './behaviors';
 import { coolDownHero, heroStrikes } from './combat';
 import { loadContent } from './content';
@@ -27,7 +27,7 @@ export function createGame(options: GameOptions): Game {
         case 'new-game':
           state = newPlayState(content);
           held = [];
-          return [];
+          return enterArea(state, content);
         case 'continue':
           state = copyState(command.snapshot.state);
           held = [];
@@ -71,6 +71,7 @@ export function createGame(options: GameOptions): Game {
       if (state.phase !== 'playing' || isPaused(state, content)) {
         return [];
       }
+      ageAreaText(state);
       coolDownHero(state);
       walkHero(state, content, held.at(-1));
       // The hero is where it walked to when it reaches a milestone, and that comes before the monsters act.

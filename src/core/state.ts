@@ -46,6 +46,8 @@ export interface AreaState {
   monsters: MonsterState[];
   /** The ids of the milestones of this Adventure Area that the hero has reached. They stay reached, defeat included. */
   reachedMilestones: string[];
+  /** Whether the hero has been in this Adventure Area. Its text is shown the first time only. */
+  visited: boolean;
   /** The state of every interactable placed in the Adventure Area, by id. */
   interactables: Record<string, InteractableState>;
 }
@@ -71,6 +73,12 @@ export interface HeroState {
 export const PAGE_IDS = ['stats', 'inventory'] as const;
 export type PageId = (typeof PAGE_IDS)[number];
 
+/** The text of an Adventure Area while it is shown, and for how many more fixed steps. */
+export interface AreaTextState {
+  readonly text: string;
+  stepsLeft: number;
+}
+
 export interface PlayState {
   readonly phase: 'playing';
   /** The Adventure Area the hero is in. */
@@ -80,6 +88,8 @@ export interface PlayState {
    * one place to change when Checkpoints send the hero somewhere else.
    */
   arrivedAt: Tile;
+  /** The text of the Adventure Area that is shown now, if any. It runs down while the game is not paused. */
+  areaText: AreaTextState | null;
   hero: HeroState;
   /** The page that is open over the game, if any. While one is open the game is paused (see pages.ts). */
   page: PageId | null;
@@ -100,6 +110,7 @@ export function newPlayState(content: Content): PlayState {
     areas[area.id] = {
       monsters: freshMonsters(area, content),
       reachedMilestones: [],
+      visited: false,
       interactables: freshInteractables(area),
     };
   }
@@ -107,6 +118,7 @@ export function newPlayState(content: Content): PlayState {
     phase: 'playing',
     areaId: content.start.areaId,
     arrivedAt: { ...content.start.tile },
+    areaText: null,
     hero: {
       position: centerOf(content.start.tile),
       facing: 'down',
