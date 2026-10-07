@@ -288,8 +288,15 @@ describe('what the hero can carry', () => {
     const interactables = spare.map((id, index) =>
       chestAt(`chest-${index + 1}`, 1 + Math.floor(index / 2), index % 2 === 0 ? 2 : 4, id),
     );
+    // The chests fill rows 2 and 4, so the Checkpoint every area needs goes in the corner of row 1.
     const game = newGame(
-      arena({ layout: FIELD_LAYOUT, start: { area: 'arena', tile: { col: 1, row: 3 } }, gear, interactables }),
+      arena({
+        layout: FIELD_LAYOUT,
+        start: { area: 'arena', tile: { col: 1, row: 3 } },
+        checkpoints: [{ id: 'corner', tile: { col: 1, row: 1 } }],
+        gear,
+        interactables,
+      }),
     );
 
     let opened = 0;

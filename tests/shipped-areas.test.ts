@@ -172,6 +172,14 @@ describe('the Adventure Areas the game ships with', () => {
     },
   );
 
+  it('puts a Checkpoint at the entrance of each area: the start of the adventure on the coast, the way in from it on the trail', () => {
+    const checkpointTiles = (id: string) => (areaNamed(id).checkpoints ?? []).map(({ tile }) => tile);
+
+    expect(gameContent.start.area).toBe(COAST);
+    expect(checkpointTiles(COAST)).toContainEqual(gameContent.start.tile);
+    expect(checkpointTiles(TRAIL)).toContainEqual(entranceOf(TRAIL, 'from-coast').tile);
+  });
+
   it('puts every exit and milestone on tiles the hero can stand on, so that each can be reached', () => {
     for (const area of gameContent.areas) {
       const zones = [...(area.exits ?? []), ...(area.milestones ?? [])];

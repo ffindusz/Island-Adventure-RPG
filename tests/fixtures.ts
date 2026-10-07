@@ -2,6 +2,7 @@ import { createGame } from '../src/core';
 import type {
   AreaDefinition,
   ChaserMonsterDefinition,
+  CheckpointDefinition,
   ChestView,
   ConsumableId,
   ContentDefinition,
@@ -115,6 +116,11 @@ export const WITH_BOW = {
 /** The one entrance an Adventure Area gets unless a test gives it others. Tile (1, 1) is ground in both layouts above. */
 const DEFAULT_ENTRANCE: EntranceDefinition = { id: 'start', tile: { col: 1, row: 1 } };
 
+/** The one Checkpoint an Adventure Area gets unless a test gives it others: in the bottom left corner, where no test walks. */
+function defaultCheckpoint(areaId: string): CheckpointDefinition {
+  return { id: `${areaId}-checkpoint`, tile: { col: 1, row: 4 } };
+}
+
 export interface ArenaOptions {
   readonly monsters?: readonly MonsterPlacement[];
   readonly layout?: readonly string[];
@@ -124,6 +130,8 @@ export interface ArenaOptions {
   readonly entrances?: readonly EntranceDefinition[];
   /** The exits of the arena. There are none unless a test gives some. */
   readonly exits?: readonly ExitDefinition[];
+  /** The Checkpoints of the arena. Leave it out for a single one, on tile (1, 4), where no test walks. */
+  readonly checkpoints?: readonly CheckpointDefinition[];
   /** The text shown the first time the hero enters the arena. There is none unless a test gives some. */
   readonly text?: string;
   /** How long area text stays on the screen, in milliseconds. Leave it out to get the default. */
@@ -154,6 +162,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     otherAreas = [],
     entrances = [DEFAULT_ENTRANCE],
     exits = [],
+    checkpoints = [defaultCheckpoint('arena')],
     text,
     areaTextMs,
     start = { area: 'arena', tile: { col: 3, row: 3 } },
@@ -210,10 +219,15 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
         interactables,
         entrances,
         exits,
+        checkpoints,
         ...(text === undefined ? {} : { text }),
       },
-      // Most tests visit no second area, so it needs no more than the entrance every Adventure Area has.
-      ...otherAreas.map((area) => ({ entrances: [DEFAULT_ENTRANCE], ...area })),
+      // Most tests visit no second area, so it needs no more than the entrance and the Checkpoint every area has.
+      ...otherAreas.map((area) => ({
+        entrances: [DEFAULT_ENTRANCE],
+        checkpoints: [defaultCheckpoint(area.id)],
+        ...area,
+      })),
     ],
     start,
   };

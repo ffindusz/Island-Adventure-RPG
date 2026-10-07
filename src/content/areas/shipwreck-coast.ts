@@ -6,12 +6,14 @@ import type { AreaDefinition } from '../../core';
 // milestone, worth a little Experience. Two chests on the beach, one up and one down the column of the start, hold a
 // better sword and better armor. Two more, in the column two tiles right of the start, hold a short bow and a cache
 // of arrows. In the column two tiles left of it, a chest up the beach holds two Healing Potions and a third lies on the
-// ground down the beach, to be taken by walking over it.
+// ground down the beach, to be taken by walking over it. The Checkpoint of the area is where the hero starts: the start
+// of the adventure counts as the first.
 export const shipwreckCoast: AreaDefinition = {
   id: 'shipwreck-coast',
   name: 'Shipwreck Coast',
   text: 'You washed up on a strange shore.',
   entrances: [{ id: 'from-trail', tile: { col: 18, row: 5 } }],
+  checkpoints: [{ id: 'coast-checkpoint', tile: { col: 4, row: 5 } }],
   exits: [
     {
       id: 'to-trail',

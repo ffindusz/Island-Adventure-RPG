@@ -6,6 +6,7 @@ export { CONSUMABLE_IDS, GEAR_SLOT_STAT, GEAR_SLOTS, STAT_IDS, WEAPON_SLOTS } fr
 export type {
   AreaDefinition,
   ChaserMonsterDefinition,
+  CheckpointDefinition,
   ChestContents,
   ChestDefinition,
   ConsumableId,

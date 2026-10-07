@@ -245,6 +245,20 @@ export interface ExitDestination {
   readonly entrance: string;
 }
 
+/**
+ * A safe place the hero activates by touching it: it restores the hero's Health and records where defeat sends the
+ * hero back to (see checkpoints.ts). It fills one tile and is not solid.
+ */
+export interface CheckpointDefinition {
+  /** Unique across all Adventure Areas: events refer to the Checkpoint by it. */
+  readonly id: string;
+  /**
+   * The tile it stands on, which must not be solid, nor inside an exit of the same area, nor where an interactable
+   * stands: after defeat the hero stands at the centre of this tile.
+   */
+  readonly tile: Tile;
+}
+
 /** Ground that takes the hero to another Adventure Area as soon as its body overlaps it. */
 export interface ExitDefinition {
   /** Unique within its Adventure Area. */
@@ -268,6 +282,11 @@ export interface AreaDefinition {
   readonly entrances?: readonly EntranceDefinition[];
   /** The exits of this Adventure Area. Each leads to an entrance of an area that has an exit back. Leave out for none. */
   readonly exits?: readonly ExitDefinition[];
+  /**
+   * The Checkpoints of this Adventure Area. Every area needs at least one: the one at its entrance, where the hero
+   * comes in (for the first area, where the game begins).
+   */
+  readonly checkpoints?: readonly CheckpointDefinition[];
   /** A short text shown the first time the hero enters this Adventure Area. Leave it out for none. */
   readonly text?: string;
 }
