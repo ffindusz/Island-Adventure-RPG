@@ -4,7 +4,9 @@ import { loadContent } from './content';
 import type { Direction } from './geometry';
 import type { Game, GameOptions } from './interface';
 import { walkHero } from './movement';
-import { closePage, isPaused, openPage } from './pages';
+import { closePage, openPage } from './pages';
+import { isPaused } from './pause';
+import { assignStatPoint } from './progression';
 import { newPlayState, SNAPSHOT_VERSION, copyState } from './state';
 import type { GameState } from './state';
 import { buildView } from './view';
@@ -39,10 +41,10 @@ export function createGame(options: GameOptions): Game {
           }
           return [];
         case 'attack':
-          return state.phase === 'playing' && !isPaused(state) ? heroStrikes(state, content) : [];
+          return state.phase === 'playing' && !isPaused(state, content) ? heroStrikes(state, content) : [];
         case 'open-page':
           if (state.phase === 'playing') {
-            openPage(state, command.page);
+            openPage(state, content, command.page);
           }
           return [];
         case 'close-page':
@@ -50,10 +52,15 @@ export function createGame(options: GameOptions): Game {
             closePage(state, command.page);
           }
           return [];
+        case 'assign-stat-point':
+          if (state.phase === 'playing') {
+            assignStatPoint(state, content, command.stat);
+          }
+          return [];
       }
     },
     step() {
-      if (state.phase !== 'playing' || isPaused(state)) {
+      if (state.phase !== 'playing' || isPaused(state, content)) {
         return [];
       }
       coolDownHero(state);

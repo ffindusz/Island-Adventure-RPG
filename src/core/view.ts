@@ -1,7 +1,17 @@
 import { areaOf, monsterTypeOf } from './content';
 import type { Content } from './content';
-import type { GameView, MonsterActionView, PageView } from './interface';
-import { experienceProgress, heroAttack, heroDefense, heroLevel, heroMaxHealth, highestLevel } from './stats';
+import { STAT_IDS } from './definitions';
+import type { GameView, LevelUpView, MonsterActionView, PageView } from './interface';
+import {
+  experienceProgress,
+  heroAttack,
+  heroDefense,
+  heroLevel,
+  heroMaxHealth,
+  heroStat,
+  highestLevel,
+  unassignedStatPoints,
+} from './stats';
 import { livingMonsters } from './state';
 import type { GameState, MonsterAction, PlayState } from './state';
 
@@ -19,7 +29,7 @@ export function buildView(state: GameState, content: Content): GameView {
       size: content.hero.size,
       facing: state.hero.facing,
       health: state.hero.health,
-      maxHealth: heroMaxHealth(content),
+      maxHealth: heroMaxHealth(state, content),
     },
     monsters: livingMonsters(state).map((monster) => {
       const type = monsterTypeOf(content, monster.type);
@@ -34,6 +44,7 @@ export function buildView(state: GameState, content: Content): GameView {
       };
     }),
     page: pageView(state, content),
+    levelUp: levelUpView(state, content),
   };
 }
 
@@ -48,11 +59,27 @@ function pageView(state: PlayState, content: Content): PageView | null {
         maxLevel: highestLevel(content),
         experience: experienceProgress(state, content) ?? null,
         health: state.hero.health,
-        maxHealth: heroMaxHealth(content),
-        attack: heroAttack(content),
-        defense: heroDefense(content),
+        maxHealth: heroMaxHealth(state, content),
+        attack: heroAttack(state, content),
+        defense: heroDefense(state, content),
       };
   }
+}
+
+function levelUpView(state: PlayState, content: Content): LevelUpView | null {
+  const points = unassignedStatPoints(state, content);
+  if (points === 0) {
+    return null;
+  }
+  return {
+    level: heroLevel(state, content) - points + 1,
+    points,
+    options: STAT_IDS.map((stat) => ({
+      stat,
+      value: heroStat(state, content, stat),
+      gain: content.progression.statPointValue[stat],
+    })),
+  };
 }
 
 function actionView(action: MonsterAction): MonsterActionView {

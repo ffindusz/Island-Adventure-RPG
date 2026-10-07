@@ -1,7 +1,8 @@
 import type { Content } from './content';
+import type { StatId } from './definitions';
 import type { GameEvent } from './interface';
 import type { PlayState } from './state';
-import { experienceCap, heroLevel } from './stats';
+import { experienceCap, heroLevel, heroMaxHealth, unassignedStatPoints } from './stats';
 
 // How the hero grows: the rules that change what the hero has earned. What the earnings are worth, such as the Level
 // they add up to, is worked out in stats.ts.
@@ -22,4 +23,17 @@ export function gainExperience(state: PlayState, content: Content, amount: numbe
     events.push({ type: 'level-up', level });
   }
   return events;
+}
+
+/**
+ * The hero spends a Stat Point it has not assigned yet on a stat, for good. The current Health rises by as much as the
+ * maximum does, so Health bought with a Stat Point is not left empty. Does nothing when no Stat Point waits.
+ */
+export function assignStatPoint(state: PlayState, content: Content, stat: StatId): void {
+  if (unassignedStatPoints(state, content) === 0) {
+    return;
+  }
+  const maxHealthBefore = heroMaxHealth(state, content);
+  state.hero.statPoints[stat] += 1;
+  state.hero.health += heroMaxHealth(state, content) - maxHealthBefore;
 }

@@ -1,3 +1,4 @@
+import { STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
   ChaserMonsterDefinition,
@@ -129,7 +130,11 @@ function loadProgression(definition: ProgressionDefinition): ProgressionDefiniti
       );
     }
   });
-  return { levelThresholds: [...levelThresholds] };
+  for (const stat of STAT_IDS) {
+    requireMoreThanZero(`The value of a Stat Point in ${stat}`, definition.statPointValue[stat]);
+  }
+  const { health, attack, defense } = definition.statPointValue;
+  return { levelThresholds: [...levelThresholds], statPointValue: { health, attack, defense } };
 }
 
 function loadMonsterType(name: string, definition: MonsterTypeDefinition): MonsterType {

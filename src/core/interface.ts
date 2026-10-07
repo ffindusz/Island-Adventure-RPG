@@ -1,4 +1,4 @@
-import type { ContentDefinition } from './definitions';
+import type { ContentDefinition, StatId } from './definitions';
 import type { Box, Direction, Point } from './geometry';
 import type { PageId, PlayState } from './state';
 
@@ -34,13 +34,18 @@ export type Command =
   /** Strike with the Melee Weapon in the facing direction, unless the attack cooldown is still running. */
   | { readonly type: 'attack' }
   /**
-   * Open a page over the game, such as the stat page. Ignored at the title and while a page is already open. While a
-   * page is open the game is paused: step() advances nothing and attack does nothing; move and stop still keep track
-   * of the keys that are down.
+   * Open a page over the game, such as the stat page. Ignored at the title and while the game is paused already: a
+   * page is open, or a Stat Point waits to be assigned. While the game is paused step() advances nothing and attack
+   * does nothing; move and stop still keep track of the keys that are down.
    */
   | { readonly type: 'open-page'; readonly page: PageId }
   /** Close the page, if it is the one that is open. */
-  | { readonly type: 'close-page'; readonly page: PageId };
+  | { readonly type: 'close-page'; readonly page: PageId }
+  /**
+   * Spend a Stat Point on a stat, for good: there is no taking it back. Ignored when no Stat Point waits to be
+   * assigned. Until every Stat Point has been assigned the game is paused.
+   */
+  | { readonly type: 'assign-stat-point'; readonly stat: StatId };
 
 /** Something that happened, for the adapter to show or play. Events never carry rules; the state view is the truth. */
 export type GameEvent =
@@ -132,6 +137,25 @@ export interface StatPageView {
 /** A page that is open over the game. One kind for each page id; `id` says which. */
 export type PageView = StatPageView;
 
+/** One place a Stat Point can go. */
+export interface StatChoiceView {
+  readonly stat: StatId;
+  /** What the stat is now: for Health, the maximum Health. */
+  readonly value: number;
+  /** What the Stat Point adds to it. */
+  readonly gain: number;
+}
+
+/** The hero has Stat Points to assign, and the game waits until they are all assigned. */
+export interface LevelUpView {
+  /** The Level this choice is for. Several Levels reached at once ask one choice after another, the lowest first. */
+  readonly level: number;
+  /** The Stat Points still to assign, this one included. */
+  readonly points: number;
+  /** Where the point can go, in a fixed order. */
+  readonly options: readonly StatChoiceView[];
+}
+
 /** Everything the player can see while playing. Monsters that are defeated are not listed. */
 export interface PlayingView {
   readonly phase: 'playing';
@@ -140,6 +164,8 @@ export interface PlayingView {
   readonly monsters: readonly MonsterView[];
   /** The page that is open over the game, if any. While one is open the game is paused. */
   readonly page: PageView | null;
+  /** The Stat Point the hero has to assign, if any. While one waits the game is paused. */
+  readonly levelUp: LevelUpView | null;
 }
 
 export type GameView = TitleView | PlayingView;

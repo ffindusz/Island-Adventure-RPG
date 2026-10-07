@@ -29,7 +29,8 @@ import type {
 //   hero                    body 0.5 tiles; walks 7.5 tiles a second, which is 0.125 tile a fixed step
 //                           (8 steps to cross one tile); Health 10; Defense 0; Attack 1; attack cooldown 400 ms,
 //                           which is 24 steps; strike reaches 1 tile beyond the body and is 1 tile wide
-//   Levels                  the Experience that raises the hero to Levels 2 to 6 is 10, 25, 45, 70 and 100 in all
+//   Levels                  the Experience that raises the hero to Levels 2 to 6 is 10, 25, 45, 70 and 100 in all;
+//                           each Stat Point adds 3 to Health, 2 to Attack or 1 to Defense
 //   monster "dummy"         stationary: it never moves or attacks; body 0.5 tiles; Health 3; worth 5 Experience
 //   monster "biter"         a chaser; body 0.5 tiles; Health 3; worth 8 Experience; damage 5; walks 3.75 tiles a
 //                           second, which is 0.0625 tile a step (16 steps to cross one tile); notices the hero within
@@ -121,7 +122,11 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
       ...hero,
     },
     ...(minimumDamage === undefined ? {} : { minimumDamage }),
-    progression: { levelThresholds: [10, 25, 45, 70, 100], ...progression },
+    progression: {
+      levelThresholds: [10, 25, 45, 70, 100],
+      statPointValue: { health: 3, attack: 2, defense: 1 },
+      ...progression,
+    },
     monsterTypes: {
       dummy: { behavior: 'stationary', health: 3, size: 0.5, experience: 5 },
       biter: BITER,
@@ -165,7 +170,10 @@ const PRIZE_TILES: readonly Tile[] = [
 const PRIZE_SIDES: readonly Direction[] = ['down', 'right', 'left', 'up'];
 
 /** What the arena needs for frail monsters worth the given Experience, standing around the hero (see PRIZE_TILES). */
-export function prizes(...experiences: number[]): Pick<ArenaOptions, 'monsters' | 'monsterTypes'> {
+export function prizes(...experiences: number[]): {
+  monsters: MonsterPlacement[];
+  monsterTypes: Record<string, MonsterTypeDefinition>;
+} {
   const monsterTypes: Record<string, MonsterTypeDefinition> = {};
   const monsters = experiences.map((experience, index): MonsterPlacement => {
     const tile = PRIZE_TILES[index];

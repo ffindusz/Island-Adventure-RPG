@@ -90,6 +90,10 @@ export interface AreaDefinition {
   readonly monsters: readonly MonsterPlacement[];
 }
 
+/** The stats a Stat Point can be spent on. */
+export const STAT_IDS = ['health', 'attack', 'defense'] as const;
+export type StatId = (typeof STAT_IDS)[number];
+
 /** How the hero grows, as data a designer can tune. */
 export interface ProgressionDefinition {
   /**
@@ -98,6 +102,8 @@ export interface ProgressionDefinition {
    * than the number of thresholds, and Experience beyond the last threshold changes nothing.
    */
   readonly levelThresholds: readonly number[];
+  /** What each Stat Point adds to the stat it is spent on. Each is more than 0. */
+  readonly statPointValue: Readonly<Record<StatId, number>>;
 }
 
 export interface ContentDefinition {

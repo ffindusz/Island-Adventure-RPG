@@ -1,5 +1,6 @@
 import type { Area, Content } from './content';
 import { monsterTypeOf } from './content';
+import type { StatId } from './definitions';
 import type { Box, Direction, Point } from './geometry';
 import { boxAround, centerOf } from './geometry';
 import { heroMaxHealth } from './stats';
@@ -44,6 +45,8 @@ export interface HeroState {
   attackCooldown: number;
   /** The Experience the hero has earned in all. The Level is worked out from it (see stats.ts). */
   experience: number;
+  /** The Stat Points the hero has assigned to each stat. The ones it has still to assign are worked out (stats.ts). */
+  statPoints: Record<StatId, number>;
 }
 
 /** A page that can be open over the game, one at a time. A new page is one more id here and one more view. */
@@ -72,19 +75,23 @@ export function newPlayState(content: Content): PlayState {
   for (const area of Object.values(content.areas)) {
     areas[area.id] = { monsters: freshMonsters(area, content) };
   }
-  return {
+  const state: PlayState = {
     phase: 'playing',
     areaId: content.start.areaId,
     hero: {
       position: centerOf(content.start.tile),
       facing: 'down',
-      health: heroMaxHealth(content),
+      health: 0,
       attackCooldown: 0,
       experience: 0,
+      statPoints: { health: 0, attack: 0, defense: 0 },
     },
     page: null,
     areas,
   };
+  // The most Health there is can only be worked out from the state, which is why it is set once the state exists.
+  state.hero.health = heroMaxHealth(state, content);
+  return state;
 }
 
 /** Every monster of an Adventure Area as the content places it: at full Health, on its starting tile, doing nothing. */

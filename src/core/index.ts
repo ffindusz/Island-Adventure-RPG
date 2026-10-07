@@ -11,6 +11,7 @@ export type {
   MonsterPlacement,
   MonsterTypeDefinition,
   ProgressionDefinition,
+  StatId,
   StationaryMonsterDefinition,
   TerrainDefinition,
 } from './definitions';
@@ -23,12 +24,14 @@ export type {
   GameOptions,
   GameView,
   HeroView,
+  LevelUpView,
   MonsterActionView,
   MonsterView,
   PageView,
   PlayingView,
   RandomSource,
   Snapshot,
+  StatChoiceView,
   StatPageView,
   TitleView,
 } from './interface';

@@ -154,6 +154,21 @@ describe('numbers the rules cannot work with are refused when the game is create
       content: arena({ progression: { levelThresholds: [10, 25, 20] } }),
       message: 'The Experience for Level 4 must be more than the 25 of Level 3, but it is 20',
     },
+    {
+      what: 'a Stat Point that adds nothing to Health',
+      content: arena({ progression: { statPointValue: { health: 0, attack: 2, defense: 1 } } }),
+      message: 'The value of a Stat Point in health must be more than 0, but it is 0',
+    },
+    {
+      what: 'a Stat Point that adds nothing to Attack',
+      content: arena({ progression: { statPointValue: { health: 3, attack: 0, defense: 1 } } }),
+      message: 'The value of a Stat Point in attack must be more than 0, but it is 0',
+    },
+    {
+      what: 'a Stat Point that takes away from Defense',
+      content: arena({ progression: { statPointValue: { health: 3, attack: 2, defense: -1 } } }),
+      message: 'The value of a Stat Point in defense must be more than 0, but it is -1',
+    },
   ])('$what', ({ content, message }) => {
     expectRefused(content, message);
   });
@@ -162,7 +177,7 @@ describe('numbers the rules cannot work with are refused when the game is create
     const content = arena({
       hero: { defense: 0 },
       minimumDamage: 0,
-      progression: { levelThresholds: [1] },
+      progression: { levelThresholds: [1], statPointValue: { health: 1, attack: 1, defense: 1 } },
       monsterTypes: {
         biter: {
           ...BITER,
