@@ -11,6 +11,17 @@ import { enemyField, KEEPER, keeperAt, shooterAt } from './enemy-fixtures';
 // The distance is the gap between the bodies, counted along the axis on which the two are farther apart: the way the
 // keeper walks, toward the hero or away from it.
 
+// The field of fixtures.ts with a wall on the tile (3, 3), in front of the keeper in the tile (2, 3).
+const WALL_IN_FRONT = [
+  '##############',
+  '#............#',
+  '#............#',
+  '#..#.........#',
+  '#............#',
+  '#............#',
+  '##############',
+];
+
 describe('a ranged attacker that keeps its distance', () => {
   it('walks toward a hero that is farther away than it likes, and winds up when it is as near as it likes', () => {
     const game = enemyField([keeperAt('keeper-1', 2, 3)]);
@@ -123,6 +134,18 @@ describe('a ranged attacker that keeps its distance', () => {
     });
     expect(advance(game, 29)).toEqual([]);
     expect(game.step()).toEqual([{ type: 'monster-fired', monsterId: 'keeper-1', direction: 'right' }]); // step 35
+  });
+
+  it('stays on its way, where it is, when it cannot come any nearer: it does not wind up with a wall in front of it', () => {
+    // The wall stops it flush at x = 2.75 after 4 moves, and the hero is still farther away than it likes.
+    const game = enemyField([keeperAt('keeper-1', 2, 3)], { layout: WALL_IN_FRONT });
+
+    advance(game, 4);
+    expect(monsterNamed(game, 'keeper-1')).toMatchObject({ position: { x: 2.75, y: 3.5 }, action: { type: 'chasing' } });
+
+    expect(advance(game, 100)).toEqual([]);
+    expect(monsterNamed(game, 'keeper-1')).toMatchObject({ position: { x: 2.75, y: 3.5 }, action: { type: 'chasing' } });
+    expect(playingView(game).arrows).toEqual([]);
   });
 
   it('stands where it is while it winds up and while it rests after a shot, however near the hero comes', () => {
