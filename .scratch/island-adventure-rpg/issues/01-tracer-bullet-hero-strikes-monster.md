@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 1, 21-23, 30-32, 36, 102-104, 107
 
@@ -19,6 +19,8 @@
 - [ ] Reviewer play check (manual, in a browser): start the dev server, walk to the monster, strike it until it is defeated, and confirm that walls block the hero.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 1a83fb0
 
 ### What was built
 
