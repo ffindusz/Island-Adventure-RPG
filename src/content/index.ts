@@ -17,6 +17,7 @@ export const gameContent: ContentDefinition = {
   hero,
   progression,
   minimumDamage: 1,
+  automapRevealDistance: 4,
   healingPotion,
   gear,
   monsterTypes,
