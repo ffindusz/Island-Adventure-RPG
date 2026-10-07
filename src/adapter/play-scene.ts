@@ -3,6 +3,7 @@ import type { Command, Game, GameEvent, GameView } from '../core';
 import { AreaBanner } from './area-banner';
 import {
   drawArrow,
+  drawCheckpoints,
   drawExits,
   drawHero,
   drawInteractable,
@@ -63,9 +64,10 @@ export class PlayScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Added in drawing order: ground, then the telegraphs of monster attacks, then chests, hero and monsters, then the
-    // swings and strikes on top. The HUD draws above them all, then the text of the area, the notice above that, and the
-    // overlay above that. The world scrolls with the camera; the HUD, the text, the notice and the overlay do not.
+    // Added in drawing order: ground, then the telegraphs of monster attacks, then Checkpoints, chests, hero and
+    // monsters, then the swings and strikes on top. The HUD draws above them all, then the text of the area, the notice
+    // above that, and the overlay above that. The world scrolls with the camera; the HUD, the text, the notice and the
+    // overlay do not.
     this.terrainLayer = this.add.graphics();
     this.telegraphLayer = this.add.graphics();
     this.entityLayer = this.add.graphics();
@@ -135,6 +137,7 @@ export class PlayScene extends Phaser.Scene {
     this.cameras.main.setScroll(scroll.x, scroll.y);
     this.telegraphLayer.clear();
     this.entityLayer.clear();
+    drawCheckpoints(this.entityLayer, view.checkpoints);
     for (const interactable of view.interactables) {
       drawInteractable(this.entityLayer, interactable);
     }

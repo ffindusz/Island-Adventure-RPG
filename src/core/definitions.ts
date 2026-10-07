@@ -258,7 +258,7 @@ export interface CheckpointDefinition {
   readonly id: string;
   /**
    * The tile it stands on, which must not be solid, nor inside an exit of the same area, nor where an interactable
-   * stands: after defeat the hero stands at the centre of this tile.
+   * stands or a monster starts: after defeat the hero stands at the centre of this tile.
    */
   readonly tile: Tile;
 }

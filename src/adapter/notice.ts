@@ -6,13 +6,18 @@ import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Graphics } from './pixel-font';
 import { pageKeyLabel, switchWeaponKeyLabel } from './player-input';
 
-// The notice of what the hero just found, or that the bow has nothing to shoot, low on the screen where it covers
-// neither the hero nor the HUD. It is drawn from what the Game core reported and nothing else.
+// The notice of what the hero just found, that the bow has nothing to shoot, or that it touched a Checkpoint, low on
+// the screen where it covers neither the hero nor the HUD. It is drawn from what the Game core reported and nothing
+// else.
 
-/** What the notice tells the player: the item the hero picked up, or that an arrow was asked for and there is none. */
+/**
+ * What the notice tells the player: the item the hero picked up, that an arrow was asked for and there is none, or that
+ * the hero touched a Checkpoint.
+ */
 export type NoticeContent =
   | { readonly kind: 'pickup'; readonly item: PickedUpItem }
-  | { readonly kind: 'out-of-ammunition' };
+  | { readonly kind: 'out-of-ammunition' }
+  | { readonly kind: 'checkpoint' };
 
 /** Above the HUD, below the overlay: a page that opens covers the notice. */
 const NOTICE_DEPTH = 150;
@@ -34,7 +39,7 @@ interface Line {
   readonly colour: number;
 }
 
-/** Tells the player what the hero picked up, or that the bow is out of Ammunition. */
+/** Tells the player what the hero picked up, that the bow is out of Ammunition, or that a Checkpoint is touched. */
 export class Notice {
   private readonly graphics: Graphics;
   private shown = 'null';
@@ -65,6 +70,11 @@ function linesFor(content: NoticeContent): Line[] {
       return [
         { text: 'OUT OF AMMUNITION', colour: WARNING_COLOUR },
         { text: `PRESS ${switchWeaponKeyLabel()} TO SWITCH`, colour: HINT_COLOUR },
+      ];
+    case 'checkpoint':
+      return [
+        { text: 'CHECKPOINT', colour: TITLE_COLOUR },
+        { text: 'HEALTH FULL', colour: GAIN_COLOUR },
       ];
   }
 }
