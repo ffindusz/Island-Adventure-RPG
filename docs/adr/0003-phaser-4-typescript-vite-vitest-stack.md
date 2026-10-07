@@ -1,0 +1,3 @@
+# Build with Phaser 4.2.1, TypeScript, Vite and Vitest
+
+The game is strict TypeScript on Phaser 4.2.1, built by Vite into plain static files with no server and tested headlessly with Vitest, with every dependency pinned to an exact version and the lockfile committed so builds repeat. Phaser 4.2.1 is the current release of the framework chosen in ADR 0001, so starting on it avoids a later migration from Phaser 3, at the cost that its API differs from most published examples; the adapter has no automated tests, so the compiler and Phaser's shipped type definitions are its safety net.
