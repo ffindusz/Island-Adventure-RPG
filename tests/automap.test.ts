@@ -49,6 +49,10 @@ function areaOnMap(game: Game, id: string): AutomapAreaView {
   return area;
 }
 
+function exitIds(game: Game, areaId: string): string[] {
+  return areaOnMap(game, areaId).exits.map((exit) => exit.id);
+}
+
 /** The terrain the page shows of an area, one string for each row: a symbol on a revealed tile, a space on a hidden one. */
 function picture(area: AutomapAreaView): string[] {
   return area.terrain.map((row) =>
@@ -357,8 +361,6 @@ describe('The route on the Automap', () => {
 });
 
 describe('Exits on the Automap', () => {
-  const exitIds = (game: Game, areaId: string): string[] => areaOnMap(game, areaId).exits.map((exit) => exit.id);
-
   it('marks an exit once the hero has revealed a tile of it, and not before', () => {
     const game = newGame(route({ automapRevealDistance: 1.5 }));
     expect(exitIds(game, 'arena')).toEqual([]);
@@ -399,5 +401,74 @@ describe('Exits on the Automap', () => {
     walk(game, 'left', 8);
 
     expect(exitIds(game, 'arena')).toEqual(['to-cellar']);
+  });
+});
+
+describe('The Automap on arrival in another Adventure Area', () => {
+  // A distance of 1.5 reveals the 3 x 3 square around the tile the hero is on. The hero arrives on tile (2, 3).
+  const AROUND_THE_ENTRANCE = [
+    '       ',
+    '       ',
+    ' .~.   ',
+    ' ...   ',
+    ' ...   ',
+    '       ',
+  ];
+
+  it('reveals the terrain around the entrance at once, and shows the name of the area', () => {
+    const game = newGame(route({ automapRevealDistance: 1.5 }));
+
+    crossExit(game, 'right');
+
+    const cellar = areaOnMap(game, 'cellar');
+    expect(cellar.name).toBe('Cellar');
+    expect(picture(cellar)).toEqual(AROUND_THE_ENTRANCE);
+  });
+
+  it('finds the exits within reach of the entrance and no other', () => {
+    const game = newGame(route({ automapRevealDistance: 1.5 }));
+
+    crossExit(game, 'right');
+
+    // The way back is on tile (1, 3), next to the entrance. The way on is on tile (5, 3), three tiles away.
+    expect(exitIds(game, 'cellar')).toEqual(['to-arena']);
+  });
+
+  it('keeps what was revealed of the area the hero has left, and the exit it left through', () => {
+    const game = newGame(route({ automapRevealDistance: 1.5 }));
+
+    crossExit(game, 'right');
+
+    // The squares around tile (3, 3), where the hero started, and tile (4, 3), where it was as it went out.
+    expect(picture(areaOnMap(game, 'arena'))).toEqual([
+      '       ',
+      '       ',
+      '  ~... ',
+      '  .... ',
+      '  ..,. ',
+      '       ',
+    ]);
+    expect(exitIds(game, 'arena')).toEqual(['to-cellar']);
+  });
+
+  it('reveals each area the hero comes to along the route, and keeps the rest', () => {
+    const game = newGame(route({ automapRevealDistance: 1.5 }));
+
+    crossExit(game, 'right');
+    crossExit(game, 'right');
+
+    expect(picture(areaOnMap(game, 'attic'))).toEqual(AROUND_THE_ENTRANCE);
+    expect(exitIds(game, 'attic')).toEqual(['to-cellar']);
+    // The hero walked the cellar from tile (2, 3) to tile (4, 3).
+    expect(picture(areaOnMap(game, 'cellar'))).toEqual([
+      '       ',
+      '       ',
+      ' .~... ',
+      ' ..... ',
+      ' ...,. ',
+      '       ',
+    ]);
+    expect(exitIds(game, 'cellar')).toEqual(['to-arena', 'to-attic']);
+    expect(automap(game).areas.map((area) => area.discovered)).toEqual([true, true, true]);
   });
 });

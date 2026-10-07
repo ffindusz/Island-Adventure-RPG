@@ -1,3 +1,4 @@
+import { revealAroundHero } from './automap';
 import { areaOf } from './content';
 import type { Area, Content, Entrance } from './content';
 import { centerOf, overlaps } from './geometry';
@@ -24,6 +25,7 @@ export function crossExits(state: PlayState, content: Content): GameEvent[] {
   state.areaId = destination.id;
   const entrance = entranceOf(destination, exit.to.entranceId);
   state.hero.position = centerOf(entrance.tile);
+  revealAroundHero(state, content);
   return [{ type: 'area-changed', areaId: destination.id }, ...enterArea(state, content)];
 }
 
