@@ -4,7 +4,7 @@
 
 **Blocked by:** 03: Monsters fight back
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 57-65, 92, 93
 
@@ -19,6 +19,8 @@
 - [ ] Reviewer play check (manual, in a browser): defeat monsters until a level-up, assign the point, open and close the stat page with C and Esc, and switch tabs to confirm the pause.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 89266be
 
 ### What was built
 
