@@ -543,6 +543,32 @@ describe('Defeat and the consumables', () => {
     expect(pickupIds(game)).toEqual([]);
   });
 
+  it('records what the hero has again each time it comes back onto the Checkpoint', () => {
+    // The hero has 5 Health. It touches the camp on its 3rd step, takes the 2 potions on the tile (4, 4) in the 3 steps
+    // to the right, steps clear of the camp and comes back onto it on its 12th step, which records the potions. The
+    // biter's hit on the 31st step defeats it.
+    const game = newGame(
+      arena({
+        hero: { health: 5 },
+        checkpoints: [CAMP],
+        monsters: [BITER_BESIDE_HERO],
+        interactables: [pickupAt('potions', 4, 4, 2)],
+      }),
+    );
+    expect(walk(game, 'down', 3)).toEqual([CAMP_ACTIVATED]);
+    expect(walk(game, 'right', 3)).toEqual([tookPotions(2)]);
+    walk(game, 'up', 3);
+    expect(walk(game, 'down', 3)).toEqual([CAMP_ACTIVATED]);
+
+    untilDefeated(game);
+
+    expect(playingView(game).hero).toMatchObject({
+      position: { x: 3.5, y: 4.5 },
+      consumables: { ammunition: 0, 'healing-potion': 2 },
+    });
+    expect(pickupIds(game)).toEqual([]);
+  });
+
   it('does the same every time the hero falls: what it finds again in its next life goes as well', () => {
     // The hero has 5 Health. It touches the camp, opens the cache to its left (5 arrows) and walks onto the beach (3
     // potions), and the biter's hit on the 31st step defeats it. The biter is whole again and hits 31 steps after
