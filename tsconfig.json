@@ -1,0 +1,10 @@
+{
+  // Everything that runs in the browser or in tests: the adapter, the entry point, the tests and the tool config.
+  // The Game core and the content are also checked, more strictly, by tsconfig.core.json.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": []
+  },
+  "include": ["src", "tests", "vite.config.ts"]
+}
