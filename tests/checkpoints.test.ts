@@ -340,6 +340,25 @@ describe('Defeat with Checkpoints', () => {
     expect(view.checkpoints).toEqual([{ ...CAMP_VIEW, active: true }]);
   });
 
+  it('takes the text of the area where the hero fell off the screen', () => {
+    // As above, with the text of the cellar on the screen from the hero's arrival, 31 steps before the defeat.
+    const game = newGame(
+      world(
+        { hero: { health: 5 }, checkpoints: [CAMP] },
+        { text: 'A damp cellar.', monsters: [biterAt('cellar-biter', 3, 3)] },
+      ),
+    );
+    walk(game, 'down', 3);
+    walk(game, 'right', 11);
+    advance(game, 30);
+    expect(playingView(game).areaText).toBe('A damp cellar.');
+
+    expect(advance(game, 1)).toContainEqual({ type: 'hero-defeated' });
+
+    expect(playingView(game).area.id).toBe('arena');
+    expect(playingView(game).areaText).toBeNull();
+  });
+
   it('may send the hero to a Checkpoint of the cellar, from the arena it has gone back to', () => {
     // The door of the cellar is touched on arrival. The hero walks back out, to the arena entrance, where the biter at
     // (4, 4) winds up from the first step after the arrival and hits on the 31st.
