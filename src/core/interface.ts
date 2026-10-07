@@ -99,7 +99,10 @@ export type GameEvent =
   | { readonly type: 'level-up'; readonly level: number }
   /** The hero's body first overlapped the zone of this milestone, and the reward follows. It happens once per game. */
   | { readonly type: 'milestone-reached'; readonly milestoneId: string }
-  /** The hero walked into an exit and is now in this Adventure Area, standing at the entrance the exit leads to. */
+  /**
+   * The hero walked into an exit and is now in this Adventure Area, standing at the entrance the exit leads to. Also
+   * after a defeat that sent the hero to a Checkpoint of another area, where it follows `hero-defeated`.
+   */
   | { readonly type: 'area-changed'; readonly areaId: string }
   /** The hero came into this Adventure Area for the first time: its short text is shown for a few seconds. */
   | { readonly type: 'area-text'; readonly areaId: string; readonly text: string }
@@ -114,9 +117,19 @@ export type GameEvent =
   /** The hero took this weapon in hand. */
   | { readonly type: 'weapon-switched'; readonly weapon: WeaponSlot }
   /**
-   * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health where
-   * defeat sends it, and the monsters of the Adventure Area it is in are back as they began: the view shows the new
-   * state. The monsters of other Adventure Areas are as they were.
+   * The hero came onto this Checkpoint. It is the one defeat sends the hero back to now, and the hero's Health is
+   * restored to full. Nothing else changes: the Ammunition and the Healing Potions the hero has stay as they are, and
+   * they are what defeat gives back later, along with the pickups and the caches taken so far.
+   */
+  | { readonly type: 'checkpoint-activated'; readonly checkpointId: string }
+  /**
+   * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health at the
+   * Checkpoint it touched last (the start of the adventure before it touched any), and the monsters of that Adventure
+   * Area are back as they began: the view shows the new state. When that Checkpoint is in another area, `area-changed`
+   * follows this event. The monsters of other Adventure Areas keep their Health, defeated ones stay defeated, and the
+   * ones that were after the hero stop. The Ammunition and the Healing Potions are as many as they were at that
+   * Checkpoint, and the pickups and the caches taken since are there again, in every area; the Level, the Experience,
+   * the Stat Points, the Gear and the chests of Gear that were opened stay.
    */
   | { readonly type: 'hero-defeated' };
 
@@ -233,6 +246,17 @@ export interface ExitView {
   readonly zone: Box;
 }
 
+/** A Checkpoint of the Adventure Area the hero is in, for the adapter to draw. */
+export interface CheckpointView {
+  readonly id: string;
+  /** The centre of the tile it stands on. */
+  readonly position: Point;
+  /** Width and height of the tile it stands on, in tiles. */
+  readonly size: number;
+  /** Whether defeat sends the hero back here now: it is the last one the hero touched, or the start of the adventure. */
+  readonly active: boolean;
+}
+
 export interface TitleView {
   readonly phase: 'title';
 }
@@ -308,6 +332,8 @@ export interface PlayingView {
   readonly area: AreaView;
   /** The exits of the Adventure Area the hero is in. */
   readonly exits: readonly ExitView[];
+  /** The Checkpoints of the Adventure Area the hero is in, in the order the content places them. */
+  readonly checkpoints: readonly CheckpointView[];
   /** The short text of the Adventure Area while it is shown: for a few seconds after the hero first comes in. */
   readonly areaText: string | null;
   readonly hero: HeroView;

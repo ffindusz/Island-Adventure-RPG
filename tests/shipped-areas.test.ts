@@ -172,6 +172,30 @@ describe('the Adventure Areas the game ships with', () => {
     },
   );
 
+  it('puts a Checkpoint at the entrance of each area: the start of the adventure on the coast, the way in from it on the trail', () => {
+    const checkpointTiles = (id: string) => (areaNamed(id).checkpoints ?? []).map(({ tile }) => tile);
+
+    expect(gameContent.start.area).toBe(COAST);
+    expect(checkpointTiles(COAST)).toContainEqual(gameContent.start.tile);
+    expect(checkpointTiles(TRAIL)).toContainEqual(entranceOf(TRAIL, 'from-coast').tile);
+  });
+
+  it('begins a new game with the Checkpoint of the coast active, as the start of the adventure counts as the first', () => {
+    const game = createGame({ content: gameContent, random: fixedRandom });
+    game.send({ type: 'new-game' });
+
+    expect(playingView(game).checkpoints).toEqual([expect.objectContaining({ id: 'coast-checkpoint', active: true })]);
+  });
+
+  it('touches the Checkpoint of the trail when the hero comes in from the coast', () => {
+    const game = gameBeginningAt(COAST, 17, 5);
+
+    const events = walkThroughExit(game, 'right');
+
+    expect(events).toContainEqual({ type: 'checkpoint-activated', checkpointId: 'trail-checkpoint' });
+    expect(playingView(game).checkpoints).toEqual([expect.objectContaining({ id: 'trail-checkpoint', active: true })]);
+  });
+
   it('puts every exit and milestone on tiles the hero can stand on, so that each can be reached', () => {
     for (const area of gameContent.areas) {
       const zones = [...(area.exits ?? []), ...(area.milestones ?? [])];

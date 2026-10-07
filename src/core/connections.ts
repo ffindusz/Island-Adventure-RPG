@@ -52,7 +52,8 @@ export function loadExits(area: AreaDefinition, width: number, height: number): 
 
 /**
  * Once every area is loaded: each exit must lead to an entrance of an area that can be left the other way, and the
- * hero must not arrive where it would at once overlap an exit, which would send it straight back.
+ * hero must not arrive where it would at once overlap an exit, which would send it straight back. The same goes for a
+ * Checkpoint, where the hero is put back after defeat.
  */
 export function checkConnections(areas: Readonly<Record<string, Area>>, heroSize: number): void {
   for (const area of Object.values(areas)) {
@@ -78,6 +79,15 @@ export function checkConnections(areas: Readonly<Record<string, Area>>, heroSize
       if (exit !== undefined) {
         throw new Error(
           `Area "${area.id}": entrance "${entrance.id}" is inside exit "${exit.id}", which would send the hero straight back`,
+        );
+      }
+    }
+    for (const checkpoint of area.checkpoints) {
+      const returning = boxAround(centerOf(checkpoint.tile), heroSize);
+      const exit = area.exits.find((candidate) => overlaps(returning, candidate.zone));
+      if (exit !== undefined) {
+        throw new Error(
+          `Area "${area.id}": Checkpoint "${checkpoint.id}" is inside exit "${exit.id}", which would send the hero straight through it`,
         );
       }
     }

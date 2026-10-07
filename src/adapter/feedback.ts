@@ -49,13 +49,19 @@ export class Feedback {
         case 'out-of-ammunition':
           this.told = { content: { kind: 'out-of-ammunition' }, msLeft: NOTICE_MS };
           break;
+        case 'checkpoint-activated':
+          this.told = { content: { kind: 'checkpoint' }, msLeft: NOTICE_MS };
+          break;
         case 'area-changed':
           this.clearFight();
           break;
         case 'hero-defeated':
           // The fight is over and the monsters are back as they began: nothing of it should linger on the new scene.
+          // The notice on the screen told of what happened before the fall, and what the hero found since the Checkpoint
+          // is back where it was, so it goes too.
           this.clearFight();
           this.heroHurtMsLeft = 0;
+          this.told = null;
           break;
       }
     }
@@ -105,7 +111,7 @@ export class Feedback {
     return this.heroHurtMsLeft > 0;
   }
 
-  /** What the player is being told about, the latest of what the hero found and that the bow has nothing to shoot. */
+  /** What the player is being told about: the latest of what the hero found, a Checkpoint touched, or the empty bow. */
   notice(): NoticeContent | null {
     return this.told === null ? null : this.told.content;
   }
