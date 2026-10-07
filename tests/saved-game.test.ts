@@ -3,6 +3,7 @@ import { parseSave } from '../src/adapter/saved-game';
 import type { MakeGame, SaveProblem } from '../src/adapter/saved-game';
 import { PAGE_IDS, SNAPSHOT_VERSION } from '../src/core';
 import type { Command, ContentDefinition, Game, GameOptions } from '../src/core';
+import { SHOOTER } from './enemy-fixtures';
 import { BITER } from './fixtures';
 import { adventureAfter, adventureContent, CHAPTERS } from './saved-adventure';
 
@@ -11,6 +12,10 @@ const content = adventureContent();
 // The saved adventure places no chaser, so the rows about a monster that chases are judged against its content with
 // the rat made one (the rat is monsters[1] of the arena; as a stationary monster it only ever stands idle in the save).
 const contentWithChaser: ContentDefinition = { ...content, monsterTypes: { ...content.monsterTypes, rat: BITER } };
+
+// A second type that shoots is needed for the rows about an arrow that names the wrong one of the two: the rat of the
+// arena is made one, though it is never seen to shoot.
+const contentWithTwoShooters: ContentDefinition = { ...content, monsterTypes: { ...content.monsterTypes, rat: SHOOTER } };
 
 /** What the save slot holds for a game that has played the saved adventure up to the end of the chapter with that id. */
 function textAfter(chapter: string): string {
@@ -83,10 +88,25 @@ describe('a text that is not a save', () => {
     expect(parseSave(text, content)).toMatchObject({ status: 'unusable', problem: 'damaged' });
   });
 
-  it('says what was wrong with it, for whoever reads the console', () => {
-    const parsed = parseSave('{}', content);
+  it('is damaged when a number in it is too big to be one, as 1e999 is', () => {
+    const saved: Saved = JSON.parse(textAfter('volley'));
+    saved.state.hero.position.x = 'a number too big';
+    const text = JSON.stringify(saved).replace('"a number too big"', '1e999');
 
-    expect(parsed).toMatchObject({ status: 'unusable', detail: expect.stringContaining('version') });
+    expect(JSON.parse(text).state.hero.position.x).toBe(Infinity);
+    expect(parseSave(text, content)).toMatchObject({
+      status: 'unusable',
+      problem: 'damaged',
+      detail: expect.stringContaining('state.hero.position.x should be a number'),
+    });
+  });
+
+  it.each([
+    ['the island at dusk', 'is not JSON'],
+    ['{}', 'version should be a number'],
+    ['[]', 'The save should be an object'],
+  ])('says what was wrong with %j, for whoever reads the console', (text, said) => {
+    expect(parseSave(text, content)).toMatchObject({ status: 'unusable', detail: expect.stringContaining(said) });
   });
 });
 
@@ -167,7 +187,7 @@ describe('a save that does not fit the monsters of this game', () => {
       fault: 'a monster is of a type the game does not have',
       damage: (saved) => (saved.state.areas['ruins'].monsters[0].type = 'ogre'),
       problem: 'incompatible',
-      names: 'state.areas.ruins.monsters[0].type',
+      names: 'state.areas.ruins.monsters[0].type is "ogre", which is not a monster type of this game',
     },
     {
       fault: 'a monster is of another type than the area places there',
@@ -340,6 +360,24 @@ describe('a save whose hero this game could not have made', () => {
       names: 'state.hero.position',
     },
     {
+      fault: 'the hero is in a place above its area',
+      damage: (saved) => (saved.state.hero.position = { x: 2, y: -0.5 }),
+      problem: 'incompatible',
+      names: 'state.hero.position',
+    },
+    {
+      fault: 'the hero is in a place right of its area',
+      damage: (saved) => (saved.state.hero.position = { x: 14.5, y: 2 }),
+      problem: 'incompatible',
+      names: 'state.hero.position',
+    },
+    {
+      fault: 'the hero is in a place below its area',
+      damage: (saved) => (saved.state.hero.position = { x: 2, y: 7.5 }),
+      problem: 'incompatible',
+      names: 'state.hero.position',
+    },
+    {
       fault: 'the hero is in a place that is not a number',
       damage: (saved) => (saved.state.hero.position.x = '2.5'),
       problem: 'damaged',
@@ -368,6 +406,12 @@ describe('a save whose hero this game could not have made', () => {
       damage: (saved) => (saved.state.hero.attackCooldown = 1.5),
       problem: 'damaged',
       names: 'state.hero.attackCooldown',
+    },
+    {
+      fault: 'the hero has to wait a text of steps before it can attack again',
+      damage: (saved) => (saved.state.hero.attackCooldown = '3'),
+      problem: 'damaged',
+      names: 'state.hero.attackCooldown should be a number',
     },
     {
       fault: 'the hero has to wait less than no step before it can attack again',
@@ -508,6 +552,18 @@ describe('a save whose Checkpoint this game could not have made', () => {
     {
       fault: 'the Checkpoint is on a tile outside its area',
       damage: (saved) => (saved.state.checkpoint.tile = { col: 99, row: 3 }),
+      problem: 'incompatible',
+      names: 'state.checkpoint.tile',
+    },
+    {
+      fault: 'the Checkpoint is on the column right of its area',
+      damage: (saved) => (saved.state.checkpoint.tile = { col: 14, row: 3 }),
+      problem: 'incompatible',
+      names: 'state.checkpoint.tile',
+    },
+    {
+      fault: 'the Checkpoint is on the row below its area',
+      damage: (saved) => (saved.state.checkpoint.tile = { col: 3, row: 7 }),
       problem: 'incompatible',
       names: 'state.checkpoint.tile',
     },
@@ -675,13 +731,20 @@ describe('a save whose arrows in flight this game could not have made', () => {
       fault: 'an arrow was shot by a monster of a type the game does not have',
       damage: (saved) => (saved.state.arrows[1].shotBy.monsterType = 'ogre'),
       problem: 'incompatible',
-      names: 'state.arrows[1].shotBy.monsterType',
+      names: 'state.arrows[1].shotBy.monsterType is "ogre", which is not a monster type of this game',
     },
     {
       fault: 'an arrow was shot by a monster of another type than the area places',
       damage: (saved) => (saved.state.arrows[1].shotBy.monsterType = 'rat'),
       problem: 'incompatible',
       names: 'state.arrows[1].shotBy.monsterType',
+    },
+    {
+      fault: 'an arrow was shot by a monster of a type that shoots, but not the one the area places',
+      damage: (saved) => (saved.state.arrows[1].shotBy.monsterType = 'rat'),
+      judgedBy: contentWithTwoShooters,
+      problem: 'incompatible',
+      names: 'state.arrows[1].shotBy.monsterType is "rat", but the area places "shooter" as a "shooter"',
     },
     {
       fault: 'an arrow was shot by a monster that shoots nothing',
@@ -709,6 +772,31 @@ describe('a save whose monsters do what this game could not have them do', () =>
     {
       fault: 'a monster that stays where it is chases the hero',
       damage: (saved) => (saved.state.areas['arena'].monsters[0].action = { type: 'chasing' }),
+      problem: 'incompatible',
+      names: 'state.areas.arena.monsters[0].action',
+    },
+    {
+      fault: 'a monster that stays where it is winds up to hit',
+      damage: (saved) =>
+        (saved.state.areas['arena'].monsters[0].action = {
+          type: 'winding-up',
+          zone: { minX: 5, minY: 5, maxX: 7, maxY: 6 },
+          elapsed: 2,
+          length: 30,
+        }),
+      problem: 'incompatible',
+      names: 'state.areas.arena.monsters[0].action',
+    },
+    {
+      fault: 'a monster that stays where it is dashes',
+      damage: (saved) =>
+        (saved.state.areas['arena'].monsters[0].action = { type: 'dashing', direction: 'up', rangeLeft: 1 }),
+      problem: 'incompatible',
+      names: 'state.areas.arena.monsters[0].action',
+    },
+    {
+      fault: 'a monster that stays where it is rests after a hit',
+      damage: (saved) => (saved.state.areas['arena'].monsters[0].action = { type: 'recovering', stepsLeft: 12 }),
       problem: 'incompatible',
       names: 'state.areas.arena.monsters[0].action',
     },
@@ -848,6 +936,20 @@ describe('a save that holds what the saved adventure does not show', () => {
     expectUsable((saved) => (saved.state.areaText = null));
   });
 
+  it.each([
+    ['the first tile', { col: 0, row: 0 }],
+    ['the last tile', { col: 13, row: 6 }],
+  ])('is usable when the Checkpoint is on %s of its area', (_, tile) => {
+    expectUsable((saved) => (saved.state.checkpoint.tile = tile));
+  });
+
+  it.each([
+    ['the top left', { x: 0, y: 0 }],
+    ['the bottom right', { x: 14, y: 7 }],
+  ])('is usable when the hero is at the very corner of its area, in %s', (_, position) => {
+    expectUsable((saved) => (saved.state.hero.position = position));
+  });
+
   it.each(PAGE_IDS)('is usable when the %s Page is open', (page) => {
     expectUsable((saved) => (saved.state.page = page));
   });
@@ -952,6 +1054,18 @@ describe('a save with the shape of a saved game that the game cannot go on from'
     expect(sent).toEqual([{ type: 'continue', snapshot: JSON.parse(text) }]);
   });
 
+  it('is tried on a game that plays out the same way every time', () => {
+    const made: GameOptions[] = [];
+
+    parseSave(text, content, (options) => {
+      made.push(options);
+      return standIn()(options);
+    });
+
+    expect(made).toHaveLength(1);
+    expect(made[0]?.random()).toBe(made[0]?.random());
+  });
+
   it.each<[string, string | null]>([
     ['there is no save', null],
     ['the text is not JSON', 'the island at dusk'],
@@ -966,5 +1080,18 @@ describe('a save with the shape of a saved game that the game cannot go on from'
     });
 
     expect(made).toEqual([]);
+  });
+});
+
+describe('a failure of the checks themselves', () => {
+  it('is not passed off as a verdict on the save', () => {
+    const broken: ContentDefinition = {
+      ...content,
+      get areas(): never {
+        throw new Error('the areas are gone');
+      },
+    };
+
+    expect(() => parseSave(textAfter('camp'), broken)).toThrow('the areas are gone');
   });
 });

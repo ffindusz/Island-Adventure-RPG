@@ -39,7 +39,13 @@ export function createSaveStore(storage: SaveStorage | null, content: ContentDef
       } catch {
         return { status: 'unavailable' };
       }
-      return parseSave(text, content);
+      try {
+        return parseSave(text, content);
+      } catch (error) {
+        // The checks give a verdict for every save they were written for. A save that makes them fail in a way nobody
+        // foresaw is still no game to continue from, and the title must come up.
+        return { status: 'unusable', problem: 'damaged', detail: `The save could not be read: ${messageOf(error)}` };
+      }
     },
     write(snapshot) {
       if (storage === null) {
@@ -53,4 +59,8 @@ export function createSaveStore(storage: SaveStorage | null, content: ContentDef
       }
     },
   };
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

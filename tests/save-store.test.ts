@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createSaveStore } from '../src/adapter/save-store';
 import type { SaveStorage } from '../src/adapter/save-store';
+import type { ContentDefinition } from '../src/core';
 import { adventureAfter, adventureContent } from './saved-adventure';
 
 const content = adventureContent();
@@ -31,6 +32,16 @@ const KEY = 'island-adventure-rpg:saved-game';
 describe('the save store', () => {
   it('finds no save when nothing was ever written', () => {
     expect(createSaveStore(new MemoryStorage(), content).read()).toEqual({ status: 'none' });
+  });
+
+  it('writes nothing of its own when it finds no save', () => {
+    const storage = new MemoryStorage();
+    const store = createSaveStore(storage, content);
+
+    store.read();
+
+    expect(storage.items.size).toBe(0);
+    expect(store.read()).toEqual({ status: 'none' });
   });
 
   it('gives back the game that was written, exactly as it was', () => {
@@ -104,6 +115,40 @@ describe('the save store', () => {
       store.write(snapshot);
 
       expect(store.read()).toEqual({ status: 'usable', snapshot });
+    });
+
+    it('is damaged, and no crash, when the checks themselves fail on it', () => {
+      const storage = new MemoryStorage();
+      storage.items.set(KEY, JSON.stringify(adventureAfter('camp').snapshot()));
+      const broken: ContentDefinition = {
+        ...content,
+        get areas(): never {
+          throw new Error('the areas are gone');
+        },
+      };
+
+      expect(createSaveStore(storage, broken).read()).toMatchObject({
+        status: 'unusable',
+        problem: 'damaged',
+        detail: expect.stringMatching(/could not be read.*the areas are gone/),
+      });
+    });
+
+    it('is damaged, and no crash, when the checks fail on it with something that is not an Error', () => {
+      const storage = new MemoryStorage();
+      storage.items.set(KEY, JSON.stringify(adventureAfter('camp').snapshot()));
+      const broken: ContentDefinition = {
+        ...content,
+        get areas(): never {
+          throw 'out of areas';
+        },
+      };
+
+      expect(createSaveStore(storage, broken).read()).toMatchObject({
+        status: 'unusable',
+        problem: 'damaged',
+        detail: expect.stringContaining('out of areas'),
+      });
     });
   });
 
