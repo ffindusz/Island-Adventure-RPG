@@ -86,7 +86,8 @@ export type GameEvent =
   | { readonly type: 'gear-equipped'; readonly gearId: string; readonly slot: GearSlot }
   /**
    * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health where
-   * defeat sends it, and the monsters of the Adventure Area are back as they began: the view shows the new state.
+   * defeat sends it, and the monsters of the Adventure Area it is in are back as they began: the view shows the new
+   * state. The monsters of other Adventure Areas are as they were.
    */
   | { readonly type: 'hero-defeated' };
 

@@ -3,7 +3,7 @@ import { areaOf } from './content';
 import { centerOf } from './geometry';
 import type { GameEvent } from './interface';
 import type { PlayState } from './state';
-import { freshMonsters } from './state';
+import { currentAreaState, freshMonsters } from './state';
 import { heroDefense, heroMaxHealth } from './stats';
 
 /**
@@ -22,20 +22,14 @@ export function hurtHero(state: PlayState, content: Content, monsterId: string, 
 }
 
 /**
- * Defeat sends the hero back at full Health and starts the Adventure Area it returns to over: its monsters are all
- * there again, at full Health on their starting tiles. Nothing else changes: the hero keeps the way it faces and its
- * attack cooldown, the milestones it has reached stay reached, the chests it has opened stay opened, it keeps all its
- * Gear, and the direction keys the player holds stay held.
+ * Defeat sends the hero back to where it came into the Adventure Area it is in, at full Health, and starts that area
+ * over: its monsters are all there again, at full Health on their starting tiles. Nothing else changes: the monsters of
+ * other areas stay as they are, the hero keeps the way it faces and its attack cooldown, the milestones it has reached
+ * stay reached, the chests it has opened stay opened, it keeps all its Gear, and the direction keys the player holds
+ * stay held.
  */
 function returnHero(state: PlayState, content: Content): void {
-  // Until Adventure Areas have entrances and Checkpoints, the one place to return to is where the adventure began.
-  const { areaId, tile } = content.start;
-  state.areaId = areaId;
-  state.hero.position = centerOf(tile);
+  state.hero.position = centerOf(state.arrivedAt);
   state.hero.health = heroMaxHealth(state, content);
-  const area = state.areas[areaId];
-  if (area === undefined) {
-    throw new Error(`The state has no world for area "${areaId}"`);
-  }
-  area.monsters = freshMonsters(areaOf(content, areaId), content);
+  currentAreaState(state).monsters = freshMonsters(areaOf(content, state.areaId), content);
 }

@@ -23,7 +23,9 @@ export function crossExits(state: PlayState, content: Content): GameEvent[] {
     monster.action = { type: 'idle' };
   }
   state.areaId = destination.id;
-  state.hero.position = centerOf(entranceOf(destination, exit.to.entranceId).tile);
+  const entrance = entranceOf(destination, exit.to.entranceId);
+  state.arrivedAt = { ...entrance.tile };
+  state.hero.position = centerOf(entrance.tile);
   return [{ type: 'area-changed', areaId: destination.id }];
 }
 

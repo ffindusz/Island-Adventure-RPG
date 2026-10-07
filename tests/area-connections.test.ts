@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { createGame } from '../src/core';
-import type { AreaDefinition, ContentDefinition, EntranceDefinition, ExitDefinition, Game } from '../src/core';
+import type {
+  AreaDefinition,
+  ContentDefinition,
+  EntranceDefinition,
+  ExitDefinition,
+  Game,
+  GameEvent,
+} from '../src/core';
 import {
   ARENA_LAYOUT,
   advance,
@@ -216,6 +223,70 @@ describe('What the hero left behind in an Adventure Area', () => {
     // Back in the arena the hero is within the biter's reach again, and its wind-up starts over: 30 steps, then the hit.
     expect(advance(game, 30)).not.toContainEqual(expect.objectContaining({ type: 'hero-hit' }));
     expect(advance(game, 1)).toContainEqual(expect.objectContaining({ type: 'hero-hit', monsterId: 'biter-1' }));
+  });
+});
+
+describe('Defeat in a connected Adventure Area', () => {
+  /**
+   * The arena's weakling falls to the first strike, the hero goes to the cellar and strikes down the weakling there,
+   * and the biter's hit lands on the 31st step after the hero came in. By then the hero has walked on to (3.25, 3.5),
+   * still in the zone the biter chose, so defeat has to send it back from there. Returns the events of the 31st step.
+   */
+  function fallInTheCellar(): { game: Game; events: readonly GameEvent[] } {
+    const game = newGame(
+      world(
+        {
+          monsters: [{ id: 'arena-weakling', type: 'weakling', tile: { col: 3, row: 4 } }],
+          monsterTypes: WEAKLING,
+          hero: { health: 5 },
+        },
+        { monsters: [{ id: 'cellar-weakling', type: 'weakling', tile: { col: 3, row: 3 } }, biterAt('cellar-biter', 2, 4)] },
+      ),
+    );
+    strike(game);
+    walk(game, 'right', 11);
+    strike(game);
+    walk(game, 'right', 6);
+    return { game, events: advance(game, 1) };
+  }
+
+  it('sends the hero back to the entrance it came through, at full Health, in the area where it fell', () => {
+    const { game, events } = fallInTheCellar();
+
+    expect(events.map((event) => event.type)).toEqual(['monster-attacked', 'hero-hit', 'hero-defeated']);
+    const view = playingView(game);
+    expect(view.area.id).toBe('cellar');
+    expect(view.hero.position).toEqual({ x: 2.5, y: 3.5 });
+    expect(view.hero.health).toBe(5);
+  });
+
+  it('starts only the area where the hero fell over: its monsters are back, and those of the other area stay defeated', () => {
+    const { game } = fallInTheCellar();
+
+    expect(playingView(game).monsters.map((monster) => monster.id)).toEqual(['cellar-weakling', 'cellar-biter']);
+    expect(monsterNamed(game, 'cellar-biter')).toMatchObject({ health: 3, position: { x: 2.5, y: 4.5 }, action: { type: 'idle' } });
+
+    walk(game, 'left', 3);
+
+    expect(playingView(game).area.id).toBe('arena');
+    expect(playingView(game).monsters).toEqual([]);
+  });
+
+  it('sends the hero back to the entrance it last came in by, not to the start or the first entrance listed', () => {
+    const first: EntranceDefinition = { id: 'first', tile: { col: 1, row: 1 } };
+    const game = newGame(
+      world({ monsters: [biterAt('arena-biter', 4, 4)], entrances: [first, FROM_CELLAR], hero: { health: 5 } }),
+    );
+    goThereAndBack(game);
+
+    // The biter was calm while the hero was away: it winds up from the next step and hits on the 31st.
+    walk(game, 'left', 2);
+    advance(game, 28);
+    const events = advance(game, 1);
+
+    expect(events.map((event) => event.type)).toContain('hero-defeated');
+    expect(playingView(game).area.id).toBe('arena');
+    expect(playingView(game).hero.position).toEqual({ x: 4.5, y: 3.5 });
   });
 });
 

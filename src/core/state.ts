@@ -2,7 +2,7 @@ import type { Area, Content, Interactable } from './content';
 import { monsterTypeOf } from './content';
 import { GEAR_SLOTS } from './definitions';
 import type { GearSlot, StatId } from './definitions';
-import type { Box, Direction, Point } from './geometry';
+import type { Box, Direction, Point, Tile } from './geometry';
 import { boxAround, centerOf } from './geometry';
 import { heroMaxHealth } from './stats';
 
@@ -75,6 +75,11 @@ export interface PlayState {
   readonly phase: 'playing';
   /** The Adventure Area the hero is in. */
   areaId: string;
+  /**
+   * The tile of that Adventure Area where the hero began or came in, which is where defeat sends it back. It is the
+   * one place to change when Checkpoints send the hero somewhere else.
+   */
+  arrivedAt: Tile;
   hero: HeroState;
   /** The page that is open over the game, if any. While one is open the game is paused (see pages.ts). */
   page: PageId | null;
@@ -101,6 +106,7 @@ export function newPlayState(content: Content): PlayState {
   const state: PlayState = {
     phase: 'playing',
     areaId: content.start.areaId,
+    arrivedAt: { ...content.start.tile },
     hero: {
       position: centerOf(content.start.tile),
       facing: 'down',
