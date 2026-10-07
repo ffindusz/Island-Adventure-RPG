@@ -1,4 +1,4 @@
-import type { ContentDefinition, GearSlot, GearStat, StatId, WeaponSlot } from './definitions';
+import type { ConsumableId, ContentDefinition, GearSlot, GearStat, StatId, WeaponSlot } from './definitions';
 import type { Box, Direction, Point } from './geometry';
 import type { PageId, PlayState } from './state';
 
@@ -97,11 +97,19 @@ export type GameEvent =
   | { readonly type: 'hero-defeated' };
 
 /** What the hero took, as the player is told about it: one member for each kind of item. */
-export type PickedUpItem = PickedUpGear;
+export type PickedUpItem = PickedUpGear | PickedUpConsumable;
 
 /** A piece of Gear the hero took. It is carried, not equipped: the player equips it in the inventory. */
 export interface PickedUpGear extends GearInfo {
   readonly kind: 'gear';
+}
+
+/** Some of a consumable the hero took, such as the Ammunition of a cache. It is added to the count the hero has. */
+export interface PickedUpConsumable {
+  readonly kind: 'consumable';
+  readonly id: ConsumableId;
+  /** How many were added, 1 or more. */
+  readonly amount: number;
 }
 
 export interface HeroView {
@@ -115,6 +123,8 @@ export interface HeroView {
   readonly maxHealth: number;
   /** The weapon in hand, named by its slot. */
   readonly activeWeapon: WeaponSlot;
+  /** How many of each consumable the hero has. */
+  readonly consumables: Readonly<Record<ConsumableId, number>>;
 }
 
 export interface MonsterView {
@@ -151,6 +161,11 @@ export interface ChestView {
   /** Width and height of the chest's body, in tiles. */
   readonly size: number;
   readonly opened: boolean;
+  /**
+   * What kind of thing it holds, so that it can be drawn marked: 'gear' for a chest of Gear, or the consumable that a
+   * cache holds. It never says which piece or how many, and it is the same once the chest is opened.
+   */
+  readonly holds: 'gear' | ConsumableId;
 }
 
 /** Something the hero can interact with, one member for each kind. */
@@ -209,7 +224,9 @@ export interface InventoryPageView {
   readonly id: 'inventory';
   /** The Gear the hero carries, equipped or not: by slot in the order of the slots, then in the order found. */
   readonly gear: readonly GearView[];
-  /** The hero's Attack and Defense, with the equipped Gear counted in. */
+  /** How many of each consumable the hero has. */
+  readonly consumables: Readonly<Record<ConsumableId, number>>;
+  /** The hero's Attack and Defense, with the equipped Gear counted in. The Attack is that of the weapon in hand. */
   readonly attack: number;
   readonly defense: number;
 }

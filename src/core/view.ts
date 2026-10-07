@@ -33,6 +33,7 @@ export function buildView(state: GameState, content: Content): GameView {
       health: state.hero.health,
       maxHealth: heroMaxHealth(state, content),
       activeWeapon: state.hero.activeWeapon,
+      consumables: { ...state.hero.consumables },
     },
     monsters: livingMonsters(state).map((monster) => {
       const type = monsterTypeOf(content, monster.type);
@@ -61,6 +62,7 @@ function interactableView(interactable: Interactable, state: PlayState): Interac
         position: centerOfBox(interactable.body),
         size: interactable.body.maxX - interactable.body.minX,
         opened: interactableStateOf(state, interactable.id).opened,
+        holds: interactable.contents.kind === 'gear' ? 'gear' : interactable.contents.consumable,
       };
   }
 }
@@ -84,6 +86,7 @@ function pageView(state: PlayState, content: Content): PageView | null {
       return {
         id: 'inventory',
         gear: carriedGear(state, content),
+        consumables: { ...state.hero.consumables },
         attack: heroAttack(state, content),
         defense: heroDefense(state, content),
       };

@@ -1,9 +1,10 @@
-import { GEAR_SLOTS, STAT_IDS } from './definitions';
+import { CONSUMABLE_IDS, GEAR_SLOTS, STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
   ChaserMonsterDefinition,
   ChestContents,
   ChestDefinition,
+  ConsumableId,
   ContentDefinition,
   GearDefinition,
   GearSlot,
@@ -239,6 +240,12 @@ function requireMoreThanZero(what: string, value: number): void {
 function requireZeroOrMore(what: string, value: number): void {
   if (!(value >= 0)) {
     throw new Error(`${what} must be 0 or more, but it is ${value}`);
+  }
+}
+
+function requireWholeNumberOfOneOrMore(what: string, value: number): void {
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error(`${what} must be a whole number of 1 or more, but it is ${value}`);
   }
 }
 
@@ -479,9 +486,20 @@ function loadChestContents(
       }
       claimGear(usedIds, contents.gear, `chest "${definition.id}"`);
       return { kind: 'gear', gear: contents.gear };
+    case 'consumable':
+      if (!isConsumableId(contents.consumable)) {
+        throw new Error(`${what} holds unknown consumable "${String(contents.consumable)}"`);
+      }
+      requireWholeNumberOfOneOrMore(`${what}: amount`, contents.amount);
+      return { kind: 'consumable', consumable: contents.consumable, amount: contents.amount };
     default:
       return refuseContents(what, kind);
   }
+}
+
+/** Content read from a file could name a consumable that does not exist, and the compiler would not notice. */
+function isConsumableId(id: string): id is ConsumableId {
+  return (CONSUMABLE_IDS as readonly string[]).includes(id);
 }
 
 function refuseContents(what: string, kind: never): never {

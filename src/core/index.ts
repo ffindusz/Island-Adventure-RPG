@@ -2,12 +2,13 @@
 export { createGame } from './game';
 export { STEP_MS, STEPS_PER_SECOND } from './time';
 export { PAGE_IDS, SNAPSHOT_VERSION } from './state';
-export { GEAR_SLOT_STAT, GEAR_SLOTS, STAT_IDS, WEAPON_SLOTS } from './definitions';
+export { CONSUMABLE_IDS, GEAR_SLOT_STAT, GEAR_SLOTS, STAT_IDS, WEAPON_SLOTS } from './definitions';
 export type {
   AreaDefinition,
   ChaserMonsterDefinition,
   ChestContents,
   ChestDefinition,
+  ConsumableId,
   ContentDefinition,
   GearDefinition,
   GearSlot,
@@ -44,6 +45,7 @@ export type {
   MonsterActionView,
   MonsterView,
   PageView,
+  PickedUpConsumable,
   PickedUpGear,
   PickedUpItem,
   PlayingView,

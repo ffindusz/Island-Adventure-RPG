@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import type { PickedUpItem } from '../core';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
-import { shown, STAT_NAMES } from './labels';
+import { CONSUMABLE_NAMES, shown, STAT_NAMES } from './labels';
 import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Graphics } from './pixel-font';
 import { pageKeyLabel } from './player-input';
@@ -58,6 +58,11 @@ function linesFor(item: PickedUpItem): Line[] {
         { text: `FOUND ${item.name}`, colour: TITLE_COLOUR },
         { text: `+${shown(item.bonus)} ${STAT_NAMES[item.stat]}`, colour: GAIN_COLOUR },
         { text: `PRESS ${pageKeyLabel('inventory')} TO EQUIP`, colour: HINT_COLOUR },
+      ];
+    case 'consumable':
+      return [
+        { text: `FOUND ${CONSUMABLE_NAMES[item.id]}`, colour: TITLE_COLOUR },
+        { text: `+${item.amount}`, colour: GAIN_COLOUR },
       ];
   }
 }

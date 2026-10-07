@@ -2,6 +2,7 @@ import { createGame } from '../src/core';
 import type {
   AreaDefinition,
   ChaserMonsterDefinition,
+  ConsumableId,
   ContentDefinition,
   Direction,
   Game,
@@ -178,6 +179,17 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
 /** A chest on the tile (col, row) that holds the piece of Gear with the given id. */
 export function chestAt(id: string, col: number, row: number, gear: string): InteractableDefinition {
   return { kind: 'chest', id, tile: { col, row }, contents: { kind: 'gear', gear } };
+}
+
+/** A cache on the tile (col, row): a chest that holds some Ammunition, or another consumable if one is named. */
+export function cacheAt(
+  id: string,
+  col: number,
+  row: number,
+  amount: number,
+  consumable: ConsumableId = 'ammunition',
+): InteractableDefinition {
+  return { kind: 'chest', id, tile: { col, row }, contents: { kind: 'consumable', consumable, amount } };
 }
 
 /** A milestone that gives the given Experience when the hero's body first overlaps the block of tiles `zone`. */

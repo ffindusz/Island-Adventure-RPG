@@ -147,8 +147,20 @@ export interface MilestoneDefinition {
   readonly reward: MilestoneReward;
 }
 
-/** What a chest holds. Gear is the first kind of contents; ammunition and potions will be members beside it. */
-export type ChestContents = { readonly kind: 'gear'; readonly gear: string };
+/**
+ * What the hero carries in counts and spends: it has none until it finds some. The list is open: a new consumable is
+ * one more id here and one more count in the hero's state.
+ */
+export const CONSUMABLE_IDS = ['ammunition'] as const;
+export type ConsumableId = (typeof CONSUMABLE_IDS)[number];
+
+/**
+ * What a chest holds: a piece of Gear, or an amount of a consumable (an Ammunition cache is a chest like that). A
+ * new kind of contents is one more member here, one more case in loadChestContents, takeContents and the chest view.
+ */
+export type ChestContents =
+  | { readonly kind: 'gear'; readonly gear: string }
+  | { readonly kind: 'consumable'; readonly consumable: ConsumableId; readonly amount: number };
 
 /** A chest: the hero opens it once by interacting with it and takes what is inside. It fills one tile and is solid. */
 export interface ChestDefinition {
