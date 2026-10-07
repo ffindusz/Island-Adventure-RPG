@@ -208,7 +208,9 @@ export function interactableStateOf<T extends Interactable>(
     throw new Error(`The state has no interactable "${interactable.id}" in area "${state.areaId}"`);
   }
   if (found.kind !== interactable.kind) {
-    throw new Error(`The state of interactable "${interactable.id}" is that of a ${found.kind}, not a ${interactable.kind}`);
+    throw new Error(
+      `The state of interactable "${interactable.id}" is that of a ${found.kind}, not a ${interactable.kind}`,
+    );
   }
   // The kinds match, so this is the state that was made for this kind.
   return found as Extract<InteractableState, { kind: T['kind'] }>;

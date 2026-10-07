@@ -9,6 +9,7 @@ import type {
   DropDefinition,
   GearDefinition,
   GearSlot,
+  HealingPotionDefinition,
   InteractableDefinition,
   MeleeWeaponDefinition,
   MilestoneDefinition,
@@ -127,6 +128,7 @@ export interface Content {
   readonly progression: ProgressionDefinition;
   /** The least damage a hit does to the hero, however high its Defense. */
   readonly minimumDamage: number;
+  readonly healingPotion: HealingPotionDefinition;
   readonly gear: Readonly<Record<string, GearDefinition>>;
   readonly monsterTypes: Readonly<Record<string, MonsterType>>;
   readonly areas: Readonly<Record<string, Area>>;
@@ -142,6 +144,7 @@ export function loadContent(definition: ContentDefinition): Content {
   const minimumDamage = definition.minimumDamage ?? DEFAULT_MINIMUM_DAMAGE;
   requireZeroOrMore('The minimum damage', minimumDamage);
   const progression = loadProgression(definition.progression);
+  requireMoreThanZero('The Health a Healing Potion restores', definition.healingPotion.restores);
   const monsterTypes: Record<string, MonsterType> = {};
   for (const [name, monsterType] of Object.entries(definition.monsterTypes)) {
     monsterTypes[name] = loadMonsterType(name, monsterType);
@@ -185,6 +188,7 @@ export function loadContent(definition: ContentDefinition): Content {
     },
     progression,
     minimumDamage,
+    healingPotion: { restores: definition.healingPotion.restores },
     gear,
     monsterTypes,
     areas,

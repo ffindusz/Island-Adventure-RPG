@@ -14,6 +14,7 @@ export type {
   GearDefinition,
   GearSlot,
   GearStat,
+  HealingPotionDefinition,
   HeroDefinition,
   InteractableDefinition,
   MeleeWeaponDefinition,

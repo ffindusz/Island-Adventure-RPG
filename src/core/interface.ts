@@ -65,6 +65,12 @@ export type Command =
    */
   | { readonly type: 'equip'; readonly gearId: string }
   /**
+   * Use a Healing Potion: the hero gets back the Health the content says, up to its maximum, and the potion is used
+   * up even when less than that fits. Ignored unless the inventory page is open, when the hero has no potion, and at
+   * full Health, where it would be wasted: then the hero keeps the potion.
+   */
+  | { readonly type: 'use-healing-potion' }
+  /**
    * Take the other weapon in hand: from the Melee Weapon to the Ranged Weapon, if the hero has one equipped, and from
    * the Ranged Weapon back to the Melee Weapon. It takes no time: the attack cooldown is neither started nor waited
    * for. Ignored at the title and while the game is paused, like attack.
@@ -99,6 +105,8 @@ export type GameEvent =
   | { readonly type: 'pickup'; readonly item: PickedUpItem }
   /** The hero equipped this Gear in its slot, in place of the piece there. */
   | { readonly type: 'gear-equipped'; readonly gearId: string; readonly slot: GearSlot }
+  /** The hero used a Healing Potion. `restored` is the Health it got back, after the cap; `health` is what it has. */
+  | { readonly type: 'healing-potion-used'; readonly restored: number; readonly health: number }
   /** The hero took this weapon in hand. */
   | { readonly type: 'weapon-switched'; readonly weapon: WeaponSlot }
   /**

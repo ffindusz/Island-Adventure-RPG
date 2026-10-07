@@ -185,6 +185,12 @@ export interface MilestoneDefinition {
 export const CONSUMABLE_IDS = ['ammunition', 'healing-potion'] as const;
 export type ConsumableId = (typeof CONSUMABLE_IDS)[number];
 
+/** The Healing Potion: what the hero gets from using one. */
+export interface HealingPotionDefinition {
+  /** The Health it restores, never above the hero's maximum Health. Must be more than 0. */
+  readonly restores: number;
+}
+
 /**
  * What a chest holds: a piece of Gear, or an amount of a consumable (an Ammunition cache is a chest like that). A
  * new kind of contents is one more member here, one more case in loadChestContents, takeContents and the chest view.
@@ -261,6 +267,8 @@ export interface ContentDefinition {
   readonly progression: ProgressionDefinition;
   /** The least damage a hit does to the hero, however high its Defense. Leave it out for the default of 1. */
   readonly minimumDamage?: number;
+  /** What a Healing Potion does when the hero uses it. */
+  readonly healingPotion: HealingPotionDefinition;
   /** Every piece of Gear in the game, by id: what the hero starts with, and what is waiting to be found. */
   readonly gear: Readonly<Record<string, GearDefinition>>;
   readonly monsterTypes: Readonly<Record<string, MonsterTypeDefinition>>;

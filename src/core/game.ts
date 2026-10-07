@@ -11,6 +11,7 @@ import { walkHero } from './movement';
 import { closePage, openPage } from './pages';
 import { isPaused } from './pause';
 import { collectPickups } from './pickups';
+import { useHealingPotion } from './potions';
 import { assignStatPoint } from './progression';
 import { newPlayState, SNAPSHOT_VERSION, copyState } from './state';
 import type { GameState } from './state';
@@ -69,6 +70,8 @@ export function createGame(options: GameOptions): Game {
           return [];
         case 'equip':
           return state.phase === 'playing' ? equipGear(state, content, command.gearId) : [];
+        case 'use-healing-potion':
+          return state.phase === 'playing' ? useHealingPotion(state, content) : [];
         case 'switch-weapon':
           return state.phase === 'playing' && !isPaused(state, content) ? switchWeapon(state) : [];
       }

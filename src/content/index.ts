@@ -1,6 +1,7 @@
 import type { ContentDefinition } from '../core';
 import { shipwreckCoast } from './areas/shipwreck-coast';
 import { gear } from './gear';
+import { healingPotion } from './healing-potion';
 import { hero } from './hero';
 import { monsterTypes } from './monsters';
 import { progression } from './progression';
@@ -15,6 +16,7 @@ export const gameContent: ContentDefinition = {
   hero,
   progression,
   minimumDamage: 1,
+  healingPotion,
   gear,
   monsterTypes,
   areas: [shipwreckCoast],
