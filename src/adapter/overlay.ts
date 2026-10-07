@@ -1,7 +1,16 @@
 import type Phaser from 'phaser';
 import { CONSUMABLE_IDS } from '../core';
-import type { InventoryPageView, LevelUpView, PageView, PlayingView, StatPageView } from '../core';
+import type {
+  ConsumableId,
+  HeroView,
+  InventoryPageView,
+  LevelUpView,
+  PageView,
+  PlayingView,
+  StatPageView,
+} from '../core';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
+import { potionLineOf } from './inventory-menu';
 import { CONSUMABLE_NAMES, GEAR_STAT_ABBREVIATIONS, shown, STAT_NAMES } from './labels';
 import { bitmapWidth, drawBitmap, drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Bitmap, Graphics } from './pixel-font';
@@ -53,6 +62,8 @@ type Row =
   | { readonly kind: 'text'; readonly text: string; readonly colour: number }
   /** A name on the left and a value on the right, and a gain after the value when there is one. */
   | { readonly kind: 'stat'; readonly label: string; readonly value: string; readonly gain: string | null }
+  /** A name and a value like a stat's, that the cursor can rest on: highlighted when it does. */
+  | { readonly kind: 'choice'; readonly label: string; readonly value: string; readonly highlighted: boolean }
   /** A piece of Gear: its mark, its name and its bonus on the right, highlighted when the cursor is on it. */
   | {
       readonly kind: 'gear';
@@ -101,7 +112,7 @@ function panelFor(view: PlayingView, focused: boolean, inventoryCursor: number):
     return levelUpPanel(view.levelUp);
   }
   if (view.page !== null) {
-    return pagePanel(view.page, inventoryCursor);
+    return pagePanel(view.page, view.hero, inventoryCursor);
   }
   if (!focused) {
     return { width: NARROW_PANEL, rows: [{ kind: 'text', text: 'PAUSED', colour: TITLE_COLOUR }] };
@@ -131,21 +142,36 @@ function levelUpPanel(levelUp: LevelUpView): Panel {
   return { width: WIDE_PANEL, rows };
 }
 
-function pagePanel(page: PageView, inventoryCursor: number): Panel {
+function pagePanel(page: PageView, hero: HeroView, inventoryCursor: number): Panel {
   switch (page.id) {
     case 'stats':
       return statPagePanel(page);
     case 'inventory':
-      return inventoryPagePanel(page, inventoryCursor);
+      return inventoryPagePanel(page, hero, inventoryCursor);
   }
 }
 
-function inventoryPagePanel(page: InventoryPageView, cursor: number): Panel {
+/** The title, with the cursor's place in the list of Gear while the list is longer than the window shows. */
+function inventoryTitle(gearCount: number, cursor: number): string {
+  return gearCount > VISIBLE_GEAR && cursor < gearCount ? `INVENTORY ${cursor + 1}/${gearCount}` : 'INVENTORY';
+}
+
+/** A consumable's line: the Healing Potion is one the cursor can rest on, to use it; the others are only counted. */
+function consumableRow(id: ConsumableId, page: InventoryPageView, cursor: number): Row {
+  const label = CONSUMABLE_NAMES[id];
+  const value = String(page.consumables[id]);
+  if (id === 'healing-potion') {
+    return { kind: 'choice', label, value, highlighted: cursor === potionLineOf(page) };
+  }
+  return { kind: 'stat', label, value, gain: null };
+}
+
+function inventoryPagePanel(page: InventoryPageView, hero: HeroView, cursor: number): Panel {
   const { gear } = page;
   // The window shows the cursor in the middle of the list when it can, and never runs past either end of it.
   const first = Math.min(Math.max(0, cursor - Math.floor(VISIBLE_GEAR / 2)), Math.max(0, gear.length - VISIBLE_GEAR));
   const rows: Row[] = [
-    { kind: 'text', text: 'INVENTORY', colour: TITLE_COLOUR },
+    { kind: 'text', text: inventoryTitle(gear.length, cursor), colour: TITLE_COLOUR },
     { kind: 'space' },
     ...gear.slice(first, first + VISIBLE_GEAR).map(
       (piece, offset): Row => ({
@@ -160,17 +186,22 @@ function inventoryPagePanel(page: InventoryPageView, cursor: number): Panel {
   if (gear.length === 0) {
     rows.push({ kind: 'text', text: 'NO GEAR YET', colour: HINT_COLOUR });
   }
-  if (gear.length > VISIBLE_GEAR) {
-    rows.push({ kind: 'text', text: `${cursor + 1}/${gear.length}`, colour: HINT_COLOUR });
-  }
   rows.push(
     { kind: 'space' },
-    ...CONSUMABLE_IDS.map(
-      (id): Row => ({ kind: 'stat', label: CONSUMABLE_NAMES[id], value: String(page.consumables[id]), gain: null }),
-    ),
+    ...CONSUMABLE_IDS.map((id): Row => consumableRow(id, page, cursor)),
+    // Health is rounded up, as on the HUD, so a hero that is still standing never reads as 0.
+    {
+      kind: 'stat',
+      label: STAT_NAMES.health,
+      value: `${Math.ceil(hero.health)}/${Math.ceil(hero.maxHealth)}`,
+      gain: null,
+    },
     { kind: 'text', text: `ATTACK ${shown(page.attack)}  DEFENSE ${shown(page.defense)}`, colour: TEXT_COLOUR },
-    { kind: 'space' },
-    { kind: 'text', text: 'UP/DOWN PICK ENTER EQUIP', colour: HINT_COLOUR },
+    {
+      kind: 'text',
+      text: cursor === potionLineOf(page) ? 'UP/DOWN PICK ENTER USE' : 'UP/DOWN PICK ENTER EQUIP',
+      colour: HINT_COLOUR,
+    },
     { kind: 'text', text: 'ESC TO CLOSE', colour: HINT_COLOUR },
   );
   return { width: INVENTORY_PANEL, rows };
@@ -214,6 +245,7 @@ function heightOf(row: Row): number {
   switch (row.kind) {
     case 'text':
     case 'stat':
+    case 'choice':
     case 'gear':
       return TEXT_HEIGHT;
     case 'bar':
@@ -253,6 +285,14 @@ interface RowSpace {
   readonly top: number;
 }
 
+/** The bar behind the line that the cursor is on, with a gold edge. */
+function drawHighlight(graphics: Graphics, left: number, right: number, top: number): void {
+  graphics.fillStyle(HIGHLIGHT_COLOUR);
+  graphics.fillRect(left - HIGHLIGHT_REACH, top - 1, right - left + 2 * HIGHLIGHT_REACH, TEXT_HEIGHT + 2);
+  graphics.fillStyle(TITLE_COLOUR);
+  graphics.fillRect(left - HIGHLIGHT_REACH, top - 1, 2, TEXT_HEIGHT + 2);
+}
+
 function drawRow(graphics: Graphics, row: Row, space: RowSpace, gainColumn: number): void {
   const { left, right, top } = space;
   switch (row.kind) {
@@ -266,12 +306,16 @@ function drawRow(graphics: Graphics, row: Row, space: RowSpace, gainColumn: numb
       }
       drawText(graphics, row.value, right - gainColumn - textWidthOf(row.value), top, TEXT_COLOUR);
       return;
+    case 'choice':
+      if (row.highlighted) {
+        drawHighlight(graphics, left, right, top);
+      }
+      drawText(graphics, row.label, left, top, TEXT_COLOUR);
+      drawText(graphics, row.value, right - gainColumn - textWidthOf(row.value), top, TEXT_COLOUR);
+      return;
     case 'gear': {
       if (row.highlighted) {
-        graphics.fillStyle(HIGHLIGHT_COLOUR);
-        graphics.fillRect(left - HIGHLIGHT_REACH, top - 1, right - left + 2 * HIGHLIGHT_REACH, TEXT_HEIGHT + 2);
-        graphics.fillStyle(TITLE_COLOUR);
-        graphics.fillRect(left - HIGHLIGHT_REACH, top - 1, 2, TEXT_HEIGHT + 2);
+        drawHighlight(graphics, left, right, top);
       }
       const colour = row.equipped ? GAIN_COLOUR : TEXT_COLOUR;
       drawBitmap(graphics, row.equipped ? MARK_EQUIPPED : MARK_CARRIED, left, top, colour);
