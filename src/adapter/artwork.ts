@@ -23,6 +23,12 @@ export const ARTWORK = {
   'gear-chain-mail': drawn(MAIL_ROWS, PACK_PALETTE),
   'consumable-ammunition': image('consumable-ammunition.png'),
   'consumable-healing-potion': image('consumable-healing-potion.png'),
+  // The pieces the HUD and the pages are built from, see ui-layer.ts: a dark panel, the orange frame of a window, the
+  // orange button behind the line the cursor is on, and the heart of Health.
+  'ui-panel': image('ui-panel.png'),
+  'ui-window': image('ui-window.png'),
+  'ui-button': image('ui-button.png'),
+  'ui-heart': image('ui-heart.png'),
 } as const satisfies ArtManifest;
 
 /** The name of a picture the adapter itself asks for. */

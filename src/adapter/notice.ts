@@ -1,10 +1,11 @@
 import type Phaser from 'phaser';
 import type { PickedUpItem } from '../core';
+import { consumableIcon, gearIcon } from './artwork';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { CONSUMABLE_NAMES, shown, STAT_NAMES } from './labels';
-import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
-import type { Graphics } from './pixel-font';
+import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import { pageKeyLabel, switchWeaponKeyLabel } from './player-input';
+import { INK, UiLayer } from './ui-layer';
 
 // The notice of what the hero just found, or that the bow has nothing to shoot, low on the screen where it covers
 // neither the hero nor the HUD. It is drawn from what the Game core reported and nothing else.
@@ -17,17 +18,18 @@ export type NoticeContent =
 /** Above the HUD, below the overlay: a page that opens covers the notice. */
 const NOTICE_DEPTH = 150;
 
-const PADDING = 6;
-const BORDER = 2;
+/** From the panel's edge, whose frame is 3 pixels wide, to what it holds. */
+const PADDING = 7;
 const LINE_GAP = 4;
 const BOTTOM_MARGIN = 10;
+/** The room of the item's picture, which is 16 pixels square at most, and the air between it and the text. */
+const ICON_ROOM = 16;
+const ICON_GAP = 6;
 
-const PANEL_COLOUR = 0x1b1b24;
-const BORDER_COLOUR = 0x6a6a7a;
-const TITLE_COLOUR = 0xf2c94c;
-const GAIN_COLOUR = 0x7bd35f;
-const HINT_COLOUR = 0xa0a0b0;
-const WARNING_COLOUR = 0xe8505b;
+const TITLE_COLOUR = INK.title;
+const GAIN_COLOUR = INK.gain;
+const HINT_COLOUR = INK.hint;
+const WARNING_COLOUR = INK.warning;
 
 interface Line {
   readonly text: string;
@@ -36,11 +38,11 @@ interface Line {
 
 /** Tells the player what the hero picked up, or that the bow is out of Ammunition. */
 export class Notice {
-  private readonly graphics: Graphics;
+  private readonly layer: UiLayer;
   private shown = 'null';
 
   constructor(scene: Phaser.Scene) {
-    this.graphics = scene.add.graphics().setScrollFactor(0).setDepth(NOTICE_DEPTH);
+    this.layer = new UiLayer(scene, NOTICE_DEPTH);
   }
 
   /** Shows the content, or nothing. It draws again only when what it shows has changed. */
@@ -50,10 +52,20 @@ export class Notice {
       return;
     }
     this.shown = key;
-    this.graphics.clear();
+    this.layer.clear();
     if (content !== null) {
-      drawLines(this.graphics, linesFor(content));
+      drawLines(this.layer, linesFor(content), iconFor(content));
     }
+  }
+}
+
+/** The picture of what the notice is about, to the left of the lines, if it has one. */
+function iconFor(content: NoticeContent): string | null {
+  switch (content.kind) {
+    case 'pickup':
+      return content.item.kind === 'gear' ? gearIcon(content.item.id) : consumableIcon(content.item.id);
+    case 'out-of-ammunition':
+      return consumableIcon('ammunition');
   }
 }
 
@@ -85,17 +97,23 @@ function pickupLines(item: PickedUpItem): Line[] {
   }
 }
 
-function drawLines(graphics: Graphics, lines: readonly Line[]): void {
-  const width = Math.max(...lines.map((line) => textWidthOf(line.text))) + 2 * PADDING;
-  const height = lines.length * TEXT_HEIGHT + (lines.length - 1) * LINE_GAP + 2 * PADDING;
+function drawLines(layer: UiLayer, lines: readonly Line[], icon: string | null): void {
+  const textWidth = Math.max(...lines.map((line) => textWidthOf(line.text)));
+  const textHeight = lines.length * TEXT_HEIGHT + (lines.length - 1) * LINE_GAP;
+  const iconRoom = icon === null ? 0 : ICON_ROOM + ICON_GAP;
+  const contentHeight = icon === null ? textHeight : Math.max(textHeight, ICON_ROOM);
+  const width = iconRoom + textWidth + 2 * PADDING;
+  const height = contentHeight + 2 * PADDING;
   const left = Math.floor((VIEW_WIDTH - width) / 2);
   const top = VIEW_HEIGHT - height - BOTTOM_MARGIN;
-  graphics.fillStyle(BORDER_COLOUR);
-  graphics.fillRect(left - BORDER, top - BORDER, width + 2 * BORDER, height + 2 * BORDER);
-  graphics.fillStyle(PANEL_COLOUR);
-  graphics.fillRect(left, top, width, height);
+  layer.frame('panel', left, top, width, height);
+  if (icon !== null) {
+    layer.icon(icon, left + PADDING, top + PADDING, ICON_ROOM, contentHeight);
+  }
+  const textLeft = left + PADDING + iconRoom;
+  const textTop = top + PADDING + Math.floor((contentHeight - textHeight) / 2);
   lines.forEach((line, index) => {
-    const lineLeft = left + Math.floor((width - textWidthOf(line.text)) / 2);
-    drawText(graphics, line.text, lineLeft, top + PADDING + index * (TEXT_HEIGHT + LINE_GAP), line.colour);
+    const lineLeft = textLeft + Math.floor((textWidth - textWidthOf(line.text)) / 2);
+    layer.text(line.text, lineLeft, textTop + index * (TEXT_HEIGHT + LINE_GAP), line.colour);
   });
 }

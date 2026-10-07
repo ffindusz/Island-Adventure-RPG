@@ -16,7 +16,7 @@ import { DEPTH } from './depths';
 import { Feedback } from './feedback';
 import { FixedStepClock } from './fixed-step';
 import { HeroSprite } from './hero-sprite';
-import { Hud } from './hud';
+import { checkHudFootprint, Hud } from './hud';
 import { InventoryMenu } from './inventory-menu';
 import { Notice } from './notice';
 import { Overlay } from './overlay';
@@ -71,6 +71,7 @@ export class PlayScene extends Phaser.Scene {
   create(): void {
     buildDrawnArt(this.textures, ARTWORK);
     requireLoadedArt(this.textures, ARTWORK);
+    checkHudFootprint();
     // Added in drawing order: ground, then the telegraphs of monster attacks, then chests and monsters, which share the
     // lowest depth. The hero and its arrows are sprites above them (see depths.ts), and the strikes of the monsters
     // above those. The HUD draws above them all, then the text of the area, the notice above that, and the overlay
