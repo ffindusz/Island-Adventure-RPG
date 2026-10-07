@@ -95,8 +95,9 @@ export function createGame(options: GameOptions): Game {
       const arrowEvents = flyArrows(state, content, options.random);
       if (arrowEvents.some((event) => event.type === 'hero-defeated')) {
         // A projectile defeated the hero: the step ends there, as it does when a monster's hit does. The monsters are new
-        // ones, and they first act in the next step.
-        return [...milestoneEvents, ...pickupEvents, ...arrowEvents];
+        // ones, and they first act in the next step. A Checkpoint the hero came onto in this step was activated before
+        // the hit, and the hero is back on it.
+        return [...milestoneEvents, ...pickupEvents, ...checkpointEvents, ...arrowEvents];
       }
       // The step ends when the hero crosses: the arrows have flown their last in the area it leaves, and the
       // monsters of the area it arrives in first act in the next step.
