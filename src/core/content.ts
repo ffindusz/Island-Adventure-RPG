@@ -47,8 +47,14 @@ export function loadContent(definition: ContentDefinition): Content {
     }
     areas[area.id] = loadArea(area, definition, monsterIds);
   }
-  if (areas[definition.start.area] === undefined) {
+  const startArea = areas[definition.start.area];
+  if (startArea === undefined) {
     throw new Error(`The start is in unknown area "${definition.start.area}"`);
+  }
+  if (isSolid(startArea, definition.start.tile)) {
+    throw new Error(
+      `The start tile ${describeTile(definition.start.tile)} of area "${startArea.id}" is ${NOT_WALKABLE}`,
+    );
   }
   return {
     hero: {
@@ -83,16 +89,7 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition, monsterId
       return terrain;
     });
   });
-  for (const monster of area.monsters) {
-    if (definition.monsterTypes[monster.type] === undefined) {
-      throw new Error(`Area "${area.id}": monster "${monster.id}" has unknown type "${monster.type}"`);
-    }
-    if (monsterIds.has(monster.id)) {
-      throw new Error(`Monster id "${monster.id}" is used more than once`);
-    }
-    monsterIds.add(monster.id);
-  }
-  return {
+  const loaded: Area = {
     id: area.id,
     name: area.name,
     width: tiles[0]?.length ?? 0,
@@ -101,6 +98,32 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition, monsterId
     solid: tiles.map((row) => row.map((terrain) => terrain.solid)),
     monsters: area.monsters,
   };
+  for (const monster of area.monsters) {
+    if (definition.monsterTypes[monster.type] === undefined) {
+      throw new Error(`Area "${area.id}": monster "${monster.id}" has unknown type "${monster.type}"`);
+    }
+    if (monsterIds.has(monster.id)) {
+      throw new Error(`Monster id "${monster.id}" is used more than once`);
+    }
+    if (isSolid(loaded, monster.tile)) {
+      throw new Error(
+        `Area "${area.id}": monster "${monster.id}" is placed at ${describeTile(monster.tile)}, which is ${NOT_WALKABLE}`,
+      );
+    }
+    monsterIds.add(monster.id);
+  }
+  return loaded;
+}
+
+const NOT_WALKABLE = 'solid terrain or outside the map';
+
+function describeTile(tile: Tile): string {
+  return `(col ${tile.col}, row ${tile.row})`;
+}
+
+/** Whether a tile blocks movement. Tiles beyond the map count as solid. */
+export function isSolid(area: Area, tile: Tile): boolean {
+  return area.solid[tile.row]?.[tile.col] ?? true;
 }
 
 /** These lookups cannot fail for content that loaded; they fail loudly for a snapshot that does not fit it. */

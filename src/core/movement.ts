@@ -1,4 +1,4 @@
-import { areaOf } from './content';
+import { areaOf, isSolid } from './content';
 import type { Area, Content } from './content';
 import { boxAround, EPSILON, overlapsHorizontally, overlapsVertically, unitVector } from './geometry';
 import type { Box, Direction } from './geometry';
@@ -30,7 +30,7 @@ function solidTilesAround(area: Area, body: Box, reach: number): Box[] {
   const tiles: Box[] = [];
   for (let row = Math.floor(body.minY - reach); row <= Math.floor(body.maxY + reach); row++) {
     for (let col = Math.floor(body.minX - reach); col <= Math.floor(body.maxX + reach); col++) {
-      if (area.solid[row]?.[col] ?? true) {
+      if (isSolid(area, { col, row })) {
         tiles.push({ minX: col, minY: row, maxX: col + 1, maxY: row + 1 });
       }
     }

@@ -41,7 +41,7 @@ export interface MonsterPlacement {
   /** Unique across all Adventure Areas: events and saves refer to the monster by it. */
   readonly id: string;
   readonly type: string;
-  /** The monster starts at the centre of this tile. */
+  /** The monster starts at the centre of this tile, which must not be solid. */
   readonly tile: Tile;
 }
 
@@ -59,6 +59,6 @@ export interface ContentDefinition {
   readonly hero: HeroDefinition;
   readonly monsterTypes: Readonly<Record<string, MonsterTypeDefinition>>;
   readonly areas: readonly AreaDefinition[];
-  /** Where a new game begins: the hero stands at the centre of this tile. */
+  /** Where a new game begins: the hero stands at the centre of this tile, which must not be solid. */
   readonly start: { readonly area: string; readonly tile: Tile };
 }

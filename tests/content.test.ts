@@ -46,4 +46,23 @@ describe('content that does not make sense is refused when the game is created',
 
     expectRefused(arena({ start, monsters: [dummyAt('dummy-1', 5, 3)] }), 'The start is in unknown area "nowhere"');
   });
+
+  it('the hero starts on solid terrain', () => {
+    const start = { area: 'arena', tile: { col: 2, row: 2 } }; // the water
+
+    expectRefused(arena({ start }), 'The start tile (col 2, row 2) of area "arena" is solid terrain or outside the map');
+  });
+
+  it('the hero starts outside the map', () => {
+    const start = { area: 'arena', tile: { col: 9, row: 3 } };
+
+    expectRefused(arena({ start }), 'The start tile (col 9, row 3) of area "arena" is solid terrain or outside the map');
+  });
+
+  it('a monster stands on solid terrain', () => {
+    expectRefused(
+      arena({ monsters: [dummyAt('dummy-1', 2, 2)] }),
+      'Area "arena": monster "dummy-1" is placed at (col 2, row 2), which is solid terrain or outside the map',
+    );
+  });
 });
