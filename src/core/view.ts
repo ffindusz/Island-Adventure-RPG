@@ -32,6 +32,7 @@ export function buildView(state: GameState, content: Content): GameView {
       facing: state.hero.facing,
       health: state.hero.health,
       maxHealth: heroMaxHealth(state, content),
+      activeWeapon: state.hero.activeWeapon,
     },
     monsters: livingMonsters(state).map((monster) => {
       const type = monsterTypeOf(content, monster.type);

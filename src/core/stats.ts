@@ -32,15 +32,18 @@ export function heroMaxHealth(state: PlayState, content: Content): number {
   return content.hero.health + statPointBonus(state, content, 'health');
 }
 
-/** How much damage each of the hero's attacks does to a monster, made with the weapon in the slot `weapon`. */
-export function heroAttack(state: PlayState, content: Content, weapon: WeaponSlot = 'melee-weapon'): number {
+/**
+ * How much damage each of the hero's attacks does to a monster, made with the weapon in the slot `weapon`. Without
+ * one it is the Attack of the weapon in hand, which is what the pages show.
+ */
+export function heroAttack(state: PlayState, content: Content, weapon: WeaponSlot = state.hero.activeWeapon): number {
   return content.hero.attack + statPointBonus(state, content, 'attack') + gearBonus(state, content, 'attack', weapon);
 }
 
 /** How much each hit's damage is reduced by. */
 export function heroDefense(state: PlayState, content: Content): number {
   const base = content.hero.defense + statPointBonus(state, content, 'defense');
-  return base + gearBonus(state, content, 'defense', 'melee-weapon');
+  return base + gearBonus(state, content, 'defense', state.hero.activeWeapon);
 }
 
 /** A stat by name, for what treats the stats alike, such as the choice of where to put a Stat Point. */

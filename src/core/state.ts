@@ -1,7 +1,7 @@
 import type { Area, Content, Interactable } from './content';
 import { monsterTypeOf } from './content';
 import { GEAR_SLOTS } from './definitions';
-import type { GearSlot, StatId } from './definitions';
+import type { GearSlot, StatId, WeaponSlot } from './definitions';
 import type { Box, Direction, Point } from './geometry';
 import { boxAround, centerOf } from './geometry';
 import { heroMaxHealth } from './stats';
@@ -65,6 +65,8 @@ export interface HeroState {
   gear: string[];
   /** The id of the carried Gear that is equipped in each slot. A slot that has none is left out. */
   equipped: Partial<Record<GearSlot, string>>;
+  /** The weapon in hand, named by its slot: attack uses it, and the pages show its Attack. */
+  activeWeapon: WeaponSlot;
 }
 
 /** The pages that can be open over the game, one at a time. A new page is one more id here and one more view. */
@@ -110,6 +112,7 @@ export function newPlayState(content: Content): PlayState {
       statPoints: { health: 0, attack: 0, defense: 0 },
       gear: GEAR_SLOTS.flatMap((slot) => content.hero.startingGear[slot] ?? []),
       equipped: { ...content.hero.startingGear },
+      activeWeapon: 'melee-weapon',
     },
     page: null,
     areas,

@@ -29,6 +29,7 @@ describe('starting a game', () => {
       facing: 'down',
       health: 10,
       maxHealth: 10,
+      activeWeapon: 'melee-weapon',
     });
     expect(view.monsters).toEqual([
       {

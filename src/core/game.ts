@@ -13,6 +13,7 @@ import { assignStatPoint } from './progression';
 import { newPlayState, SNAPSHOT_VERSION, copyState } from './state';
 import type { GameState } from './state';
 import { buildView } from './view';
+import { switchWeapon } from './weapons';
 
 export function createGame(options: GameOptions): Game {
   const content = loadContent(options.content);
@@ -64,6 +65,8 @@ export function createGame(options: GameOptions): Game {
           return [];
         case 'equip':
           return state.phase === 'playing' ? equipGear(state, content, command.gearId) : [];
+        case 'switch-weapon':
+          return state.phase === 'playing' && !isPaused(state, content) ? switchWeapon(state) : [];
       }
     },
     step() {

@@ -1,4 +1,4 @@
-import type { ContentDefinition, GearSlot, GearStat, StatId } from './definitions';
+import type { ContentDefinition, GearSlot, GearStat, StatId, WeaponSlot } from './definitions';
 import type { Box, Direction, Point } from './geometry';
 import type { PageId, PlayState } from './state';
 
@@ -56,7 +56,13 @@ export type Command =
    * unless the inventory page is open, and for Gear the hero does not carry or has equipped already. There is no
    * taking Gear off: equipping another piece in its slot is how it is swapped.
    */
-  | { readonly type: 'equip'; readonly gearId: string };
+  | { readonly type: 'equip'; readonly gearId: string }
+  /**
+   * Take the other weapon in hand: from the Melee Weapon to the Ranged Weapon, if the hero has one equipped, and from
+   * the Ranged Weapon back to the Melee Weapon. It takes no time: the attack cooldown is neither started nor waited
+   * for. Ignored at the title and while the game is paused, like attack.
+   */
+  | { readonly type: 'switch-weapon' };
 
 /** Something that happened, for the adapter to show or play. Events never carry rules; the state view is the truth. */
 export type GameEvent =
@@ -82,6 +88,8 @@ export type GameEvent =
   | { readonly type: 'pickup'; readonly item: PickedUpItem }
   /** The hero equipped this Gear in its slot, in place of the piece there. */
   | { readonly type: 'gear-equipped'; readonly gearId: string; readonly slot: GearSlot }
+  /** The hero took this weapon in hand. */
+  | { readonly type: 'weapon-switched'; readonly weapon: WeaponSlot }
   /**
    * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health where
    * defeat sends it, and the monsters of the Adventure Area are back as they began: the view shows the new state.
@@ -105,6 +113,8 @@ export interface HeroView {
   readonly health: number;
   /** The hero's maximum Health. */
   readonly maxHealth: number;
+  /** The weapon in hand, named by its slot. */
+  readonly activeWeapon: WeaponSlot;
 }
 
 export interface MonsterView {
