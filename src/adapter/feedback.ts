@@ -1,10 +1,12 @@
 import type { Box, GameEvent } from '../core';
 
-/** How long the swing and the hit flash stay on screen, in milliseconds. */
+/** How long each kind of feedback stays on screen, in milliseconds. */
 const SWING_MS = 120;
 const HIT_FLASH_MS = 100;
+const STRIKE_MS = 160;
+const HERO_HURT_MS = 200;
 
-interface Swing {
+interface ZoneFlash {
   readonly zone: Box;
   readonly msLeft: number;
 }
@@ -14,27 +16,46 @@ interface Swing {
  * Game core decides ever depends on it.
  */
 export class Feedback {
-  private swings: Swing[] = [];
+  private swings: ZoneFlash[] = [];
+  private strikes: ZoneFlash[] = [];
   private readonly flashes = new Map<string, number>();
+  private heroHurtMsLeft = 0;
 
   /** Starts the feedback for events the Game core just reported. */
   show(events: readonly GameEvent[]): void {
     for (const event of events) {
-      if (event.type === 'hero-attacked') {
-        this.swings.push({ zone: event.zone, msLeft: SWING_MS });
-      } else if (event.type === 'monster-hit') {
-        this.flashes.set(event.monsterId, HIT_FLASH_MS);
-      } else if (event.type === 'monster-defeated') {
-        this.flashes.delete(event.monsterId);
+      switch (event.type) {
+        case 'hero-attacked':
+          this.swings.push({ zone: event.zone, msLeft: SWING_MS });
+          break;
+        case 'monster-hit':
+          this.flashes.set(event.monsterId, HIT_FLASH_MS);
+          break;
+        case 'monster-defeated':
+          this.flashes.delete(event.monsterId);
+          break;
+        case 'monster-attacked':
+          this.strikes.push({ zone: event.zone, msLeft: STRIKE_MS });
+          break;
+        case 'hero-hit':
+          this.heroHurtMsLeft = HERO_HURT_MS;
+          break;
+        case 'hero-defeated':
+          // The fight is over and the monsters are back as they began: nothing of it should linger on the new scene.
+          this.swings = [];
+          this.strikes = [];
+          this.flashes.clear();
+          this.heroHurtMsLeft = 0;
+          break;
       }
     }
   }
 
   /** Lets one frame's time pass; feedback that has run out disappears. */
   age(frameMs: number): void {
-    this.swings = this.swings
-      .map((swing) => ({ zone: swing.zone, msLeft: swing.msLeft - frameMs }))
-      .filter((swing) => swing.msLeft > 0);
+    this.swings = remaining(this.swings, frameMs);
+    this.strikes = remaining(this.strikes, frameMs);
+    this.heroHurtMsLeft = Math.max(0, this.heroHurtMsLeft - frameMs);
     for (const [monsterId, msLeft] of this.flashes) {
       if (msLeft <= frameMs) {
         this.flashes.delete(monsterId);
@@ -44,12 +65,28 @@ export class Feedback {
     }
   }
 
-  /** The areas of the swings to draw now. */
+  /** The areas of the hero's swings to draw now. */
   swingZones(): Box[] {
     return this.swings.map((swing) => swing.zone);
+  }
+
+  /** The areas of the monsters' strikes to draw now. */
+  strikeZones(): Box[] {
+    return this.strikes.map((strike) => strike.zone);
   }
 
   isFlashing(monsterId: string): boolean {
     return this.flashes.has(monsterId);
   }
+
+  /** Whether the hero is showing that it was just hit. */
+  isHeroHurt(): boolean {
+    return this.heroHurtMsLeft > 0;
+  }
+}
+
+function remaining(flashes: readonly ZoneFlash[], frameMs: number): ZoneFlash[] {
+  return flashes
+    .map((flash) => ({ zone: flash.zone, msLeft: flash.msLeft - frameMs }))
+    .filter((flash) => flash.msLeft > 0);
 }

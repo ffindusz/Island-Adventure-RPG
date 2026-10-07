@@ -1,9 +1,13 @@
 import Phaser from 'phaser';
 import type { Game, GameEvent, GameView } from '../core';
-import { drawHero, drawMonster, drawSwing, drawTerrain } from './art';
+import { drawHero, drawMonster, drawStrike, drawSwing, drawTelegraph, drawTerrain } from './art';
 import { Feedback } from './feedback';
 import { FixedStepClock } from './fixed-step';
+import { Hud } from './hud';
 import { PlayerInput } from './player-input';
+
+/** How long the screen takes to fade in after the hero is defeated and returned, in milliseconds. */
+const DEFEAT_FADE_MS = 500;
 
 /**
  * The play screen. Every frame it turns the keyboard into commands, runs the Game core's fixed steps, and draws
@@ -14,7 +18,9 @@ export class PlayScene extends Phaser.Scene {
   private readonly clock = new FixedStepClock();
   private readonly feedback = new Feedback();
   private playerInput!: PlayerInput;
+  private hud!: Hud;
   private terrainLayer!: Phaser.GameObjects.Graphics;
+  private telegraphLayer!: Phaser.GameObjects.Graphics;
   private entityLayer!: Phaser.GameObjects.Graphics;
   private effectLayer!: Phaser.GameObjects.Graphics;
   private drawnAreaId: string | null = null;
@@ -25,10 +31,13 @@ export class PlayScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Added in drawing order: ground, then hero and monsters, then the swing on top.
+    // Added in drawing order: ground, then the telegraphs of monster attacks, then hero and monsters, then the
+    // swings and strikes on top. The HUD draws above them all.
     this.terrainLayer = this.add.graphics();
+    this.telegraphLayer = this.add.graphics();
     this.entityLayer = this.add.graphics();
     this.effectLayer = this.add.graphics();
+    this.hud = new Hud(this);
     const keyboard = this.input.keyboard;
     if (keyboard === null) {
       throw new Error('The keyboard plugin is not available, so nothing could control the hero.');
@@ -46,6 +55,10 @@ export class PlayScene extends Phaser.Scene {
     }
     this.feedback.age(frameMs);
     this.feedback.show(events);
+    if (events.some((event) => event.type === 'hero-defeated')) {
+      // The core has already put the hero back; the fade hides the cut. The world keeps running while it plays.
+      this.cameras.main.fadeIn(DEFEAT_FADE_MS, 0, 0, 0);
+    }
     this.draw(this.core.view());
   }
 
@@ -57,14 +70,22 @@ export class PlayScene extends Phaser.Scene {
       drawTerrain(this.terrainLayer, view.area);
       this.drawnAreaId = view.area.id;
     }
+    this.telegraphLayer.clear();
     this.entityLayer.clear();
     for (const monster of view.monsters) {
+      if (monster.action.type === 'winding-up') {
+        drawTelegraph(this.telegraphLayer, monster.action.zone, monster.action.progress);
+      }
       drawMonster(this.entityLayer, monster, this.feedback.isFlashing(monster.id));
     }
-    drawHero(this.entityLayer, view.hero);
+    drawHero(this.entityLayer, view.hero, this.feedback.isHeroHurt());
     this.effectLayer.clear();
     for (const zone of this.feedback.swingZones()) {
       drawSwing(this.effectLayer, zone);
     }
+    for (const zone of this.feedback.strikeZones()) {
+      drawStrike(this.effectLayer, zone);
+    }
+    this.hud.draw(view);
   }
 }
