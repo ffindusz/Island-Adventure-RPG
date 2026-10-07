@@ -4,7 +4,8 @@
 
 export type ArtEntry =
   | { readonly kind: 'image'; readonly file: string }
-  | { readonly kind: 'sheet'; readonly file: string; readonly frameWidth: number; readonly frameHeight: number };
+  | { readonly kind: 'sheet'; readonly file: string; readonly frameWidth: number; readonly frameHeight: number }
+  | { readonly kind: 'drawn'; readonly rows: readonly string[]; readonly palette: Readonly<Record<string, number>> };
 
 export type ArtManifest = Readonly<Record<string, ArtEntry>>;
 
@@ -16,6 +17,14 @@ export function image(file: string): ArtEntry {
 /** A grid of equal frames in one file; the frames are numbered row by row, starting at 0. */
 export function sheet(file: string, frameWidth: number, frameHeight: number = frameWidth): ArtEntry {
   return { kind: 'sheet', file, frameWidth, frameHeight };
+}
+
+/**
+ * A small picture drawn in code, for what the art pack has nothing for: one letter of the palette per pixel, and `.`
+ * for a clear one. The rows must all be as long as the first.
+ */
+export function drawn(rows: readonly string[], palette: Readonly<Record<string, number>>): ArtEntry {
+  return { kind: 'drawn', rows, palette };
 }
 
 /**

@@ -12,6 +12,8 @@ import {
   drawTelegraph,
   drawTerrain,
 } from './art';
+import { ARTWORK } from './artwork';
+import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import { scrollFor } from './camera';
 import { Feedback } from './feedback';
 import { FixedStepClock } from './fixed-step';
@@ -62,7 +64,13 @@ export class PlayScene extends Phaser.Scene {
     this.core = core;
   }
 
+  preload(): void {
+    queueArt(this.load, ARTWORK);
+  }
+
   create(): void {
+    buildDrawnArt(this.textures, ARTWORK);
+    requireLoadedArt(this.textures, ARTWORK);
     // Added in drawing order: ground, then the telegraphs of monster attacks, then chests, hero and monsters, then the
     // swings and strikes on top. The HUD draws above them all, then the text of the area, the notice above that, and the
     // overlay above that. The world scrolls with the camera; the HUD, the text, the notice and the overlay do not.
