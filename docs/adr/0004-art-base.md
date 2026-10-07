@@ -1,6 +1,6 @@
 # 0004. Art base: Ninja Adventure Asset Pack, with named gaps filled
 
-Status: **Proposed**. Waiting for the user's approval; nothing here is decided until the user approves it or picks a fallback.
+Status: **Accepted** on 2026-10-07: the user approved the art base with the named gaps filled (see "Decision" at the end). The text below is the proposal as it was put to the user.
 
 Evidence: `docs\assets\art-base-inventory.md` (coverage, gap plan) and `docs\assets\licences.md` (licence record). Checked 2026-10-07 against the files of the archive downloaded 2026-10-06.
 
@@ -64,4 +64,12 @@ Decide:
 
 ## Decision
 
-Not made yet. The user records it here: approved, approved with changes, or rejected with the chosen fallback, and the date.
+Approved with the named gaps filled, by the user on 2026-10-07, in answer to the five questions above:
+
+1. **Pack:** approved as proposed, with the gaps filled as listed in "Proposal". The fallback (TinyRPG Collection) is not needed. Approving also accepts the pack's own CC0 claim for its audio, which no separate source backs (`licences.md`, A1), and for `Ui\Input` and `Ui\Skill Icon` (A3), which the game avoids anyway.
+2. **Download:** the scripted download of 2026-10-06 is acceptable. The archive and its extraction stay where they are; nothing is deleted or downloaded again.
+3. **Hero:** the Hunter, a fixed and silent castaway.
+4. **Font:** the pack's `NormalFont.ttf` is replaced (`licences.md`, A2 stays "do not use"). The art ticket that first needs a font, ticket 22, picks the replacement, which needs a confirmed licence and its own entry in `licences.md`. The user's permission to download covered the pack only, so fetching a font or any other asset needs a fresh permission; text drawn by the game's own bitmap font needs none.
+5. **Composed art:** the composed wreck, sword, bow, ammunition cache and recolored undead Guardian are accepted, and hand-drawn replacements are not to be ordered. The 0x72 "16x16 Pirates Tileset" (S4) stays a fallback for the wreck only if the composed version turns out weak in ticket 23; using it needs the user's permission to download it and a re-read of its licence first.
+
+The decision can still be reversed later (spec story 102). Tickets 22-25 are no longer gated by this one.
