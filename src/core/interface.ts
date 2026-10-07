@@ -48,6 +48,8 @@ export type GameEvent =
   | { readonly type: 'hero-hit'; readonly monsterId: string; readonly damage: number; readonly health: number }
   /** The hero earned Experience, by defeating a monster. `amount` is what was added to the hero's total. */
   | { readonly type: 'experience-gained'; readonly amount: number }
+  /** The hero reached this Level. When one gain of Experience raises it several Levels, there is one event for each. */
+  | { readonly type: 'level-up'; readonly level: number }
   /**
    * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health where
    * defeat sends it, and the monsters of the Adventure Area are back as they began: the view shows the new state.

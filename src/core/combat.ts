@@ -23,7 +23,7 @@ export function heroStrikes(state: PlayState, content: Content): GameEvent[] {
       events.push({ type: 'monster-hit', monsterId: monster.id, damage, health: monster.health });
       if (monster.health === 0) {
         events.push({ type: 'monster-defeated', monsterId: monster.id });
-        events.push(...gainExperience(state, monsterTypeOf(content, monster.type).experience));
+        events.push(...gainExperience(state, content, monsterTypeOf(content, monster.type).experience));
       }
     }
   }

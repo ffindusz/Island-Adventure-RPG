@@ -134,6 +134,26 @@ describe('numbers the rules cannot work with are refused when the game is create
       content: arena({ monsterTypes: { dummy: frailMonster(-5) } }),
       message: 'Monster type "dummy": experience must be 0 or more, but it is -5',
     },
+    {
+      what: 'a Level curve with no thresholds, which leaves the hero no Level to reach',
+      content: arena({ progression: { levelThresholds: [] } }),
+      message: 'The Level thresholds must give the Experience for at least Level 2',
+    },
+    {
+      what: 'a Level that takes no Experience',
+      content: arena({ progression: { levelThresholds: [0, 10] } }),
+      message: 'The Experience for Level 2 must be more than 0, but it is 0',
+    },
+    {
+      what: 'a Level that takes as much Experience as the one before',
+      content: arena({ progression: { levelThresholds: [10, 10, 30] } }),
+      message: 'The Experience for Level 3 must be more than the 10 of Level 2, but it is 10',
+    },
+    {
+      what: 'a Level that takes less Experience than the one before',
+      content: arena({ progression: { levelThresholds: [10, 25, 20] } }),
+      message: 'The Experience for Level 4 must be more than the 25 of Level 3, but it is 20',
+    },
   ])('$what', ({ content, message }) => {
     expectRefused(content, message);
   });
@@ -142,6 +162,7 @@ describe('numbers the rules cannot work with are refused when the game is create
     const content = arena({
       hero: { defense: 0 },
       minimumDamage: 0,
+      progression: { levelThresholds: [1] },
       monsterTypes: {
         biter: {
           ...BITER,

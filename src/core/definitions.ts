@@ -90,10 +90,22 @@ export interface AreaDefinition {
   readonly monsters: readonly MonsterPlacement[];
 }
 
+/** How the hero grows, as data a designer can tune. */
+export interface ProgressionDefinition {
+  /**
+   * The total Experience that raises the hero to each Level above 1: the first number is for Level 2, the second for
+   * Level 3, and so on. Each is more than the one before. The last is the cap: the hero's highest Level is one more
+   * than the number of thresholds, and Experience beyond the last threshold changes nothing.
+   */
+  readonly levelThresholds: readonly number[];
+}
+
 export interface ContentDefinition {
   /** The terrain legend: every symbol a layout may use. */
   readonly terrain: Readonly<Record<string, TerrainDefinition>>;
   readonly hero: HeroDefinition;
+  /** How the hero's Levels are reached, and what they are worth. */
+  readonly progression: ProgressionDefinition;
   /** The least damage a hit does to the hero, however high its Defense. Leave it out for the default of 1. */
   readonly minimumDamage?: number;
   readonly monsterTypes: Readonly<Record<string, MonsterTypeDefinition>>;

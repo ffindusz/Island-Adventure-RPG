@@ -11,6 +11,7 @@ import type {
   MonsterTypeDefinition,
   MonsterView,
   PlayingView,
+  ProgressionDefinition,
   Snapshot,
   StationaryMonsterDefinition,
   Tile,
@@ -28,6 +29,7 @@ import type {
 //   hero                    body 0.5 tiles; walks 7.5 tiles a second, which is 0.125 tile a fixed step
 //                           (8 steps to cross one tile); Health 10; Defense 0; Attack 1; attack cooldown 400 ms,
 //                           which is 24 steps; strike reaches 1 tile beyond the body and is 1 tile wide
+//   Levels                  the Experience that raises the hero to Levels 2 to 6 is 10, 25, 45, 70 and 100 in all
 //   monster "dummy"         stationary: it never moves or attacks; body 0.5 tiles; Health 3; worth 5 Experience
 //   monster "biter"         a chaser; body 0.5 tiles; Health 3; worth 8 Experience; damage 5; walks 3.75 tiles a
 //                           second, which is 0.0625 tile a step (16 steps to cross one tile); notices the hero within
@@ -86,6 +88,8 @@ interface ArenaOptions {
   readonly monsterTypes?: Readonly<Record<string, MonsterTypeDefinition>>;
   /** The least damage the hero takes from a hit. Leave it out to get the default. */
   readonly minimumDamage?: number;
+  /** Replaces parts of how the hero grows, such as the Level thresholds. */
+  readonly progression?: Partial<ProgressionDefinition>;
 }
 
 export function arena(options: ArenaOptions = {}): ContentDefinition {
@@ -97,6 +101,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     hero = {},
     monsterTypes = {},
     minimumDamage,
+    progression = {},
   } = options;
   return {
     terrain: {
@@ -116,6 +121,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
       ...hero,
     },
     ...(minimumDamage === undefined ? {} : { minimumDamage }),
+    progression: { levelThresholds: [10, 25, 45, 70, 100], ...progression },
     monsterTypes: {
       dummy: { behavior: 'stationary', health: 3, size: 0.5, experience: 5 },
       biter: BITER,

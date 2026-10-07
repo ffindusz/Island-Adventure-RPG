@@ -10,6 +10,7 @@ export type {
   MeleeWeaponDefinition,
   MonsterPlacement,
   MonsterTypeDefinition,
+  ProgressionDefinition,
   StationaryMonsterDefinition,
   TerrainDefinition,
 } from './definitions';

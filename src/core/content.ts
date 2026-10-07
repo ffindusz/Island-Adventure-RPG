@@ -5,6 +5,7 @@ import type {
   MeleeWeaponDefinition,
   MonsterPlacement,
   MonsterTypeDefinition,
+  ProgressionDefinition,
   StationaryMonsterDefinition,
 } from './definitions';
 import type { Tile } from './geometry';
@@ -58,6 +59,7 @@ export interface Content {
     readonly attackCooldownSteps: number;
     readonly meleeWeapon: MeleeWeaponDefinition;
   };
+  readonly progression: ProgressionDefinition;
   /** The least damage a hit does to the hero, however high its Defense. */
   readonly minimumDamage: number;
   readonly monsterTypes: Readonly<Record<string, MonsterType>>;
@@ -71,6 +73,7 @@ export function loadContent(definition: ContentDefinition): Content {
   requireZeroOrMore("The hero's defense", definition.hero.defense);
   const minimumDamage = definition.minimumDamage ?? DEFAULT_MINIMUM_DAMAGE;
   requireZeroOrMore('The minimum damage', minimumDamage);
+  const progression = loadProgression(definition.progression);
   const monsterTypes: Record<string, MonsterType> = {};
   for (const [name, monsterType] of Object.entries(definition.monsterTypes)) {
     monsterTypes[name] = loadMonsterType(name, monsterType);
@@ -102,11 +105,31 @@ export function loadContent(definition: ContentDefinition): Content {
       attackCooldownSteps: msToSteps(definition.hero.attackCooldownMs),
       meleeWeapon: definition.hero.meleeWeapon,
     },
+    progression,
     minimumDamage,
     monsterTypes,
     areas,
     start: { areaId: definition.start.area, tile: definition.start.tile },
   };
+}
+
+function loadProgression(definition: ProgressionDefinition): ProgressionDefinition {
+  const { levelThresholds } = definition;
+  if (levelThresholds.length === 0) {
+    throw new Error('The Level thresholds must give the Experience for at least Level 2');
+  }
+  levelThresholds.forEach((experience, index) => {
+    const level = index + 2;
+    const before = levelThresholds[index - 1];
+    if (before === undefined) {
+      requireMoreThanZero(`The Experience for Level ${level}`, experience);
+    } else if (!(experience > before)) {
+      throw new Error(
+        `The Experience for Level ${level} must be more than the ${before} of Level ${level - 1}, but it is ${experience}`,
+      );
+    }
+  });
+  return { levelThresholds: [...levelThresholds] };
 }
 
 function loadMonsterType(name: string, definition: MonsterTypeDefinition): MonsterType {
