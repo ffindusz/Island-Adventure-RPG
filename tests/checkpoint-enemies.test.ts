@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckpointDefinition, ContentDefinition, ExitDefinition, Game, GameEvent, MonsterPlacement } from '../src/core';
-import { FIELD_LAYOUT, advance, biterAt, face, frailMonster, monsterNamed, newGame, playingView, strike, walk } from './fixtures';
+import { FIELD_LAYOUT, advance, biterAt, face, frailMonster, monsterAction, monsterNamed, newGame, playingView, strike, walk } from './fixtures';
 import { chargerAt, enemyContent, enemyField, shooterAt } from './enemy-fixtures';
 
 // Chargers and ranged attackers with the Checkpoints and the defeat of Checkpoints (checkpoints.test.ts). The timelines
@@ -321,5 +321,39 @@ describe('a projectile that defeats a hero in the step it walks into an exit', (
     const view = playingView(game);
     expect(view.area.id).toBe('arena');
     expect(view.hero).toMatchObject({ position: { x: 7.5, y: 3.5 }, health: 4 });
+  });
+});
+
+describe('a Checkpoint between a monster and the hero', () => {
+  // The camp is on the tile (4, 3), in the row of the monster on the tile (2, 3) and of the hero, who stands at (6.5, 3.5)
+  // with its 10 Health. A Checkpoint is not an obstacle: the lane, the dash and the shot go over it, and a hero who is
+  // hit away from it has not touched it.
+  const CAMP_IN_THE_WAY: CheckpointDefinition = { id: 'camp', tile: { col: 4, row: 3 } };
+  const CAMP_INACTIVE = [{ id: 'camp', position: { x: 4.5, y: 3.5 }, size: 1, active: false }];
+
+  it('lets a charger show its whole lane across it and dash over it, and the hit activates nothing', () => {
+    const game = enemyField([chargerAt('charger-1', 2, 3)], { checkpoints: [CAMP_IN_THE_WAY] });
+    game.step();
+    expect(monsterAction(game, 'charger-1')).toEqual({
+      type: 'winding-up',
+      progress: 0,
+      zone: { minX: 2.75, minY: 3.25, maxX: 8.75, maxY: 3.75 },
+    });
+
+    const events = advance(game, 44); // steps 2 to 45
+
+    expect(events).toContainEqual({ type: 'hero-hit', monsterId: 'charger-1', damage: 6, health: 4 });
+    expect(events).not.toContainEqual(expect.objectContaining({ type: 'checkpoint-activated' }));
+    expect(playingView(game).checkpoints).toEqual(CAMP_INACTIVE);
+  });
+
+  it('lets a projectile fly over it, and the hit activates nothing', () => {
+    const game = enemyField([shooterAt('shooter-1', 2, 3)], { checkpoints: [CAMP_IN_THE_WAY] });
+
+    const events = advance(game, 89);
+
+    expect(events).toContainEqual({ type: 'hero-hit', monsterId: 'shooter-1', damage: 4, health: 6 });
+    expect(events).not.toContainEqual(expect.objectContaining({ type: 'checkpoint-activated' }));
+    expect(playingView(game).checkpoints).toEqual(CAMP_INACTIVE);
   });
 });
