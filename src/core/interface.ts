@@ -59,10 +59,12 @@ export type GameEvent =
   | { readonly type: 'monster-attacked'; readonly monsterId: string; readonly zone: Box }
   /** The hero took damage, after Defense; `health` is what the hero has left. */
   | { readonly type: 'hero-hit'; readonly monsterId: string; readonly damage: number; readonly health: number }
-  /** The hero earned Experience, by defeating a monster. `amount` is what was added to the hero's total. */
+  /** The hero earned Experience, by defeating a monster or reaching a milestone. `amount` is what was added to it. */
   | { readonly type: 'experience-gained'; readonly amount: number }
   /** The hero reached this Level. When one gain of Experience raises it several Levels, there is one event for each. */
   | { readonly type: 'level-up'; readonly level: number }
+  /** The hero's body first overlapped the zone of this milestone, and the reward follows. It happens once per game. */
+  | { readonly type: 'milestone-reached'; readonly milestoneId: string }
   /**
    * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health where
    * defeat sends it, and the monsters of the Adventure Area are back as they began: the view shows the new state.

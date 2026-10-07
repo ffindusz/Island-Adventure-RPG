@@ -8,12 +8,15 @@ export type {
   ContentDefinition,
   HeroDefinition,
   MeleeWeaponDefinition,
+  MilestoneDefinition,
+  MilestoneReward,
   MonsterPlacement,
   MonsterTypeDefinition,
   ProgressionDefinition,
   StatId,
   StationaryMonsterDefinition,
   TerrainDefinition,
+  TileRect,
 } from './definitions';
 export type { Box, Direction, Point, Tile } from './geometry';
 export type {

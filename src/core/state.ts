@@ -34,6 +34,8 @@ export type MonsterAction =
 export interface AreaState {
   /** Every monster placed in the Adventure Area, defeated ones included (at 0 Health), so that they stay defeated. */
   monsters: MonsterState[];
+  /** The ids of the milestones of this Adventure Area that the hero has reached. They stay reached, defeat included. */
+  reachedMilestones: string[];
 }
 
 export interface HeroState {
@@ -73,7 +75,7 @@ export type GameState = TitleState | PlayState;
 export function newPlayState(content: Content): PlayState {
   const areas: Record<string, AreaState> = {};
   for (const area of Object.values(content.areas)) {
-    areas[area.id] = { monsters: freshMonsters(area, content) };
+    areas[area.id] = { monsters: freshMonsters(area, content), reachedMilestones: [] };
   }
   const state: PlayState = {
     phase: 'playing',

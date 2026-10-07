@@ -7,6 +7,7 @@ import type {
   Game,
   GameEvent,
   HeroDefinition,
+  MilestoneDefinition,
   MonsterPlacement,
   MonsterTypeDefinition,
   MonsterView,
@@ -15,6 +16,7 @@ import type {
   Snapshot,
   StationaryMonsterDefinition,
   Tile,
+  TileRect,
 } from '../src/core';
 
 // The test arena. Its numbers are chosen so that every expected value in the tests can be worked out by hand,
@@ -91,6 +93,8 @@ interface ArenaOptions {
   readonly minimumDamage?: number;
   /** Replaces parts of how the hero grows, such as the Level thresholds. */
   readonly progression?: Partial<ProgressionDefinition>;
+  /** The milestones of the arena. There are none unless a test gives some. */
+  readonly milestones?: readonly MilestoneDefinition[];
 }
 
 export function arena(options: ArenaOptions = {}): ContentDefinition {
@@ -103,6 +107,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     monsterTypes = {},
     minimumDamage,
     progression = {},
+    milestones = [],
   } = options;
   return {
     terrain: {
@@ -132,9 +137,14 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
       biter: BITER,
       ...monsterTypes,
     },
-    areas: [{ id: 'arena', name: 'Arena', layout, monsters }, ...otherAreas],
+    areas: [{ id: 'arena', name: 'Arena', layout, monsters, milestones }, ...otherAreas],
     start,
   };
+}
+
+/** A milestone that gives the given Experience when the hero's body first overlaps the block of tiles `zone`. */
+export function milestone(id: string, zone: TileRect, experience: number): MilestoneDefinition {
+  return { id, zone, reward: { experience } };
 }
 
 /** A game in the wide field, with the hero at (6.5, 3.5). */
@@ -186,7 +196,7 @@ export function prizes(...experiences: number[]): {
   return { monsters, monsterTypes };
 }
 
-/** A game in the arena where the hero stands among prizes: the first below it, where it faces, the second right of it. */
+/** A game in the arena where the hero stands among prizes: the first below it, where it faces, the second to its right. */
 export function gameWithPrizes(...experiences: number[]): Game {
   return newGame(arena(prizes(...experiences)));
 }

@@ -82,12 +82,39 @@ export interface MonsterPlacement {
   readonly tile: Tile;
 }
 
+/** A block of whole tiles in an Adventure Area, counted from the top-left corner of its map. */
+export interface TileRect {
+  readonly col: number;
+  readonly row: number;
+  /** How many tiles wide, at least 1. */
+  readonly width: number;
+  /** How many tiles high, at least 1. */
+  readonly height: number;
+}
+
+/** What reaching a milestone gives the hero. Kept apart from the trigger, so later rewards can sit beside Experience. */
+export interface MilestoneReward {
+  /** The Experience the hero earns, 0 or more. */
+  readonly experience: number;
+}
+
+/** Ground that rewards the hero the first time its body overlaps it. The reward is given once for the whole game. */
+export interface MilestoneDefinition {
+  /** Unique across all Adventure Areas: events and saves refer to the milestone by it. */
+  readonly id: string;
+  /** The tiles that trigger it, which must lie within the map. */
+  readonly zone: TileRect;
+  readonly reward: MilestoneReward;
+}
+
 export interface AreaDefinition {
   readonly id: string;
   readonly name: string;
   /** One string per row of tiles, one terrain symbol per tile. Every row has the same length. */
   readonly layout: readonly string[];
   readonly monsters: readonly MonsterPlacement[];
+  /** The milestones of this Adventure Area. Leave it out for none. */
+  readonly milestones?: readonly MilestoneDefinition[];
 }
 
 /** The stats a Stat Point can be spent on. */

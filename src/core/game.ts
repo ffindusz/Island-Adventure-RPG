@@ -3,6 +3,7 @@ import { coolDownHero, heroStrikes } from './combat';
 import { loadContent } from './content';
 import type { Direction } from './geometry';
 import type { Game, GameOptions } from './interface';
+import { reachMilestones } from './milestones';
 import { walkHero } from './movement';
 import { closePage, openPage } from './pages';
 import { isPaused } from './pause';
@@ -65,7 +66,9 @@ export function createGame(options: GameOptions): Game {
       }
       coolDownHero(state);
       walkHero(state, content, held.at(-1));
-      return stepMonsters(state, content);
+      // The hero is where it walked to when it reaches a milestone, and that comes before the monsters act.
+      const milestoneEvents = reachMilestones(state, content);
+      return [...milestoneEvents, ...stepMonsters(state, content)];
     },
     view: () => buildView(state, content),
     snapshot: () => {
