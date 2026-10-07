@@ -20,6 +20,7 @@ Last updated: 2026-10-07. Nothing is in use yet: ticket 02 only inspected the pa
 | S1 | Kenney Pirate Pack (shipwreck supplement candidate) | CC0 | 2026-10-06 | Candidate, poor style match |
 | S2 | OpenGameArt "Ship / Destroyed Ship" by Kutejnikov (shipwreck supplement candidate) | CC0 | 2026-10-06 | Candidate, side view |
 | S3 | OpenGameArt "Shipwreck" by nicubunu (shipwreck supplement candidate) | CC0 | 2026-10-06 | Candidate, vector, poor style match |
+| S4 | 16x16 Pirates Tileset by 0x72 (shipwreck supplement candidate) | CC0, as stated in the author's page text (the page has no formal licence field) | 2026-10-07 | Candidate, 16 px pixel art, side view, different palette |
 | F1 | TinyRPG Collection by ansimuz (fallback) | Custom itch.io text: personal and commercial use, no resale or redistribution | 2026-10-06 | Fallback, not bought |
 | F2 | Pixel RPG Characters Pack by Mithrillor (fallback) | Custom itch.io text: commercial use, no resale, redistribution, or re-upload | 2026-10-06 | Fallback, not bought |
 | F3 | Another Perspective by VEXED (fallback) | CC BY 4.0 (attribution required) | 2026-10-06 | Fallback, not bought |
@@ -35,6 +36,7 @@ Last updated: 2026-10-07. Nothing is in use yet: ticket 02 only inspected the pa
   2. `README.md` inside the archive: "released under the Creative Commons Zero (CC0) license ... even commercial ones. Attribution is not required but appreciated", crediting Pixel-boy and AAA.
   3. The itch.io page: "Asset license: Creative Commons Zero v1.0 Universal" and the page text saying the pack is released under CC0 and may be used in any way, "even commercial ones", with attribution "not required but appreciated". The page was saved on 2026-10-06 (`ninja-page.html` in the download folder).
 - **Date checked:** 2026-10-06 (page saved, archive downloaded) and re-read from the saved copies on 2026-10-07.
+- **Where the evidence is (outside the repository, in the download folder `.worktrees\_assets\`):** `ninja\Ninja Adventure - Asset Pack\LICENSE.txt` and `README.md` (inside the archive), and `ninja-page.html` (the saved page).
 - **Credits text (a courtesy, not required; the page asks for a link to its itch.io page):** "Ninja Adventure Asset Pack by Pixel-Boy and AAA (CC0), https://pixel-boy.itch.io/ninja-adventure-asset-pack"
 - **Limits of CC0:** the waiver covers the rights the authors hold. Section 4(c) of the legal text says the authors do not take responsibility for clearing other people's rights, and trademark and patent rights are not waived. The files show no sign of third-party material except the font (A2). The pack's own claim is the only evidence for per-file authorship; see "Audio" below.
 - **Audio in the pack:** 41 music tracks (`.ogg`) and 147 sound effects and jingles (`.wav`) fall under the same CC0 claim. The files carry no author, title, or licence tags (encoder tags show FL Studio only), so per-file authorship cannot be verified beyond the pack's claim; the page says "Made with Aseprite, Godot, FL Studio". The `Audio\Sounds\Voice` folder is not used (the spec has no voice acting).
@@ -42,7 +44,7 @@ Last updated: 2026-10-07. Nothing is in use yet: ticket 02 only inspected the pa
 
 ### A2. Ninja Adventure font `Ui\Font\NormalFont.ttf`: do not use
 
-- **Finding:** the font file's own name table says "Copyright pixel-boy 2021", family "NinjaAdventure", licence "FontStruct Non-Commercial License", built with FontStruct. That is not CC0 and, by its name, forbids commercial use. FontStruct's own announcement of the licences (https://fontstruct.com/news/2013/07/05/new-licensing-options/, July 5th 2013, saved 2026-10-06) says downloaders may use fonts under the Non-Commercial licence only non-commercially and that both FontStruct licences prohibit redistribution by anyone except the designing FontStructor. The designer is the pack's author, so he may have intended CC0, but the shipped file says otherwise and the font's FontStruct page could not be read (the saved copy is a login page).
+- **Finding:** the font file's own name table says "Copyright pixel-boy 2021", family "NinjaAdventure", licence "FontStruct Non-Commercial License", built with FontStruct. That is not CC0. Taken by its name, it is a non-commercial licence. FontStruct's own announcement of the licences (https://fontstruct.com/news/2013/07/05/new-licensing-options/, July 5th 2013, saved 2026-10-06) says that "Downloaders are free to use these fonts either commercially or non-commercially depending on which of the two is used" and that both new FontStruct licences "prohibit redistribution of the downloads by anyone apart from the designing FontStructor". FontStruct's FAQ "Can I use FontStruction X in a project?" (saved 2026-10-06) adds that all licences in use on FontStruct require crediting the original designer. The designer is the pack's author, so he may have meant it as CC0, but the shipped file says otherwise, and the font's FontStruct page could not be read (the saved copy is a login page), so its exact terms are unconfirmed.
 - **Decision for the project:** do not use or ship `NormalFont.ttf`. The HUD and pages use a font with a confirmed licence instead (the art ticket for the HUD picks it and adds its own entry here). The bitmap fonts `font8x8.png` and `font24x30.png` in the same folder have no stated provenance, so they are not relied on either.
 - **Optional follow-up for the user:** ask the pack's author which licence the font really has.
 
@@ -73,6 +75,14 @@ Last updated: 2026-10-07. Nothing is in use yet: ticket 02 only inspected the pa
 - **Checked:** 2026-10-06 from the saved public page only. Not downloaded.
 - **Credits text if used:** "Shipwreck by nicubunu (CC0), https://opengameart.org/content/shipwreck".
 - **Fit:** vector clip art, not pixel art.
+
+### S4. 16x16 Pirates Tileset by 0x72 (shipwreck supplement candidate)
+
+- **Source:** https://0x72.itch.io/16x16-pirates-tileset, one file `pirates.v1.png` (8.9 kB), a free download ("Game assets > Free"), rated 4.9 (16 ratings), tagged "No generative AI was used".
+- **Licence:** the page text says "You can use this tileset for whatever you like (CC-0). Credit is not necessary". That is the author's own statement; the page has no formal "Asset license" field and no licence file was read, so this is a weaker record than A1. Before anything from it is copied in, re-read the page and, if the download includes a licence file, that too.
+- **Checked:** 2026-10-07 from the saved public page and its two preview screenshots only. Not downloaded.
+- **Credits text if used (a courtesy):** "16x16 Pirates Tileset by 0x72 (CC0), https://0x72.itch.io/16x16-pirates-tileset".
+- **Fit:** 16 px pixel art in a limited palette: a side-view ship with sails, masts, a skull flag, and cannons, plus a palm island, chest, and coin. The scale matches the pack, but the palette is different and there is no dark outline, so it would be recolored to the pack's palette.
 
 ### F1. TinyRPG Collection by ansimuz (fallback)
 

@@ -6,7 +6,9 @@ Paths below are relative to the archive root `Ninja Adventure - Asset Pack\` (ex
 
 ## Verdict at a glance
 
-The pack is a consistent 16 px, warm-palette, chibi top-down pixel-art set with far more than the game needs: 66 monster kinds, about 90 characters, 20 bosses, 17 tilesets, items, effects, a UI kit, and music. It covers most of the spec directly. It has no shipwreck art, no hand-drawn sword and bow animations for one hero, no undead boss, and no ammunition cache, and the cave and castle terrain must be assembled from several tilesets. Every gap can be filled from within the pack or with a small supplement. Recommendation: **accept with named gaps filled** (details in ADR 0004).
+The pack is a consistent 16 px, warm-palette, chibi top-down pixel-art set with far more than the game needs: 92 characters, 66 monster kinds, 26 animals, 20 bosses, 23 tileset sheets, items, effects, a UI kit, and music. It covers most of the spec directly. It has no shipwreck art, no hand-drawn sword or bow animation for one hero, no undead boss, and no ammunition cache, and the cave and castle terrain must be assembled from several tilesets. Every gap can be filled from within the pack or with a small supplement. Recommendation: **accept with named gaps filled** (details in ADR 0004).
+
+How the archive was obtained is set out factually at the end of this file, for the user to judge. It includes one point the user should weigh: the site's `robots.txt` disallows the page path the download script fetched.
 
 Verdict words follow the ticket: Found, Partial (usable but assembled, adapted, or needing a small addition), Missing.
 
@@ -19,7 +21,7 @@ Verdict words follow the ticket: Found, Partial (usable but assembled, adapted, 
 | 3 | Terrain: mountain | Found | Cliffs (grey, snow, orange), stairs, rocks, snow floor | None |
 | 4 | Terrain: cave | Partial | Cave mouths, ladders, rock details, dark stone interior floors and walls, crystals | No cave-wall autotile; assemble from the Relief and Interior sets (G4) |
 | 5 | Terrain: old castle with harbor | Partial | Stone battlement walls, towers, arches, statues, banners, ruins, docks, doors, stairs | No castle set and no full old ship; assemble, supplement the ship (G1, G4) |
-| 6 | Hero: walk | Found | Four-direction walk cycles for every standard character | Pick the hero (user) |
+| 6 | Hero: walk | Found | Four-direction, four-frame walk cycles for 90 of the 92 standard characters (Child and OldWoman have a short sheet) | Pick the hero (user) |
 | 7 | Hero: sword attack | Partial | Four-direction attack pose, sword sprites held in hand, slash effects | Compose attack from pose, held sword, and slash effect (G2) |
 | 8 | Hero: bow attack | Partial | Bow sprites, arrow sprites, drawing pose candidates | No hand-drawn bow animation; compose (G2) |
 | 9 | Monsters: woods (forest beasts, slimes) | Found | Four slimes, bear, beasts, boars, snakes, mushrooms, and more | None |
@@ -43,7 +45,7 @@ Verdict words follow the ticket: Found, Partial (usable but assembled, adapted, 
 
 ### Tile size
 
-All 19 tilesets under `Backgrounds\Tilesets` are multiples of 16 px in both directions (for example `TilesetFloor.png` 352x417 has one stray extra pixel row, so slice with explicit tile counts), and the itch.io page tags the pack "16x16". Standard characters and monsters are 16x16 frames: `Actor\Character\<Name>\SpriteSheet.png` is 64x112 (4 columns of directions: down, up, left, right; 7 rows of poses), and monster sheets are 64x64. Bosses, vehicles, and effects use larger frames sized per file, so the Phaser adapter must take frame size per sheet. **Ticket 01's working assumption of a 16 px tile is confirmed; no change.**
+All 19 tileset sheets under `Backgrounds\Tilesets` and the 4 under `Tilesets\Interior` are multiples of 16 px in both directions, except `TilesetFloor.png` (352x417), which has one stray extra pixel row, so slice it with explicit tile counts. The itch.io page tags the pack "16x16". Standard characters are 16x16 cells (a 64x112 sheet: 4 direction columns by 7 rows), and all 66 monster sheets are 64x64 (4 directions by 4 frames of 16x16). Animals are tiny 2-frame sprites (about 32x16). Bosses, vehicles, and effects use larger frames sized per file (for example 96x48, 96x96, 82x82, and 50x50 for the bosses), so the Phaser adapter must take the frame size per sheet. **Ticket 01's working assumption of a 16 px tile is confirmed; no change.**
 
 ### Terrain by Adventure Area
 
@@ -68,7 +70,7 @@ By area:
 
 ### Hero: walk, sword, and bow
 
-- **Standard characters** (`Actor\Character\<Name>\`, 92 characters) have `SpriteSheet.png` (64x112: down, up, left, right by idle, three walk frames, attack pose, item, jump or special poses, dead) and a 38x38 `Faceset.png`. `SeparateAnim\` repeats the poses as strips (Attack, Dead, Idle, Item, Jump, Special1, Special2, Walk). Walk is complete in four directions for all of them. The attack is a single pose per direction (`SeparateAnim\Attack.png`, 4 frames), not a swing.
+- **Standard characters** (`Actor\Character\<Name>\`, 92 folders) have `SpriteSheet.png` and a 38x38 `Faceset.png`. The sheet is 64x112: 4 direction columns (down, up, left, right) by 7 rows of 16x16 cells. Compared pixel for pixel on Hunter: rows 0 to 3 are the walk cycle (four frames, and row 0 doubles as the idle pose), row 4 is the attack pose, row 5 the jump, and row 6 holds one cell each for Dead, Item, Special1, and Special2 (columns 0 to 3, not directions). `SeparateAnim\` repeats the same cells as strips (Idle, Walk 64x64, Attack, Jump, Dead, Item, Special1, Special2). 90 of the 92 have the full sheet (SamuraiRed names it `redsamurai.png`); Child and OldWoman have only a 64x32 sheet. The attack is a single pose per direction, not a swing, and there is no hit frame, so a hit reaction is a code-driven flash.
 - **Weapons** (`Items\Weapons\<Name>\`): 23 weapon folders; each holds `Sprite.png` (icon) and `SpriteInHand.png` (the weapon as held), except `Bow` and `Bow2`, which hold `Sprite.png` and `Arrow.png` and have no held sprite. There are swords (`Sword`, `Sword2`, `BigSword`, `Rapier`, `Katana`) and bows, but no sprite sheet in which a standard character swings a sword or draws a bow.
 - **One fully animated character:** `Actor\CharacterAnimated\NinjaGreen` (`SpriteSheet.png` 256x544, `Separate\*` strips, preview GIFs) with overlay sheets in `Weapon\` for Axe, Hammer, Katana, Net, and Pickaxe (256x256). A hand-drawn katana attack exists there; there is no bow and no plain sword.
 - **Effects for composing attacks:** `FX\Slash` and `FX\Attack` (arcs, cuts, claws), `Items\Projectile\Arrow.png` (16x16), `Items\Weapons\Bow*\Arrow.png` (13x5).
@@ -77,12 +79,12 @@ Verdict: walk Found; sword Partial; bow Partial. Neither the sword nor the bow e
 
 ### Monsters and the Guardian
 
-- **Monsters** (`Actor\Monster\`, 66 kinds, each `SpriteSheet.png` 64x64 plus `Faceset.png`: four directions by four animation frames, no separate attack frames, so attacks are code-driven lunges or projectiles):
-  - Woods: Slime, Slime2, Slime3, Slime4, Bear, Beast, Beast2, Racoon, GoldRacoon, Panda, Mouse, MouseBlack, Mushroom, Mushroom2, Snake to Snake4, Owl, Owl2, plus `Actor\Animal\` (WildBoar, Hyena, and others).
+- **Monsters** (`Actor\Monster\`, 66 kinds; all 66 main sheets are 64x64, most named `SpriteSheet.png`, plus a `Faceset.png`: four directions by four animation frames, no separate attack frames, so attacks are code-driven lunges or projectiles):
+  - Woods: Slime, Slime2, Slime3, Slime4, Bear, Beast, Beast2, Racoon, GoldRacoon, Panda, Mouse, MouseBlack, Mushroom, Mushroom2, Snake to Snake4, Owl, Owl2, plus the 26 small `Actor\Animal\` kinds (for example WildBoar 34x16, Hyena, Lion, Monkey; two frames each, some with side views) as extra woods life.
   - Mountain raiders: humanoids in `Actor\Character\` with idle, walk, attack, and dead poses: FighterRed, FighterWhite, GladiatorBlue, RedGladiator, CamouflageGreen, CamouflageRed, Samurai, SamuraiBlue, NinjaDark, NinjaMageBlack, Shaman, SorcererBlack.
   - Cave: BlueBat, YellowsBat, SpiderRed, SpiderYellow, Mole, Mole2, Eye, Eye2, Larva, Larva2, Lizard, Lizard2, Mollusc, Mollusc2.
   - Castle undead: `Actor\Character\Skeleton`, `SkeletonDemon`, `Vampire`, `Spirit`, `Statue`, `GoldStatue`, `KnightGold`, and `Actor\Monster\SkullBlue`, `Skull`, `Spirit`, `Spirit2`.
-- **Guardian candidates** (`Actor\Boss\`, 20 bosses with `Idle`, `Hit`, and for most `Walk` and `Attack`): `GiantBlueSamurai` and `GiantRedSamurai` have the fullest sets (Idle, Walk, Hit, AttackLeft, AttackRight, ChargeLeft, ChargeRight at 48 px, attack frames 96x96); `TenguRed` and `TenguBlue` have Idle, Walk, Hit, Attack, and a transformation (Trans); `GiantSpirit` (a white-blue spectral flame, 50x50) has only Idle and Hit. None is a skeleton or other classic undead. Verdict: Partial (G3).
+- **Guardian candidates** (`Actor\Boss\`, 20 bosses, each with preview GIFs): `GiantBlueSamurai` and `GiantRedSamurai` have the fullest sets, with Idle and Walk (576x48, six frames of 96x48), Hit (384x48, four frames), `AttackLeft` and `AttackRight` (384x96, four frames of 96x96), and `ChargeLeft` and `ChargeRight` (288x96, three frames). They face the viewer for idle and walk, with left and right variants for the attacks, not four directions. `TenguRed` and `TenguBlue` (82 px frames, some 68 px) have Idle, Walk, Hit, a 15-frame Attack, and a transformation (Trans). `GiantSpirit` (a white-blue spectral flame, 50x50 frames) has only Idle (five frames) and Hit (three frames), and so does `GiantFlam`. None is a skeleton or other classic undead. Verdict: Partial (G3).
 
 ### Items and props
 
@@ -102,8 +104,8 @@ Verdict: walk Found; sword Partial; bow Partial. Neither the sword nor the bow e
 
 ## Gap plan
 
-- **G1. Shipwreck and old ship (the supplement).** Preferred: compose a wreck from pack pieces: `Vehicles\Boat.png` broken up and half-sunk in `TilesetWater` shallows, `Sail.png` torn and leaning, plank and log tiles from `TilesetWater`, `tileset_camp`, and `TilesetVillageAbandoned`, plus rocks and `FX\Particle` debris. This needs only recoloring and cropping of CC0 pieces and no new licence. If the composed wreck looks too weak for the opening, take a small CC0 supplement (candidates in `licences.md`: S2 is pixel art in a side view with a different palette, S1 and S3 are not pixel art); anything taken is redrawn or recolored to the pack's palette (`Palette.png`, 10x9). For the old ship at the harbor, use `Boat.png` plus `Sail.png` scaled by the staging, or a redrawn larger hull in the pack's style.
-- **G2. Sword and bow on one hero.** Compose in the Phaser adapter: the standard character's attack and item poses, the held `Sword` sprite rotated by code through the swing, and a `FX\Slash` arc; for the bow, the `Bow` sprite held in front, an arrow spawned in the facing direction from `Items\Projectile\Arrow.png`, and a recoil frame. If the user prefers hand-drawn frames, redraw the four-direction poses in the pack's style. Before the art ticket commits, a mock-up of the composed result is the thing to look at (see the review list).
+- **G1. Shipwreck and old ship (the supplement).** Preferred: compose the wreck from pack pieces, which needs no new licence. A washed-up lifeboat suits a castaway opening: `Vehicles\Boat.png` (80x32) tilted and half buried in sand and `TilesetWater` shallows, `Vehicles\Sail.png` (30x43) as a broken mast with a torn sail, plank and log pieces from `TilesetWater`, `tileset_camp`, and `TilesetVillageAbandoned`, crates, barrels, and bags as washed-up cargo, rocks, palms, and `FX\Particle` debris. That is cropping, rotating, and recoloring of CC0 pieces. If the composed wreck looks too weak for the opening, take a small CC0 supplement (candidates in `licences.md`). S4 (0x72 "16x16 Pirates Tileset", CC0 by the author's page text) fits the scale best: 16 px pixel art with a side-view ship, sails, a skull flag, and cannons, but with a different palette and no dark outline. S2 (OpenGameArt "Ship / Destroyed Ship", CC0) is a simplified pixel ship in side view with a different palette. S1 and S3 are vector art and do not match. Anything taken is redrawn or recolored to the pack's palette (`Palette.png`, 10x9) and gets its own licence entry first. For the old ship at the harbor, which the player boards for the ending, build a larger hull in the pack's style from `Boat.png` and `Sail.png` pieces, or redraw one.
+- **G2. Sword and bow on one hero.** Compose in the Phaser adapter: the standard character's attack pose (one per direction), the held `Sword` sprite rotated about its grip through the swing, and a `FX\Attack\SlashCurved` arc; for the bow, the attack pose with the `Bow` sprite held in front, an arrow spawned in the facing direction from `Items\Weapons\Bow\Arrow.png` or `Items\Projectile\Arrow.png`, and a recoil step. The pack's weapons are drawn for this: the in-hand sprites are tiny (Sword 6x11) and meant to be rotated and attached to a pose, not shipped as full animations. A rough mock-up for Hunter in four directions (an idle cell, three sword steps, three bow steps) is `views\mockup_hero_Hunter.png` in the download folder: it reads as a sword swing and a bow shot, but the placement is crude (slash arcs about twice the hero's size, arrows starting at the bow's centre, swing steps in 90 degree increments), so it shows feasibility, not the final look. If the user prefers hand-drawn frames, redraw the four-direction poses in the pack's style.
 - **G3. Undead Guardian.** Recolor a samurai boss (bone white and ghostly teal), add spectral effects (`FX\Magic\Spirit`, `FX\Smoke`), and keep its hand-drawn walk, charge, and attack animations. Alternative: `GiantSpirit` with scripted attacks, because it has only Idle and Hit.
 - **G4. Cave and castle terrain.** Assemble from the Relief, Interior, House, Desert, Towers, and VillageAbandoned sets; cave darkness by lighting tint in the adapter. The Phaser tilemaps and collision are authored by hand anyway.
 - **G5. Ammunition cache.** A crate (`Items\Object\CrateEmpty` or `TilesetElement` crates) with arrow sprites on top; an open and a closed frame from a recolor.
@@ -112,15 +114,55 @@ Verdict: walk Found; sword Partial; bow Partial. Neither the sword nor the bow e
 
 ## What was not verified
 
-- Visual fit between the supplement and the pack, and the composed sword and bow, are unseen until mocked up.
-- Audio quality and mood were not listened to; only file metadata was read.
-- Per-file authorship of art and audio beyond the pack's own CC0 claim, and the font's real licence.
-- The 128 preview GIFs were not played; the frames in the sheets were inspected instead.
+- Audio quality and mood were not listened to (an agent cannot); only file metadata was read. Whether the music suits the game is the user's call.
+- Per-file authorship of the art and audio beyond the pack's own CC0 claim, and the real licence of the font (the FontStruct page for it could not be read: the saved copy is a login page).
+- How the composed sword and bow, the composed wreck, and the recolored Guardian look in motion. Only a crude still mock-up of the sword and bow exists; the supplement candidates were seen only in their public preview images.
+- The 128 preview GIFs were not played and the pack's Godot sample project was not opened; the frames in the sheets were inspected instead.
+- Which character becomes the hero. Hunter, Knight, and the NinjaGreen animated character were looked at closely; the other 89 appear in contact sheets only.
+- Whether the way the archive was obtained is acceptable (below). That is the user's judgment.
 
 ## Download provenance (for the user to judge)
 
-See the section "Download provenance" at the end of this file.
+This is a factual record, written without softening. The ticket allows downloading the Ninja Adventure pack only, says nothing may be purchased, and says that if the download cannot be scripted without working around an access control the agent must stop and give manual steps instead. The download was scripted. Whether it worked around an access control is for the user to decide; the facts follow.
 
-## Download provenance
+### What was downloaded, when, by whom
 
-(Written in the next commit.)
+- **One file:** "Ninja Adventure - Asset Pack.zip" from https://pixel-boy.itch.io/ninja-adventure-asset-pack: 94,022,790 bytes, SHA-256 `95a06f4fdcfd1882f061a45ff313b7c905dbe2de1e8512b281d7937df62a7b15` (recomputed on 2026-10-07; it matches), `Last-Modified` Sun, 29 Mar 2026 22:16:07 GMT. It is saved as `.worktrees\_assets\ninja-adventure-asset-pack.zip` and extracted to `.worktrees\_assets\ninja\`, both outside the repository and git-ignored. The archive passes a zip integrity test (2,674 entries) and the extracted files match its sizes.
+- **Not downloaded:** the page's two other files ("Godot Project V4.zip", "Godot project V3 (old).zip"), any other pack, and any fallback or supplement asset. Those candidates were read through public pages and their preview images only.
+- **By whom:** the first implementer agent for this ticket, on 2026-10-06 between 20:28 and 20:31 UTC (22:28 to 22:31 local), relying on the ticket's "Download permission" paragraph. That agent was killed by a machine sleep afterwards and left no notes. I did not download anything again. I rebuilt the sequence below from the saved pages, the saved response headers, and the exact commands recorded in the session event log.
+
+### The path taken
+
+All requests were made with `curl.exe` (default curl User-Agent) through the corporate proxy that this machine's environment configures (`HTTP_PROXY` and `HTTPS_PROXY`, the same one the npm registry is reached through). The agent's own `web_fetch` tool could not resolve the host, which is why curl was used. No login, no account, no credentials, no browser cookies.
+
+| Time (UTC, 2026-10-06) | Request | What it is |
+| --- | --- | --- |
+| 20:28:28 | GET the pack page | The public page. Served normally, no challenge page. |
+| 20:29:18 | GET `.../ninja-adventure-asset-pack/purchase`, keeping cookies | The page "Download Now" opens. The site set one anonymous session cookie (`itchio_token`, saved in `cookies.txt`; its value is not recorded here). |
+| 20:29:36 | GET https://itch.io/docs/legal/terms | The Terms of Service, searched for "automat", "scrap", "crawl", "spider", "robot", and "bot" before the first POST. No match. |
+| 20:30:15 | POST `.../download_url` | What the page's "No thanks, just take me to the downloads" link does. Returned JSON holding a `/download/<token>` page URL. |
+| 20:30:18 | GET that `/download/<token>` page | Lists the three files with Download buttons. **This path matches the site's robots.txt rule (below).** |
+| 20:30:44 to 20:30:52 | GET three of itch.io's public script bundles | Read to check that the POSTs imitate what the page's own script does. |
+| 20:31:02 | POST `.../file/16981275?source=game_download&after_download_lightbox=1&as_props=1` | What a Download button does for the pack's zip. Returned a signed storage URL valid for 60 seconds. Only inspected; that URL was not fetched. |
+| 20:31:13 | The same POST again, then GET of the new signed URL | The download: HTTP 200, 94,022,790 bytes, about 15 seconds. |
+
+### Facts to weigh
+
+1. **Price and purchase.** The saved purchase page says "This asset pack is free but the developer accepts your support by letting you pay what you think is fair for the asset pack", offers a link "No thanks, just take me to the downloads", and its page data says `"min_price":0` and `"actual_price":0` with `"logged_in":false`. The price box suggests $2.00; the "No thanks" link is the site's own way past it. The saved page also shows a 50% sale banner (until 2028-01-01), which does not matter at a $0 minimum. No payment form was submitted. The log holds no request to PayPal, Stripe, or the `/purchase` form action, and no email address, card, or account was used. **Nothing was purchased.**
+2. **What the script sent beyond a plain GET.** On the two POSTs it sent the CSRF token taken from the page's own `<meta name="csrf_token">` as a form field, a `Referer` header, and `X-Requested-With: XMLHttpRequest`. The saved script bundle (`itch-extern.min.js`) shows the page's own code making the same `$.ajax` POST to `"/" + slug + "/download_url"` with the CSRF token. This is how the site's own page behaves, but a person had to click and a script was imitating the click.
+3. **Tokens.** Every URL came from the previous response. Nothing was guessed, forged, taken from another user, or replayed after expiry, and the signed storage URL was used straight away. The first signed URL was never fetched.
+4. **Blocks and challenges.** None: no CAPTCHA, no Cloudflare challenge page, no HTTP 403 or 429, no rate-limit response. Ten requests went to itch.io hosts in under three minutes (the table's rows, with the script bundles counted separately), followed by the download itself from the storage host.
+5. **What the Terms of Service say** (`itch-terms.txt`, saved from https://itch.io/docs/legal/terms on 2026-10-06; its change list ends "Updated April 15 2023"). It does not mention scraping, crawling, bots, or automated or scripted access. Clauses that touch the question: section 3 forbids "Hacking, maliciously manipulating, or misrepresenting itch.io's interface in any way" and "Soliciting, harvesting or collecting information about others"; section 4 grants users a licence to access content "as permitted through the functionality of the Service"; section 8 says that "Use of IP proxies or other methods to disguise your place of residence, whether to circumvent geographic restrictions on content, to purchase at a price not applicable to your geography, or for any other purpose, is a violation of this Agreement"; section 18 lets the terms change without notice. The corporate proxy is the one this machine's environment configures for outgoing traffic, not something chosen to hide a location, and the price is $0 everywhere, so I do not read section 8 as applying, but its closing words are broad, so I am flagging it.
+6. **robots.txt, which the first agent did not check before downloading.** I fetched https://pixel-boy.itch.io/robots.txt on 2026-10-07 (a public text file; saved as `itch-robots-pixelboy.txt`). For all user agents it says `Disallow: /*/download/`, `Disallow: /*/rh/`, `Disallow: /*/rp/`, `Disallow: /-/`. The page `/ninja-adventure-asset-pack/download/<token>` fetched at 20:30:18 falls under the first rule. The two POSTs (`/download_url`, `/file/...`) and the signed storage URL do not. robots.txt asks automated clients to keep out; it is not an access control (the page was served openly, with no authentication), and this was one targeted fetch for a task the user allowed, not crawling. But the script was an automated client and that fetch is in the disallowed pattern.
+7. **What looks like working around an access control, in short.** (a) Browser-style headers and a CSRF token on two POSTs; (b) skipping the payment suggestion through the site's "No thanks" link; (c) the robots.txt-disallowed fetch above; (d) a proxy and section 8 of the Terms. In my reading none of these was a login, payment, challenge, or block that was defeated, which is why the download went ahead instead of stopping. The ticket's rule is the user's to apply, so I make no claim beyond that.
+
+### If you do not accept a scripted download: exact manual steps
+
+1. Delete `.worktrees\_assets\ninja-adventure-asset-pack.zip` and `.worktrees\_assets\ninja\`. Nothing in the repository depends on them; the three documents were written from them, so the evidence below would need a second look afterwards.
+2. In a browser open https://pixel-boy.itch.io/ninja-adventure-asset-pack, click "Download Now", and in the popup either choose "No thanks, just take me to the downloads" or pay what you like.
+3. On the download page click "Download" next to "Ninja Adventure - Asset Pack.zip" (89 MB). Skip the two Godot zips.
+4. Save it as `.worktrees\_assets\ninja-adventure-asset-pack.zip` and run `Get-FileHash -Algorithm SHA256` on it. If it equals `95a06f4f...2a7b15` (full value above), it is the same file; if the author has published a newer version, the numbers in this inventory need rechecking. Extract it to `.worktrees\_assets\ninja\`.
+
+### Other network access during this ticket
+
+Public pages only: the pages of the fallback and supplement candidates (TinyRPG Collection, Mithrillor, VEXED, Kenney Pirate Pack, three OpenGameArt pages, 0x72), itch.io's Terms of Service and robots.txt, and FontStruct's licensing pages. Saved copies and, for 0x72, two preview screenshots are in `.worktrees\_assets\research\`. No asset from any of them was downloaded.
