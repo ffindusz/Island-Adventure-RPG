@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 **Download permission:** On 2026-10-06 the user allowed downloading the provisional base pack (Ninja Adventure, free) for this inventory, replacing the earlier "previews only; do not download". Not covered: any purchase or paid asset, and downloading any other pack. Fallbacks and the shipwreck supplement are researched through their public pages and previews only; ask before downloading them. The agent does the inventory, but whether the art is acceptable is the user's judgment, so the last criterion is completed by the user, not the agent. Downloaded files stay outside the repository; later art tickets copy in only what they use, each with a licence record entry.
 
@@ -18,6 +18,8 @@
 - [ ] The user reviews the result and approves the art base or picks a fallback; the decision is recorded.
 
 ## Comments
+
+Merged to integration/island-adventure-rpg at 7d346c5; waiting for the user's approval of the art base (ADR 0004 is Proposed).
 
 - Built three documents, no art copied in: `docs\assets\art-base-inventory.md` (24-row coverage matrix, evidence, gap plan G1-G7, what was not verified, full download provenance), `docs\assets\licences.md` (pack A1 CC0 1.0 from the archive's `LICENSE.txt`, `README.md`, and the itch page, checked 2026-10-06 and re-read 2026-10-07; font conflict; supplement candidates S1-S4; fallbacks F1-F3), and `docs\adr\0004-art-base.md` (Proposed). Tile size: 16 px confirmed, no change to ticket 01.
 - Recommendation: accept with named gaps filled; TinyRPG Collection if the pack is rejected. Defaults chosen: hero not picked (Hunter appears only in a mock-up); pack font `NormalFont.ttf` not used (the file says FontStruct Non-Commercial); wreck composed from pack pieces first, with 0x72 "16x16 Pirates Tileset" (S4) as the supplement.
