@@ -10,8 +10,15 @@ const MOST_STEPS_PER_FRAME = 5;
 export class FixedStepClock {
   private owedMs = 0;
 
-  /** How many whole steps to run for a frame that took `frameMs`. Time left over is kept for the next frame. */
-  stepsDue(frameMs: number): number {
+  /**
+   * How many whole steps to run for a frame that took `frameMs`. Time left over is kept for the next frame. While
+   * nobody is `watching` no step is due, and the time that passes is not owed afterwards: the game does not catch up.
+   */
+  stepsDue(frameMs: number, watching: boolean): number {
+    if (!watching) {
+      this.owedMs = 0;
+      return 0;
+    }
     this.owedMs += Math.min(frameMs, LONGEST_FRAME_MS);
     let steps = 0;
     while (this.owedMs >= STEP_MS && steps < MOST_STEPS_PER_FRAME) {

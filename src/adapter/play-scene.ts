@@ -59,11 +59,8 @@ export class PlayScene extends Phaser.Scene {
     for (const command of this.playerInput.poll()) {
       events.push(...this.core.send(command));
     }
-    // The clock is left alone while nobody is watching, so no time is owed afterwards: the game does not catch up.
-    if (watching) {
-      for (let steps = this.clock.stepsDue(frameMs); steps > 0; steps -= 1) {
-        events.push(...this.core.step());
-      }
+    for (let steps = this.clock.stepsDue(frameMs, watching); steps > 0; steps -= 1) {
+      events.push(...this.core.step());
     }
     this.feedback.age(frameMs);
     this.feedback.show(events);
