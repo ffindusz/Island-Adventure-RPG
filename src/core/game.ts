@@ -1,5 +1,6 @@
 import { ageAreaText, crossExits, enterArea } from './areas';
 import { flyArrows } from './arrows';
+import { revealAroundHero } from './automap';
 import { stepMonsters } from './behaviors';
 import { coolDownHero } from './combat';
 import { activateCheckpoints, touchedCheckpoints } from './checkpoints';
@@ -32,6 +33,7 @@ export function createGame(options: GameOptions): Game {
         case 'new-game':
           state = newPlayState(content);
           held = [];
+          revealAroundHero(state, content);
           return enterArea(state, content);
         case 'continue':
           state = copyState(command.snapshot.state);

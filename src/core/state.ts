@@ -62,6 +62,11 @@ export interface AreaState {
   visited: boolean;
   /** The state of every interactable placed in the Adventure Area, by id. */
   interactables: Record<string, InteractableState>;
+  /**
+   * Whether the Automap has revealed the terrain of each tile, indexed [row][col]. A tile is revealed when the hero
+   * comes within the reveal distance of it (see automap.ts) and stays revealed for good, defeat included.
+   */
+  revealed: boolean[][];
 }
 
 export interface HeroState {
@@ -86,7 +91,7 @@ export interface HeroState {
 }
 
 /** The pages that can be open over the game, one at a time. A new page is one more id here and one more view. */
-export const PAGE_IDS = ['stats', 'inventory'] as const;
+export const PAGE_IDS = ['stats', 'inventory', 'automap'] as const;
 export type PageId = (typeof PAGE_IDS)[number];
 
 /** An arrow in flight. Like all state it is plain data, so the arrows in the air are saved with the game. */
@@ -159,6 +164,7 @@ export function newPlayState(content: Content): PlayState {
       reachedMilestones: [],
       visited: false,
       interactables: freshInteractables(area),
+      revealed: freshRevealed(area),
     };
   }
   const state: PlayState = {
@@ -210,6 +216,11 @@ export function freshInteractables(area: Area): Record<string, InteractableState
     fresh[interactable.id] = freshInteractable(interactable);
   }
   return fresh;
+}
+
+/** What the Automap shows of an Adventure Area before the hero has been in it: every tile hidden. */
+function freshRevealed(area: Area): boolean[][] {
+  return area.terrain.map((row) => row.map(() => false));
 }
 
 function freshInteractable(interactable: Interactable): InteractableState {

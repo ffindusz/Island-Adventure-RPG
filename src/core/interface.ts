@@ -277,7 +277,7 @@ export interface StatPageView {
 }
 
 /** A page that is open over the game. One kind for each page id; `id` says which. */
-export type PageView = StatPageView | InventoryPageView;
+export type PageView = StatPageView | InventoryPageView | AutomapPageView;
 
 /** A piece of Gear as the player reads about it. */
 export interface GearInfo {
@@ -305,6 +305,32 @@ export interface InventoryPageView {
   /** The hero's Attack and Defense, with the equipped Gear counted in. The Attack is that of the weapon in hand. */
   readonly attack: number;
   readonly defense: number;
+}
+
+/**
+ * The Automap page: the whole route, with as much of each Adventure Area as the hero has explored. It is built only
+ * while the page is open.
+ */
+export interface AutomapPageView {
+  readonly id: 'automap';
+  /** Every Adventure Area of the content, in the order the content lists them: the order of the route. */
+  readonly areas: readonly AutomapAreaView[];
+}
+
+/** An Adventure Area on the Automap. */
+export interface AutomapAreaView {
+  readonly id: string;
+  /** What it is called, or null while the hero has not been in it: the route shows the area, but not what it is. */
+  readonly name: string | null;
+  /** Size in tiles. */
+  readonly width: number;
+  readonly height: number;
+  /** Whether the hero is in this area now. */
+  readonly current: boolean;
+  /** Whether the hero has been in this area, so that it has explored some of it. */
+  readonly discovered: boolean;
+  /** The kind of terrain on each tile the hero has explored, indexed [row][col]; null on a tile it has not. */
+  readonly terrain: readonly (readonly (string | null)[])[];
 }
 
 /** One place a Stat Point can go. */

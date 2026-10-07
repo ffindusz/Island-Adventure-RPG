@@ -148,6 +148,9 @@ function pagePanel(page: PageView, hero: HeroView, inventoryCursor: number): Pan
       return statPagePanel(page);
     case 'inventory':
       return inventoryPagePanel(page, hero, inventoryCursor);
+    case 'automap':
+      // Until the adapter draws the map, the page only says it is open.
+      return { width: NARROW_PANEL, rows: [{ kind: 'text', text: 'AUTOMAP', colour: TITLE_COLOUR }] };
   }
 }
 

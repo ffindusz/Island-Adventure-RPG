@@ -35,6 +35,9 @@ const DEFAULT_MINIMUM_DAMAGE = 1;
 /** Used when the content does not set how long area text stays on the screen. */
 const DEFAULT_AREA_TEXT_MS = 4000;
 
+/** Used when the content does not set how far from the hero the Automap reveals terrain, in tiles. */
+const DEFAULT_AUTOMAP_REVEAL_DISTANCE = 4;
+
 /** A milestone as the rules use it: its zone is a box in tile units, like the bodies it is compared with. */
 export interface Milestone {
   readonly id: string;
@@ -167,6 +170,8 @@ export interface Content {
   readonly areas: Readonly<Record<string, Area>>;
   /** How many fixed steps the text of an Adventure Area stays on the screen. */
   readonly areaTextSteps: number;
+  /** How far from the hero's tile the Automap reveals terrain, in tiles. */
+  readonly automapRevealDistance: number;
   readonly start: { readonly areaId: string; readonly tile: Tile };
 }
 
@@ -236,6 +241,7 @@ export function loadContent(definition: ContentDefinition): Content {
     monsterTypes,
     areas,
     areaTextSteps: msToSteps(areaTextMs),
+    automapRevealDistance: definition.automapRevealDistance ?? DEFAULT_AUTOMAP_REVEAL_DISTANCE,
     start: { areaId: definition.start.area, tile: definition.start.tile },
   };
 }

@@ -39,6 +39,8 @@ export type { Box, Direction, Point, Tile } from './geometry';
 export type {
   AreaView,
   ArrowView,
+  AutomapAreaView,
+  AutomapPageView,
   CheckpointView,
   ChestView,
   Command,

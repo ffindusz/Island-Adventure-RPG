@@ -326,6 +326,11 @@ export interface ContentDefinition {
   readonly monsterTypes: Readonly<Record<string, MonsterTypeDefinition>>;
   /** How long the text of an Adventure Area stays on screen, in milliseconds. Leave it out for the default of 4000. */
   readonly areaTextMs?: number;
+  /**
+   * How far from the hero's tile the Automap reveals terrain, in tiles: every tile whose middle is no farther than this
+   * from the middle of the hero's tile. Leave it out for the default of 4.
+   */
+  readonly automapRevealDistance?: number;
   readonly areas: readonly AreaDefinition[];
   /** Where a new game begins: the hero stands at the centre of this tile, which must not be solid. */
   readonly start: { readonly area: string; readonly tile: Tile };
