@@ -1,12 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import type { CheckpointDefinition } from '../src/core';
-import { advance, playingView, walk } from './fixtures';
-import { chargerAt, enemyField, shooterAt } from './enemy-fixtures';
+import type { CheckpointDefinition, ContentDefinition, ExitDefinition, Game, GameEvent, MonsterPlacement } from '../src/core';
+import { FIELD_LAYOUT, advance, biterAt, face, frailMonster, monsterNamed, newGame, playingView, strike, walk } from './fixtures';
+import { chargerAt, enemyContent, enemyField, shooterAt } from './enemy-fixtures';
 
 // Chargers and ranged attackers with the Checkpoints and the defeat of Checkpoints (checkpoints.test.ts). The timelines
 // are those of charger.test.ts and projectile.test.ts: a charger or a shooter in the tile (2, 3) launches its dash or
 // fires in step 31, the dash, 0.25 tile a step, would meet a hero who stays at (6.5, 3.5) in step 45 and the shot, 0.0625
 // tile a step, in step 89.
+
+/** Steps the game until the hero is defeated, which has to happen within 300 steps. Returns the events of that step. */
+function untilDefeated(game: Game): readonly GameEvent[] {
+  for (let step = 0; step < 300; step += 1) {
+    const events = game.step();
+    if (events.some((event) => event.type === 'hero-defeated')) {
+      return events;
+    }
+  }
+  throw new Error('The hero was not defeated within 300 steps');
+}
 
 const CAMP: CheckpointDefinition = { id: 'camp', tile: { col: 5, row: 3 } };
 const CAMP_ACTIVATED = { type: 'checkpoint-activated', checkpointId: 'camp' } as const;
@@ -47,5 +58,171 @@ describe('a hero who comes onto a Checkpoint as a monster defeats it', () => {
     const view = playingView(game);
     expect(view.hero).toMatchObject({ position: { x: 5.5, y: 3.5 }, health: 4 });
     expect(view.checkpoints).toEqual([{ id: 'camp', position: { x: 5.5, y: 3.5 }, size: 1, active: true }]);
+  });
+});
+
+// The world of the falls below: the arena is the wide field of enemy-fixtures.ts and the cellar a second one.
+//
+//   arena   the hero begins at (6.5, 3.5); a weakling stands on the tile (5, 3) and the hero strikes it down first; the
+//           camp, a Checkpoint, is on the tile (7, 3), the exit "to-cellar" on the tile (8, 3) and the entrance
+//           "from-cellar" on the tile (11, 3)
+//   cellar  the entrance "from-arena" is on the tile (2, 3): the hero arrives there, at (2.5, 3.5), and stays; the exit
+//           "to-arena" is on the tile (1, 3); the monsters and a Checkpoint are up to each test
+//
+// The hero's body overlaps the camp on its 3rd step to the right and the exit on its 11th. It has 4 Health, which a bite
+// (5), a dash (6) and a shot (4) all take. The monsters of the cellar first act in the step after the hero arrives.
+
+const EXIT_CAMP: CheckpointDefinition = { id: 'exit-camp', tile: { col: 7, row: 3 } };
+const EXIT_CAMP_ACTIVATED = { type: 'checkpoint-activated', checkpointId: 'exit-camp' } as const;
+const EXIT_CAMP_VIEW = { id: 'exit-camp', position: { x: 7.5, y: 3.5 }, size: 1 };
+const CELLAR_DOOR: CheckpointDefinition = { id: 'cellar-door', tile: { col: 2, row: 3 } };
+const CELLAR_CORNER: CheckpointDefinition = { id: 'cellar-corner', tile: { col: 12, row: 5 } };
+const TO_CELLAR: ExitDefinition = {
+  id: 'to-cellar',
+  zone: { col: 8, row: 3, width: 1, height: 1 },
+  to: { area: 'cellar', entrance: 'from-arena' },
+};
+const TO_ARENA: ExitDefinition = {
+  id: 'to-arena',
+  zone: { col: 1, row: 3, width: 1, height: 1 },
+  to: { area: 'arena', entrance: 'from-cellar' },
+};
+
+function world(
+  cellar: readonly MonsterPlacement[],
+  cellarCheckpoint: CheckpointDefinition,
+  arena: readonly MonsterPlacement[] = [],
+): ContentDefinition {
+  return enemyContent([{ id: 'weakling', type: 'weakling', tile: { col: 5, row: 3 } }, ...arena], {
+    hero: { health: 4 },
+    checkpoints: [EXIT_CAMP],
+    entrances: [{ id: 'from-cellar', tile: { col: 11, row: 3 } }],
+    exits: [TO_CELLAR],
+    monsterTypes: { weakling: frailMonster(0) },
+    otherAreas: [
+      {
+        id: 'cellar',
+        name: 'Cellar',
+        layout: FIELD_LAYOUT,
+        monsters: cellar,
+        entrances: [{ id: 'from-arena', tile: { col: 2, row: 3 } }],
+        exits: [TO_ARENA],
+        checkpoints: [cellarCheckpoint],
+      },
+    ],
+  });
+}
+
+/** The hero strikes down the weakling, touches the camp on its way to the exit and arrives in the cellar. */
+function intoTheCellar(game: Game): void {
+  face(game, 'left');
+  strike(game);
+  expect(playingView(game).monsters).toEqual([]);
+
+  const events = walk(game, 'right', 11);
+
+  expect(events).toContainEqual(EXIT_CAMP_ACTIVATED);
+  expect(events).toContainEqual({ type: 'area-changed', areaId: 'cellar' });
+}
+
+// What defeats the hero: a monster of the cellar, with the damage it does and the place it stands on, which defeat puts
+// it back to. The biter's reach covers the hero where it arrives and its hit lands in the 31st step after the arrival;
+// the charger and the shooter are in the row of the hero, and their hits land in the 49th step (the dash) and in the 89th.
+const KILLERS = [
+  {
+    how: 'a biter',
+    monster: biterAt('killer', 3, 3),
+    hit: { type: 'hero-hit', monsterId: 'killer', damage: 5, health: 0 },
+    home: { x: 3.5, y: 3.5 },
+  },
+  {
+    how: 'the dash of a charger',
+    monster: chargerAt('killer', 7, 3),
+    hit: { type: 'hero-hit', monsterId: 'killer', damage: 6, health: 0 },
+    home: { x: 7.5, y: 3.5 },
+  },
+  {
+    how: 'the projectile of a shooter',
+    monster: shooterAt('killer', 6, 3),
+    hit: { type: 'hero-hit', monsterId: 'killer', damage: 4, health: 0 },
+    home: { x: 6.5, y: 3.5 },
+  },
+] as const;
+
+describe('a hero defeated in the cellar with its Checkpoint in the arena', () => {
+  it.each(KILLERS)('sends a hero defeated by $how back to the camp in the arena, at full Health', ({ monster, hit }) => {
+    const game = newGame(world([monster], CELLAR_CORNER));
+    intoTheCellar(game);
+
+    const events = untilDefeated(game);
+
+    expect(events.slice(-3)).toEqual([hit, { type: 'hero-defeated' }, { type: 'area-changed', areaId: 'arena' }]);
+    const view = playingView(game);
+    expect(view.area.id).toBe('arena');
+    expect(view.hero).toMatchObject({ position: { x: 7.5, y: 3.5 }, health: 4 });
+    expect(view.checkpoints).toEqual([{ ...EXIT_CAMP_VIEW, active: true }]);
+  });
+
+  it.each(KILLERS)('starts the arena over and leaves no arrow in the air when $how defeated the hero', ({ monster }) => {
+    const game = newGame(world([monster], CELLAR_CORNER));
+    intoTheCellar(game);
+
+    untilDefeated(game);
+
+    expect(monsterNamed(game, 'weakling')).toMatchObject({ health: 1, action: { type: 'idle' } });
+    expect(playingView(game).arrows).toEqual([]);
+    expect(game.snapshot().state.arrows).toEqual([]);
+  });
+
+  it.each(KILLERS)('leaves the monsters of the cellar calm when $how defeated the hero', ({ monster }) => {
+    const game = newGame(world([monster], CELLAR_CORNER));
+    intoTheCellar(game);
+
+    untilDefeated(game);
+
+    const { monsters } = game.snapshot().state.areas['cellar'] ?? { monsters: [] };
+    expect(monsters.map(({ id, action }) => ({ id, action }))).toEqual([{ id: 'killer', action: { type: 'idle' } }]);
+  });
+});
+
+describe('a hero defeated in the cellar with its Checkpoint in the cellar', () => {
+  // The hero touches the door of the cellar as it arrives, after the camp: the door is the Checkpoint it touched last.
+  it.each(KILLERS)('sends a hero defeated by $how back to the door of the cellar, at full Health', ({ monster, hit }) => {
+    const game = newGame(world([monster], CELLAR_DOOR));
+    intoTheCellar(game);
+
+    const events = untilDefeated(game);
+
+    expect(events.slice(-2)).toEqual([hit, { type: 'hero-defeated' }]);
+    expect(events).not.toContainEqual(expect.objectContaining({ type: 'area-changed' }));
+    const view = playingView(game);
+    expect(view.area.id).toBe('cellar');
+    expect(view.hero).toMatchObject({ position: { x: 2.5, y: 3.5 }, health: 4 });
+  });
+
+  it.each(KILLERS)('starts the cellar over when $how defeated the hero: its monster is new and first acts in the next step', ({ monster, home }) => {
+    const game = newGame(world([monster], CELLAR_DOOR));
+    intoTheCellar(game);
+
+    untilDefeated(game);
+
+    expect(monsterNamed(game, 'killer')).toMatchObject({ position: home, health: 3, action: { type: 'idle' } });
+  });
+});
+
+describe('a projectile that defeats a hero in the step it walks into an exit', () => {
+  // The shooter on the tile (9, 3), behind the exit, fires in step 31 along the row of the hero, which waits until step 40
+  // and then walks right: it is in the exit on the 11th step, step 51. The tip of the projectile is at 8.125 in that step,
+  // where the right edge of the hero is, and at 8.1875 in step 50, when the edge is at 8.
+  it('hits first: the hero is back at the camp it touched on its way, and has not gone through the exit', () => {
+    const game = newGame(world([], CELLAR_CORNER, [shooterAt('shooter-1', 9, 3)]));
+    advance(game, 40);
+
+    const events = walk(game, 'right', 11);
+
+    expect(events).toEqual([EXIT_CAMP_ACTIVATED, { type: 'hero-hit', monsterId: 'shooter-1', damage: 4, health: 0 }, { type: 'hero-defeated' }]);
+    const view = playingView(game);
+    expect(view.area.id).toBe('arena');
+    expect(view.hero).toMatchObject({ position: { x: 7.5, y: 3.5 }, health: 4 });
   });
 });
