@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
 import { STEPS_PER_SECOND, createGame } from '../src/core';
-import type { Direction, Game, GameEvent, InventoryPageView } from '../src/core';
+import type {
+  AreaDefinition,
+  AutomapAreaView,
+  AutomapPageView,
+  Direction,
+  Game,
+  GameEvent,
+  InventoryPageView,
+} from '../src/core';
 import { fixedRandom, playingView, walk } from './fixtures';
 
 // Only what must hold for any content the game ships with. The tests of the rules use purpose-built content
@@ -9,6 +17,8 @@ import { fixedRandom, playingView, walk } from './fixtures';
 
 const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
 const CLOSE_INVENTORY = { type: 'close-page', page: 'inventory' } as const;
+const OPEN_AUTOMAP = { type: 'open-page', page: 'automap' } as const;
+const CLOSE_AUTOMAP = { type: 'close-page', page: 'automap' } as const;
 
 function newShippedGame() {
   const game = createGame({ content: gameContent, random: fixedRandom });
@@ -25,6 +35,33 @@ function inventoryOf(game: Game): InventoryPageView {
     throw new Error('The inventory page did not open');
   }
   return page;
+}
+
+/** What the Automap page shows now. It is closed again afterwards, so that the hero can walk. */
+function automapOf(game: Game): AutomapPageView {
+  game.send(OPEN_AUTOMAP);
+  const { page } = playingView(game);
+  game.send(CLOSE_AUTOMAP);
+  if (page?.id !== 'automap') {
+    throw new Error('The Automap page did not open');
+  }
+  return page;
+}
+
+function areaOnMap(page: AutomapPageView, id: string): AutomapAreaView {
+  const area = page.areas.find((candidate) => candidate.id === id);
+  if (area === undefined) {
+    throw new Error(`The Automap shows no area "${id}"`);
+  }
+  return area;
+}
+
+function definitionOf(id: string): AreaDefinition {
+  const area = gameContent.areas.find((candidate) => candidate.id === id);
+  if (area === undefined) {
+    throw new Error(`The content has no area "${id}"`);
+  }
+  return area;
 }
 
 describe('the content the game ships with', () => {
@@ -176,5 +213,66 @@ describe('the content the game ships with', () => {
 
     expect(chances.length).toBeGreaterThan(0);
     expect(chances.every((chance) => chance > 0 && chance < 1)).toBe(true);
+  });
+});
+
+describe('the Automap of the content the game ships with', () => {
+  const { area: startAreaId, tile: startTile } = gameContent.start;
+  const wayOut = definitionOf(startAreaId).exits ?? [];
+  const wayOutIds = wayOut.map(({ id }) => id);
+
+  /** Walks straight right from the start, through the gap in the rock wall, towards the way out of the first area. */
+  function walkRightWhile(game: Game, keepGoing: () => boolean): void {
+    for (let step = 0; step < 600 && keepGoing(); step += 1) {
+      walk(game, 'right', 1);
+    }
+  }
+
+  function exitIdsOnMap(game: Game, areaId: string): string[] {
+    return areaOnMap(automapOf(game), areaId).exits.map(({ id }) => id);
+  }
+
+  it('starts with what is around the hero only: the route from where the adventure begins, no exit found', () => {
+    const page = automapOf(newShippedGame());
+
+    expect(page.areas[0]?.id, 'the route begins where the adventure does').toBe(startAreaId);
+    const start = areaOnMap(page, startAreaId);
+    expect(start.current).toBe(true);
+    const around = [startTile.row - 1, startTile.row, startTile.row + 1].flatMap((row) =>
+      [startTile.col - 1, startTile.col, startTile.col + 1].map((col) => start.terrain[row]?.[col]),
+    );
+    expect(around.every((kind) => typeof kind === 'string'), 'the hero sees the tiles right around it').toBe(true);
+    expect(start.terrain.flat(), 'and not all of the area').toContain(null);
+    const others = page.areas.filter((area) => area.id !== startAreaId);
+    expect(others, 'the route goes on').not.toEqual([]);
+    expect(others.every((area) => !area.discovered && area.name === null)).toBe(true);
+    expect(page.areas.flatMap((area) => area.exits), 'no way out is found yet').toEqual([]);
+  });
+
+  it('marks the way out of the first area before the hero reaches it', () => {
+    const game = newShippedGame();
+    const inFirstArea = () => playingView(game).area.id === startAreaId;
+    const wayOutFound = () => exitIdsOnMap(game, startAreaId).length > 0;
+
+    walkRightWhile(game, () => inFirstArea() && !wayOutFound());
+
+    expect(inFirstArea(), 'the hero has not crossed yet').toBe(true);
+    expect(exitIdsOnMap(game, startAreaId)).toEqual(wayOutIds);
+  });
+
+  it('shows the next area, with the hero in it, once the hero crosses into it, and keeps the first', () => {
+    const game = newShippedGame();
+    const nextAreaId = wayOut[0]?.to.area ?? '';
+
+    walkRightWhile(game, () => playingView(game).area.id === startAreaId);
+
+    expect(playingView(game).area.id, 'the hero has crossed').toBe(nextAreaId);
+    const page = automapOf(game);
+    const first = areaOnMap(page, startAreaId);
+    expect(first).toMatchObject({ discovered: true, current: false, hero: null });
+    const next = areaOnMap(page, nextAreaId);
+    expect(next).toMatchObject({ discovered: true, current: true, name: definitionOf(nextAreaId).name });
+    expect(next.hero).toEqual(playingView(game).hero.position);
+    expect(next.connections).toEqual([startAreaId]);
   });
 });

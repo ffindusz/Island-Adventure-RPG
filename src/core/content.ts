@@ -38,6 +38,9 @@ const DEFAULT_MINIMUM_DAMAGE = 1;
 /** Used when the content does not set how long area text stays on the screen. */
 const DEFAULT_AREA_TEXT_MS = 4000;
 
+/** Used when the content does not set how far from the hero the Automap reveals terrain, in tiles. */
+const DEFAULT_AUTOMAP_REVEAL_DISTANCE = 4;
+
 /** A milestone as the rules use it: its zone is a box in tile units, like the bodies it is compared with. */
 export interface Milestone {
   readonly id: string;
@@ -216,8 +219,12 @@ export interface Content {
   readonly gear: Readonly<Record<string, GearDefinition>>;
   readonly monsterTypes: Readonly<Record<string, MonsterType>>;
   readonly areas: Readonly<Record<string, Area>>;
+  /** The ids of the areas in the order the definition lists them, which an object does not keep for all keys. */
+  readonly areaOrder: readonly string[];
   /** How many fixed steps the text of an Adventure Area stays on the screen. */
   readonly areaTextSteps: number;
+  /** How far from the hero's tile the Automap reveals terrain, in tiles. */
+  readonly automapRevealDistance: number;
   readonly start: { readonly areaId: string; readonly tile: Tile };
 }
 
@@ -236,6 +243,8 @@ export function loadContent(definition: ContentDefinition): Content {
     );
   }
   const progression = loadProgression(definition.progression);
+  const automapRevealDistance = definition.automapRevealDistance ?? DEFAULT_AUTOMAP_REVEAL_DISTANCE;
+  requireZeroOrMore('The Automap reveal distance', automapRevealDistance);
   requireMoreThanZero('The Health a Healing Potion restores', definition.healingPotion.restores);
   const monsterTypes: Record<string, MonsterType> = {};
   for (const [name, monsterType] of Object.entries(definition.monsterTypes)) {
@@ -287,7 +296,9 @@ export function loadContent(definition: ContentDefinition): Content {
     gear,
     monsterTypes,
     areas,
+    areaOrder: definition.areas.map((area) => area.id),
     areaTextSteps: msToSteps(areaTextMs),
+    automapRevealDistance,
     start: { areaId: definition.start.area, tile: definition.start.tile },
   };
 }

@@ -1,6 +1,7 @@
 import { arrowSizeOf } from './arrows';
 import { areaOf, monsterTypeOf } from './content';
 import type { Content, Interactable } from './content';
+import { automapPage } from './automap';
 import { isActive } from './checkpoints';
 import { STAT_IDS } from './definitions';
 import { carriedGear } from './gear';
@@ -120,6 +121,8 @@ function pageView(state: PlayState, content: Content): PageView | null {
         attack: heroAttack(state, content),
         defense: heroDefense(state, content),
       };
+    case 'automap':
+      return automapPage(state, content);
   }
 }
 

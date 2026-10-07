@@ -1,5 +1,6 @@
 import { ageAreaText, crossExits, enterArea } from './areas';
 import { flyArrows } from './arrows';
+import { revealAroundHero } from './automap';
 import { stepMonsters } from './behaviors';
 import { coolDownHero } from './combat';
 import { activateCheckpoints, touchedCheckpoints } from './checkpoints';
@@ -32,6 +33,7 @@ export function createGame(options: GameOptions): Game {
         case 'new-game':
           state = newPlayState(content);
           held = [];
+          revealAroundHero(state, content);
           return enterArea(state, content);
         case 'continue':
           state = copyState(command.snapshot.state);
@@ -86,6 +88,7 @@ export function createGame(options: GameOptions): Game {
       coolDownHero(state);
       const touchedBefore = touchedCheckpoints(state, content);
       walkHero(state, content, held.at(-1));
+      revealAroundHero(state, content);
       // The hero is where it walked to when it reaches a milestone, takes a pickup or comes onto a Checkpoint: the
       // pickups come first, so that a Checkpoint is activated with them taken. Then the arrows fly, a hero that
       // walked into an exit goes through it, and otherwise the monsters act.

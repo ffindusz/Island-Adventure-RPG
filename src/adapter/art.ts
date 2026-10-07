@@ -103,6 +103,11 @@ function fillWithOutline(graphics: Graphics, rect: Rect, fill: number, outline: 
   graphics.fillRect(rect.x + 1, rect.y + 1, rect.width - 2, rect.height - 2);
 }
 
+/** The colour of a kind of terrain. The maps of the Automap are coloured the same way as the ground. */
+export function terrainColour(kind: string): number {
+  return TERRAIN_COLOURS[kind] ?? UNKNOWN_COLOUR;
+}
+
 /** Draws the ground of the whole area. Call it once per area: terrain never changes. */
 export function drawTerrain(graphics: Graphics, area: AreaView): void {
   graphics.clear();
@@ -110,7 +115,7 @@ export function drawTerrain(graphics: Graphics, area: AreaView): void {
     row.forEach((kind, colIndex) => {
       const x = colIndex * TILE_SIZE;
       const y = rowIndex * TILE_SIZE;
-      graphics.fillStyle(TERRAIN_COLOURS[kind] ?? UNKNOWN_COLOUR);
+      graphics.fillStyle(terrainColour(kind));
       graphics.fillRect(x, y, TILE_SIZE, TILE_SIZE);
       // A faint edge on two sides, so single tiles can be told apart and blurry scaling would show.
       graphics.fillStyle(0x000000, 0.12);

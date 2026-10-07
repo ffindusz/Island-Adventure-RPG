@@ -13,6 +13,7 @@ import {
 } from './art';
 import { ARTWORK } from './artwork';
 import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
+import { AutomapPage } from './automap-page';
 import { scrollFor } from './camera';
 import { DEPTH } from './depths';
 import { Fall, FALL_FADE_OUT_MS } from './fall';
@@ -57,6 +58,7 @@ export class PlayScene extends Phaser.Scene {
   private banner!: AreaBanner;
   private notice!: Notice;
   private overlay!: Overlay;
+  private automapPage!: AutomapPage;
   private terrainLayer!: Phaser.GameObjects.Graphics;
   private telegraphLayer!: Phaser.GameObjects.Graphics;
   private entityLayer!: Phaser.GameObjects.Graphics;
@@ -84,8 +86,8 @@ export class PlayScene extends Phaser.Scene {
     // Added in drawing order: ground, then the telegraphs of monster attacks, then Checkpoints, chests, monsters and
     // their projectiles, which share the lowest depth. The hero and its arrows are sprites above them (see depths.ts),
     // and the strikes of the monsters above those. The HUD draws above them all, then the text of the area, the notice
-    // above that, and the overlay above that. The world scrolls with the camera; the HUD, the text, the notice and the
-    // overlay do not.
+    // above that, and the overlay above that, which shares its place with the Automap page. The world scrolls with the
+    // camera; the HUD, the text, the notice, the overlay and the Automap page do not.
     this.terrainLayer = this.add.graphics();
     this.drawnAreaId = null;
     this.lastPlaying = null;
@@ -98,6 +100,7 @@ export class PlayScene extends Phaser.Scene {
     this.banner = new AreaBanner(this);
     this.notice = new Notice(this);
     this.overlay = new Overlay(this);
+    this.automapPage = new AutomapPage(this);
     const keyboard = this.input.keyboard;
     if (keyboard === null) {
       throw new Error('The keyboard plugin is not available, so nothing could control the hero.');
@@ -105,12 +108,12 @@ export class PlayScene extends Phaser.Scene {
     this.playerInput = new PlayerInput(keyboard);
   }
 
-  override update(_time: number, frameMs: number): void {
+  override update(time: number, frameMs: number): void {
     const watching = playerIsWatching();
     if (this.fall !== null) {
       this.fall.age(frameMs);
       if (this.fall.stage !== 'over') {
-        this.showFall(this.fall, frameMs, watching);
+        this.showFall(this.fall, frameMs, watching, time);
         return;
       }
       this.endFall();
@@ -151,7 +154,7 @@ export class PlayScene extends Phaser.Scene {
       // the place the hero fell in (see fall.ts).
       this.fall = new Fall(this.lastPlaying ?? view);
       this.fadingOut = false;
-      this.draw(this.fall.view, watching);
+      this.draw(this.fall.view, watching, time);
       return;
     }
     if (events.some((event) => event.type === 'area-changed')) {
@@ -162,14 +165,14 @@ export class PlayScene extends Phaser.Scene {
       // A page or a Stat Point covers the notice, and the player is already where it pointed them.
       this.feedback.dismissNotice();
     }
-    this.draw(view, watching);
+    this.draw(view, watching, time);
     if (view.phase === 'playing') {
       this.lastPlaying = view;
     }
   }
 
   /** One frame of a fall: the world stands still with the hero lying in it, and at the end the screen fades out. */
-  private showFall(fall: Fall, frameMs: number, watching: boolean): void {
+  private showFall(fall: Fall, frameMs: number, watching: boolean, time: number): void {
     // What the player presses meanwhile does not count. The walk keys are read again when the fall is over.
     this.playerInput.pollMenu();
     this.playerInput.pollActions();
@@ -179,7 +182,7 @@ export class PlayScene extends Phaser.Scene {
       this.fadingOut = true;
       this.cameras.main.fadeOut(FALL_FADE_OUT_MS, 0, 0, 0);
     }
-    this.draw(fall.view, watching);
+    this.draw(fall.view, watching, time);
   }
 
   /** The screen is black: the hero stands at its Checkpoint, whole again, and the place it returned to fades in. */
@@ -193,7 +196,7 @@ export class PlayScene extends Phaser.Scene {
     this.cameras.main.fadeIn(DEFEAT_FADE_MS, 0, 0, 0);
   }
 
-  private draw(view: GameView, watching: boolean): void {
+  private draw(view: GameView, watching: boolean, time: number): void {
     if (view.phase !== 'playing') {
       return;
     }
@@ -231,5 +234,6 @@ export class PlayScene extends Phaser.Scene {
     this.banner.draw(gameIsWaiting(view) ? null : view.areaText);
     this.notice.draw(this.feedback.notice());
     this.overlay.draw(view, watching, this.inventoryMenu.position);
+    this.automapPage.draw(view, time);
   }
 }
