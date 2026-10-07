@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { StatId } from '../src/core';
 import {
   COOLDOWN_STEPS,
+  FIELD_LAYOUT,
+  STEPS_PER_TILE,
   advance,
   arena,
   biterAt,
@@ -12,6 +14,7 @@ import {
   playingView,
   prizes,
   strike,
+  walk,
 } from './fixtures';
 
 const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
@@ -274,5 +277,43 @@ describe('equipping Gear', () => {
     expect(game.send({ type: 'attack' }), 'one step short of the cooldown').toEqual([]);
     advance(game, 1);
     expect(game.send({ type: 'attack' })).toHaveLength(1);
+  });
+});
+
+describe('what the hero can carry', () => {
+  it('has no limit: it takes every piece of Gear it finds, however many', () => {
+    // Two chests, above and below the hero, in each of the 12 columns of the field it walks along: 24 spare pieces.
+    const spare = Array.from({ length: 24 }, (_, index) => `spare-${index + 1}`);
+    const gear = Object.fromEntries(spare.map((id) => [id, { name: id, slot: 'armor', bonus: 0 } as const]));
+    const interactables = spare.map((id, index) =>
+      chestAt(`chest-${index + 1}`, 1 + Math.floor(index / 2), index % 2 === 0 ? 2 : 4, id),
+    );
+    const game = newGame(
+      arena({ layout: FIELD_LAYOUT, start: { area: 'arena', tile: { col: 1, row: 3 } }, gear, interactables }),
+    );
+
+    let opened = 0;
+    for (let column = 1; column <= 12; column++) {
+      if (column > 1) {
+        walk(game, 'right', STEPS_PER_TILE);
+      }
+      for (const side of ['up', 'down'] as const) {
+        face(game, side);
+        opened += game.send(INTERACT).filter((event) => event.type === 'chest-opened').length;
+      }
+    }
+    game.send(OPEN_INVENTORY);
+
+    const { page } = playingView(game);
+    expect(opened).toBe(24);
+    expect(page).toMatchObject({ id: 'inventory', attack: 1, defense: 0 });
+    expect(page?.id === 'inventory' ? page.gear.map((piece) => piece.id) : []).toEqual([
+      'basic-sword',
+      'basic-armor',
+      ...spare,
+    ]);
+    expect(game.send({ type: 'equip', gearId: 'spare-24' })).toEqual([
+      { type: 'gear-equipped', gearId: 'spare-24', slot: 'armor' },
+    ]);
   });
 });
