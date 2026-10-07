@@ -62,11 +62,17 @@ function awarenessOf(type: MonsterTypeDefinition): number {
   }
 }
 
+// The places where the hero is put down: it starts, arrives, or, defeated, comes back to a Checkpoint among new monsters.
 const SPOTS = gameContent.areas.flatMap((area) => [
   ...(area.entrances ?? []).map((entrance) => ({
     area: area.id,
     what: `the entrance ${entrance.id}`,
     tile: entrance.tile,
+  })),
+  ...(area.checkpoints ?? []).map((checkpoint) => ({
+    area: area.id,
+    what: `the Checkpoint ${checkpoint.id}`,
+    tile: checkpoint.tile,
   })),
   ...(gameContent.start.area === area.id ? [{ area: area.id, what: 'the start', tile: gameContent.start.tile }] : []),
 ]);
