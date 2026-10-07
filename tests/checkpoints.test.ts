@@ -498,6 +498,29 @@ describe('Defeat and the consumables', () => {
     expect(playingView(game).hero.consumables).toEqual({ ammunition: 5, 'healing-potion': 2 });
   });
 
+  it('does not put back a pickup the hero took in the other area before the Checkpoint', () => {
+    // The hero takes the 2 potions on the tile (3, 2) of the arena, goes through the exit and touches the door of the
+    // cellar as it arrives. The biter on the tile (3, 3) defeats it: it is back at the door, and goes through the exit
+    // on its 3rd step to the left.
+    const game = newGame(
+      world(
+        { hero: { health: 5 }, interactables: [pickupAt('arena-potions', 3, 2, 2)] },
+        { checkpoints: [DOOR], monsters: [biterAt('cellar-biter', 3, 3)] },
+      ),
+    );
+    expect(walk(game, 'up', 3)).toContainEqual(tookPotions(2));
+    walk(game, 'down', 3);
+    expect(walk(game, 'right', 11)).toContainEqual(DOOR_ACTIVATED);
+    untilDefeated(game);
+    expect(playingView(game).area.id).toBe('cellar');
+
+    walk(game, 'left', 3);
+
+    expect(playingView(game).area.id).toBe('arena');
+    expect(pickupIds(game)).toEqual([]);
+    expect(playingView(game).hero.consumables).toEqual({ ammunition: 0, 'healing-potion': 2 });
+  });
+
   it('keeps what the hero took on the very step it came onto the Checkpoint: the pickups are taken first', () => {
     // The hero walks right to x = 4, then down: on the 3rd step down its body comes onto the camp, on the tile (3, 4),
     // and onto the potions on the tile (4, 4) together. The biter's hit on the 31st step defeats it.
