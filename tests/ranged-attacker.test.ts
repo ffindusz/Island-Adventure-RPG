@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Game, GameEvent } from '../src/core';
 import { advance, monsterAction, monsterNamed, playingView, walk } from './fixtures';
-import { enemyField, shooterAt } from './enemy-fixtures';
+import { enemyField, shooterAt, untilFired } from './enemy-fixtures';
 
 // A shooter in tile (2, 3) stands at (2.5, 3.5), so its body spans x 2.25 to 2.75 and y 3.25 to 3.75. The hero stands at
 // (6.5, 3.5): its body spans x 6.25 to 6.75 and y 3.25 to 3.75, in the same row of space.
@@ -12,12 +11,6 @@ import { enemyField, shooterAt } from './enemy-fixtures';
 // hero's left edge is at x = 6.25, so the two meet after 58 moves, in step 89.
 
 const SHOOTER_BODY = { minX: 2.25, minY: 3.25, maxX: 2.75, maxY: 3.75 };
-
-/** Plays a game up to step 31, the one in which the shooter fires, and returns what happened in that step. */
-function untilFired(game: Game): readonly GameEvent[] {
-  advance(game, 30);
-  return game.step();
-}
 
 describe('a ranged attacker that has noticed the hero', () => {
   it('stands still while the hero is farther than it can notice', () => {

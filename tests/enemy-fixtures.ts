@@ -2,10 +2,11 @@ import type {
   ChargerMonsterDefinition,
   ContentDefinition,
   Game,
+  GameEvent,
   MonsterPlacement,
   RangedMonsterDefinition,
 } from '../src/core';
-import { arena, FIELD_LAYOUT, newGame } from './fixtures';
+import { advance, arena, FIELD_LAYOUT, newGame } from './fixtures';
 import type { ArenaOptions } from './fixtures';
 
 // The charger and the ranged attacker of the tests, in the wide field of fixtures.ts (14 x 7 tiles, walkable in
@@ -86,4 +87,13 @@ export function enemyContent(monsters: readonly MonsterPlacement[], options: Are
 /** A game in that field. */
 export function enemyField(monsters: readonly MonsterPlacement[], options: ArenaOptions = {}): Game {
   return newGame(enemyContent(monsters, options));
+}
+
+/**
+ * Plays a game of shooters up to step 31, the one in which a shooter that has the hero within reach from the first step
+ * fires, and returns what happened in that step.
+ */
+export function untilFired(game: Game): readonly GameEvent[] {
+  advance(game, 30);
+  return game.step();
 }
