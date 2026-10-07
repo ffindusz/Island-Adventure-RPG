@@ -13,9 +13,11 @@ import {
   FIELD_LAYOUT,
   advance,
   arena,
+  biterAt,
   gameAtTitle,
   milestone,
   newGame,
+  pickupAt,
   playingView,
   throughStorage,
   walk,
@@ -139,6 +141,26 @@ function crossExit(game: Game, direction: Direction): void {
   if (playingView(game).area.id === from) {
     throw new Error(`The hero did not leave area "${from}"`);
   }
+}
+
+/** What a distance of 1.5 reveals of the cellar or the attic when the hero has just arrived on tile (2, 3). */
+const AROUND_THE_ENTRANCE = [
+  '       ',
+  '       ',
+  ' .~.   ',
+  ' ...   ',
+  ' ...   ',
+  '       ',
+];
+
+/** Steps the game until the hero is defeated, which has to happen within 300 steps. */
+function untilDefeated(game: Game): void {
+  for (let step = 0; step < 300; step += 1) {
+    if (game.step().some((event) => event.type === 'hero-defeated')) {
+      return;
+    }
+  }
+  throw new Error('The hero was not defeated within 300 steps');
 }
 
 describe('The Automap at the start of the adventure', () => {
@@ -417,15 +439,6 @@ describe('Exits on the Automap', () => {
 
 describe('The Automap on arrival in another Adventure Area', () => {
   // A distance of 1.5 reveals the 3 x 3 square around the tile the hero is on. The hero arrives on tile (2, 3).
-  const AROUND_THE_ENTRANCE = [
-    '       ',
-    '       ',
-    ' .~.   ',
-    ' ...   ',
-    ' ...   ',
-    '       ',
-  ];
-
   it('reveals the terrain around the entrance at once, and shows the name of the area', () => {
     const game = newGame(route({ automapRevealDistance: 1.5 }));
 
@@ -585,5 +598,53 @@ describe('The Automap in a saved game', () => {
 
     expect(playingView(continued).page).toMatchObject({ id: 'automap' });
     expect(playingView(continued).page).toEqual(playingView(game).page);
+  });
+});
+
+describe('The Automap and defeat', () => {
+  // The hero has 5 Health, and the biter's hit on the 31st step takes all of it (see checkpoints.test.ts). The start of
+  // the adventure is the first Checkpoint, so defeat sends the hero back to tile (3, 3) of the arena.
+  const FRAIL = { automapRevealDistance: 1.5, hero: { health: 5 } };
+
+  const pickupsOnTheGround = (game: Game): string[] =>
+    playingView(game).interactables.flatMap((item) => (item.kind === 'pickup' ? [item.id] : []));
+
+  it('keeps what the hero has revealed, though the potions it found since the Checkpoint are taken back', () => {
+    const game = newGame(
+      arena({ ...FRAIL, monsters: [biterAt('biter', 4, 3)], interactables: [pickupAt('potions', 3, 2, 1)] }),
+    );
+    // The hero goes up to tile (3, 2) and takes the potions on the way. The squares around tile (3, 3), where it
+    // started, and around tile (3, 2) make a block of 3 columns and 4 rows.
+    const explored = ['       ', '  ...  ', '  ~..  ', '  ...  ', '  ..,  ', '       '];
+    walk(game, 'up', 8);
+    expect(pickupsOnTheGround(game)).toEqual([]);
+    expect(picture(areaOnMap(game, 'arena'))).toEqual(explored);
+
+    untilDefeated(game);
+
+    expect(pickupsOnTheGround(game)).toEqual(['potions']);
+    expect(picture(areaOnMap(game, 'arena'))).toEqual(explored);
+  });
+
+  it('keeps what the hero has revealed in both areas when defeat sends it from the cellar back to the arena', () => {
+    const cellar = { ...CELLAR_ROOM, monsters: [biterAt('cellar-biter', 3, 3)] };
+    const game = newGame(route({ ...FRAIL, otherAreas: [cellar, ATTIC_ROOM] }));
+    crossExit(game, 'right');
+    expect(areaOnMap(game, 'cellar').current).toBe(true);
+
+    untilDefeated(game);
+
+    expect(playingView(game).area.id).toBe('arena');
+    expect(picture(areaOnMap(game, 'cellar'))).toEqual(AROUND_THE_ENTRANCE);
+    expect(picture(areaOnMap(game, 'arena'))).toEqual([
+      '       ',
+      '       ',
+      '  ~... ',
+      '  .... ',
+      '  ..,. ',
+      '       ',
+    ]);
+    expect(areaOnMap(game, 'arena')).toMatchObject({ current: true, hero: { x: 3.5, y: 3.5 } });
+    expect(areaOnMap(game, 'cellar')).toMatchObject({ current: false, hero: null });
   });
 });
