@@ -32,6 +32,8 @@ export function buildView(state: GameState, content: Content): GameView {
       facing: state.hero.facing,
       health: state.hero.health,
       maxHealth: heroMaxHealth(state, content),
+      activeWeapon: state.hero.activeWeapon,
+      consumables: { ...state.hero.consumables },
     },
     monsters: livingMonsters(state).map((monster) => {
       const type = monsterTypeOf(content, monster.type);
@@ -45,6 +47,13 @@ export function buildView(state: GameState, content: Content): GameView {
         action: actionView(monster.action),
       };
     }),
+    arrows: state.arrows
+      .filter((arrow) => arrow.areaId === state.areaId)
+      .map((arrow) => ({
+        position: { x: arrow.position.x, y: arrow.position.y },
+        direction: arrow.direction,
+        size: content.hero.rangedWeapon.arrowSize,
+      })),
     interactables: area.interactables.map((interactable) => interactableView(interactable, state)),
     page: pageView(state, content),
     levelUp: levelUpView(state, content),
@@ -60,6 +69,7 @@ function interactableView(interactable: Interactable, state: PlayState): Interac
         position: centerOfBox(interactable.body),
         size: interactable.body.maxX - interactable.body.minX,
         opened: interactableStateOf(state, interactable.id).opened,
+        holds: interactable.contents.kind === 'gear' ? 'gear' : interactable.contents.consumable,
       };
   }
 }
@@ -83,6 +93,7 @@ function pageView(state: PlayState, content: Content): PageView | null {
       return {
         id: 'inventory',
         gear: carriedGear(state, content),
+        consumables: { ...state.hero.consumables },
         attack: heroAttack(state, content),
         defense: heroDefense(state, content),
       };

@@ -1,6 +1,15 @@
 import Phaser from 'phaser';
 import type { Command, Game, GameEvent, GameView } from '../core';
-import { drawHero, drawInteractable, drawMonster, drawStrike, drawSwing, drawTelegraph, drawTerrain } from './art';
+import {
+  drawArrow,
+  drawHero,
+  drawInteractable,
+  drawMonster,
+  drawStrike,
+  drawSwing,
+  drawTelegraph,
+  drawTerrain,
+} from './art';
 import { Feedback } from './feedback';
 import { FixedStepClock } from './fixed-step';
 import { Hud } from './hud';
@@ -95,7 +104,7 @@ export class PlayScene extends Phaser.Scene {
     const view = this.core.view();
     if (gameIsWaiting(view)) {
       // A page or a Stat Point covers the notice, and the player is already where it pointed them.
-      this.feedback.dismissPickup();
+      this.feedback.dismissNotice();
     }
     this.draw(view, watching);
   }
@@ -119,6 +128,9 @@ export class PlayScene extends Phaser.Scene {
       }
       drawMonster(this.entityLayer, monster, this.feedback.isFlashing(monster.id));
     }
+    for (const arrow of view.arrows) {
+      drawArrow(this.entityLayer, arrow);
+    }
     drawHero(this.entityLayer, view.hero, this.feedback.isHeroHurt());
     this.effectLayer.clear();
     for (const zone of this.feedback.swingZones()) {
@@ -128,7 +140,7 @@ export class PlayScene extends Phaser.Scene {
       drawStrike(this.effectLayer, zone);
     }
     this.hud.draw(view);
-    this.notice.draw(this.feedback.pickupNotice());
+    this.notice.draw(this.feedback.notice());
     this.overlay.draw(view, watching, this.inventoryMenu.position);
   }
 }

@@ -21,18 +21,39 @@ export interface MeleeWeaponDefinition {
 }
 
 /**
+ * The hero's Ranged Weapon: how its arrows fly. A bow only adds to Attack (see GearDefinition), so the arrows fly the
+ * same whichever bow the hero has equipped.
+ */
+export interface RangedWeaponDefinition {
+  /** How fast an arrow flies, in tiles per second. Must be more than 0. */
+  readonly arrowSpeedTilesPerSecond: number;
+  /** How far an arrow flies from the hero's centre before it falls, in tiles. Must be more than 0. */
+  readonly range: number;
+  /** Width and height of an arrow's body, in tiles. Must be more than 0, and at most the hero's own size. */
+  readonly arrowSize: number;
+}
+
+/**
  * Where Gear is equipped: the hero carries as many pieces as it finds and has one equipped in each slot. The list is
  * open: a new slot is one more entry here and in GEAR_SLOT_STAT.
  */
-export const GEAR_SLOTS = ['melee-weapon', 'armor'] as const;
+export const GEAR_SLOTS = ['melee-weapon', 'ranged-weapon', 'armor'] as const;
 export type GearSlot = (typeof GEAR_SLOTS)[number];
+
+/**
+ * The slots that hold a weapon. The hero has one weapon in hand at a time, and a weapon's bonus counts only for the
+ * attacks made with it: a bow's for arrows, a sword's for strikes.
+ */
+export const WEAPON_SLOTS = ['melee-weapon', 'ranged-weapon'] as const satisfies readonly GearSlot[];
+export type WeaponSlot = (typeof WEAPON_SLOTS)[number];
 
 /** The stats Gear can raise. It never changes anything else. */
 export type GearStat = Extract<StatId, 'attack' | 'defense'>;
 
-/** The stat each slot raises: a Melee Weapon only ever adds to Attack, and armor only to Defense. */
+/** The stat each slot raises: a weapon only ever adds to Attack, and armor only to Defense. */
 export const GEAR_SLOT_STAT: Readonly<Record<GearSlot, GearStat>> = {
   'melee-weapon': 'attack',
+  'ranged-weapon': 'attack',
   armor: 'defense',
 };
 
@@ -57,6 +78,7 @@ export interface HeroDefinition {
   readonly attack: number;
   readonly attackCooldownMs: number;
   readonly meleeWeapon: MeleeWeaponDefinition;
+  readonly rangedWeapon: RangedWeaponDefinition;
   /**
    * How far the hero reaches beyond its body, in tiles, to interact with something in front of it, such as a chest.
    * It is as wide as the hero's body. Must be more than 0.
@@ -66,6 +88,18 @@ export interface HeroDefinition {
   readonly startingGear: Readonly<Partial<Record<GearSlot, string>>>;
 }
 
+/**
+ * One chance, in a monster type's drop table, that a defeated monster leaves some of a consumable behind. The hero
+ * takes what it leaves at once. Each entry is rolled on its own, so a table can leave several things.
+ */
+export interface DropDefinition {
+  readonly consumable: ConsumableId;
+  /** From 0 (never) to 1 (always): the chance of this drop. It is left when the roll is below it. */
+  readonly chance: number;
+  /** How much of the consumable the hero takes when the drop is left: a whole number of 1 or more. */
+  readonly amount: number;
+}
+
 /** What every kind of monster has, whatever its behavior. */
 export interface MonsterTypeBase {
   readonly health: number;
@@ -73,6 +107,11 @@ export interface MonsterTypeBase {
   readonly size: number;
   /** The Experience the hero earns each time it defeats a monster of this type. */
   readonly experience: number;
+  /**
+   * What the hero may find when it defeats a monster of this type. Every entry is rolled once, in order, each time a
+   * monster of the type is defeated. Without a table nothing is left, and no roll is made.
+   */
+  readonly drops?: readonly DropDefinition[];
 }
 
 /** A monster that stays where it was placed and never attacks. */
@@ -139,8 +178,20 @@ export interface MilestoneDefinition {
   readonly reward: MilestoneReward;
 }
 
-/** What a chest holds. Gear is the first kind of contents; ammunition and potions will be members beside it. */
-export type ChestContents = { readonly kind: 'gear'; readonly gear: string };
+/**
+ * What the hero carries in counts and spends: it has none until it finds some. The list is open: a new consumable is
+ * one more id here and one more count in the hero's state.
+ */
+export const CONSUMABLE_IDS = ['ammunition'] as const;
+export type ConsumableId = (typeof CONSUMABLE_IDS)[number];
+
+/**
+ * What a chest holds: a piece of Gear, or an amount of a consumable (an Ammunition cache is a chest like that). A
+ * new kind of contents is one more member here, one more case in loadChestContents, takeContents and the chest view.
+ */
+export type ChestContents =
+  | { readonly kind: 'gear'; readonly gear: string }
+  | { readonly kind: 'consumable'; readonly consumable: ConsumableId; readonly amount: number };
 
 /** A chest: the hero opens it once by interacting with it and takes what is inside. It fills one tile and is solid. */
 export interface ChestDefinition {

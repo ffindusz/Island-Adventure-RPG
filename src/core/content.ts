@@ -1,10 +1,12 @@
-import { GEAR_SLOTS, STAT_IDS } from './definitions';
+import { CONSUMABLE_IDS, GEAR_SLOTS, STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
   ChaserMonsterDefinition,
   ChestContents,
   ChestDefinition,
+  ConsumableId,
   ContentDefinition,
+  DropDefinition,
   GearDefinition,
   GearSlot,
   InteractableDefinition,
@@ -14,7 +16,7 @@ import type {
   MonsterPlacement,
   MonsterTypeDefinition,
   ProgressionDefinition,
-  StationaryMonsterDefinition,
+  RangedWeaponDefinition,
   TileRect,
 } from './definitions';
 import type { Box, Tile } from './geometry';
@@ -58,13 +60,23 @@ export interface Area {
   readonly interactables: readonly Interactable[];
 }
 
-export type StationaryMonsterType = StationaryMonsterDefinition;
+/** A stationary monster type as the rules use it. */
+export interface StationaryMonsterType {
+  readonly behavior: 'stationary';
+  readonly health: number;
+  readonly size: number;
+  readonly experience: number;
+  /** Never absent: a type without a drop table has an empty one. */
+  readonly drops: readonly DropDefinition[];
+}
 
 export interface ChaserMonsterType {
   readonly behavior: 'chaser';
   readonly health: number;
   readonly size: number;
   readonly experience: number;
+  /** Never absent: a type without a drop table has an empty one. */
+  readonly drops: readonly DropDefinition[];
   readonly damage: number;
   /** Tiles walked in one fixed step. */
   readonly speedPerStep: number;
@@ -77,6 +89,16 @@ export interface ChaserMonsterType {
 /** A monster type as the rules use it, one member for each behavior. */
 export type MonsterType = StationaryMonsterType | ChaserMonsterType;
 
+/** The hero's Ranged Weapon as the rules use it. */
+export interface RangedWeapon {
+  /** Tiles an arrow flies in one fixed step. */
+  readonly arrowSpeedPerStep: number;
+  /** Tiles an arrow flies from the hero's centre before it falls. */
+  readonly range: number;
+  /** Width and height of an arrow's body, in tiles. */
+  readonly arrowSize: number;
+}
+
 export interface Content {
   readonly hero: {
     readonly size: number;
@@ -87,6 +109,7 @@ export interface Content {
     readonly attack: number;
     readonly attackCooldownSteps: number;
     readonly meleeWeapon: MeleeWeaponDefinition;
+    readonly rangedWeapon: RangedWeapon;
     /** Tiles beyond the hero's body, in front of it, within which it interacts. */
     readonly interactionReach: number;
     readonly startingGear: Readonly<Partial<Record<GearSlot, string>>>;
@@ -105,6 +128,7 @@ export function loadContent(definition: ContentDefinition): Content {
   requireMoreThanZero("The hero's health", definition.hero.health);
   requireZeroOrMore("The hero's defense", definition.hero.defense);
   requireMoreThanZero("The hero's interaction reach", definition.hero.interactionReach);
+  const rangedWeapon = loadRangedWeapon(definition.hero.rangedWeapon, definition.hero.size);
   const minimumDamage = definition.minimumDamage ?? DEFAULT_MINIMUM_DAMAGE;
   requireZeroOrMore('The minimum damage', minimumDamage);
   const progression = loadProgression(definition.progression);
@@ -145,6 +169,7 @@ export function loadContent(definition: ContentDefinition): Content {
       attack: definition.hero.attack,
       attackCooldownSteps: msToSteps(definition.hero.attackCooldownMs),
       meleeWeapon: definition.hero.meleeWeapon,
+      rangedWeapon,
       interactionReach: definition.hero.interactionReach,
       startingGear,
     },
@@ -154,6 +179,26 @@ export function loadContent(definition: ContentDefinition): Content {
     monsterTypes,
     areas,
     start: { areaId: definition.start.area, tile: definition.start.tile },
+  };
+}
+
+/**
+ * An arrow starts at the hero's centre, so it must fit in the hero's body, which is never inside solid terrain or a
+ * chest: that is what keeps an arrow from ever starting inside something it should be stopped by.
+ */
+function loadRangedWeapon(definition: RangedWeaponDefinition, heroSize: number): RangedWeapon {
+  requireMoreThanZero("The hero's arrow speed", definition.arrowSpeedTilesPerSecond);
+  requireMoreThanZero("The hero's arrow range", definition.range);
+  requireMoreThanZero("The hero's arrow size", definition.arrowSize);
+  if (definition.arrowSize > heroSize) {
+    throw new Error(
+      `The hero's arrow size must be at most the hero's size of ${heroSize}, but it is ${definition.arrowSize}`,
+    );
+  }
+  return {
+    arrowSpeedPerStep: definition.arrowSpeedTilesPerSecond / STEPS_PER_SECOND,
+    range: definition.range,
+    arrowSize: definition.arrowSize,
   };
 }
 
@@ -182,6 +227,7 @@ function loadProgression(definition: ProgressionDefinition): ProgressionDefiniti
 
 function loadMonsterType(name: string, definition: MonsterTypeDefinition): MonsterType {
   requireZeroOrMore(`Monster type "${name}": experience`, definition.experience);
+  const drops = loadDrops(name, definition.drops ?? []);
   switch (definition.behavior) {
     case 'stationary':
       return {
@@ -189,12 +235,27 @@ function loadMonsterType(name: string, definition: MonsterTypeDefinition): Monst
         health: definition.health,
         size: definition.size,
         experience: definition.experience,
+        drops,
       };
     case 'chaser':
-      return loadChaser(name, definition);
+      return loadChaser(name, definition, drops);
     default:
       return refuseBehavior(name, definition);
   }
+}
+
+function loadDrops(name: string, definitions: readonly DropDefinition[]): readonly DropDefinition[] {
+  return definitions.map((drop, index) => {
+    const field = (fieldName: string) => `Monster type "${name}": drops[${index}]${fieldName}`;
+    if (!isConsumableId(drop.consumable)) {
+      throw new Error(`${field('')} gives unknown consumable "${String(drop.consumable)}"`);
+    }
+    if (!(drop.chance >= 0 && drop.chance <= 1)) {
+      throw new Error(`${field('.chance')} must be from 0 to 1, but it is ${drop.chance}`);
+    }
+    requireWholeNumberOfOneOrMore(field('.amount'), drop.amount);
+    return { consumable: drop.consumable, chance: drop.chance, amount: drop.amount };
+  });
 }
 
 /** Only content that got past the compiler gets here. Its parameter type makes a behavior without a case a compile error. */
@@ -203,7 +264,11 @@ function refuseBehavior(name: string, definition: never): never {
   throw new Error(`Monster type "${name}" has unknown behavior "${String(behavior)}"`);
 }
 
-function loadChaser(name: string, definition: ChaserMonsterDefinition): ChaserMonsterType {
+function loadChaser(
+  name: string,
+  definition: ChaserMonsterDefinition,
+  drops: readonly DropDefinition[],
+): ChaserMonsterType {
   const field = (fieldName: string) => `Monster type "${name}": ${fieldName}`;
   requireMoreThanZero(field('damage'), definition.damage);
   requireZeroOrMore(field('speedTilesPerSecond'), definition.speedTilesPerSecond);
@@ -220,6 +285,7 @@ function loadChaser(name: string, definition: ChaserMonsterDefinition): ChaserMo
     health: definition.health,
     size: definition.size,
     experience: definition.experience,
+    drops,
     damage: definition.damage,
     speedPerStep: definition.speedTilesPerSecond / STEPS_PER_SECOND,
     noticingDistance: definition.noticingDistance,
@@ -239,6 +305,12 @@ function requireMoreThanZero(what: string, value: number): void {
 function requireZeroOrMore(what: string, value: number): void {
   if (!(value >= 0)) {
     throw new Error(`${what} must be 0 or more, but it is ${value}`);
+  }
+}
+
+function requireWholeNumberOfOneOrMore(what: string, value: number): void {
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error(`${what} must be a whole number of 1 or more, but it is ${value}`);
   }
 }
 
@@ -479,9 +551,20 @@ function loadChestContents(
       }
       claimGear(usedIds, contents.gear, `chest "${definition.id}"`);
       return { kind: 'gear', gear: contents.gear };
+    case 'consumable':
+      if (!isConsumableId(contents.consumable)) {
+        throw new Error(`${what} holds unknown consumable "${String(contents.consumable)}"`);
+      }
+      requireWholeNumberOfOneOrMore(`${what}: amount`, contents.amount);
+      return { kind: 'consumable', consumable: contents.consumable, amount: contents.amount };
     default:
       return refuseContents(what, kind);
   }
+}
+
+/** Content read from a file could name a consumable that does not exist, and the compiler would not notice. */
+function isConsumableId(id: string): id is ConsumableId {
+  return (CONSUMABLE_IDS as readonly string[]).includes(id);
 }
 
 function refuseContents(what: string, kind: never): never {

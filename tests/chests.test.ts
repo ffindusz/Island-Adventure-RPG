@@ -53,7 +53,7 @@ describe('opening a chest', () => {
 
   it('shows the chest closed until it is opened', () => {
     const game = gameWithChestBelow();
-    const chest = { kind: 'chest', id: 'chest-1', position: { x: 3.5, y: 4.5 }, size: 1 };
+    const chest = { kind: 'chest', id: 'chest-1', position: { x: 3.5, y: 4.5 }, size: 1, holds: 'gear' };
 
     expect(playingView(game).interactables).toEqual([{ ...chest, opened: false }]);
 

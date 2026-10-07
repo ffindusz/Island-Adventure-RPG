@@ -9,6 +9,7 @@ export const hero: HeroDefinition = {
   attack: 1,
   attackCooldownMs: 400,
   meleeWeapon: { reach: 0.75, width: 1 },
+  rangedWeapon: { arrowSpeedTilesPerSecond: 12, range: 7, arrowSize: 0.3 },
   interactionReach: 0.5,
   startingGear: { 'melee-weapon': 'basic-sword', armor: 'basic-armor' },
 };
