@@ -647,4 +647,32 @@ describe('The Automap and defeat', () => {
     expect(areaOnMap(game, 'arena')).toMatchObject({ current: true, hero: { x: 3.5, y: 3.5 } });
     expect(areaOnMap(game, 'cellar')).toMatchObject({ current: false, hero: null });
   });
+
+  it('reveals the terrain around the Checkpoint the hero is put back on, at once', () => {
+    const camp = { id: 'camp', tile: { col: 3, row: 4 } };
+    const game = newGame(arena({ ...FRAIL, checkpoints: [camp], monsters: [biterAt('biter', 4, 3)] }));
+    // The hero touches the camp from tile (3, 3), so the wall below the camp is two tiles from it: out of reach.
+    walk(game, 'down', 3);
+    expect(picture(areaOnMap(game, 'arena'))).toEqual([
+      '       ',
+      '       ',
+      '  ~..  ',
+      '  ...  ',
+      '  ..,  ',
+      '       ',
+    ]);
+
+    untilDefeated(game);
+
+    // Put back on tile (3, 4) the hero has the wall next to it, and the page shows it without another step.
+    expect(playingView(game).hero.position).toEqual({ x: 3.5, y: 4.5 });
+    expect(picture(areaOnMap(game, 'arena'))).toEqual([
+      '       ',
+      '       ',
+      '  ~..  ',
+      '  ...  ',
+      '  ..,  ',
+      '  ###  ',
+    ]);
+  });
 });
