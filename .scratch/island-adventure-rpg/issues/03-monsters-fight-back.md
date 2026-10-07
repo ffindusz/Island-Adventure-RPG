@@ -4,7 +4,7 @@
 
 **Blocked by:** 01: Tracer bullet: the hero walks and strikes a monster
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 30, 41, 42, 44, 46, 48, 51, 52
 
@@ -17,6 +17,8 @@
 - [ ] Reviewer play check (manual, in a browser): get hit (hit feedback and the HUD update), avoid a telegraphed attack by moving, die, and return to the entrance.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at b67c0e2
 
 ### What was built
 
