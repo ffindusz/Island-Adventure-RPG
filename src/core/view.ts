@@ -133,6 +133,8 @@ function actionView(action: MonsterAction): MonsterActionView {
   switch (action.type) {
     case 'winding-up':
       return { type: 'winding-up', progress: action.elapsed / action.length, zone: { ...action.zone } };
+    case 'dashing':
+      return { type: 'dashing', direction: action.direction };
     case 'idle':
     case 'chasing':
     case 'recovering':

@@ -89,7 +89,7 @@ export type GameEvent =
   | { readonly type: 'monster-hit'; readonly monsterId: string; readonly damage: number; readonly health: number }
   /** A monster's Health reached zero. It is gone from the view. */
   | { readonly type: 'monster-defeated'; readonly monsterId: string }
-  /** A monster struck. `zone` is the area its attack covered, whether or not the hero was in it. */
+  /** A monster struck, or a charger launched its dash. `zone` is the area its attack covered, whether or not the hero was in it. */
   | { readonly type: 'monster-attacked'; readonly monsterId: string; readonly zone: Box }
   /** The hero took damage, after Defense; `health` is what the hero has left. */
   | { readonly type: 'hero-hit'; readonly monsterId: string; readonly damage: number; readonly health: number }
@@ -173,6 +173,8 @@ export type MonsterActionView =
    * passed, from 0 when it begins up to (but never reaching) 1. `zone` does not change during the wind-up.
    */
   | { readonly type: 'winding-up'; readonly progress: number; readonly zone: Box }
+  /** Dashing in `direction`, along the lane that its wind-up showed. */
+  | { readonly type: 'dashing'; readonly direction: Direction }
   /** Resting after an attack. */
   | { readonly type: 'recovering' };
 

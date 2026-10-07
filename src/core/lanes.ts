@@ -31,3 +31,8 @@ export function laneAhead(
   const length = Math.abs(end.x - position.x) + Math.abs(end.y - position.y);
   return zoneInFront(position, size, direction, length, size);
 }
+
+/** How long a lane is, from the front edge of the body that dashes along it to its far end. */
+export function laneLength(lane: Box, direction: Direction): number {
+  return direction === 'left' || direction === 'right' ? lane.maxX - lane.minX : lane.maxY - lane.minY;
+}

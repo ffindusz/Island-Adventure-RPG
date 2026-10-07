@@ -38,6 +38,8 @@ export type MonsterAction =
       readonly length: number;
       readonly direction?: Direction;
     }
+  /** Dashing along the lane its wind-up showed, with this much of the lane still ahead of it, in tiles. */
+  | { readonly type: 'dashing'; readonly direction: Direction; rangeLeft: number }
   /** Resting after an attack, for this many more steps. */
   | { readonly type: 'recovering'; stepsLeft: number };
 
