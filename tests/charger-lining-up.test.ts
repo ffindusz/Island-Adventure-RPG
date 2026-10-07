@@ -1,0 +1,114 @@
+import { describe, expect, it } from 'vitest';
+import { advance, monsterAction, monsterNamed, walk } from './fixtures';
+import { CHARGER, chargerAt, enemyField } from './enemy-fixtures';
+
+// A charger in tile (2, 3) stands at (2.5, 3.5) and walks 0.0625 tile a step to line up with the hero. It begins its
+// wind-up as soon as the hero's body overlaps its lane, the strip in front of it that is as wide as its body: the
+// lane to the right is y 3.25 to 3.75 as long as the charger is at y = 3.5. The hero walks 0.125 tile a step.
+
+describe('a charger lining up with the hero', () => {
+  it('walks sideways, toward the hero, until its lane reaches the hero, and winds up where it stands', () => {
+    // The hero is at (6.5, 5.5): its body spans y 5.25 to 5.75. The charger's lane, y - 0.25 to y + 0.25, touches
+    // that when the charger is at y = 5, after 24 steps of walking down, and overlaps it after the 25th.
+    const game = enemyField([chargerAt('charger-1', 2, 3)], { start: { area: 'arena', tile: { col: 6, row: 5 } } });
+
+    advance(game, 24);
+    expect(monsterNamed(game, 'charger-1')).toMatchObject({ position: { x: 2.5, y: 5 }, action: { type: 'chasing' } });
+
+    game.step();
+    expect(monsterNamed(game, 'charger-1')).toMatchObject({
+      position: { x: 2.5, y: 5.0625 },
+      action: { type: 'chasing' },
+    });
+
+    game.step();
+    expect(monsterNamed(game, 'charger-1')).toMatchObject({
+      position: { x: 2.5, y: 5.0625 },
+      action: {
+        type: 'winding-up',
+        progress: 0,
+        zone: { minX: 2.75, minY: 4.8125, maxX: 8.75, maxY: 5.3125 },
+      },
+    });
+  });
+
+  it('walks toward a hero who is level with it but out of reach of its lane, until the lane reaches', () => {
+    // The charger dashes 2 tiles at most: its lane ends at x = 4.75, and the hero's body begins at x = 6.25. Each step
+    // takes the lane 0.0625 tile nearer: it touches the hero after 24 steps and overlaps it after the 25th.
+    const game = enemyField([chargerAt('charger-1', 2, 3)], {
+      monsterTypes: { charger: { ...CHARGER, dashRange: 2 } },
+    });
+
+    advance(game, 24);
+    expect(monsterNamed(game, 'charger-1')).toMatchObject({ position: { x: 4, y: 3.5 }, action: { type: 'chasing' } });
+
+    game.step();
+    expect(monsterNamed(game, 'charger-1')).toMatchObject({ position: { x: 4.0625, y: 3.5 } });
+
+    game.step();
+    expect(monsterAction(game, 'charger-1')).toEqual({
+      type: 'winding-up',
+      progress: 0,
+      zone: { minX: 4.3125, minY: 3.25, maxX: 6.3125, maxY: 3.75 },
+    });
+  });
+
+  it('stands where it is when it does not walk, until the hero comes into its lane', () => {
+    const game = enemyField([chargerAt('charger-1', 2, 3)], {
+      start: { area: 'arena', tile: { col: 6, row: 5 } },
+      monsterTypes: { charger: { ...CHARGER, speedTilesPerSecond: 0 } },
+    });
+
+    advance(game, 60);
+    expect(monsterNamed(game, 'charger-1')).toMatchObject({ position: { x: 2.5, y: 3.5 }, action: { type: 'idle' } });
+
+    walk(game, 'up', 12); // the hero's body now touches the lane from below
+    expect(monsterAction(game, 'charger-1')).toEqual({ type: 'idle' });
+
+    walk(game, 'up', 1);
+    expect(monsterAction(game, 'charger-1')).toEqual({
+      type: 'winding-up',
+      progress: 0,
+      zone: { minX: 2.75, minY: 3.25, maxX: 8.75, maxY: 3.75 },
+    });
+  });
+});
+
+describe('a charger noticing the hero', () => {
+  // The noticing distance is measured from the charger's body, as a square around it: with 2 tiles, the hero is noticed
+  // once its body overlaps the square, which reaches x = 4.75. The hero's left edge is at x = 6.25 and moves 0.125 tile
+  // a step toward it, so the hero is noticed after 13 steps.
+  const NEARSIGHTED = { charger: { ...CHARGER, noticingDistance: 2 } };
+
+  it('does not react to a hero who is beyond its noticing distance', () => {
+    const game = enemyField([chargerAt('charger-1', 2, 3)], { monsterTypes: NEARSIGHTED });
+
+    advance(game, 60);
+
+    expect(monsterNamed(game, 'charger-1')).toMatchObject({ position: { x: 2.5, y: 3.5 }, action: { type: 'idle' } });
+  });
+
+  it('winds up once the hero comes within its noticing distance', () => {
+    const game = enemyField([chargerAt('charger-1', 2, 3)], { monsterTypes: NEARSIGHTED });
+
+    walk(game, 'left', 12); // the hero's left edge touches the square
+    expect(monsterAction(game, 'charger-1')).toEqual({ type: 'idle' });
+
+    walk(game, 'left', 1);
+    expect(monsterAction(game, 'charger-1')).toMatchObject({ type: 'winding-up', progress: 0 });
+  });
+
+  it('stops going after a hero who gets away, and stands again', () => {
+    // The hero at (4.5, 5.5) is within 2 tiles of the charger's body, but not in its lane: the charger walks down.
+    const game = enemyField([chargerAt('charger-1', 2, 3)], {
+      start: { area: 'arena', tile: { col: 4, row: 5 } },
+      monsterTypes: NEARSIGHTED,
+    });
+    game.step();
+    expect(monsterAction(game, 'charger-1')).toEqual({ type: 'chasing' });
+
+    walk(game, 'right', 16); // the hero is at (6.5, 5.5), 3.5 tiles from the charger's body
+
+    expect(monsterAction(game, 'charger-1')).toEqual({ type: 'idle' });
+  });
+});

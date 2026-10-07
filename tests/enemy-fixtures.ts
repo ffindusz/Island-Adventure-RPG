@@ -1,4 +1,4 @@
-import type { ChargerMonsterDefinition, Game, MonsterPlacement } from '../src/core';
+import type { ChargerMonsterDefinition, ContentDefinition, Game, MonsterPlacement } from '../src/core';
 import { arena, FIELD_LAYOUT, newGame } from './fixtures';
 import type { ArenaOptions } from './fixtures';
 
@@ -33,15 +33,18 @@ export function chargerAt(id: string, col: number, row: number): MonsterPlacemen
   return { id, type: 'charger', tile: { col, row } };
 }
 
-/** A game in the wide field with the charger type known, where the hero begins at (6.5, 3.5). */
+/** The content of a wide field with the charger type known, where the hero begins at (6.5, 3.5). */
+export function enemyContent(monsters: readonly MonsterPlacement[], options: ArenaOptions = {}): ContentDefinition {
+  return arena({
+    layout: FIELD_LAYOUT,
+    start: { area: 'arena', tile: { col: 6, row: 3 } },
+    ...options,
+    monsters,
+    monsterTypes: { charger: CHARGER, ...options.monsterTypes },
+  });
+}
+
+/** A game in that field. */
 export function enemyField(monsters: readonly MonsterPlacement[], options: ArenaOptions = {}): Game {
-  return newGame(
-    arena({
-      layout: FIELD_LAYOUT,
-      start: { area: 'arena', tile: { col: 6, row: 3 } },
-      ...options,
-      monsters,
-      monsterTypes: { charger: CHARGER, ...options.monsterTypes },
-    }),
-  );
+  return newGame(enemyContent(monsters, options));
 }

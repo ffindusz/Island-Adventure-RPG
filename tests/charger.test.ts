@@ -46,13 +46,19 @@ describe('a charger with the hero in its line', () => {
     expect(monsterAction(game, 'charger-1')).toMatchObject({ type: 'winding-up', progress: 29 / 30 });
   });
 
-  it('locks the lane when the wind-up starts: it does not follow a hero who walks away', () => {
-    const game = enemyField([chargerAt('charger-1', 2, 3)]);
+  it('locks the lane when the wind-up starts: it does not turn toward a hero who walks around it', () => {
+    // The charger in tile (5, 3) is a tile from the hero in x. The hero walks 1.5 tiles down, which is farther than that:
+    // a charger that aimed again would now dash down.
+    const game = enemyField([chargerAt('charger-1', 5, 3)]);
     game.step(); // the wind-up starts
 
-    walk(game, 'down', 8); // the hero ends a tile lower, at (6.5, 4.5), out of the lane
+    walk(game, 'down', 12);
 
-    expect(monsterAction(game, 'charger-1')).toEqual({ type: 'winding-up', progress: 8 / 30, zone: LANE_RIGHT });
+    expect(monsterAction(game, 'charger-1')).toEqual({
+      type: 'winding-up',
+      progress: 12 / 30,
+      zone: { minX: 5.75, minY: 3.25, maxX: 11.75, maxY: 3.75 },
+    });
   });
 
   it('shows a lane that ends where solid terrain would stop the dash', () => {

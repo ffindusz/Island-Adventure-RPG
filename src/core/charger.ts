@@ -1,11 +1,12 @@
 import { areaOf } from './content';
 import type { Content, ChargerMonsterType } from './content';
 import { EPSILON, expandBox, overlaps } from './geometry';
+import type { Direction } from './geometry';
 import { hurtHero } from './hero-damage';
 import { interactableObstacles } from './interactables';
 import type { GameEvent } from './interface';
 import { laneAhead, laneLength } from './lanes';
-import { directionToward } from './monster-movement';
+import { directionToward, walkMonster } from './monster-movement';
 import { heroBody, livingMonsters, monsterBody } from './state';
 import type { MonsterAction, MonsterState, PlayState } from './state';
 import { sweepToward } from './sweep';
@@ -47,8 +48,38 @@ export function stepCharger(
   const lane = laneAhead(state, content, monster.position, type.size, direction, type.dashRange);
   if (overlaps(hero, lane)) {
     monster.action = { type: 'winding-up', zone: lane, elapsed: 0, length: type.windUpSteps, direction };
+  } else {
+    lineUp(monster, type, direction, state, content);
   }
   return [];
+}
+
+/**
+ * The hero is noticed but not in the lane. The charger walks sideways until the lane is on the hero, or, once it is
+ * level with the hero, toward it, until the lane reaches. A charger that does not walk waits for the hero to step in.
+ */
+function lineUp(
+  monster: MonsterState,
+  type: ChargerMonsterType,
+  direction: Direction,
+  state: PlayState,
+  content: Content,
+): void {
+  if (type.speedPerStep === 0) {
+    monster.action = { type: 'idle' };
+    return;
+  }
+  monster.action = { type: 'chasing' };
+  const lanesRunAcross = direction === 'left' || direction === 'right';
+  const sideways = lanesRunAcross
+    ? state.hero.position.y - monster.position.y
+    : state.hero.position.x - monster.position.x;
+  if (Math.abs(sideways) <= EPSILON) {
+    walkMonster(monster, type.size, direction, type.speedPerStep, state, content);
+  } else {
+    const toward = lanesRunAcross ? (sideways > 0 ? 'down' : 'up') : sideways > 0 ? 'right' : 'left';
+    walkMonster(monster, type.size, toward, Math.min(type.speedPerStep, Math.abs(sideways)), state, content);
+  }
 }
 
 /** The wind-up is over: the dash is launched along the lane that was telegraphed, and the lane flashes. */
