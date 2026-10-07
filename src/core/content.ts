@@ -10,12 +10,14 @@ import type {
   DropDefinition,
   GearDefinition,
   GearSlot,
+  HealingPotionDefinition,
   InteractableDefinition,
   MeleeWeaponDefinition,
   MilestoneDefinition,
   MilestoneReward,
   MonsterPlacement,
   MonsterTypeDefinition,
+  PickupDefinition,
   ProgressionDefinition,
   RangedWeaponDefinition,
 } from './definitions';
@@ -47,8 +49,17 @@ export interface Chest {
   readonly contents: ChestContents;
 }
 
+/** A pickup as the rules use it: its body is the box of the tile it lies on, which the hero's body has to overlap. */
+export interface Pickup {
+  readonly kind: 'pickup';
+  readonly id: string;
+  readonly body: Box;
+  readonly consumable: ConsumableId;
+  readonly amount: number;
+}
+
 /** An interactable as the rules use it, one member for each kind. */
-export type Interactable = Chest;
+export type Interactable = Chest | Pickup;
 
 /** An entrance as the rules use it: the hero arrives standing at the centre of its tile. */
 export interface Entrance {
@@ -140,6 +151,7 @@ export interface Content {
   readonly progression: ProgressionDefinition;
   /** The least damage a hit does to the hero, however high its Defense. */
   readonly minimumDamage: number;
+  readonly healingPotion: HealingPotionDefinition;
   readonly gear: Readonly<Record<string, GearDefinition>>;
   readonly monsterTypes: Readonly<Record<string, MonsterType>>;
   readonly areas: Readonly<Record<string, Area>>;
@@ -163,6 +175,7 @@ export function loadContent(definition: ContentDefinition): Content {
     );
   }
   const progression = loadProgression(definition.progression);
+  requireMoreThanZero('The Health a Healing Potion restores', definition.healingPotion.restores);
   const monsterTypes: Record<string, MonsterType> = {};
   for (const [name, monsterType] of Object.entries(definition.monsterTypes)) {
     monsterTypes[name] = loadMonsterType(name, monsterType);
@@ -207,6 +220,7 @@ export function loadContent(definition: ContentDefinition): Content {
     },
     progression,
     minimumDamage,
+    healingPotion: { restores: definition.healingPotion.restores },
     gear,
     monsterTypes,
     areas,
@@ -542,6 +556,8 @@ function loadInteractable(
   switch (kind) {
     case 'chest':
       return loadChest(areaId, definition, gear, usedIds);
+    case 'pickup':
+      return loadPickup(areaId, definition);
     default:
       return refuseKind(areaId, id, kind);
   }
@@ -558,13 +574,32 @@ function loadChest(
   gear: ContentDefinition['gear'],
   usedIds: UsedIds,
 ): Chest {
-  const { col, row } = definition.tile;
   return {
     kind: 'chest',
     id: definition.id,
-    body: { minX: col, minY: row, maxX: col + 1, maxY: row + 1 },
+    body: tileBox(definition.tile),
     contents: loadChestContents(areaId, definition, gear, usedIds),
   };
+}
+
+function loadPickup(areaId: string, definition: PickupDefinition): Pickup {
+  const what = `Area "${areaId}": pickup "${definition.id}"`;
+  if (!isConsumableId(definition.consumable)) {
+    throw new Error(`${what} holds unknown consumable "${String(definition.consumable)}"`);
+  }
+  requireWholeNumberOfOneOrMore(`${what}: amount`, definition.amount);
+  return {
+    kind: 'pickup',
+    id: definition.id,
+    body: tileBox(definition.tile),
+    consumable: definition.consumable,
+    amount: definition.amount,
+  };
+}
+
+/** The box of a tile, in tile units like the other bodies. */
+function tileBox({ col, row }: Tile): Box {
+  return { minX: col, minY: row, maxX: col + 1, maxY: row + 1 };
 }
 
 /** One case for each kind of chest contents. */

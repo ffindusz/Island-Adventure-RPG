@@ -11,6 +11,8 @@ import { reachMilestones } from './milestones';
 import { walkHero } from './movement';
 import { closePage, openPage } from './pages';
 import { isPaused } from './pause';
+import { collectPickups } from './pickups';
+import { useHealingPotion } from './potions';
 import { assignStatPoint } from './progression';
 import { newPlayState, SNAPSHOT_VERSION, copyState } from './state';
 import type { GameState } from './state';
@@ -69,6 +71,8 @@ export function createGame(options: GameOptions): Game {
           return [];
         case 'equip':
           return state.phase === 'playing' ? equipGear(state, content, command.gearId) : [];
+        case 'use-healing-potion':
+          return state.phase === 'playing' ? useHealingPotion(state, content) : [];
         case 'switch-weapon':
           return state.phase === 'playing' && !isPaused(state, content) ? switchWeapon(state) : [];
       }
@@ -80,22 +84,23 @@ export function createGame(options: GameOptions): Game {
       ageAreaText(state);
       coolDownHero(state);
       walkHero(state, content, held.at(-1));
-      // The hero is where it walked to when it reaches a milestone. Then the arrows fly, a hero that walked into an
-      // exit goes through it, and otherwise the monsters act.
+      // The hero is where it walked to when it reaches a milestone or takes a pickup. Then the arrows fly, a hero that
+      // walked into an exit goes through it, and otherwise the monsters act.
       const milestoneEvents = reachMilestones(state, content);
+      const pickupEvents = collectPickups(state, content);
       const arrowEvents = flyArrows(state, content, options.random);
       // The step ends when the hero crosses: the arrows have flown their last in the area it leaves, and the
       // monsters of the area it arrives in first act in the next step.
       const areaEvents = crossExits(state, content);
       if (areaEvents.length > 0) {
-        return [...milestoneEvents, ...arrowEvents, ...areaEvents];
+        return [...milestoneEvents, ...pickupEvents, ...arrowEvents, ...areaEvents];
       }
       const monsterEvents = stepMonsters(state, content);
       if (monsterEvents.some((event) => event.type === 'hero-defeated')) {
         // Defeat sends the hero back and the monsters back to where they began: the arrows of that life do not fly on.
         state.arrows = [];
       }
-      return [...milestoneEvents, ...arrowEvents, ...monsterEvents];
+      return [...milestoneEvents, ...pickupEvents, ...arrowEvents, ...monsterEvents];
     },
     view: () => buildView(state, content),
     snapshot: () => {

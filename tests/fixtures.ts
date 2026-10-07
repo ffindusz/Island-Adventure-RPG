@@ -2,6 +2,7 @@ import { createGame } from '../src/core';
 import type {
   AreaDefinition,
   ChaserMonsterDefinition,
+  ChestView,
   ConsumableId,
   ContentDefinition,
   Direction,
@@ -10,6 +11,7 @@ import type {
   Game,
   GameEvent,
   GearDefinition,
+  HealingPotionDefinition,
   HeroDefinition,
   InteractableDefinition,
   MilestoneDefinition,
@@ -42,6 +44,7 @@ import type {
 //                           4 tiles from the hero's centre (16 steps)
 //   Levels                  the Experience that raises the hero to Levels 2 to 6 is 10, 25, 45, 70 and 100 in all;
 //                           each Stat Point adds 3 to Health, 2 to Attack or 1 to Defense
+//   Healing Potion          restores 3 Health, up to the hero's maximum
 //   Gear                    the hero begins with a basic sword and basic armor, which add nothing. The arena has more
 //                           Gear to find: an iron sword (+2 Attack), a steel sword (+5), leather armor (+2 Defense),
 //                           plate armor (+4), a short bow (+2 Attack, for arrows only) and a long bow (+4)
@@ -134,6 +137,8 @@ export interface ArenaOptions {
   readonly minimumDamage?: number;
   /** Replaces parts of how the hero grows, such as the Level thresholds. */
   readonly progression?: Partial<ProgressionDefinition>;
+  /** What the Healing Potion restores. It is 3 Health unless a test says otherwise. */
+  readonly healingPotion?: HealingPotionDefinition;
   /** The milestones of the arena. There are none unless a test gives some. */
   readonly milestones?: readonly MilestoneDefinition[];
   /** The interactables of the arena, such as chests. There are none unless a test gives some. */
@@ -156,6 +161,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     monsterTypes = {},
     minimumDamage,
     progression = {},
+    healingPotion = { restores: 3 },
     milestones = [],
     interactables = [],
     gear = {},
@@ -187,6 +193,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
       statPointValue: { health: 3, attack: 2, defense: 1 },
       ...progression,
     },
+    healingPotion,
     gear: { ...ARENA_GEAR, ...gear },
     monsterTypes: {
       dummy: { behavior: 'stationary', health: 3, size: 0.5, experience: 5 },
@@ -226,6 +233,17 @@ export function cacheAt(
   consumable: ConsumableId = 'ammunition',
 ): InteractableDefinition {
   return { kind: 'chest', id, tile: { col, row }, contents: { kind: 'consumable', consumable, amount } };
+}
+
+/** A pickup on the tile (col, row): some Healing Potions, or another consumable if one is named, to walk onto. */
+export function pickupAt(
+  id: string,
+  col: number,
+  row: number,
+  amount: number,
+  consumable: ConsumableId = 'healing-potion',
+): InteractableDefinition {
+  return { kind: 'pickup', id, tile: { col, row }, consumable, amount };
 }
 
 /** A milestone that gives the given Experience when the hero's body first overlaps the block of tiles `zone`. */
@@ -383,6 +401,11 @@ export function playingView(game: Game): PlayingView {
     throw new Error(`Expected a game in play, but it is at the ${view.phase}`);
   }
   return view;
+}
+
+/** The chests the view shows, opened ones included, in the order the content places them. */
+export function chestViews(game: Game): ChestView[] {
+  return playingView(game).interactables.filter((item): item is ChestView => item.kind === 'chest');
 }
 
 /** A monster as the view shows it. */

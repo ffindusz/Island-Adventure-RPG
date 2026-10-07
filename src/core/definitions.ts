@@ -182,8 +182,14 @@ export interface MilestoneDefinition {
  * What the hero carries in counts and spends: it has none until it finds some. The list is open: a new consumable is
  * one more id here and one more count in the hero's state.
  */
-export const CONSUMABLE_IDS = ['ammunition'] as const;
+export const CONSUMABLE_IDS = ['ammunition', 'healing-potion'] as const;
 export type ConsumableId = (typeof CONSUMABLE_IDS)[number];
+
+/** The Healing Potion: what the hero gets from using one. */
+export interface HealingPotionDefinition {
+  /** The Health it restores, never above the hero's maximum Health. Must be more than 0. */
+  readonly restores: number;
+}
 
 /**
  * What a chest holds: a piece of Gear, or an amount of a consumable (an Ammunition cache is a chest like that). A
@@ -204,11 +210,26 @@ export interface ChestDefinition {
 }
 
 /**
- * Something in an Adventure Area that the hero acts on with Interact. Its `kind` names the rules it follows (see
- * interactables.ts); the other fields are what that kind needs. Adding a kind means adding a member here and an entry
- * in the interaction registry.
+ * Some of a consumable lying on a tile: the hero takes all of it by walking onto it, with no key to press, and it is
+ * gone for good. It is not solid: the hero, the monsters and the arrows pass over it.
  */
-export type InteractableDefinition = ChestDefinition;
+export interface PickupDefinition {
+  readonly kind: 'pickup';
+  /** Unique across all interactables of all Adventure Areas: saves refer to the pickup by it. */
+  readonly id: string;
+  /** The tile it lies on. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+  readonly consumable: ConsumableId;
+  /** How many the hero takes: a whole number of 1 or more. */
+  readonly amount: number;
+}
+
+/**
+ * Something in an Adventure Area that the hero acts on with Interact, or takes by walking onto it (a pickup). Its
+ * `kind` names the rules it follows (see interactables.ts); the other fields are what that kind needs. Adding a kind
+ * means adding a member here and the cases the recipe in interactables.ts lists.
+ */
+export type InteractableDefinition = ChestDefinition | PickupDefinition;
 
 /** Where the hero stands when it comes into an Adventure Area through an exit of another. */
 export interface EntranceDefinition {
@@ -241,7 +262,7 @@ export interface AreaDefinition {
   readonly monsters: readonly MonsterPlacement[];
   /** The milestones of this Adventure Area. Leave it out for none. */
   readonly milestones?: readonly MilestoneDefinition[];
-  /** The interactables of this Adventure Area, such as chests. Leave it out for none. */
+  /** The interactables of this Adventure Area, such as chests and pickups. Leave it out for none. */
   readonly interactables?: readonly InteractableDefinition[];
   /** Where the hero can arrive in this Adventure Area. Every area needs at least one: it is how the hero comes in. */
   readonly entrances?: readonly EntranceDefinition[];
@@ -275,6 +296,8 @@ export interface ContentDefinition {
   readonly progression: ProgressionDefinition;
   /** The least damage a hit does to the hero, however high its Defense. Leave it out for the default of 1. */
   readonly minimumDamage?: number;
+  /** What a Healing Potion does when the hero uses it. */
+  readonly healingPotion: HealingPotionDefinition;
   /** Every piece of Gear in the game, by id: what the hero starts with, and what is waiting to be found. */
   readonly gear: Readonly<Record<string, GearDefinition>>;
   readonly monsterTypes: Readonly<Record<string, MonsterTypeDefinition>>;

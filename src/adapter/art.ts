@@ -4,11 +4,13 @@ import type {
   ArrowView,
   Box,
   ChestView,
+  ConsumableId,
   Direction,
   ExitView,
   HeroView,
   InteractableView,
   MonsterView,
+  PickupView,
   Point,
 } from '../core';
 import { TILE_SIZE } from './config';
@@ -49,6 +51,10 @@ const CHEST_LATCH_COLOUR = 0xf2c94c;
 const CACHE_COLOUR = 0x6b7a3a;
 const CACHE_ARROW_COLOUR = 0xe8d8a8;
 const CACHE_ARROW_HEAD_COLOUR = 0xffffff;
+const POTION_CRATE_COLOUR = 0x7b5b8c;
+const FLASK_GLASS_COLOUR = 0xcfe8f0;
+const FLASK_LIQUID_COLOUR = 0xe0455f;
+const FLASK_SHINE_COLOUR = 0xffffff;
 const ARROW_SHAFT_COLOUR = 0xf0e6c8;
 const ARROW_HEAD_COLOUR = 0xffffff;
 const EXIT_COLOUR = 0xbfeaff;
@@ -127,23 +133,39 @@ export function drawExits(graphics: Graphics, exits: readonly ExitView[]): void 
   }
 }
 
-/** Draws what the hero can interact with. Real art replaces this, one kind at a time. */
+/** Draws what the hero can interact with or walk onto. Real art replaces this, one kind at a time. */
 export function drawInteractable(graphics: Graphics, interactable: InteractableView): void {
   switch (interactable.kind) {
     case 'chest':
       drawChest(graphics, interactable);
       return;
+    case 'pickup':
+      drawPickup(graphics, interactable);
+      return;
   }
 }
 
+/** The colour of a closed crate, by the consumable it holds. */
+const CRATE_COLOURS: Readonly<Record<ConsumableId, number>> = {
+  ammunition: CACHE_COLOUR,
+  'healing-potion': POTION_CRATE_COLOUR,
+};
+
+/** What a closed crate shows of the consumable in it, drawn on its body. A new consumable needs a look here. */
+const CRATE_MARKS: Readonly<Record<ConsumableId, (graphics: Graphics, body: Rect) => void>> = {
+  ammunition: drawArrowsInCrate,
+  'healing-potion': (graphics, body) =>
+    drawFlask(graphics, shrunk(body, Math.round(body.width / 4), Math.round(body.height / 6)), false),
+};
+
 /**
- * A closed chest is a brown box with a gold latch on its lid. A cache is a green crate with arrows standing in it.
- * Once opened either is dark, with an empty inside.
+ * A closed chest is a brown box with a gold latch on its lid. A cache is a crate with what it holds on it: arrows
+ * standing in a green one, a flask in a purple one. Once opened any of them is dark, with an empty inside.
  */
 function drawChest(graphics: Graphics, chest: ChestView): void {
   const body = bodyRect(chest.position, chest.size);
   const lidY = body.y + Math.floor(body.height * 0.4);
-  const closedColour = chest.holds === 'gear' ? CHEST_COLOUR : CACHE_COLOUR;
+  const closedColour = chest.holds === 'gear' ? CHEST_COLOUR : CRATE_COLOURS[chest.holds];
   fillWithOutline(graphics, body, chest.opened ? CHEST_OPENED_COLOUR : closedColour);
   if (chest.opened) {
     graphics.fillStyle(CHEST_INSIDE_COLOUR);
@@ -151,13 +173,59 @@ function drawChest(graphics: Graphics, chest: ChestView): void {
     return;
   }
   if (chest.holds !== 'gear') {
-    drawArrowsInCrate(graphics, body);
+    CRATE_MARKS[chest.holds](graphics, body);
     return;
   }
   graphics.fillStyle(OUTLINE_COLOUR);
   graphics.fillRect(body.x + 1, lidY, body.width - 2, 1);
   graphics.fillStyle(CHEST_LATCH_COLOUR);
   graphics.fillRect(body.x + Math.floor(body.width / 2) - 2, lidY - 1, 4, 4);
+}
+
+/** What a loose pickup looks like on its tile, by the consumable it is. A new consumable needs a look here. */
+const PICKUP_LOOKS: Readonly<Record<ConsumableId, (graphics: Graphics, tile: Rect) => void>> = {
+  ammunition: (graphics, tile) => {
+    const crate = shrunk(tile, 3, 3);
+    fillWithOutline(graphics, crate, CACHE_COLOUR);
+    drawArrowsInCrate(graphics, crate);
+  },
+  'healing-potion': (graphics, tile) => drawFlask(graphics, shrunk(tile, 3, 2), true),
+};
+
+/** A loose pickup is the consumable itself, lying on its tile: a flask, or a small crate of arrows. */
+function drawPickup(graphics: Graphics, pickup: PickupView): void {
+  PICKUP_LOOKS[pickup.consumable](graphics, bodyRect(pickup.position, pickup.size));
+}
+
+/** The rectangle with `across` pixels taken off each side and `down` off the top and the bottom. */
+function shrunk(rect: Rect, across: number, down: number): Rect {
+  return { x: rect.x + across, y: rect.y + down, width: rect.width - 2 * across, height: rect.height - 2 * down };
+}
+
+/** A flask of red liquid with a cork, a narrow neck over a wide belly, filling the rectangle; outlined on request. */
+function drawFlask(graphics: Graphics, area: Rect, outlined: boolean): void {
+  const neckWidth = Math.max(2, Math.round(area.width * 0.4));
+  const bellyTop = area.y + Math.round(area.height * 0.4);
+  const neck = {
+    x: area.x + Math.floor((area.width - neckWidth) / 2),
+    y: area.y,
+    width: neckWidth,
+    height: bellyTop - area.y,
+  };
+  const belly = { x: area.x, y: bellyTop, width: area.width, height: area.y + area.height - bellyTop };
+  if (outlined) {
+    graphics.fillStyle(OUTLINE_COLOUR);
+    graphics.fillRect(neck.x - 1, neck.y - 1, neck.width + 2, neck.height + 2);
+    graphics.fillRect(belly.x - 1, belly.y - 1, belly.width + 2, belly.height + 2);
+  }
+  graphics.fillStyle(FLASK_GLASS_COLOUR);
+  graphics.fillRect(neck.x, neck.y, neck.width, neck.height);
+  graphics.fillStyle(CHEST_COLOUR);
+  graphics.fillRect(neck.x, neck.y, neck.width, Math.min(2, neck.height));
+  graphics.fillStyle(FLASK_LIQUID_COLOUR);
+  graphics.fillRect(belly.x, belly.y, belly.width, belly.height);
+  graphics.fillStyle(FLASK_SHINE_COLOUR);
+  graphics.fillRect(belly.x + 1, belly.y + 1, 1, Math.max(1, belly.height - 3));
 }
 
 /** Three arrows standing in a crate, their heads up. */

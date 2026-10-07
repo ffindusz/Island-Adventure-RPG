@@ -9,7 +9,10 @@ export const STAT_NAMES: Readonly<Record<StatId, string>> = { health: 'HEALTH', 
 export const GEAR_STAT_ABBREVIATIONS: Readonly<Record<GearStat, string>> = { attack: 'ATK', defense: 'DEF' };
 
 /** The name of each consumable the hero carries in counts. */
-export const CONSUMABLE_NAMES: Readonly<Record<ConsumableId, string>> = { ammunition: 'AMMUNITION' };
+export const CONSUMABLE_NAMES: Readonly<Record<ConsumableId, string>> = {
+  ammunition: 'AMMUNITION',
+  'healing-potion': 'HEALING POTION',
+};
 
 /** A number as the player reads it: whole when it is whole, with no more than two decimals otherwise. */
 export function shown(value: number): string {

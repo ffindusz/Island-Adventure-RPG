@@ -1,5 +1,5 @@
 import { areaOf } from './content';
-import type { Chest, Content, Interactable } from './content';
+import type { Chest, Content, Interactable, Pickup } from './content';
 import { grantConsumable } from './consumables';
 import type { ChestContents } from './definitions';
 import { grantGear } from './gear';
@@ -9,17 +9,23 @@ import type { GameEvent } from './interface';
 import { interactableStateOf } from './state';
 import type { ChestState, InteractableState, PlayState } from './state';
 
-// Interactables: things in an Adventure Area that the hero acts on with Interact, such as chests. The content places
-// each with a kind, and the kind is what happens when the hero interacts with it.
+// Interactables: things placed on a tile of an Adventure Area. The content places each with a kind, and the kind is
+// what it is and does. The hero acts on most with Interact, such as a chest. The hero takes a pickup by walking onto
+// it instead, and that is a step of the game (see pickups.ts).
 //
 // To add a kind:
 //   1. add its definition to InteractableDefinition (definitions.ts), its loaded form to Interactable (content.ts) and
 //      its state to InteractableState (state.ts), and have loadInteractable in content.ts convert and check the
 //      definition and freshInteractable in state.ts say how it begins;
-//   2. write a function that takes the interactable, its state, the game state and the content, changes the state, and
-//      returns the events that happened, and add the case that shows it to interactableView (view.ts);
-//   3. add it to INTERACTIONS below, and decide in blocksWalkers whether the hero and the monsters walk through it.
-//      The compiler refuses a kind that is missing from either.
+//   2. write the rules: a function that takes the interactable, its state, the game state and the content, changes the
+//      state, and returns the events that happened. Interact calls it through INTERACTIONS below; a kind that
+//      happens by walking is a step in game.ts instead. Add the case that shows it to interactableView (view.ts);
+//   3. decide in blocksWalkers whether the hero and the monsters walk through it, and in isInteractedWith whether
+//      Interact reaches it. If Interact does not, leave the kind out of InteractedWith, as the pickup is; if it does,
+//      add it to INTERACTIONS. The compiler refuses a kind that is missing from any of these.
+
+/** The interactables that Interact acts on: all but those the hero takes by walking onto them. */
+type InteractedWith = Exclude<Interactable, Pickup>;
 
 /** What one kind of interactable does when the hero interacts with it. Returns what happened, in order. */
 export type Interaction<T extends Interactable> = (
@@ -29,15 +35,27 @@ export type Interaction<T extends Interactable> = (
   content: Content,
 ) => GameEvent[];
 
-const INTERACTIONS: { readonly [K in Interactable['kind']]: Interaction<Extract<Interactable, { kind: K }>> } = {
+const INTERACTIONS: { readonly [K in InteractedWith['kind']]: Interaction<Extract<InteractedWith, { kind: K }>> } = {
   chest: openChest,
 };
 
-/** Whether the hero and the monsters are stopped by an interactable. A chest is solid, opened or not. */
+/** Whether Interact reaches an interactable. A pickup it does not reach: it is taken by walking onto it. */
+function isInteractedWith(interactable: Interactable): interactable is InteractedWith {
+  switch (interactable.kind) {
+    case 'chest':
+      return true;
+    case 'pickup':
+      return false;
+  }
+}
+
+/** Whether the hero and the monsters are stopped by an interactable. A chest is solid, opened or not; a pickup not. */
 function blocksWalkers(interactable: Interactable): boolean {
   switch (interactable.kind) {
     case 'chest':
       return true;
+    case 'pickup':
+      return false;
   }
 }
 
@@ -53,21 +71,21 @@ export function heroInteracts(state: PlayState, content: Content): GameEvent[] {
     return [];
   }
   // The registry is keyed by kind, so the entry for this interactable's kind is made for exactly this kind.
-  const interaction = INTERACTIONS[target.kind] as Interaction<Interactable>;
-  return interaction(target, interactableStateOf(state, target.id), state, content);
+  const interaction = INTERACTIONS[target.kind] as Interaction<InteractedWith>;
+  return interaction(target, interactableStateOf(state, target), state, content);
 }
 
 /**
  * The interactable Interact acts on: of those in the ground right in front of the hero, as far as its reach and as wide
  * as its body, the one whose centre is nearest the hero. When two are as near, the one the content lists first.
  */
-function interactionTarget(state: PlayState, content: Content): Interactable | undefined {
+function interactionTarget(state: PlayState, content: Content): InteractedWith | undefined {
   const { size, interactionReach } = content.hero;
   const zone = zoneInFront(state.hero.position, size, state.hero.facing, interactionReach, size);
-  let target: Interactable | undefined;
+  let target: InteractedWith | undefined;
   let nearest = Infinity;
   for (const interactable of areaOf(content, state.areaId).interactables) {
-    if (overlaps(zone, interactable.body)) {
+    if (isInteractedWith(interactable) && overlaps(zone, interactable.body)) {
       const distance = squaredDistance(state.hero.position, centerOfBox(interactable.body));
       if (distance < nearest) {
         target = interactable;

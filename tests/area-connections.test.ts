@@ -17,6 +17,7 @@ import {
   biterAt,
   cacheAt,
   chestAt,
+  chestViews,
   dummyAt,
   face,
   fixedRandom,
@@ -24,6 +25,7 @@ import {
   gameAtTitle,
   monsterNamed,
   newGame,
+  pickupAt,
   playingView,
   strike,
   throughStorage,
@@ -214,7 +216,7 @@ describe('What the hero left behind in an Adventure Area', () => {
         { interactables: [cacheAt('cellar-cache', 4, 3, 3)] },
       ),
     );
-    const caches = () => playingView(game).interactables.map((cache) => [cache.id, cache.holds, cache.opened]);
+    const caches = () => chestViews(game).map((cache) => [cache.id, cache.holds, cache.opened]);
     const ammunition = () => playingView(game).hero.consumables.ammunition;
 
     // The hero starts facing down, beside the cache below it.
@@ -240,6 +242,57 @@ describe('What the hero left behind in an Adventure Area', () => {
     walk(game, 'right', 10);
     expect(game.send({ type: 'interact' })).toEqual([]);
     expect(ammunition()).toBe(8);
+  });
+
+  it('keeps a pickup taken in either area taken, and the pickup of the other area where it lay', () => {
+    const game = newGame(
+      world(
+        { interactables: [pickupAt('arena-potion', 3, 4, 2)] },
+        { interactables: [pickupAt('cellar-potion', 2, 4, 1)] },
+      ),
+    );
+    const lying = () => playingView(game).interactables.map((pickup) => pickup.id);
+    const potions = () => playingView(game).hero.consumables['healing-potion'];
+
+    // The hero's body overlaps the tile below it, (3, 4), on the 3rd step down.
+    walk(game, 'down', 3);
+    expect(potions()).toBe(2);
+    walk(game, 'up', 3);
+
+    // Taking the pickup of the arena left the one of the cellar where it lay, below the hero's arrival at (2.5, 3.5).
+    walk(game, 'right', 11);
+    expect(playingView(game).area.id).toBe('cellar');
+    expect(lying()).toEqual(['cellar-potion']);
+    walk(game, 'down', 3);
+    expect(potions()).toBe(3);
+    walk(game, 'up', 3);
+
+    walk(game, 'left', 3);
+    expect(playingView(game).area.id).toBe('arena');
+    expect(lying()).toEqual([]);
+    walk(game, 'right', 3);
+    expect(playingView(game).area.id).toBe('cellar');
+    expect(lying()).toEqual([]);
+
+    // Both are gone for good: walking over the places again gives no second potion from either.
+    expect(walk(game, 'down', 3)).toEqual([]);
+    walk(game, 'up', 3);
+    walk(game, 'left', 3);
+    walk(game, 'left', 8);
+    expect(walk(game, 'down', 3)).toEqual([]);
+    expect(potions()).toBe(3);
+  });
+
+  it('reports a pickup taken on the very step that takes the hero through an exit', () => {
+    // The pickup lies on the tile of the exit, so the hero's body overlaps both on the 11th step.
+    const game = newGame(world({ interactables: [pickupAt('exit-potion', 5, 3, 2)] }));
+
+    expect(walk(game, 'right', 11)).toEqual([
+      { type: 'pickup', item: { kind: 'consumable', id: 'healing-potion', amount: 2 } },
+      { type: 'area-changed', areaId: 'cellar' },
+    ]);
+
+    expect(playingView(game).hero.consumables['healing-potion']).toBe(2);
   });
 
   it('lets a chest block the hero only in the area where it stands', () => {
