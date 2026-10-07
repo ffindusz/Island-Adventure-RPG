@@ -92,9 +92,10 @@ function world(
   cellar: readonly MonsterPlacement[],
   cellarCheckpoint: CheckpointDefinition,
   arena: readonly MonsterPlacement[] = [],
+  heroHealth = 4,
 ): ContentDefinition {
   return enemyContent([{ id: 'weakling', type: 'weakling', tile: { col: 5, row: 3 } }, ...arena], {
-    hero: { health: 4 },
+    hero: { health: heroHealth },
     checkpoints: [EXIT_CAMP],
     entrances: [{ id: 'from-cellar', tile: { col: 11, row: 3 } }],
     exits: [TO_CELLAR],
@@ -123,6 +124,14 @@ function intoTheCellar(game: Game): void {
 
   expect(events).toContainEqual(EXIT_CAMP_ACTIVATED);
   expect(events).toContainEqual({ type: 'area-changed', areaId: 'cellar' });
+}
+
+/** A hero sent back to the camp in the arena walks to the exit and arrives in the cellar again; one in the cellar stays. */
+function backInTheCellar(game: Game): void {
+  if (playingView(game).area.id === 'cellar') {
+    return;
+  }
+  expect(walk(game, 'right', 3)).toContainEqual({ type: 'area-changed', areaId: 'cellar' });
 }
 
 // What defeats the hero: a monster of the cellar, with the damage it does and the place it stands on, which defeat puts
@@ -241,6 +250,60 @@ describe('a shot in flight when the dash of a charger defeats the hero', () => {
 
     expect(events).not.toContainEqual(expect.objectContaining({ type: 'hero-hit' }));
     expect(playingView(game).hero.health).toBe(4);
+  });
+});
+
+// The other monsters of the cellar are each in a state of their own when the hero falls. The killer is the biter on the
+// tile (3, 3), whose bite lands in step 31. A monster listed before it has acted in that step: a charger has launched its
+// dash and a shooter has fired, and recovers. One listed after it has not: it still winds up, a step short of the dash or
+// the shot. Any of them, left as it was, would hit the hero soon after it is back, and a new one hits in step 31.
+const BYSTANDERS = [
+  { state: 'a charger that winds up', before: [], after: [chargerAt('bystander', 2, 5)] },
+  { state: 'a charger that has launched its dash', before: [chargerAt('bystander', 2, 1)], after: [] },
+  { state: 'a shooter that winds up', before: [], after: [shooterAt('bystander', 2, 5)] },
+  { state: 'a shooter that has just fired', before: [shooterAt('bystander', 2, 5)], after: [] },
+] as const;
+
+const FALLS = [
+  { checkpointIn: 'the arena', checkpoint: CELLAR_CORNER },
+  { checkpointIn: 'the cellar', checkpoint: CELLAR_DOOR },
+] as const;
+
+describe('the other monsters of the cellar when a biter defeats the hero', () => {
+  const cases = BYSTANDERS.flatMap((bystander) => FALLS.map((fall) => ({ ...bystander, ...fall })));
+
+  it.each(cases)('start over with $state, with the Checkpoint in $checkpointIn', ({ before, after, checkpoint }) => {
+    const game = newGame(world([...before, biterAt('killer', 3, 3), ...after], checkpoint));
+    intoTheCellar(game);
+    advance(game, 30);
+    expect(monsterNamed(game, 'bystander').action).toMatchObject({ type: 'winding-up' });
+
+    expect(game.step()).toContainEqual({ type: 'hero-defeated' });
+
+    const { state } = game.snapshot();
+    expect(state.arrows).toEqual([]);
+    expect((state.areas['cellar'] ?? { monsters: [] }).monsters.map(({ action }) => action)).toEqual([{ type: 'idle' }, { type: 'idle' }]);
+    backInTheCellar(game);
+    expect(advance(game, 30)).not.toContainEqual(expect.objectContaining({ type: 'hero-hit' }));
+    expect(game.step()).toContainEqual(expect.objectContaining({ type: 'hero-hit', monsterId: 'killer' }));
+  });
+});
+
+describe('a charger that recovers when a shot defeats the hero', () => {
+  it.each(FALLS)('starts over, with the Checkpoint in $checkpointIn', ({ checkpoint }) => {
+    // The hero has 10 Health: the dash of the charger takes 6 of them in step 49 and the shot of the shooter on the tile
+    // (2, 5) the other 4 in step 57, while the charger, which has hit, rests.
+    const game = newGame(world([chargerAt('bystander', 7, 3), shooterAt('killer', 2, 5)], checkpoint, [], 10));
+    intoTheCellar(game);
+    advance(game, 56);
+    expect(monsterNamed(game, 'bystander').action).toEqual({ type: 'recovering' });
+    expect(playingView(game).hero.health).toBe(4);
+
+    expect(game.step()).toContainEqual({ type: 'hero-defeated' });
+
+    const { state } = game.snapshot();
+    expect(state.arrows).toEqual([]);
+    expect((state.areas['cellar'] ?? { monsters: [] }).monsters.map(({ action }) => action)).toEqual([{ type: 'idle' }, { type: 'idle' }]);
   });
 });
 
