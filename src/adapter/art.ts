@@ -147,11 +147,15 @@ const CHECKPOINT_POST_COLOUR = 0x5a3a1a;
 const CHECKPOINT_ACTIVE_COLOUR = 0xffd34d;
 const CHECKPOINT_IDLE_COLOUR = 0x8a8a9a;
 const CHECKPOINT_GLOW_COLOUR = 0xfff3a0;
+/** How far the post stands above its tile, so that the flag of the active one shows over a hero standing on it. */
+const CHECKPOINT_POST_RISE = 10;
 
 /**
  * Draws the Checkpoints of the area: a post with a flag. The one defeat sends the hero back to has its flag up in gold
- * on a pale glow; the others hang a grey flag half way down, so that they can be told apart without the colours. Draw
- * them every frame, before the hero and the monsters that walk over them, because which one is active changes.
+ * at the top of the post, which rises above its tile so that the hero, who stands on it after a defeat and at the start,
+ * does not hide it, on a pale glow; the others hang a grey flag half way down, so that they can be told apart without
+ * the colours. Draw them every frame, before the hero and the monsters that walk over them, because which one is active
+ * changes.
  */
 export function drawCheckpoints(graphics: Graphics, checkpoints: readonly CheckpointView[]): void {
   for (const checkpoint of checkpoints) {
@@ -165,9 +169,10 @@ export function drawCheckpoints(graphics: Graphics, checkpoints: readonly Checkp
       graphics.fillRect(tile.x, tile.y + 1, 1, tile.height - 2);
       graphics.fillRect(tile.x + tile.width - 1, tile.y + 1, 1, tile.height - 2);
     }
-    const post = { x: tile.x + 3, y: tile.y + 1, width: 4, height: tile.height - 2 };
+    const postTop = tile.y - CHECKPOINT_POST_RISE;
+    const post = { x: tile.x + 3, y: postTop, width: 4, height: tile.y + tile.height - 1 - postTop };
     fillWithOutline(graphics, post, CHECKPOINT_POST_COLOUR);
-    const flag = { x: tile.x + 6, y: tile.y + (checkpoint.active ? 2 : 7), width: 8, height: 6 };
+    const flag = { x: tile.x + 6, y: checkpoint.active ? postTop + 1 : tile.y + 7, width: 8, height: 6 };
     fillWithOutline(graphics, flag, checkpoint.active ? CHECKPOINT_ACTIVE_COLOUR : CHECKPOINT_IDLE_COLOUR);
   }
 }
