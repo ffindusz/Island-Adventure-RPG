@@ -4,7 +4,7 @@
 
 **Blocked by:** 04: Experience, Levels, and the stat page
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 24, 43, 67, 70, 73-76
 
@@ -19,6 +19,8 @@
 - [ ] Reviewer play check (manual, in a browser): open both chests, equip the upgrades from the inventory, and confirm the hero hits harder and takes less damage.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at c6eb656
 
 ### What was built
 
