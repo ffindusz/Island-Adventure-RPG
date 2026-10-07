@@ -30,7 +30,7 @@ On Windows PowerShell, `npm` and `npx` can be blocked by the execution policy: u
 src/
   core/      The Game core: every gameplay rule, headless. Its public face is core/index.ts.
   content/   The game's content as plain data: terrain, hero, monsters, areas.
-  adapter/   The Phaser adapter: keys to commands, the fixed-step loop, drawing. It holds no rules.
+  adapter/   The Phaser adapter: keys to commands, the fixed-step loop, drawing, the HUD. It holds no rules.
   main.ts    The composition root: builds the Game core from the content and starts the adapter.
 tests/       Vitest tests of the Game core's interface, and fixtures.ts, a tiny arena to test in.
 docs/adr/    Decision records.
@@ -38,13 +38,21 @@ docs/adr/    Decision records.
 
 Dependencies point one way: `main.ts` uses the adapter, the content and the core; the adapter uses the core; the content imports only types from the core; the core imports nothing outside itself. Import the core through `core/index.ts`, never from the files behind it.
 
+## Monsters, damage and defeat
+
+- **Behaviors.** A monster type in `src/content/monsters.ts` names a `behavior` and gives the numbers that behavior needs; several types can share one. The behaviors are a small registry in `src/core/behaviors.ts`: `stationary` stands still, and `chaser` notices the hero, walks up, winds up a telegraphed attack, strikes, and rests before it can wind up again. To add a behavior, follow the three steps at the top of `behaviors.ts` (a definition plus a `loadMonsterType` case in `src/core/content.ts` that checks its numbers, a step function, a registry entry); the compiler refuses one that misses a place.
+- **A chaser's numbers** are monster type fields. Distances are in tiles from the monster's body, times are in milliseconds: `damage`, `speedTilesPerSecond`, `noticingDistance`, `reach`, `windUpMs` (at least one fixed step), `recoveryMs`, with `health` and `size`. The attack zone is the square around the body that `reach` describes. It is fixed when the wind-up starts and is in the view (`action` is `winding-up`, with `zone` and `progress`); the damage lands when the wind-up ends, and only if the hero overlaps the zone then. There is no line of sight and no pathfinding: a chaser walks straight at the hero and stops at what is in the way.
+- **Hero numbers.** `health` (the maximum) and `defense` in `src/content/hero.ts`; `minimumDamage` (default 1) on the content itself. A hit takes off its damage minus Defense, never less than `minimumDamage`. Health never comes back by itself.
+- **Defeat.** At 0 Health the core emits `hero-defeated` in that same step, puts the hero back at the content's start with full Health, and resets the Adventure Area's monsters to full Health at their starting places, defeated ones included. Where the hero returns to is decided in one place, `returnHero` in `src/core/hero-damage.ts`. The adapter fades the screen in when it sees the event.
+- **HUD.** `src/adapter/hud.ts` draws the hero's Health from the view and nothing else, fixed to the screen. Its digits are a tiny bitmap font drawn with rectangles, because Phaser's `Text` blurs at this size.
+
 ## How the tests work
 
 The Game core's interface is the only automated test seam (see `docs/adr/0002-game-core-interface-is-the-test-seam.md`). Commands go in with `send`, time goes in with `step` (one fixed step is 1/60 s), and everything comes out as the return values of those calls, `view()` and `snapshot()`. Tests never look inside the core, never need Phaser, and are deterministic: time moves only when a test steps the game, and the random source is passed in.
 
 - `tests/fixtures.ts` builds a small arena whose numbers can be worked out by hand. Expected values in tests are such hand-worked examples, never the rule run again, and test names use the glossary's words.
 - A new rule starts as a failing test that creates a game with `createGame`, sends commands, steps, and asserts on the view, the events or the snapshot. Rules are tested against fixtures, so retuning the real content does not break them.
-- `tests/shipped-content.test.ts` checks the real content with generic validity checks only (it loads, the hero can start and walk).
+- `tests/shipped-content.test.ts` checks the real content with generic validity checks only (it loads, the hero can start and walk, and no monster can hurt a hero who stays at the start).
 - Not tested automatically: Phaser drawing, key mapping, audio and art. A ticket that touches the adapter has a manual play check instead.
 
 ## Keeping the core independent
