@@ -97,7 +97,9 @@ export function createGame(options: GameOptions): Game {
       // monsters of the area it arrives in first act in the next step.
       const areaEvents = crossExits(state, content);
       if (areaEvents.length > 0) {
-        return [...milestoneEvents, ...pickupEvents, ...checkpointEvents, ...arrowEvents, ...areaEvents];
+        // The hero is on the entrance, and a Checkpoint there is activated though the hero did not walk onto it.
+        const arrivalEvents = activateCheckpoints(state, content, []);
+        return [...milestoneEvents, ...pickupEvents, ...checkpointEvents, ...arrowEvents, ...areaEvents, ...arrivalEvents];
       }
       const monsterEvents = stepMonsters(state, content);
       if (monsterEvents.some((event) => event.type === 'hero-defeated')) {

@@ -56,9 +56,14 @@ function expectRefused(content: ContentDefinition, message: string): void {
   expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
 }
 
-/** The arena and the cellar, with the hero in the arena. */
-function world(arenaOptions: ArenaOptions = {}): ContentDefinition {
-  return arena({ entrances: [FROM_CELLAR], exits: [TO_CELLAR], ...arenaOptions, otherAreas: [CELLAR] });
+/** The arena and the cellar, with the hero in the arena. `cellar` replaces parts of the cellar. */
+function world(arenaOptions: ArenaOptions = {}, cellar: Partial<AreaDefinition> = {}): ContentDefinition {
+  return arena({
+    entrances: [FROM_CELLAR],
+    exits: [TO_CELLAR],
+    ...arenaOptions,
+    otherAreas: [{ ...CELLAR, ...cellar }],
+  });
 }
 
 describe('Checkpoints in the content', () => {
@@ -159,5 +164,30 @@ describe('Touching a Checkpoint', () => {
     walk(game, 'up', 3);
     expect(walk(game, 'down', 3)).toContainEqual(CAMP_ACTIVATED);
     expect(playingView(game).hero.health).toBe(10);
+  });
+});
+
+describe('Arriving on a Checkpoint', () => {
+  // The hero walks right along row 3 and is in the exit, on tile (5, 3), on the 11th step. It arrives in the cellar at
+  // the entrance on tile (2, 3), where the door is.
+  const DOOR: CheckpointDefinition = { id: 'cellar-door', tile: { col: 2, row: 3 } };
+  const DOOR_ACTIVATED = { type: 'checkpoint-activated', checkpointId: 'cellar-door' } as const;
+
+  it('activates it once the hero is in the new area, and not again while it stays', () => {
+    const game = newGame(world({}, { checkpoints: [DOOR] }));
+
+    const events = walk(game, 'right', 11);
+
+    expect(events.slice(-2)).toEqual([{ type: 'area-changed', areaId: 'cellar' }, DOOR_ACTIVATED]);
+    expect(playingView(game).checkpoints).toEqual([expect.objectContaining({ id: 'cellar-door', active: true })]);
+    expect(advance(game, 5)).not.toContainEqual(DOOR_ACTIVATED);
+  });
+
+  it('does not activate a Checkpoint elsewhere in the area', () => {
+    const elsewhere: CheckpointDefinition = { id: 'cellar-corner', tile: { col: 4, row: 4 } };
+    const game = newGame(world({}, { checkpoints: [elsewhere] }));
+
+    expect(walk(game, 'right', 11)).not.toContainEqual(expect.objectContaining({ type: 'checkpoint-activated' }));
+    expect(playingView(game).checkpoints).toEqual([expect.objectContaining({ active: false })]);
   });
 });
