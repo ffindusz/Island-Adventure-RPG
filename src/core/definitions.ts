@@ -24,6 +24,8 @@ export interface HeroDefinition {
   /** Width and height of the hero's body, in tiles. */
   readonly size: number;
   readonly speedTilesPerSecond: number;
+  /** The hero's base Health: the most Health the hero can have. */
+  readonly health: number;
   /** The hero's base Attack: the damage of one strike. */
   readonly attack: number;
   readonly attackCooldownMs: number;

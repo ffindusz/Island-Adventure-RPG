@@ -61,6 +61,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     hero: {
       size: 0.5,
       speedTilesPerSecond: 7.5,
+      health: 10,
       attack: 1,
       attackCooldownMs: 400,
       meleeWeapon: { reach: 1, width: 1 },

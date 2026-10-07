@@ -48,6 +48,10 @@ export interface HeroView {
   /** Width and height of the hero's body, in tiles. */
   readonly size: number;
   readonly facing: Direction;
+  /** The hero's current Health. */
+  readonly health: number;
+  /** The hero's maximum Health. */
+  readonly maxHealth: number;
 }
 
 export interface MonsterView {

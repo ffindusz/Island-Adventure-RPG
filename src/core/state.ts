@@ -2,6 +2,7 @@ import type { Content } from './content';
 import { monsterTypeOf } from './content';
 import type { Box, Direction, Point } from './geometry';
 import { boxAround, centerOf } from './geometry';
+import { heroMaxHealth } from './stats';
 
 /** Bumped whenever the shape of a Snapshot changes in a way an older save cannot satisfy. */
 export const SNAPSHOT_VERSION = 1;
@@ -24,6 +25,8 @@ export interface AreaState {
 export interface HeroState {
   position: Point;
   facing: Direction;
+  /** The hero's current Health. It is never above the maximum, and it only goes up when the hero is restored. */
+  health: number;
   /** Fixed steps left before the hero can attack again; 0 means ready. */
   attackCooldown: number;
 }
@@ -59,7 +62,7 @@ export function newPlayState(content: Content): PlayState {
   return {
     phase: 'playing',
     areaId: content.start.areaId,
-    hero: { position: centerOf(content.start.tile), facing: 'down', attackCooldown: 0 },
+    hero: { position: centerOf(content.start.tile), facing: 'down', health: heroMaxHealth(content), attackCooldown: 0 },
     areas,
   };
 }

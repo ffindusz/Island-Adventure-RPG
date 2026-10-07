@@ -28,6 +28,7 @@ export interface Content {
     readonly size: number;
     /** Tiles walked in one fixed step. */
     readonly speedPerStep: number;
+    readonly health: number;
     readonly attack: number;
     readonly attackCooldownSteps: number;
     readonly meleeWeapon: MeleeWeaponDefinition;
@@ -60,6 +61,7 @@ export function loadContent(definition: ContentDefinition): Content {
     hero: {
       size: definition.hero.size,
       speedPerStep: definition.hero.speedTilesPerSecond / STEPS_PER_SECOND,
+      health: definition.hero.health,
       attack: definition.hero.attack,
       attackCooldownSteps: msToSteps(definition.hero.attackCooldownMs),
       meleeWeapon: definition.hero.meleeWeapon,

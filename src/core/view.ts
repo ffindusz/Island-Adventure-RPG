@@ -1,6 +1,7 @@
 import { areaOf, monsterTypeOf } from './content';
 import type { Content } from './content';
 import type { GameView } from './interface';
+import { heroMaxHealth } from './stats';
 import { livingMonsters } from './state';
 import type { GameState } from './state';
 
@@ -17,6 +18,8 @@ export function buildView(state: GameState, content: Content): GameView {
       position: { x: state.hero.position.x, y: state.hero.position.y },
       size: content.hero.size,
       facing: state.hero.facing,
+      health: state.hero.health,
+      maxHealth: heroMaxHealth(content),
     },
     monsters: livingMonsters(state).map((monster) => {
       const type = monsterTypeOf(content, monster.type);
