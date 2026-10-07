@@ -48,7 +48,7 @@
 
 ### How it was verified
 
-- `npm.cmd run check` on this branch at `fb1c17f`: typecheck exit 0, 486 of 486 tests in 31 files (465 in 28 before), build OK. Every existing test file is unchanged (`git diff --name-status` shows three new test files and nothing modified under `tests`).
+- `npm.cmd run check` on this branch at `fb1c17f`: typecheck exit 0, 486 of 486 tests in 31 files (465 in 28 before), build OK. Every existing test file is unchanged (`git diff --name-status` shows three new test files and nothing modified under `tests`). The integration tip `da2f6a8` was merged at the end ("Already up to date": tickets 09 and 12 had not merged yet) and the check gave the same result again.
 - Test-first, at the seam agreed for this ticket: the manifest through its public functions with in-memory fakes (`tests/asset-manifest.test.ts`, 8 tests: the missing names, each once and in the order first asked, the loud error that names them all, nothing thrown when nothing is missing, the same question put to loaded textures, and `toString`, `constructor` and `__proto__` not taken for pictures); the view's `progress` (`tests/hero-progress-view.test.ts`, 4 tests); the covered corner (`tests/covered-corner.test.ts`, 9 tests). Two of the manifest tests (loaded textures, inherited names) pin what the code already did, so they were green at once; mutations B and C below show that they can fail.
 - Mutations of the manifest, each confirmed red and then reverted (nothing is left in the tree): `manifestLookup` saying that every name exists (6 of the 8 tests fail); `name in manifest` instead of `Object.hasOwn(manifest, name)` (the 3 inherited-name tests fail); `requireArt` that never throws (2 fail). The test that a missing name is reported once was red first and went green with the `Set`.
 - Loud failure on the dev server, each reverted: `gear-steel-sword` taken out of `ARTWORK` made the page throw, naming it, and the smoke tool fail; pointing `arrow` at a file that does not exist gave a 404 and an error naming `arrow`; `HUD_WIDTH` 96 gave the covered-corner error ("The HUD covers the top left 98 by 48 pixels, but the content keeps only 96 by 48 solid under it"), and 88 passes again.
@@ -57,7 +57,7 @@
   - The HUD at the start, with the bow in hand, with no Ammunition and no potions (grey), and over solid rock in the trail's north-west corner.
   - The stat page; the inventory (new game, full of Gear, the cursor on a piece of Gear and on the potion line, scrolled, "INVENTORY 6/8"); the level-up choice; the pause page; the out-of-ammunition notice; the pickup notices (sword, bow, armor, arrows, potions from a chest and from the beach); the area banner on the trail.
 - The production build: `npm.cmd run build` puts all 13 files in `dist/art/`. `vite preview` on port 5122 (stopped by PID afterwards) shows the same screens, a file that does not exist is a real 404, and the smoke tool passes. A build with `--base=/island/`, served under `/island/`, boots and loads all 13 pictures too (deleted afterwards).
-
+- Other window sizes, on the production build: the canvas at 1366 by 768 and at 1920 by 1080 comes out at 1280 by 768 and 1600 by 960 pixels (4 and 5 times, whole numbers as ticket 08 has it). The HUD, the hero and the tiles are sharp, with 0 console, page or HTTP errors. Smaller windows were not tried.
 ### Left for manual review
 
 - The reviewer play check (the last criterion) stays unticked. I drove the page with real key presses and with the core's commands, and looked at screenshots, but did not play by hand.
