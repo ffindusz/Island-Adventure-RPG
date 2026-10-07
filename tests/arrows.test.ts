@@ -104,7 +104,9 @@ describe('shooting', () => {
 
     expect(game.send(ATTACK)).toEqual([{ type: 'hero-shot', direction: 'right' }]);
 
-    expect(arrowsOf(game)).toEqual([{ position: { x: 3.5, y: 3.5 }, direction: 'right', size: 0.25 }]);
+    expect(arrowsOf(game)).toEqual([
+      { position: { x: 3.5, y: 3.5 }, direction: 'right', size: 0.25, shooter: 'hero' },
+    ]);
     expect(ammunitionOf(game)).toBe(2);
   });
 
@@ -143,7 +145,7 @@ describe('shooting', () => {
       left: { x: 3, y: 3.5 },
       right: { x: 4, y: 3.5 },
     }[direction];
-    expect(arrowsOf(game)).toEqual([{ position: flownTo, direction, size: 0.25 }]);
+    expect(arrowsOf(game)).toEqual([{ position: flownTo, direction, size: 0.25, shooter: 'hero' }]);
   });
 
   it('shares the attack cooldown with the sword: after a shot a strike waits, and after a strike a shot waits', () => {
@@ -215,9 +217,13 @@ describe('an arrow in flight', () => {
     game.send(ATTACK);
 
     advance(game, 1);
-    expect(arrowsOf(game)).toEqual([{ position: { x: 3.75, y: 3.5 }, direction: 'right', size: 0.25 }]);
+    expect(arrowsOf(game)).toEqual([
+      { position: { x: 3.75, y: 3.5 }, direction: 'right', size: 0.25, shooter: 'hero' },
+    ]);
     advance(game, 2);
-    expect(arrowsOf(game)).toEqual([{ position: { x: 4.25, y: 3.5 }, direction: 'right', size: 0.25 }]);
+    expect(arrowsOf(game)).toEqual([
+      { position: { x: 4.25, y: 3.5 }, direction: 'right', size: 0.25, shooter: 'hero' },
+    ]);
   });
 
   it('keeps its way when the hero turns, and flies on when the hero walks off', () => {
@@ -228,7 +234,7 @@ describe('an arrow in flight', () => {
     face(game, 'up');
     advance(game, 2);
 
-    expect(arrowsOf(game)).toEqual([{ position: { x: 4, y: 3.5 }, direction: 'right', size: 0.25 }]);
+    expect(arrowsOf(game)).toEqual([{ position: { x: 4, y: 3.5 }, direction: 'right', size: 0.25, shooter: 'hero' }]);
   });
 
   it('is gone when it meets the wall, having flown right up to it', () => {

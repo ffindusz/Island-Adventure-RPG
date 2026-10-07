@@ -1,3 +1,4 @@
+import { arrowSizeOf } from './arrows';
 import { areaOf, monsterTypeOf } from './content';
 import type { Content, Interactable } from './content';
 import { automapPage } from './automap';
@@ -62,7 +63,8 @@ export function buildView(state: GameState, content: Content): GameView {
       .map((arrow) => ({
         position: { x: arrow.position.x, y: arrow.position.y },
         direction: arrow.direction,
-        size: content.hero.rangedWeapon.arrowSize,
+        size: arrowSizeOf(arrow, content),
+        shooter: arrow.shotBy === undefined ? 'hero' : 'monster',
       })),
     interactables: area.interactables.flatMap((interactable) => interactableView(interactable, state) ?? []),
     page: pageView(state, content),
@@ -143,6 +145,8 @@ function actionView(action: MonsterAction): MonsterActionView {
   switch (action.type) {
     case 'winding-up':
       return { type: 'winding-up', progress: action.elapsed / action.length, zone: { ...action.zone } };
+    case 'dashing':
+      return { type: 'dashing', direction: action.direction };
     case 'idle':
     case 'chasing':
     case 'recovering':

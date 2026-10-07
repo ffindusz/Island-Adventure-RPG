@@ -32,6 +32,8 @@ const TERRAIN_COLOURS: Readonly<Record<string, number>> = {
 /** Monster colours, by monster type. */
 const MONSTER_COLOURS: Readonly<Record<string, number>> = {
   crab: 0xd9534f,
+  boar: 0x7d4e2d,
+  spitter: 0xa86fd6,
 };
 
 /** Anything the art has no colour for is drawn in this colour, so a missing one cannot be overlooked. */
@@ -58,6 +60,9 @@ const FLASK_LIQUID_COLOUR = 0xe0455f;
 const FLASK_SHINE_COLOUR = 0xffffff;
 const ARROW_SHAFT_COLOUR = 0xf0e6c8;
 const ARROW_HEAD_COLOUR = 0xffffff;
+const PROJECTILE_COLOUR = 0xd28bff;
+const PROJECTILE_CORE_COLOUR = 0xffffff;
+const WIND_UP_COLOUR = 0xff6b5b;
 const EXIT_COLOUR = 0xbfeaff;
 
 /** The shape of an arrow in flight, in pixels: how far the shaft and the head reach back from the tip, and how wide. */
@@ -68,6 +73,18 @@ const ARROW_HEAD_WIDTH = 4;
 
 /** Side of the square on the hero that shows which way it faces, in pixels. */
 const FACING_MARKER_SIZE = 4;
+
+/** A monster that warns by flashing alternates on and off over this many equal parts of its wind-up, ending on. */
+const WIND_UP_FLASH_PARTS = 7;
+
+/** How far, in tiles, a zone's edge may lie beyond a body's and still be the body's edge: it absorbs rounding. */
+const EDGE_TOLERANCE = 1e-6;
+
+/** The faded copies of a dashing monster's body left behind it, nearest first, by how much of its colour shows. */
+const DASH_TRAIL_ALPHAS: readonly number[] = [0.5, 0.3, 0.15];
+
+/** The faded copies of a projectile left behind it, nearest first, by how much of its colour shows. */
+const PROJECTILE_TRAIL_ALPHAS: readonly number[] = [0.5, 0.25];
 
 const FACING_STEP: Readonly<Record<Direction, Point>> = {
   up: { x: 0, y: -1 },
@@ -93,8 +110,8 @@ function bodyRect(position: Point, size: number): Rect {
   return { x: px(position.x - size / 2), y: px(position.y - size / 2), width: px(size), height: px(size) };
 }
 
-function fillWithOutline(graphics: Graphics, rect: Rect, fill: number): void {
-  graphics.fillStyle(OUTLINE_COLOUR);
+function fillWithOutline(graphics: Graphics, rect: Rect, fill: number, outline: number = OUTLINE_COLOUR): void {
+  graphics.fillStyle(outline);
   graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
   graphics.fillStyle(fill);
   graphics.fillRect(rect.x + 1, rect.y + 1, rect.width - 2, rect.height - 2);
@@ -228,7 +245,7 @@ function drawPickup(graphics: Graphics, pickup: PickupView): void {
   PICKUP_LOOKS[pickup.consumable](graphics, bodyRect(pickup.position, pickup.size));
 }
 
-/** The rectangle with `across` pixels taken off each side and `down` off the top and the bottom. */
+/** The rectangle with `across` pixels taken off each side and `down` off the top and the bottom. A negative amount adds. */
 function shrunk(rect: Rect, across: number, down: number): Rect {
   return { x: rect.x + across, y: rect.y + down, width: rect.width - 2 * across, height: rect.height - 2 * down };
 }
@@ -304,6 +321,32 @@ function arrowPart(tip: Point, step: Point, behind: number, length: number, widt
   return { x: tip.x - width / 2, y: tip.y + start, width, height: length };
 }
 
+/**
+ * Draws a monster's projectile in flight as a glowing orb with a faded trail behind it, so that it cannot be taken for
+ * one of the hero's arrows, which `drawArrow` draws. The orb is exactly the projectile's body, with the outline around
+ * it, so what touches the orb is what it hits.
+ */
+export function drawProjectile(graphics: Graphics, projectile: ArrowView): void {
+  const body = bodyRect(projectile.position, projectile.size);
+  const step = FACING_STEP[projectile.direction];
+  const gap = body.width + 1;
+  PROJECTILE_TRAIL_ALPHAS.forEach((alpha, index) => {
+    const behind = gap * (index + 1);
+    graphics.fillStyle(PROJECTILE_COLOUR, alpha);
+    graphics.fillRect(body.x - step.x * behind, body.y - step.y * behind, body.width, body.height);
+  });
+  const outline = shrunk(body, -1, -1);
+  graphics.fillStyle(OUTLINE_COLOUR);
+  graphics.fillRect(outline.x, outline.y, outline.width, outline.height);
+  graphics.fillStyle(PROJECTILE_COLOUR);
+  graphics.fillRect(body.x, body.y, body.width, body.height);
+  if (body.width > 2 && body.height > 2) {
+    const core = shrunk(body, 1, 1);
+    graphics.fillStyle(PROJECTILE_CORE_COLOUR);
+    graphics.fillRect(core.x, core.y, core.width, core.height);
+  }
+}
+
 /** Draws the hero as a square with a dark marker on the side it faces, red while it flashes from a hit. */
 export function drawHero(graphics: Graphics, hero: HeroView, flashing: boolean): void {
   const body = bodyRect(hero.position, hero.size);
@@ -321,13 +364,19 @@ export function drawHero(graphics: Graphics, hero: HeroView, flashing: boolean):
 
 /**
  * Draws a monster as a square: white while it flashes from a hit, dimmed while it rests after an attack, with a Health
- * bar once it is hurt.
+ * bar once it is hurt. While it winds up an attack that has no area to show, it flashes red; while it dashes, faded
+ * copies of it trail behind.
  */
 export function drawMonster(graphics: Graphics, monster: MonsterView, flashing: boolean): void {
   const body = bodyRect(monster.position, monster.size);
   const colour = MONSTER_COLOURS[monster.type] ?? UNKNOWN_COLOUR;
   const resting = monster.action.type === 'recovering';
-  fillWithOutline(graphics, body, flashing ? HIT_FLASH_COLOUR : resting ? dimmed(colour) : colour);
+  const warning = flashesToWarn(monster) && !flashing;
+  if (monster.action.type === 'dashing') {
+    drawDashTrail(graphics, body, monster.action.direction, colour);
+  }
+  const fill = flashing ? HIT_FLASH_COLOUR : warning ? WIND_UP_COLOUR : resting ? dimmed(colour) : colour;
+  fillWithOutline(graphics, body, fill, warning ? TELEGRAPH_COLOUR : OUTLINE_COLOUR);
   if (monster.health < monster.maxHealth) {
     const innerWidth = body.width - 2;
     graphics.fillStyle(OUTLINE_COLOUR);
@@ -335,6 +384,38 @@ export function drawMonster(graphics: Graphics, monster: MonsterView, flashing: 
     graphics.fillStyle(HEALTH_COLOUR);
     graphics.fillRect(body.x + 1, body.y - 4, Math.max(1, Math.round((innerWidth * monster.health) / monster.maxHealth)), 2);
   }
+}
+
+/**
+ * Whether a monster that is winding up is showing it by being red at this moment. One whose attack lands somewhere
+ * else, such as a charger's lane, has that telegraph to show. One whose zone lies within its own body, such as a ranged
+ * attacker (it aims only when it fires), has nothing to show but itself, so it flashes: on for the first part of its
+ * wind-up, off for the second, and so on to the end, so that it is on just before the shot.
+ */
+function flashesToWarn(monster: MonsterView): boolean {
+  const { action, position, size } = monster;
+  if (action.type !== 'winding-up') {
+    return false;
+  }
+  const half = size / 2;
+  const { zone } = action;
+  const withinBody =
+    zone.minX >= position.x - half - EDGE_TOLERANCE &&
+    zone.maxX <= position.x + half + EDGE_TOLERANCE &&
+    zone.minY >= position.y - half - EDGE_TOLERANCE &&
+    zone.maxY <= position.y + half + EDGE_TOLERANCE;
+  return withinBody && Math.floor(action.progress * WIND_UP_FLASH_PARTS) % 2 === 0;
+}
+
+/** Behind a dashing monster: faded copies of its body, so that its speed shows. */
+function drawDashTrail(graphics: Graphics, body: Rect, direction: Direction, colour: number): void {
+  const step = FACING_STEP[direction];
+  const gap = Math.max(2, Math.round(body.width / 2));
+  DASH_TRAIL_ALPHAS.forEach((alpha, index) => {
+    const behind = gap * (index + 1);
+    graphics.fillStyle(colour, alpha);
+    graphics.fillRect(body.x - step.x * behind, body.y - step.y * behind, body.width, body.height);
+  });
 }
 
 /** Shows where a strike landed: the area the Game core says the swing covered. */

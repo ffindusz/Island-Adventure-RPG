@@ -27,8 +27,19 @@ export type MonsterAction =
   | { readonly type: 'idle' }
   /** Has noticed the hero and walks toward it. */
   | { readonly type: 'chasing' }
-  /** Telegraphing an attack: it lands on `zone`, which was fixed when the wind-up began, after `length` steps. */
-  | { readonly type: 'winding-up'; readonly zone: Box; elapsed: number; readonly length: number }
+  /**
+   * Telegraphing an attack: it lands on `zone`, which was fixed when the wind-up began, after `length` steps. A
+   * monster whose attack is a dash also keeps the `direction` it will dash in, fixed at the same time.
+   */
+  | {
+      readonly type: 'winding-up';
+      readonly zone: Box;
+      elapsed: number;
+      readonly length: number;
+      readonly direction?: Direction;
+    }
+  /** Dashing along the lane its wind-up showed, with this much of the lane still ahead of it, in tiles. */
+  | { readonly type: 'dashing'; readonly direction: Direction; rangeLeft: number }
   /** Resting after an attack, for this many more steps. */
   | { readonly type: 'recovering'; stepsLeft: number };
 
@@ -94,7 +105,10 @@ export interface HeroState {
 export const PAGE_IDS = ['stats', 'inventory', 'automap'] as const;
 export type PageId = (typeof PAGE_IDS)[number];
 
-/** An arrow in flight. Like all state it is plain data, so the arrows in the air are saved with the game. */
+/**
+ * An arrow in flight: one the hero shot, or the projectile of a ranged attacker. Like all state it is plain data, so
+ * the ones in the air are saved with the game.
+ */
 export interface ArrowState {
   /** The Adventure Area it was shot in: it flies and hits only there. */
   readonly areaId: string;
@@ -104,6 +118,11 @@ export interface ArrowState {
   readonly direction: Direction;
   /** How far it can still fly before it falls, in tiles. */
   rangeLeft: number;
+  /**
+   * The monster that shot it, when a monster did: such a projectile hurts the hero, and flies as that type of monster
+   * says. The type is kept so that it flies on when its shooter is gone. The hero's own arrows leave this out.
+   */
+  readonly shotBy?: { readonly monsterId: string; readonly monsterType: string };
 }
 
 /** The text of an Adventure Area while it is shown, and for how many more fixed steps. */
@@ -137,7 +156,7 @@ export interface PlayState {
   hero: HeroState;
   /**
    * The arrows in flight, in the order they were shot. No damage is kept with an arrow: it does the hero's Attack as
-   * it is when the arrow hits.
+   * it is when the arrow hits, and a projectile of a monster does the damage of its type.
    */
   arrows: ArrowState[];
   /** The page that is open over the game, if any. While one is open the game is paused (see pages.ts). */

@@ -1,14 +1,16 @@
-import { areaOf } from './content';
-import type { Content } from './content';
+import { areaOf, monsterTypeOf } from './content';
+import type { Area, Content, MonsterProjectile } from './content';
 import { boxAround, EPSILON, overlaps } from './geometry';
-import type { Box, Direction } from './geometry';
+import type { Box, Direction, Point } from './geometry';
+import { hurtHero } from './hero-damage';
 import { interactableObstacles } from './interactables';
 import type { GameEvent, RandomSource } from './interface';
 import { hurtMonster } from './monster-damage';
 import { gapAhead, moveBody } from './movement';
-import { livingMonsters, monsterBody } from './state';
+import { heroBody, livingMonsters, monsterBody } from './state';
 import type { ArrowState, MonsterState, PlayState } from './state';
 import { heroAttack } from './stats';
+import { sweepToward } from './sweep';
 
 /**
  * The hero shoots with the Ranged Weapon: an arrow leaves the hero's centre in the direction it faces, and costs one
@@ -34,14 +36,22 @@ export function heroShoots(state: PlayState, content: Content): GameEvent[] {
   return [{ type: 'hero-shot', direction }];
 }
 
+/** What one fixed step of flight did to an arrow: what happened, and whether it flies on. */
+interface Flight {
+  readonly events: GameEvent[];
+  readonly flying: boolean;
+}
+
 /**
- * Flies every arrow one fixed step. An arrow hurts the first monster it reaches on the way and is gone. Otherwise it
- * flies on until solid terrain or a chest stops it, or its range is spent, and then it is gone. Arrows of an Adventure
- * Area the hero has left are gone too: an arrow only flies in the area it was shot in, and the hero is in one.
+ * Flies every arrow one fixed step, the hero's and the projectiles of monsters alike. An arrow of the hero hurts the
+ * first monster it reaches on the way and is gone. A projectile of a monster hurts the hero if it reaches it, with
+ * Defense and defeat as in any hit, and passes through the monsters. Otherwise it flies on until solid terrain or a
+ * chest stops it, or its range is spent, and then it is gone. Arrows of an Adventure Area the hero has left are gone
+ * too: an arrow only flies in the area it was shot in, and the hero is in one. A projectile that defeats the hero
+ * takes the arrows in the air with it, like any defeat.
  */
 export function flyArrows(state: PlayState, content: Content, random: RandomSource): GameEvent[] {
   const area = areaOf(content, state.areaId);
-  const { arrowSpeedPerStep, arrowSize } = content.hero.rangedWeapon;
   const obstacles = interactableObstacles(state, content);
   const events: GameEvent[] = [];
   const stillFlying: ArrowState[] = [];
@@ -49,24 +59,88 @@ export function flyArrows(state: PlayState, content: Content, random: RandomSour
     if (arrow.areaId !== state.areaId) {
       continue;
     }
-    const distance = Math.min(arrowSpeedPerStep, arrow.rangeLeft);
-    const end = moveBody(area, arrow.position, arrowSize, arrow.direction, distance, obstacles);
-    const travelled = Math.abs(end.x - arrow.position.x) + Math.abs(end.y - arrow.position.y);
-    const body = boxAround(arrow.position, arrowSize);
-    const target = firstMonsterReached(state, content, body, arrow.direction, travelled);
-    if (target !== undefined) {
-      events.push(...hurtMonster(state, content, target, heroAttack(state, content, 'ranged-weapon'), random));
-      continue;
+    const flight =
+      arrow.shotBy === undefined
+        ? flyHeroArrow(state, content, arrow, area, obstacles, random)
+        : flyProjectile(state, content, arrow, arrow.shotBy, area, obstacles);
+    events.push(...flight.events);
+    if (flight.events.some((event) => event.type === 'hero-defeated')) {
+      state.arrows = [];
+      return events;
     }
-    arrow.position = end;
-    arrow.rangeLeft -= travelled;
-    const stopped = travelled < distance - EPSILON;
-    if (!stopped && arrow.rangeLeft > EPSILON) {
+    if (flight.flying) {
       stillFlying.push(arrow);
     }
   }
   state.arrows = stillFlying;
   return events;
+}
+
+/** The size an arrow is drawn at: the hero's arrows are as big as its Ranged Weapon says, a projectile as its type says. */
+export function arrowSizeOf(arrow: ArrowState, content: Content): number {
+  return arrow.shotBy === undefined ? content.hero.rangedWeapon.arrowSize : projectileOf(arrow.shotBy, content).size;
+}
+
+function projectileOf(shotBy: NonNullable<ArrowState['shotBy']>, content: Content): MonsterProjectile {
+  const type = monsterTypeOf(content, shotBy.monsterType);
+  if (type.behavior !== 'ranged') {
+    throw new Error(`A projectile of "${shotBy.monsterId}" is in flight, but its type "${shotBy.monsterType}" shoots none`);
+  }
+  return type.projectile;
+}
+
+function flyHeroArrow(
+  state: PlayState,
+  content: Content,
+  arrow: ArrowState,
+  area: Area,
+  obstacles: readonly Box[],
+  random: RandomSource,
+): Flight {
+  const { arrowSpeedPerStep, arrowSize } = content.hero.rangedWeapon;
+  const distance = Math.min(arrowSpeedPerStep, arrow.rangeLeft);
+  const end = moveBody(area, arrow.position, arrowSize, arrow.direction, distance, obstacles);
+  const travelled = Math.abs(end.x - arrow.position.x) + Math.abs(end.y - arrow.position.y);
+  const body = boxAround(arrow.position, arrowSize);
+  const target = firstMonsterReached(state, content, body, arrow.direction, travelled);
+  if (target !== undefined) {
+    const damage = heroAttack(state, content, 'ranged-weapon');
+    return { events: hurtMonster(state, content, target, damage, random), flying: false };
+  }
+  return { events: [], flying: land(arrow, end, travelled, distance) };
+}
+
+function flyProjectile(
+  state: PlayState,
+  content: Content,
+  arrow: ArrowState,
+  shotBy: NonNullable<ArrowState['shotBy']>,
+  area: Area,
+  obstacles: readonly Box[],
+): Flight {
+  const projectile = projectileOf(shotBy, content);
+  const distance = Math.min(projectile.speedPerStep, arrow.rangeLeft);
+  const sweep = sweepToward(
+    area,
+    arrow.position,
+    projectile.size,
+    arrow.direction,
+    distance,
+    obstacles,
+    heroBody(state, content),
+  );
+  if (sweep.reachedTarget) {
+    return { events: hurtHero(state, content, shotBy.monsterId, projectile.damage), flying: false };
+  }
+  return { events: [], flying: land(arrow, sweep.end, sweep.travelled, distance) };
+}
+
+/** The arrow flies on to `end`. It keeps flying unless something stopped it short of `distance`, or its range is spent. */
+function land(arrow: ArrowState, end: Point, travelled: number, distance: number): boolean {
+  arrow.position = end;
+  arrow.rangeLeft -= travelled;
+  const stopped = travelled < distance - EPSILON;
+  return !stopped && arrow.rangeLeft > EPSILON;
 }
 
 /**

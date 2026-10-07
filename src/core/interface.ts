@@ -89,9 +89,11 @@ export type GameEvent =
   | { readonly type: 'monster-hit'; readonly monsterId: string; readonly damage: number; readonly health: number }
   /** A monster's Health reached zero. It is gone from the view. */
   | { readonly type: 'monster-defeated'; readonly monsterId: string }
-  /** A monster struck. `zone` is the area its attack covered, whether or not the hero was in it. */
+  /** A monster struck, or a charger launched its dash. `zone` is the area its attack covered, whether or not the hero was in it. */
   | { readonly type: 'monster-attacked'; readonly monsterId: string; readonly zone: Box }
-  /** The hero took damage, after Defense; `health` is what the hero has left. */
+  /** A ranged attacker fired. Its projectile flies on in the view, from the monster's centre, in `direction`. */
+  | { readonly type: 'monster-fired'; readonly monsterId: string; readonly direction: Direction }
+  /** The hero took damage, after Defense, from a strike, a dash or a projectile of this monster; `health` is what the hero has left. */
   | { readonly type: 'hero-hit'; readonly monsterId: string; readonly damage: number; readonly health: number }
   /** The hero earned Experience, by defeating a monster or reaching a milestone. `amount` is what was added to it. */
   | { readonly type: 'experience-gained'; readonly amount: number }
@@ -179,17 +181,23 @@ export interface MonsterView {
 export type MonsterActionView =
   /** Standing where it is. */
   | { readonly type: 'idle' }
-  /** Has noticed the hero and is walking toward it. */
+  /**
+   * Has noticed the hero and is on the move: walking toward it, or, to keep its distance, away from it, or across to
+   * line up with it.
+   */
   | { readonly type: 'chasing' }
   /**
    * The telegraph. The attack lands on `zone` when the wind-up ends: `progress` is the share of the wind-up that has
-   * passed, from 0 when it begins up to (but never reaching) 1. `zone` does not change during the wind-up.
+   * passed, from 0 when it begins up to (but never reaching) 1. `zone` does not change during the wind-up. A ranged
+   * attacker has no zone to show, since it aims when it fires: its `zone` is its own body, which flashes.
    */
   | { readonly type: 'winding-up'; readonly progress: number; readonly zone: Box }
+  /** Dashing in `direction`, along the lane that its wind-up showed. */
+  | { readonly type: 'dashing'; readonly direction: Direction }
   /** Resting after an attack. */
   | { readonly type: 'recovering' };
 
-/** An arrow in flight, for the adapter to draw. */
+/** An arrow or a projectile in flight, for the adapter to draw. */
 export interface ArrowView {
   /** The centre of the arrow. */
   readonly position: Point;
@@ -197,6 +205,8 @@ export interface ArrowView {
   readonly direction: Direction;
   /** Width and height of the arrow's body, in tiles. */
   readonly size: number;
+  /** Who shot it: the hero's arrows hurt monsters, and the projectiles of monsters hurt the hero. */
+  readonly shooter: 'hero' | 'monster';
 }
 
 /** A chest, for the adapter to draw. It stays where it is once opened. */
@@ -370,7 +380,7 @@ export interface PlayingView {
   readonly areaText: string | null;
   readonly hero: HeroView;
   readonly monsters: readonly MonsterView[];
-  /** The arrows in flight in the Adventure Area the hero is in, in the order they were shot. */
+  /** The arrows and projectiles in flight in the Adventure Area the hero is in, in the order they were shot. */
   readonly arrows: readonly ArrowView[];
   /** The interactables of the Adventure Area the hero is in: chests, opened ones included, and the pickups left. */
   readonly interactables: readonly InteractableView[];
