@@ -7,6 +7,7 @@ import {
   drawHero,
   drawInteractable,
   drawMonster,
+  drawProjectile,
   drawStrike,
   drawSwing,
   drawTelegraph,
@@ -145,7 +146,11 @@ export class PlayScene extends Phaser.Scene {
       drawMonster(this.entityLayer, monster, this.feedback.isFlashing(monster.id));
     }
     for (const arrow of view.arrows) {
-      drawArrow(this.entityLayer, arrow);
+      if (arrow.shooter === 'monster') {
+        drawProjectile(this.entityLayer, arrow);
+      } else {
+        drawArrow(this.entityLayer, arrow);
+      }
     }
     drawHero(this.entityLayer, view.hero, this.feedback.isHeroHurt());
     this.effectLayer.clear();
