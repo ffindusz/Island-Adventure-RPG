@@ -172,6 +172,36 @@ describe('the monsters of the shipwreck coast', () => {
   });
 });
 
+describe('the Experience of the shipwreck coast', () => {
+  const [levelTwo = 0, levelThree = 0] = gameContent.progression.levelThresholds;
+  const experienceOf = (monster: { readonly type: string }): number =>
+    gameContent.monsterTypes[monster.type]?.experience ?? 0;
+  const noticingOf = (monster: { readonly type: string }): number => {
+    const type = gameContent.monsterTypes[monster.type];
+    return type !== undefined && 'noticingDistance' in type ? type.noticingDistance : 0;
+  };
+  const milestonesExperience = (coast.milestones ?? []).reduce((total, { reward }) => total + reward.experience, 0);
+  /** A monster notices a hero in the square round its body that its noticing distance makes, so a hero on the way out meets it when a tile of the way lies in that square. */
+  const metOnTheWay = coast.monsters.filter((monster) =>
+    (mainRoute ?? []).some(
+      (tile) =>
+        Math.max(Math.abs(tile.col - monster.tile.col), Math.abs(tile.row - monster.tile.row)) <= noticingOf(monster),
+    ),
+  );
+
+  it('gives a hero who fights what it meets on the way out, and passes the milestone, the Experience of Level 2', () => {
+    const earned = metOnTheWay.reduce((total, monster) => total + experienceOf(monster), 0) + milestonesExperience;
+
+    expect(earned).toBeGreaterThanOrEqual(levelTwo);
+  });
+
+  it('does not give a hero who clears the whole coast the Experience of Level 3: nobody has to grind', () => {
+    const everything = coast.monsters.reduce((total, monster) => total + experienceOf(monster), 0) + milestonesExperience;
+
+    expect(everything).toBeLessThan(levelThree);
+  });
+});
+
 describe('the text of the shipwreck coast', () => {
   it('is a short line, not a page', () => {
     expect(coast.text).toBeTypeOf('string');
