@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { advance, arena, biterAt, frailMonster, monsterNamed, newGame, playingView, strike, walk } from './fixtures';
 
 // A biter's hit does 5 damage, and the arena's hero has no Defense. A biter beside the hero, at tile (4, 3), hits it on
-// step 31. The hero starts at (3.5, 3.5), and that is where defeat sends it back to.
+// step 31. The hero starts at (3.5, 3.5), and with no Checkpoint touched the start of the adventure is where defeat
+// sends it back to (Checkpoints are in checkpoints.test.ts).
 
 describe('the hero running out of Health', () => {
   it.each([
@@ -29,7 +30,7 @@ describe('the hero running out of Health', () => {
 });
 
 describe('the hero being defeated', () => {
-  it('returns to the start of the Adventure Area at full Health', () => {
+  it('returns to the start of the adventure at full Health when it has touched no Checkpoint', () => {
     const game = newGame(arena({ hero: { health: 5 }, monsters: [biterAt('biter-1', 4, 3)] }));
     walk(game, 'down', 4); // the hero is at (3.5, 4), still within the biter's reach
     expect(playingView(game).hero.position).toEqual({ x: 3.5, y: 4 });

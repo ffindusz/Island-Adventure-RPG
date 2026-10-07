@@ -1,5 +1,7 @@
+import { arrowSizeOf } from './arrows';
 import { areaOf, monsterTypeOf } from './content';
 import type { Content, Interactable } from './content';
+import { isActive } from './checkpoints';
 import { STAT_IDS } from './definitions';
 import { carriedGear } from './gear';
 import { centerOfBox } from './geometry';
@@ -27,6 +29,12 @@ export function buildView(state: GameState, content: Content): GameView {
     phase: 'playing',
     area: { id: area.id, name: area.name, width: area.width, height: area.height, terrain: area.terrain },
     exits: area.exits.map((exit) => ({ id: exit.id, zone: { ...exit.zone } })),
+    checkpoints: area.checkpoints.map((checkpoint) => ({
+      id: checkpoint.id,
+      position: centerOfBox(checkpoint.body),
+      size: checkpoint.body.maxX - checkpoint.body.minX,
+      active: isActive(state, area.id, checkpoint),
+    })),
     areaText: state.areaText?.text ?? null,
     hero: {
       position: { x: state.hero.position.x, y: state.hero.position.y },
@@ -55,7 +63,8 @@ export function buildView(state: GameState, content: Content): GameView {
       .map((arrow) => ({
         position: { x: arrow.position.x, y: arrow.position.y },
         direction: arrow.direction,
-        size: content.hero.rangedWeapon.arrowSize,
+        size: arrowSizeOf(arrow, content),
+        shooter: arrow.shotBy === undefined ? 'hero' : 'monster',
       })),
     interactables: area.interactables.flatMap((interactable) => interactableView(interactable, state) ?? []),
     page: pageView(state, content),
@@ -134,6 +143,8 @@ function actionView(action: MonsterAction): MonsterActionView {
   switch (action.type) {
     case 'winding-up':
       return { type: 'winding-up', progress: action.elapsed / action.length, zone: { ...action.zone } };
+    case 'dashing':
+      return { type: 'dashing', direction: action.direction };
     case 'idle':
     case 'chasing':
     case 'recovering':

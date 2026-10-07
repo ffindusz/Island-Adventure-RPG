@@ -8,8 +8,8 @@ import type { PlayState } from './state';
 
 /**
  * The hero takes each pickup of its Adventure Area that its body overlaps and that it has not taken before, which is
- * what walking onto one does. A pickup is taken once, for good. Returns what happened, in order: for each pickup, the
- * hero taking what it holds.
+ * what walking onto one does. A pickup is taken once, until defeat puts it back (see consumable-rollback.ts). Returns
+ * what happened, in order: for each pickup, the hero taking what it holds.
  */
 export function collectPickups(state: PlayState, content: Content): GameEvent[] {
   const body = heroBody(state, content);

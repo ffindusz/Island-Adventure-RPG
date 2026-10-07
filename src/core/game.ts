@@ -2,6 +2,7 @@ import { ageAreaText, crossExits, enterArea } from './areas';
 import { flyArrows } from './arrows';
 import { stepMonsters } from './behaviors';
 import { coolDownHero } from './combat';
+import { activateCheckpoints, touchedCheckpoints } from './checkpoints';
 import { loadContent } from './content';
 import { equipGear } from './gear';
 import type { Direction } from './geometry';
@@ -83,24 +84,35 @@ export function createGame(options: GameOptions): Game {
       }
       ageAreaText(state);
       coolDownHero(state);
+      const touchedBefore = touchedCheckpoints(state, content);
       walkHero(state, content, held.at(-1));
-      // The hero is where it walked to when it reaches a milestone or takes a pickup. Then the arrows fly, a hero that
+      // The hero is where it walked to when it reaches a milestone, takes a pickup or comes onto a Checkpoint: the
+      // pickups come first, so that a Checkpoint is activated with them taken. Then the arrows fly, a hero that
       // walked into an exit goes through it, and otherwise the monsters act.
       const milestoneEvents = reachMilestones(state, content);
       const pickupEvents = collectPickups(state, content);
+      const checkpointEvents = activateCheckpoints(state, content, touchedBefore);
       const arrowEvents = flyArrows(state, content, options.random);
+      if (arrowEvents.some((event) => event.type === 'hero-defeated')) {
+        // A projectile defeated the hero: the step ends there, as it does when a monster's hit does. The monsters are new
+        // ones, and they first act in the next step. A Checkpoint the hero came onto in this step was activated before
+        // the hit, and the hero is back on it.
+        return [...milestoneEvents, ...pickupEvents, ...checkpointEvents, ...arrowEvents];
+      }
       // The step ends when the hero crosses: the arrows have flown their last in the area it leaves, and the
       // monsters of the area it arrives in first act in the next step.
       const areaEvents = crossExits(state, content);
       if (areaEvents.length > 0) {
-        return [...milestoneEvents, ...pickupEvents, ...arrowEvents, ...areaEvents];
+        // The hero is on the entrance, and a Checkpoint there is activated though the hero did not walk onto it.
+        const arrivalEvents = activateCheckpoints(state, content, []);
+        return [...milestoneEvents, ...pickupEvents, ...checkpointEvents, ...arrowEvents, ...areaEvents, ...arrivalEvents];
       }
       const monsterEvents = stepMonsters(state, content);
       if (monsterEvents.some((event) => event.type === 'hero-defeated')) {
         // Defeat sends the hero back and the monsters back to where they began: the arrows of that life do not fly on.
         state.arrows = [];
       }
-      return [...milestoneEvents, ...pickupEvents, ...arrowEvents, ...monsterEvents];
+      return [...milestoneEvents, ...pickupEvents, ...checkpointEvents, ...arrowEvents, ...monsterEvents];
     },
     view: () => buildView(state, content),
     snapshot: () => {

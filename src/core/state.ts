@@ -27,18 +27,35 @@ export type MonsterAction =
   | { readonly type: 'idle' }
   /** Has noticed the hero and walks toward it. */
   | { readonly type: 'chasing' }
-  /** Telegraphing an attack: it lands on `zone`, which was fixed when the wind-up began, after `length` steps. */
-  | { readonly type: 'winding-up'; readonly zone: Box; elapsed: number; readonly length: number }
+  /**
+   * Telegraphing an attack: it lands on `zone`, which was fixed when the wind-up began, after `length` steps. A
+   * monster whose attack is a dash also keeps the `direction` it will dash in, fixed at the same time.
+   */
+  | {
+      readonly type: 'winding-up';
+      readonly zone: Box;
+      elapsed: number;
+      readonly length: number;
+      readonly direction?: Direction;
+    }
+  /** Dashing along the lane its wind-up showed, with this much of the lane still ahead of it, in tiles. */
+  | { readonly type: 'dashing'; readonly direction: Direction; rangeLeft: number }
   /** Resting after an attack, for this many more steps. */
   | { readonly type: 'recovering'; stepsLeft: number };
 
-/** What changes about a chest: whether it has been opened. An opened chest stays opened, defeat included. */
+/**
+ * What changes about a chest: whether it has been opened. An opened chest stays opened, defeat included, unless it holds
+ * a consumable and the hero opened it after the Checkpoint defeat sends it back to (see consumable-rollback.ts).
+ */
 export interface ChestState {
   readonly kind: 'chest';
   opened: boolean;
 }
 
-/** What changes about a pickup: whether the hero has taken it. A pickup that was taken stays taken. */
+/**
+ * What changes about a pickup: whether the hero has taken it. A pickup that was taken stays taken, unless the hero took
+ * it after the Checkpoint defeat sends it back to (see consumable-rollback.ts).
+ */
 export interface PickupState {
   readonly kind: 'pickup';
   collected: boolean;
@@ -83,7 +100,10 @@ export interface HeroState {
 export const PAGE_IDS = ['stats', 'inventory'] as const;
 export type PageId = (typeof PAGE_IDS)[number];
 
-/** An arrow in flight. Like all state it is plain data, so the arrows in the air are saved with the game. */
+/**
+ * An arrow in flight: one the hero shot, or the projectile of a ranged attacker. Like all state it is plain data, so
+ * the ones in the air are saved with the game.
+ */
 export interface ArrowState {
   /** The Adventure Area it was shot in: it flies and hits only there. */
   readonly areaId: string;
@@ -93,6 +113,11 @@ export interface ArrowState {
   readonly direction: Direction;
   /** How far it can still fly before it falls, in tiles. */
   rangeLeft: number;
+  /**
+   * The monster that shot it, when a monster did: such a projectile hurts the hero, and flies as that type of monster
+   * says. The type is kept so that it flies on when its shooter is gone. The hero's own arrows leave this out.
+   */
+  readonly shotBy?: { readonly monsterId: string; readonly monsterType: string };
 }
 
 /** The text of an Adventure Area while it is shown, and for how many more fixed steps. */
@@ -101,21 +126,32 @@ export interface AreaTextState {
   stepsLeft: number;
 }
 
+/**
+ * The Checkpoint that defeat sends the hero back to: the last one it touched, or the start of the adventure before it
+ * has touched any. It is a place, not a Checkpoint of the content, since the start need not be one. It also records
+ * the consumables the hero had when it touched the Checkpoint, which defeat gives back (see consumable-rollback.ts).
+ */
+export interface CheckpointState {
+  readonly areaId: string;
+  readonly tile: Tile;
+  /** How many of each consumable the hero had then. */
+  readonly consumables: Readonly<Record<ConsumableId, number>>;
+  /** The ids of the pickups and of the chests of consumables that had been taken then, in all Adventure Areas. */
+  readonly collected: readonly string[];
+}
+
 export interface PlayState {
   readonly phase: 'playing';
   /** The Adventure Area the hero is in. */
   areaId: string;
-  /**
-   * The tile of that Adventure Area where the hero began or came in, which is where defeat sends it back. It is the
-   * one place to change when Checkpoints send the hero somewhere else.
-   */
-  arrivedAt: Tile;
+  /** Where defeat sends the hero. It does not change until the hero touches a Checkpoint (see checkpoints.ts). */
+  checkpoint: CheckpointState;
   /** The text of the Adventure Area that is shown now, if any. It runs down while the game is not paused. */
   areaText: AreaTextState | null;
   hero: HeroState;
   /**
    * The arrows in flight, in the order they were shot. No damage is kept with an arrow: it does the hero's Attack as
-   * it is when the arrow hits.
+   * it is when the arrow hits, and a projectile of a monster does the damage of its type.
    */
   arrows: ArrowState[];
   /** The page that is open over the game, if any. While one is open the game is paused (see pages.ts). */
@@ -129,6 +165,9 @@ export interface TitleState {
 }
 
 export type GameState = TitleState | PlayState;
+
+/** What the hero has of each consumable when the adventure begins: none. */
+const NO_CONSUMABLES: Readonly<Record<ConsumableId, number>> = { ammunition: 0, 'healing-potion': 0 };
 
 /** The state of a game that has just begun: the hero at the start with its starting Gear, every monster unhurt. */
 export function newPlayState(content: Content): PlayState {
@@ -144,7 +183,12 @@ export function newPlayState(content: Content): PlayState {
   const state: PlayState = {
     phase: 'playing',
     areaId: content.start.areaId,
-    arrivedAt: { ...content.start.tile },
+    checkpoint: {
+      areaId: content.start.areaId,
+      tile: { ...content.start.tile },
+      consumables: { ...NO_CONSUMABLES },
+      collected: [],
+    },
     areaText: null,
     hero: {
       position: centerOf(content.start.tile),
@@ -156,7 +200,7 @@ export function newPlayState(content: Content): PlayState {
       gear: GEAR_SLOTS.flatMap((slot) => content.hero.startingGear[slot] ?? []),
       equipped: { ...content.hero.startingGear },
       activeWeapon: 'melee-weapon',
-      consumables: { ammunition: 0, 'healing-potion': 0 },
+      consumables: { ...NO_CONSUMABLES },
     },
     arrows: [],
     page: null,
@@ -204,26 +248,32 @@ export function copyState(state: PlayState): PlayState {
   return JSON.parse(JSON.stringify(state)) as PlayState;
 }
 
-/** The world state of the Adventure Area the hero is in. */
-export function currentAreaState(state: PlayState): AreaState {
-  const area = state.areas[state.areaId];
+/** The world state of the Adventure Area `areaId`. */
+export function areaStateOf(state: PlayState, areaId: string): AreaState {
+  const area = state.areas[areaId];
   if (area === undefined) {
-    throw new Error(`The state has no world for area "${state.areaId}"`);
+    throw new Error(`The state has no world for area "${areaId}"`);
   }
   return area;
 }
 
+/** The world state of the Adventure Area the hero is in. */
+export function currentAreaState(state: PlayState): AreaState {
+  return areaStateOf(state, state.areaId);
+}
+
 /**
- * The state of an interactable of the current Adventure Area, of the kind that interactable is. It fails loudly for a
+ * The state of an interactable of the Adventure Area `areaId`, of the kind that interactable is. It fails loudly for a
  * snapshot the content does not fit.
  */
-export function interactableStateOf<T extends Interactable>(
+export function interactableStateIn<T extends Interactable>(
   state: PlayState,
+  areaId: string,
   interactable: T,
 ): Extract<InteractableState, { kind: T['kind'] }> {
-  const found = currentAreaState(state).interactables[interactable.id];
+  const found = areaStateOf(state, areaId).interactables[interactable.id];
   if (found === undefined) {
-    throw new Error(`The state has no interactable "${interactable.id}" in area "${state.areaId}"`);
+    throw new Error(`The state has no interactable "${interactable.id}" in area "${areaId}"`);
   }
   if (found.kind !== interactable.kind) {
     throw new Error(
@@ -232,6 +282,14 @@ export function interactableStateOf<T extends Interactable>(
   }
   // The kinds match, so this is the state that was made for this kind.
   return found as Extract<InteractableState, { kind: T['kind'] }>;
+}
+
+/** The state of an interactable of the current Adventure Area, of the kind that interactable is. */
+export function interactableStateOf<T extends Interactable>(
+  state: PlayState,
+  interactable: T,
+): Extract<InteractableState, { kind: T['kind'] }> {
+  return interactableStateIn(state, state.areaId, interactable);
 }
 
 /** The monsters of the current Adventure Area that have not been defeated. */

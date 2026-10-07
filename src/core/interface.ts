@@ -89,9 +89,11 @@ export type GameEvent =
   | { readonly type: 'monster-hit'; readonly monsterId: string; readonly damage: number; readonly health: number }
   /** A monster's Health reached zero. It is gone from the view. */
   | { readonly type: 'monster-defeated'; readonly monsterId: string }
-  /** A monster struck. `zone` is the area its attack covered, whether or not the hero was in it. */
+  /** A monster struck, or a charger launched its dash. `zone` is the area its attack covered, whether or not the hero was in it. */
   | { readonly type: 'monster-attacked'; readonly monsterId: string; readonly zone: Box }
-  /** The hero took damage, after Defense; `health` is what the hero has left. */
+  /** A ranged attacker fired. Its projectile flies on in the view, from the monster's centre, in `direction`. */
+  | { readonly type: 'monster-fired'; readonly monsterId: string; readonly direction: Direction }
+  /** The hero took damage, after Defense, from a strike, a dash or a projectile of this monster; `health` is what the hero has left. */
   | { readonly type: 'hero-hit'; readonly monsterId: string; readonly damage: number; readonly health: number }
   /** The hero earned Experience, by defeating a monster or reaching a milestone. `amount` is what was added to it. */
   | { readonly type: 'experience-gained'; readonly amount: number }
@@ -99,7 +101,10 @@ export type GameEvent =
   | { readonly type: 'level-up'; readonly level: number }
   /** The hero's body first overlapped the zone of this milestone, and the reward follows. It happens once per game. */
   | { readonly type: 'milestone-reached'; readonly milestoneId: string }
-  /** The hero walked into an exit and is now in this Adventure Area, standing at the entrance the exit leads to. */
+  /**
+   * The hero walked into an exit and is now in this Adventure Area, standing at the entrance the exit leads to. Also
+   * after a defeat that sent the hero to a Checkpoint of another area, where it follows `hero-defeated`.
+   */
   | { readonly type: 'area-changed'; readonly areaId: string }
   /** The hero came into this Adventure Area for the first time: its short text is shown for a few seconds. */
   | { readonly type: 'area-text'; readonly areaId: string; readonly text: string }
@@ -114,9 +119,19 @@ export type GameEvent =
   /** The hero took this weapon in hand. */
   | { readonly type: 'weapon-switched'; readonly weapon: WeaponSlot }
   /**
-   * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health where
-   * defeat sends it, and the monsters of the Adventure Area it is in are back as they began: the view shows the new
-   * state. The monsters of other Adventure Areas are as they were.
+   * The hero came onto this Checkpoint. It is the one defeat sends the hero back to now, and the hero's Health is
+   * restored to full. Nothing else changes: the Ammunition and the Healing Potions the hero has stay as they are, and
+   * they are what defeat gives back later, along with the pickups and the caches taken so far.
+   */
+  | { readonly type: 'checkpoint-activated'; readonly checkpointId: string }
+  /**
+   * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health at the
+   * Checkpoint it touched last (the start of the adventure before it touched any), and the monsters of that Adventure
+   * Area are back as they began: the view shows the new state. When that Checkpoint is in another area, `area-changed`
+   * follows this event. The monsters of other Adventure Areas keep their Health, defeated ones stay defeated, and the
+   * ones that were after the hero stop. The Ammunition and the Healing Potions are as many as they were at that
+   * Checkpoint, and the pickups and the caches taken since are there again, in every area; the Level, the Experience,
+   * the Stat Points, the Gear and the chests of Gear that were opened stay.
    */
   | { readonly type: 'hero-defeated' };
 
@@ -166,17 +181,23 @@ export interface MonsterView {
 export type MonsterActionView =
   /** Standing where it is. */
   | { readonly type: 'idle' }
-  /** Has noticed the hero and is walking toward it. */
+  /**
+   * Has noticed the hero and is on the move: walking toward it, or, to keep its distance, away from it, or across to
+   * line up with it.
+   */
   | { readonly type: 'chasing' }
   /**
    * The telegraph. The attack lands on `zone` when the wind-up ends: `progress` is the share of the wind-up that has
-   * passed, from 0 when it begins up to (but never reaching) 1. `zone` does not change during the wind-up.
+   * passed, from 0 when it begins up to (but never reaching) 1. `zone` does not change during the wind-up. A ranged
+   * attacker has no zone to show, since it aims when it fires: its `zone` is its own body, which flashes.
    */
   | { readonly type: 'winding-up'; readonly progress: number; readonly zone: Box }
+  /** Dashing in `direction`, along the lane that its wind-up showed. */
+  | { readonly type: 'dashing'; readonly direction: Direction }
   /** Resting after an attack. */
   | { readonly type: 'recovering' };
 
-/** An arrow in flight, for the adapter to draw. */
+/** An arrow or a projectile in flight, for the adapter to draw. */
 export interface ArrowView {
   /** The centre of the arrow. */
   readonly position: Point;
@@ -184,6 +205,8 @@ export interface ArrowView {
   readonly direction: Direction;
   /** Width and height of the arrow's body, in tiles. */
   readonly size: number;
+  /** Who shot it: the hero's arrows hurt monsters, and the projectiles of monsters hurt the hero. */
+  readonly shooter: 'hero' | 'monster';
 }
 
 /** A chest, for the adapter to draw. It stays where it is once opened. */
@@ -231,6 +254,17 @@ export interface AreaView {
 export interface ExitView {
   readonly id: string;
   readonly zone: Box;
+}
+
+/** A Checkpoint of the Adventure Area the hero is in, for the adapter to draw. */
+export interface CheckpointView {
+  readonly id: string;
+  /** The centre of the tile it stands on. */
+  readonly position: Point;
+  /** Width and height of the tile it stands on, in tiles. */
+  readonly size: number;
+  /** Whether defeat sends the hero back here now: it is the last one the hero touched, or the start of the adventure. */
+  readonly active: boolean;
 }
 
 export interface TitleView {
@@ -315,13 +349,15 @@ export interface PlayingView {
   readonly area: AreaView;
   /** The exits of the Adventure Area the hero is in. */
   readonly exits: readonly ExitView[];
+  /** The Checkpoints of the Adventure Area the hero is in, in the order the content places them. */
+  readonly checkpoints: readonly CheckpointView[];
   /** The short text of the Adventure Area while it is shown: for a few seconds after the hero first comes in. */
   readonly areaText: string | null;
   readonly hero: HeroView;
   /** The hero's Level and Experience progress, so that they can be shown without opening the stat page. */
   readonly progress: ProgressView;
   readonly monsters: readonly MonsterView[];
-  /** The arrows in flight in the Adventure Area the hero is in, in the order they were shot. */
+  /** The arrows and projectiles in flight in the Adventure Area the hero is in, in the order they were shot. */
   readonly arrows: readonly ArrowView[];
   /** The interactables of the Adventure Area the hero is in: chests, opened ones included, and the pickups left. */
   readonly interactables: readonly InteractableView[];

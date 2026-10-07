@@ -2,9 +2,11 @@ import Phaser from 'phaser';
 import type { Command, Game, GameEvent, GameView } from '../core';
 import { AreaBanner } from './area-banner';
 import {
+  drawCheckpoints,
   drawExits,
   drawInteractable,
   drawMonster,
+  drawProjectile,
   drawStrike,
   drawTelegraph,
   drawTerrain,
@@ -72,10 +74,11 @@ export class PlayScene extends Phaser.Scene {
     buildDrawnArt(this.textures, ARTWORK);
     requireLoadedArt(this.textures, ARTWORK);
     checkHudFootprint();
-    // Added in drawing order: ground, then the telegraphs of monster attacks, then chests and monsters, which share the
-    // lowest depth. The hero and its arrows are sprites above them (see depths.ts), and the strikes of the monsters
-    // above those. The HUD draws above them all, then the text of the area, the notice above that, and the overlay
-    // above that. The world scrolls with the camera; the HUD, the text, the notice and the overlay do not.
+    // Added in drawing order: ground, then the telegraphs of monster attacks, then Checkpoints, chests, monsters and
+    // their projectiles, which share the lowest depth. The hero and its arrows are sprites above them (see depths.ts),
+    // and the strikes of the monsters above those. The HUD draws above them all, then the text of the area, the notice
+    // above that, and the overlay above that. The world scrolls with the camera; the HUD, the text, the notice and the
+    // overlay do not.
     this.terrainLayer = this.add.graphics();
     this.telegraphLayer = this.add.graphics();
     this.entityLayer = this.add.graphics();
@@ -148,6 +151,7 @@ export class PlayScene extends Phaser.Scene {
     this.cameras.main.setScroll(scroll.x, scroll.y);
     this.telegraphLayer.clear();
     this.entityLayer.clear();
+    drawCheckpoints(this.entityLayer, view.checkpoints);
     for (const interactable of view.interactables) {
       drawInteractable(this.entityLayer, interactable);
     }
@@ -156,6 +160,12 @@ export class PlayScene extends Phaser.Scene {
         drawTelegraph(this.telegraphLayer, monster.action.zone, monster.action.progress);
       }
       drawMonster(this.entityLayer, monster, this.feedback.isFlashing(monster.id));
+    }
+    // The hero's arrows are sprites of the hero (hero-sprite.ts); a monster's projectile is an orb drawn here.
+    for (const arrow of view.arrows) {
+      if (arrow.shooter === 'monster') {
+        drawProjectile(this.entityLayer, arrow);
+      }
     }
     this.heroSprite.draw(view.hero, view.arrows);
     this.effectLayer.clear();

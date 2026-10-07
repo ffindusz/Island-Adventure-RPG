@@ -4,16 +4,77 @@
 
 **Blocked by:** 06: The bow: Ammunition and quick-switching; 07: Healing Potions; 08: Connected Adventure Areas and backtracking
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 40, 49, 77-84
 
-- [ ] Touching a Checkpoint activates it with visible feedback and restores full Health. It does not refill Ammunition.
-- [ ] On defeat the hero returns to the most recently activated Checkpoint at full Health, even when the hero was in a different Adventure Area when defeated.
-- [ ] These persist through defeat: Level, Experience, assigned Stat Points, all Gear, and opened chests that hold Gear and other permanent one-time rewards.
-- [ ] These roll back to the Checkpoint's snapshot: Ammunition and Healing Potion counts, together with the collected state of every pickup, cache, or chest whose contents are consumables, so a consumable obtained after the Checkpoint is never lost for good.
-- [ ] Ordinary monsters in the Checkpoint's Adventure Area reset; monsters defeated in other areas stay defeated. Outside a defeat, monsters defeated stay defeated when the hero backtracks.
-- [ ] Each of the two placeholder areas has an entrance Checkpoint, and content validation rejects an area without one.
-- [ ] Known open edge from the spec, left as is: a consumable dropped by a monster in a different area than the Checkpoint's is not restored, because that monster stays defeated.
-- [ ] Tests at the Game core's interface are scenario tests in a two-area fixture with hand-worked expectations for each category (persist, roll back, reset), including a defeat in a different area than the Checkpoint's and a consumable collected after the Checkpoint becoming collectable again.
+- [x] Touching a Checkpoint activates it with visible feedback and restores full Health. It does not refill Ammunition.
+- [x] On defeat the hero returns to the most recently activated Checkpoint at full Health, even when the hero was in a different Adventure Area when defeated.
+- [x] These persist through defeat: Level, Experience, assigned Stat Points, all Gear, and opened chests that hold Gear and other permanent one-time rewards.
+- [x] These roll back to the Checkpoint's snapshot: Ammunition and Healing Potion counts, together with the collected state of every pickup, cache, or chest whose contents are consumables, so a consumable obtained after the Checkpoint is never lost for good.
+- [x] Ordinary monsters in the Checkpoint's Adventure Area reset; monsters defeated in other areas stay defeated. Outside a defeat, monsters defeated stay defeated when the hero backtracks.
+- [x] Each of the two placeholder areas has an entrance Checkpoint, and content validation rejects an area without one.
+- [x] Known open edge from the spec, left as is: a consumable dropped by a monster in a different area than the Checkpoint's is not restored, because that monster stays defeated.
+- [x] Tests at the Game core's interface are scenario tests in a two-area fixture with hand-worked expectations for each category (persist, roll back, reset), including a defeat in a different area than the Checkpoint's and a consumable collected after the Checkpoint becoming collectable again.
 - [ ] Reviewer play check (manual, in a browser): activate a Checkpoint, spend Ammunition and a potion, collect a cache, die, and confirm what returns and what persists.
+
+## Comments
+
+Resolved on integration/island-adventure-rpg at 9376d3a
+
+### What was built
+
+- Checkpoints in the core: `checkpoints.ts` (touching one activates it; `recoverHero`, the one place defeat sends the hero back from, which replaces ticket 08's `returnHero`), `consumable-rollback.ts` (what a Checkpoint records of the consumables and of what was collected, and the roll back to it) and `checkpoint-content.ts` (the loader and its checks). `PlayState.checkpoint` holds the most recent Checkpoint with its snapshot, and `PlayState.arrivedAt` is gone. There is a `checkpoint-activated` event, and the view lists `checkpoints` with `active`.
+- Content: every Adventure Area lists its Checkpoints, and the loader refuses an area with none. The coast has `coast-checkpoint` on the tile where the hero starts, the trail has `trail-checkpoint` on the tile of its way in from the coast.
+- Adapter: a post with a flag for each Checkpoint (raised and gold on a pale glow for the one defeat returns to, grey and half way down for the others), a CHECKPOINT / HEALTH FULL notice for 3 s in the existing notice, and a defeat ends the notice on the screen. Placeholder art for ticket 22. The README has a new section, "Checkpoints and defeat recovery", and its Defeat, Chests, Pickups and notice lines are brought up to date.
+- 41 new tests (506 in 29 files, up from 465 in 28), all at the Game core's interface: the new `checkpoints.test.ts` (37, in two-area worlds with hand-worked numbers), three checks of the shipped areas in `shipped-areas.test.ts` and one in `area-connections.test.ts`. Five of ticket 08's defeat tests in `area-connections.test.ts` and one name in `hero-defeat.test.ts` were rewritten, because they pinned the interim rule this ticket replaces (see below). The fixtures give each area a default Checkpoint and take a `checkpoints` option.
+
+### Decisions and defaults
+
+- **"At its entrance" is read as: at least one Checkpoint in each area, on the tile where the hero comes in from the earlier area.** The way into the coast is the start of the adventure, so `coast-checkpoint` is on the start tile (the hero begins standing on it) and the coast's `from-trail` entrance, the way back, has none. `trail-checkpoint` is on the trail's `from-coast` entrance tile. `shipped-areas.test.ts` pins both. `loadCheckpoints` refuses an area with no Checkpoint, an id used twice anywhere in the content (ids are unique across areas, as for interactables), and a tile that is solid, inside an exit of its own area (defeat would put the hero straight into it) or where an interactable or a monster starts. It does not require a Checkpoint to sit on an entrance, and several in one area are fine.
+- **The start of the adventure is the first Checkpoint without being touched** (the ticket's "active from the start"). `state.checkpoint` begins at the start area and tile with no consumables and nothing collected, which is what a new hero carries, so a defeat before any touch goes back to the start and takes back what was found since. No event at New Game, Continue or after a defeat.
+- **Activating is coming onto a Checkpoint.** `activateCheckpoints` activates each Checkpoint of the hero's area that its body overlaps now and did not at the start of the step. Standing on one, or being hit on it, does nothing more. Leaving it and coming back activates it again: that heals again and records the snapshot again with what the hero carries then (pinned). A defeat does not activate: the hero stands on the Checkpoint afterwards and counts as already there, so no notice shows after the fade. Touching one never rolls anything back, and never refills Ammunition (pinned).
+- **Step order**: after the hero has walked, the milestones, the pickups, then `activateCheckpoints`, then the arrows, `crossExits` and the monsters. The pickups come first so that one lying on the way onto a Checkpoint is in its snapshot (pinned). A step in which the hero crosses an exit ends with the same activation for the new area, so a Checkpoint on the entrance is activated as the hero comes in, and the events run `area-changed`, `area-text` (first visit only), `checkpoint-activated`.
+- **Defeat**: `hero-defeated`, then `area-changed` when the Checkpoint is in another area. Then the living monsters of the area where the hero fell are calmed (idle, Health kept, as when the hero leaves by an exit: none finishes a wind-up on the next visit), and the area text on the screen ends. The hero is put at the centre of the Checkpoint's tile at full Health. Only the monsters of the Checkpoint's area are reset (full Health, starting places, defeated ones included); every other area keeps its monsters, so those defeated there stay defeated, as they do when the hero backtracks outside a defeat. Arrows in flight are removed, as before.
+- **What stays**: Level, Experience, Stat Points, all Gear and what is equipped, the weapon in hand, the milestones reached, opened chests of Gear, which areas were visited (area text is not shown again), facing and held keys.
+- **What the roll back covers**: the counts of every consumable (the record of counts is copied whole, so a third consumable needs no change) and the collected state of every pickup, cache and chest of a consumable, in every area. The snapshot holds the ids that were taken (unique across areas), and defeat sets those interactables back to what they were then: a cache opened after the Checkpoint can be opened again, its arrows included, and a loose potion lies there again. Chests of Gear are never touched. A kind of interactable that is added later must say in `givesConsumables` whether defeat takes it back: the compiler refuses it otherwise. The snapshot shares nothing with the live state (mutation-checked both ways).
+- **The open edge stays**: a drop of a monster in another area than the Checkpoint's is not given back, because that monster stays defeated. One test and one sentence of the README pin it. The monsters of the Checkpoint's own area respawn, so their drops can be earned again (also pinned).
+- **Ticket 08's interim rule is gone.** The README said "Checkpoints will replace that one place later": defeat no longer returns the hero to the entrance it came in by, in the area where it fell. `returnHero` and `PlayState.arrivedAt` are removed, as the brief asked. Tickets 03 and 08 still mention them and were not edited.
+- `SNAPSHOT_VERSION` stays 1 (nothing is saved before ticket 11). `copyState` is a generic JSON deep copy, so `checkpoint` is in every snapshot with no extra code, and a test pins that a game continued from a snapshot taken before a defeat recovers exactly as the original does (same area, place, Health and counts, pickups put back).
+- Nothing in the spec's "Details not decided" was needed beyond the above. Health is restored in full, as the ticket says; the 3 s of the notice is the one of the finds.
+
+### How to run it
+
+- `npm.cmd run dev`. The hero starts on the coast's Checkpoint (a post with a gold flag, on a pale glow). Hold Right for about 3 s: the way runs through the gap in the rock wall to the exit at the east edge, and on the trail the hero comes onto the trail's Checkpoint: a gold flag, CHECKPOINT / HEALTH FULL at the bottom. Back on the coast, its flag is grey and low, and walking over it activates it again.
+- To see what returns: on the coast open the bow chest (the right-most of the three chests above the start) and the arrow cache (the right one of the two chests below it) with E, put the bow in hand (I, Down, Enter, Esc, then Q), step off the start Checkpoint and back onto it, shoot with Space, open the potion chest (the left-most chest above) and take the beach potion (the flask on the ground, far left below), then go through the gap in the rock wall and let the crabs beat you. The hero wakes on the start Checkpoint at full Health with the arrows it had there and no potions, the potion chest closed and the beach potion on the ground again, and the cache and the bow chest still open.
+- `?debug` exposes `window.gameCore`. `npm.cmd run check` is the gate; `npx.cmd vitest run tests/checkpoints.test.ts` runs the new tests alone.
+
+### How it was verified
+
+- `npm.cmd run check`: typecheck exit 0, 506 of 506 tests in 29 files, build OK. Each core slice was written test-first and committed when green. The integration tip when this was done is `da2f6a8`, the base of this branch, so the merge of step 9 had nothing to bring in.
+- Mutation checks, 45 in all, each reverted afterwards (tests that failed):
+  - Content: no refusal of an area without a Checkpoint (1); a duplicate id (1); a solid tile (3); a monster on the tile (1); an interactable on the tile (2); a tile inside an exit (1); the trail's Checkpoint moved off its entrance (2); the coast's moved off the start (2).
+  - Activation: on every step, whatever the hero touched before (9); no healing (2); the roll back done at activation (7); no activation on arrival (4); activation that resets the monsters (4) or refills the Ammunition (11); `active` always true (2) or always false (5); a snapshot with a stale area (4) or a stale tile (15); activation before the pickups instead of after (survived at first); `isActive` ignoring the area (survived at first); a second touch of the active Checkpoint that does not record again (survived at first).
+  - Defeat: back to the start instead of the last Checkpoint (10); to the first Checkpoint of the area (11); no change of area (13); no calming of the monsters (1); the monsters of every area reset (2) or of none (5); `area-changed` before `hero-defeated` (4); the arrival events out of order (1); no `enterArea` in `recoverHero` (survived at first).
+  - What stays: Experience reset (3); Stat Points reset (4); Gear taken away (2); milestones reached again (2); arrows left in the air (2).
+  - Roll back: the counts not restored (9); the record sharing the hero's counts (1) or the live ones (7); pickups not put back (5); chests of consumables not closed (3); only the Checkpoint's area rolled back (3); chests of Gear closed too (2); only the finds of the current area recorded (survived at first).
+  - Snapshot: a copy that loses what the Checkpoint recorded (1) or its area and tile (1).
+  - The five that survived at first each got a hand-worked test, green on the real code and red on the mutation, and were committed.
+- Headless Edge on `vite preview` (port 5109, now stopped), real key presses with the shared smoke tool, screenshots viewed, no console errors or page errors in any run:
+  - Boot: the coast's Checkpoint under the hero, active. Right for 3 s: on the trail the hero on `trail-checkpoint`, gold flag and glow, the notice CHECKPOINT / HEALTH FULL. Back on the coast its Checkpoint is grey and low, and gold again with the notice after the hero walks over it.
+  - A defeat from the coast with the trail's Checkpoint active: Health 10, 7, 4, 1 (three crab hits), then the trail is drawn with the camera on the hero, Health 10, the hero on the Checkpoint tile, the trail's three crabs at their places, and no notice or area text left over.
+  - The roll back on the coast: bow chest and arrow cache opened, bow equipped, back onto the start Checkpoint (6 arrows recorded), two arrows shot (4), potion chest opened (+2), beach potion taken (3 potions). After the crabs' defeat: the hero on the start Checkpoint at Health 10 with 6 arrows and 0 potions, the bow still in hand, the potion chest closed and the beach potion on the ground again, the cache and the bow chest still open, the crabs at full Health. The HUD shows the bow, 6 arrows and a grey 0.
+
+### Left for manual review
+
+- The reviewer play check (the last criterion) stays unticked. The runs above were driven by a script, not by a person: how the post and flag read, whether the glow and the notice are easy to see, how the fade reads when defeat sends the hero to another area, and how it feels to be sent back across an exit are for the reviewer.
+- Not driven in the browser: a defeat within 3 s of finding something (the notice that a defeat ends: `feedback.ts`, and the adapter has no tests), a potion used before a defeat, and a monster's drop before a defeat (the random source cannot be set from the page). Those rest on the core tests.
+
+### Suggestions
+
+- Ticket 11: `checkpoint-activated` is the event to autosave on. The snapshot already holds the Checkpoint and what it recorded, so the round-trip fixture there only needs a Checkpoint touched.
+- Ticket 10: the roll back knows consumables only, so the Automap's discoveries stay through a defeat with no change here. A test in that ticket should pin it.
+- Tickets 14 to 18: every area needs a `checkpoints` list (the loader refuses one with none), the first area's Checkpoint has to stay on `content.start.tile` (`shipped-areas.test.ts` pins it), and an area's Checkpoint belongs on the tile where the hero comes in from the previous area, not inside an exit.
+- Ticket 19: `recoverHero` resets every monster of the Checkpoint's area, defeated ones included. "A defeated Guardian stays defeated" needs that one line, `freshMonsters` at the end of `recoverHero`, to spare it.
+- GLOSSARY.md has Checkpoint but lacks: activate (a Checkpoint is activated by the hero coming onto it) and what a Checkpoint records (the Ammunition and Healing Potion counts and which consumable finds were taken: its snapshot). As tickets 06 and 07 said, it also lacks cache, drop, consumable and pickup.
+- ADR candidates, none written: (1) the roll back is by interactable id over every area, with the known edge for monster drops in other areas; (2) the start of the adventure is an implicit first Checkpoint, and activating means coming onto one, which records the snapshot again each time.
