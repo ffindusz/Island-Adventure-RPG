@@ -14,4 +14,4 @@ if (new URLSearchParams(window.location.search).has('debug')) {
   Object.assign(window, { gameCore: core });
 }
 
-startAdapter(core);
+startAdapter(core, gameContent);

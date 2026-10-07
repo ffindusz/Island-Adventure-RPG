@@ -1,28 +1,31 @@
 import Phaser from 'phaser';
-import type { Command, Game, GameEvent, GameView } from '../core';
+import type { Command, Game, GameEvent, GameView, PlayingView } from '../core';
 import { AreaBanner } from './area-banner';
 import {
-  drawArrow,
   drawCheckpoints,
   drawExits,
-  drawHero,
   drawInteractable,
   drawMonster,
   drawProjectile,
   drawStrike,
-  drawSwing,
   drawTelegraph,
   drawTerrain,
 } from './art';
+import { ARTWORK } from './artwork';
+import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import { AutomapPage } from './automap-page';
 import { scrollFor } from './camera';
+import { DEPTH } from './depths';
+import { Fall, FALL_FADE_OUT_MS } from './fall';
 import { Feedback } from './feedback';
 import { FixedStepClock } from './fixed-step';
-import { Hud } from './hud';
+import { HeroSprite } from './hero-sprite';
+import { checkHudFootprint, Hud } from './hud';
 import { InventoryMenu } from './inventory-menu';
 import { Notice } from './notice';
 import { Overlay } from './overlay';
 import { PlayerInput } from './player-input';
+import { byShooter } from './projectiles';
 
 /** How long the screen takes to fade in after the hero is defeated and returned, in milliseconds. */
 const DEFEAT_FADE_MS = 500;
@@ -50,6 +53,7 @@ export class PlayScene extends Phaser.Scene {
   private readonly feedback = new Feedback();
   private readonly inventoryMenu = new InventoryMenu();
   private playerInput!: PlayerInput;
+  private heroSprite!: HeroSprite;
   private hud!: Hud;
   private banner!: AreaBanner;
   private notice!: Notice;
@@ -60,21 +64,38 @@ export class PlayScene extends Phaser.Scene {
   private entityLayer!: Phaser.GameObjects.Graphics;
   private effectLayer!: Phaser.GameObjects.Graphics;
   private drawnAreaId: string | null = null;
+  /** The last frame drawn of the game in play, which is what the screen shows of the place the hero falls in. */
+  private lastPlaying: PlayingView | null = null;
+  /** The fall of the hero that is on the screen now, if any: no step of the Game core runs until it is over. */
+  private fall: Fall | null = null;
+  private fadingOut = false;
 
   constructor(core: Game) {
     super('play');
     this.core = core;
   }
 
+  preload(): void {
+    queueArt(this.load, ARTWORK);
+  }
+
   create(): void {
-    // Added in drawing order: ground, then the telegraphs of monster attacks, then Checkpoints, chests, hero and
-    // monsters, then the swings and strikes on top. The HUD draws above them all, then the text of the area, the notice
+    buildDrawnArt(this.textures, ARTWORK);
+    requireLoadedArt(this.textures, ARTWORK);
+    checkHudFootprint();
+    // Added in drawing order: ground, then the telegraphs of monster attacks, then Checkpoints, chests, monsters and
+    // their projectiles, which share the lowest depth. The hero and its arrows are sprites above them (see depths.ts),
+    // and the strikes of the monsters above those. The HUD draws above them all, then the text of the area, the notice
     // above that, and the overlay above that, which shares its place with the Automap page. The world scrolls with the
     // camera; the HUD, the text, the notice, the overlay and the Automap page do not.
     this.terrainLayer = this.add.graphics();
+    this.drawnAreaId = null;
+    this.lastPlaying = null;
+    this.fall = null;
     this.telegraphLayer = this.add.graphics();
     this.entityLayer = this.add.graphics();
-    this.effectLayer = this.add.graphics();
+    this.heroSprite = new HeroSprite(this);
+    this.effectLayer = this.add.graphics().setDepth(DEPTH.effects);
     this.hud = new Hud(this);
     this.banner = new AreaBanner(this);
     this.notice = new Notice(this);
@@ -89,6 +110,14 @@ export class PlayScene extends Phaser.Scene {
 
   override update(time: number, frameMs: number): void {
     const watching = playerIsWatching();
+    if (this.fall !== null) {
+      this.fall.age(frameMs);
+      if (this.fall.stage !== 'over') {
+        this.showFall(this.fall, frameMs, watching, time);
+        return;
+      }
+      this.endFall();
+    }
     const events: GameEvent[] = [];
     const send = (commands: readonly Command[]): void => {
       for (const command of commands) {
@@ -108,23 +137,63 @@ export class PlayScene extends Phaser.Scene {
       send(this.playerInput.pollWalking());
     }
     for (let steps = this.clock.stepsDue(frameMs, watching); steps > 0; steps -= 1) {
-      events.push(...this.core.step());
+      const happened = this.core.step();
+      events.push(...happened);
+      if (happened.some((event) => event.type === 'hero-defeated')) {
+        // The steps that remain would run in the place the hero returned to, which the player has yet to see.
+        break;
+      }
     }
     this.feedback.age(frameMs);
+    this.heroSprite.age(frameMs);
     this.feedback.show(events);
-    if (events.some((event) => event.type === 'hero-defeated')) {
-      // The core has already put the hero back; the fade hides the cut. The world keeps running while it plays.
-      this.cameras.main.fadeIn(DEFEAT_FADE_MS, 0, 0, 0);
-    } else if (events.some((event) => event.type === 'area-changed')) {
+    this.heroSprite.show(events);
+    const view = this.core.view();
+    if (view.phase === 'playing' && events.some((event) => event.type === 'hero-defeated')) {
+      // The core has already put the hero back at its Checkpoint, which may be in another area. The screen first shows
+      // the place the hero fell in (see fall.ts).
+      this.fall = new Fall(this.lastPlaying ?? view);
+      this.fadingOut = false;
+      this.draw(this.fall.view, watching, time);
+      return;
+    }
+    if (events.some((event) => event.type === 'area-changed')) {
       // The core has already put the hero into the next area; a short fade hides the cut. The world keeps running.
       this.cameras.main.fadeIn(AREA_FADE_MS, 0, 0, 0);
     }
-    const view = this.core.view();
     if (gameIsWaiting(view)) {
       // A page or a Stat Point covers the notice, and the player is already where it pointed them.
       this.feedback.dismissNotice();
     }
     this.draw(view, watching, time);
+    if (view.phase === 'playing') {
+      this.lastPlaying = view;
+    }
+  }
+
+  /** One frame of a fall: the world stands still with the hero lying in it, and at the end the screen fades out. */
+  private showFall(fall: Fall, frameMs: number, watching: boolean, time: number): void {
+    // What the player presses meanwhile does not count. The walk keys are read again when the fall is over.
+    this.playerInput.pollMenu();
+    this.playerInput.pollActions();
+    this.feedback.age(frameMs);
+    this.heroSprite.age(frameMs);
+    if (fall.stage === 'fading-out' && !this.fadingOut) {
+      this.fadingOut = true;
+      this.cameras.main.fadeOut(FALL_FADE_OUT_MS, 0, 0, 0);
+    }
+    this.draw(fall.view, watching, time);
+  }
+
+  /** The screen is black: the hero stands at its Checkpoint, whole again, and the place it returned to fades in. */
+  private endFall(): void {
+    this.fall = null;
+    this.lastPlaying = null;
+    this.heroSprite.getUp();
+    this.feedback.endFall();
+    // Whether the hero returned to another area or to this one, the ground is drawn afresh.
+    this.drawnAreaId = null;
+    this.cameras.main.fadeIn(DEFEAT_FADE_MS, 0, 0, 0);
   }
 
   private draw(view: GameView, watching: boolean, time: number): void {
@@ -151,18 +220,12 @@ export class PlayScene extends Phaser.Scene {
       }
       drawMonster(this.entityLayer, monster, this.feedback.isFlashing(monster.id));
     }
-    for (const arrow of view.arrows) {
-      if (arrow.shooter === 'monster') {
-        drawProjectile(this.entityLayer, arrow);
-      } else {
-        drawArrow(this.entityLayer, arrow);
-      }
+    // The hero's arrows are sprites of the hero (hero-sprite.ts); a monster's projectile is an orb drawn here.
+    for (const projectile of byShooter(view.arrows).monster) {
+      drawProjectile(this.entityLayer, projectile);
     }
-    drawHero(this.entityLayer, view.hero, this.feedback.isHeroHurt());
+    this.heroSprite.draw(view.hero, view.arrows);
     this.effectLayer.clear();
-    for (const zone of this.feedback.swingZones()) {
-      drawSwing(this.effectLayer, zone);
-    }
     for (const zone of this.feedback.strikeZones()) {
       drawStrike(this.effectLayer, zone);
     }

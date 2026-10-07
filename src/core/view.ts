@@ -46,6 +46,7 @@ export function buildView(state: GameState, content: Content): GameView {
       activeWeapon: state.hero.activeWeapon,
       consumables: { ...state.hero.consumables },
     },
+    progress: { level: heroLevel(state, content), experience: experienceProgress(state, content) ?? null },
     monsters: livingMonsters(state).map((monster) => {
       const type = monsterTypeOf(content, monster.type);
       return {

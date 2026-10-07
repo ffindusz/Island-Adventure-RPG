@@ -8,14 +8,14 @@ How it is used:
 - The credits screen draws from the "Credits text" lines of entries that are "In use".
 - Rule from the spec: every graphics and audio asset must permit public and commercial use.
 
-Last updated: 2026-10-07. The user approved the Ninja Adventure pack as the art base that day (ADR 0004). Nothing is in use yet: ticket 02 only inspected the pack outside the repository, and no asset file has been copied into the repository.
+Last updated: 2026-10-07. The user approved the Ninja Adventure pack as the art base that day (ADR 0004). Ticket 22 copied the first asset files into the repository (the hero, its weapons, the item icons and the pieces of the HUD and the windows; see A1 "Used so far"). Nothing else is in use yet.
 
 ## Summary
 
 | ID | Source | Licence | Checked | Status |
 | --- | --- | --- | --- | --- |
-| A1 | Ninja Adventure Asset Pack: art, audio, and the other files | CC0 1.0 Universal | 2026-10-06, re-read 2026-10-07 | Approved base on 2026-10-07 (ADR 0004); nothing in use yet |
-| A2 | Ninja Adventure `Ui\Font\NormalFont.ttf` | FontStruct Non-Commercial License (embedded in the font file), conflicting with the pack's CC0 claim | 2026-10-07 | Do not use; the user confirmed on 2026-10-07 that it is replaced |
+| A1 | Ninja Adventure Asset Pack: art, audio, and the other files | CC0 1.0 Universal | 2026-10-06, re-read 2026-10-07 | Approved base on 2026-10-07 (ADR 0004); in use: the hero, its weapons, the item icons and the interface pieces (ticket 22) |
+| A2 | Ninja Adventure `Ui\Font\NormalFont.ttf` | FontStruct Non-Commercial License (embedded in the font file), conflicting with the pack's CC0 claim | 2026-10-07 | Do not use; replaced by the project's own bitmap font, which is no file (ticket 22) |
 | A3 | Ninja Adventure `Ui\Input` and `Ui\Skill Icon` | Covered only by the pack's blanket CC0 claim; no separate provenance | 2026-10-07 | Not needed; avoid |
 | S1 | Kenney Pirate Pack (shipwreck supplement candidate) | CC0 | 2026-10-06 | Candidate, poor style match |
 | S2 | OpenGameArt "Ship / Destroyed Ship" by Kutejnikov (shipwreck supplement candidate) | CC0 | 2026-10-06 | Candidate, side view |
@@ -40,12 +40,28 @@ Last updated: 2026-10-07. The user approved the Ninja Adventure pack as the art 
 - **Credits text (a courtesy, not required; the page asks for a link to its itch.io page):** "Ninja Adventure Asset Pack by Pixel-Boy and AAA (CC0), https://pixel-boy.itch.io/ninja-adventure-asset-pack"
 - **Limits of CC0:** the waiver covers the rights the authors hold. Section 4(c) of the legal text says the authors do not take responsibility for clearing other people's rights, and trademark and patent rights are not waived. The files show no sign of third-party material except the font (A2). The pack's own claim is the only evidence for per-file authorship; see "Audio" below.
 - **Audio in the pack:** 41 music tracks (`.ogg`) and 147 sound effects and jingles (`.wav`) fall under the same CC0 claim. The files carry no author, title, or licence tags (encoder tags show FL Studio only), so per-file authorship cannot be verified beyond the pack's claim; the page says "Made with Aseprite, Godot, FL Studio". The `Audio\Sounds\Voice` folder is not used (the spec has no voice acting).
-- **Used so far:** nothing. The art tickets list here, per file or folder, what they copy in.
+- **Used so far (ticket 22):** the files below, copied unchanged from the pack into `public\art\` under the name shown. A file listed for two uses is one file.
+  - `Actor\Character\Hunter\SpriteSheet.png` as `hero.png`: the hero.
+  - `Items\Weapons\Sword2\SpriteInHand.png` as `sword-held.png`: the sword in the hero's hand.
+  - `Items\Weapons\Bow\Sprite.png` as `gear-short-bow.png`: the bow in the hero's hand, and the icon of the Short Bow.
+  - `Items\Weapons\Bow\Arrow.png` as `arrow.png`: the hero's arrow in flight.
+  - `FX\Attack\SlashCurved\SpriteSheet.png` as `slash.png`: the slash of the sword.
+  - `Items\Weapons\Sword2\Sprite.png` as `gear-basic-sword.png`: the icon of the Basic Sword.
+  - `Items\Weapons\BigSword\Sprite.png` as `gear-steel-sword.png`: the icon of the Steel Sword.
+  - `Items\Projectile\Arrow.png` as `consumable-ammunition.png`: the icon of Ammunition.
+  - `Items\Potion\LifePot.png` as `consumable-healing-potion.png`: the icon of the Healing Potion.
+  - `Ui\Theme\Theme Wood\nine_path_bg_2.png` as `ui-panel.png`: the dark panel of the HUD, the notices and the banner, and the inside of the windows.
+  - `Ui\Theme\Theme Wood\nine_path_panel.png` as `ui-window.png`: the orange frame of the windows.
+  - `Ui\Theme\Theme Wood\button_normal.png` as `ui-button.png`: the button behind the line the cursor is on.
+  - `Ui\Receptacle\IconHeart.png` as `ui-heart.png`: the heart of Health.
+  - Not from the pack: the colours of the bars are the pack's palette, drawn with rectangles; no file was copied for them.
+  - Not from the pack: the icons of the Basic Armor and the Chain Mail are drawn in code (`src\adapter\drawn-icons.ts`), in the pack's own colours, because the pack has no armor icon. They are this project's own work, not a copy or a recolour of a pack file.
+  - Later art tickets add what they copy in to this list, in the same commit as the files.
 
 ### A2. Ninja Adventure font `Ui\Font\NormalFont.ttf`: do not use
 
 - **Finding:** the font file's own name table says "Copyright pixel-boy 2021", family "NinjaAdventure", licence "FontStruct Non-Commercial License", built with FontStruct. That is not CC0. Taken by its name, it is a non-commercial licence. FontStruct's own announcement of the licences (https://fontstruct.com/news/2013/07/05/new-licensing-options/, July 5th 2013, saved 2026-10-06) says that "Downloaders are free to use these fonts either commercially or non-commercially depending on which of the two is used" and that both new FontStruct licences "prohibit redistribution of the downloads by anyone apart from the designing FontStructor". FontStruct's FAQ "Can I use FontStruction X in a project?" (saved 2026-10-06) adds that all licences in use on FontStruct require crediting the original designer. The designer is the pack's author, so he may have meant it as CC0, but the shipped file says otherwise, and the font's FontStruct page could not be read (the saved copy is a login page), so its exact terms are unconfirmed.
-- **Decision for the project:** do not use or ship `NormalFont.ttf`; the user confirmed on 2026-10-07 that it is replaced (ADR 0004). The HUD and pages use a font with a confirmed licence instead (ticket 22 picks it and adds its own entry here; fetching a font needs the user's permission, because the download permission covered the pack only). The bitmap fonts `font8x8.png` and `font24x30.png` in the same folder have no stated provenance, so they are not relied on either.
+- **Decision for the project:** do not use or ship `NormalFont.ttf`; the user confirmed on 2026-10-07 that it is replaced (ADR 0004). Ticket 22 resolved it without a font file: the HUD and the pages draw their text with the project's own 5 by 7 bitmap font, whose letters are rectangles drawn by code (`src\adapter\pixel-font.ts`), so no font was fetched, and none needs an entry here. The bitmap fonts `font8x8.png` and `font24x30.png` in the same folder have no stated provenance, so they are not relied on either.
 - **Optional follow-up for the user:** ask the pack's author which licence the font really has.
 
 ### A3. Ninja Adventure `Ui\Input` and `Ui\Skill Icon`

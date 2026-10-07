@@ -1,10 +1,16 @@
 import Phaser from 'phaser';
-import type { Game } from '../core';
+import type { ContentDefinition, Game } from '../core';
+import { ARTWORK, neededArt } from './artwork';
+import { manifestLookup, requireArt } from './asset-manifest';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { PlayScene } from './play-scene';
 
-/** Starts the Phaser game that shows and controls the given Game core. This is the only way into the adapter. */
-export function startAdapter(core: Game): Phaser.Game {
+/**
+ * Starts the Phaser game that shows and controls the given Game core. This is the only way into the adapter. It refuses
+ * to start, naming them, when the content needs pictures that the asset manifest does not list.
+ */
+export function startAdapter(core: Game, content: ContentDefinition): Phaser.Game {
+  requireArt(neededArt(content), manifestLookup(ARTWORK), 'The content needs pictures that the asset manifest lacks');
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'game',
