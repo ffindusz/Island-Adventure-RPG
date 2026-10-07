@@ -32,7 +32,7 @@ export interface Milestone {
   readonly reward: MilestoneReward;
 }
 
-/** A chest as the rules use it: its body is the box of the tile it fills, in tile units like the bodies it is compared with. */
+/** A chest as the rules use it: its body is the box of the tile it fills, in tile units like the other bodies. */
 export interface Chest {
   readonly kind: 'chest';
   readonly id: string;

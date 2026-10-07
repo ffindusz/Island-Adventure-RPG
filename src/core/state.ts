@@ -163,7 +163,7 @@ export function currentAreaState(state: PlayState): AreaState {
   return area;
 }
 
-/** The state of an interactable of the current Adventure Area. It fails loudly for a snapshot that does not fit the content. */
+/** The state of an interactable of the current Adventure Area. It fails loudly for a snapshot the content does not fit. */
 export function interactableStateOf(state: PlayState, interactableId: string): InteractableState {
   const found = currentAreaState(state).interactables[interactableId];
   if (found === undefined) {

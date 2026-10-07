@@ -34,8 +34,8 @@ export type Command =
   /** Strike with the Melee Weapon in the facing direction, unless the attack cooldown is still running. */
   | { readonly type: 'attack' }
   /**
-   * Interact with what is in front of the hero within its reach, such as opening a chest. When several interactables are
-   * in reach, the one nearest the hero is the one. Ignored while the game is paused, like attack.
+   * Interact with what is in front of the hero within its reach, such as opening a chest. When several interactables
+   * are in reach, the one nearest the hero is the one. Ignored while the game is paused, like attack.
    */
   | { readonly type: 'interact' }
   /**

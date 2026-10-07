@@ -2,6 +2,7 @@ import { areaOf, isSolid } from './content';
 import type { Area, Content } from './content';
 import { boxAround, EPSILON, overlapsHorizontally, overlapsVertically, unitVector } from './geometry';
 import type { Box, Direction, Point } from './geometry';
+import { interactableObstacles } from './interactables';
 import { livingMonsters, monsterBody } from './state';
 import type { PlayState } from './state';
 
@@ -16,7 +17,10 @@ export function walkHero(state: PlayState, content: Content, direction: Directio
     content.hero.size,
     direction,
     content.hero.speedPerStep,
-    livingMonsters(state).map((monster) => monsterBody(monster, content)),
+    [
+      ...livingMonsters(state).map((monster) => monsterBody(monster, content)),
+      ...interactableObstacles(state, content),
+    ],
   );
 }
 

@@ -14,7 +14,7 @@ export function describeGear(content: Content, id: string): GearInfo {
   return { id, name: gear.name, slot: gear.slot, stat: GEAR_SLOT_STAT[gear.slot], bonus: gear.bonus };
 }
 
-/** The hero picks up a piece of Gear. It is carried, not equipped, and there is no limit to how much the hero carries. */
+/** The hero picks up a piece of Gear. It is carried, not equipped, and the hero can carry any number of pieces. */
 export function grantGear(state: PlayState, content: Content, id: string): GameEvent[] {
   state.hero.gear.push(id);
   return [{ type: 'pickup', item: { kind: 'gear', ...describeGear(content, id) } }];

@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { arena, chestAt, newGame, playingView } from './fixtures';
+import type { Direction } from '../src/core';
+import {
+  ARENA_LAYOUT,
+  advance,
+  arena,
+  biterAt,
+  chestAt,
+  face,
+  gameAtTitle,
+  milestone,
+  monsterNamed,
+  newGame,
+  playingView,
+  walk,
+} from './fixtures';
 
 // The hero stands at (3.5, 3.5) and faces down, its body 0.5 tiles wide, and it interacts with what is within 0.5 tile
 // of its body in front of it. A chest fills the tile it stands on.
@@ -65,5 +79,177 @@ describe('opening a chest', () => {
     expect(game.send(INTERACT)).toEqual([]);
 
     expect(carriedIds(game)).toEqual(['basic-sword', 'steel-sword', 'basic-armor']);
+  });
+});
+
+describe('what the hero reaches', () => {
+  it('is a chest in front of it, whichever way it faces', () => {
+    const chests = { up: [3, 2], down: [3, 4], left: [2, 3], right: [4, 3] } as const;
+    for (const [direction, [col, row]] of Object.entries(chests) as [Direction, readonly [number, number]][]) {
+      const game = newGame(arena({ interactables: [chestAt('chest-1', col, row, 'steel-sword')] }));
+      face(game, direction);
+
+      expect(game.send(INTERACT), `a chest ${direction} of the hero`).toEqual([
+        { type: 'chest-opened', chestId: 'chest-1' },
+        STEEL_SWORD_PICKED_UP,
+      ]);
+    }
+  });
+
+  it.each<Direction>(['up', 'left', 'right'])(
+    'is not a chest the hero does not face: it faces %s, the chest is below',
+    (direction) => {
+      const game = gameWithChestBelow();
+      face(game, direction);
+
+      expect(game.send(INTERACT)).toEqual([]);
+      expect(playingView(game).interactables).toMatchObject([{ id: 'chest-1', opened: false }]);
+    },
+  );
+
+  it('is not a chest beside its way: the reach is as wide as the hero, not wider', () => {
+    const game = newGame(
+      arena({ interactables: [chestAt('chest-1', 4, 4, 'steel-sword'), chestAt('chest-2', 2, 4, 'iron-sword')] }),
+    );
+
+    expect(game.send(INTERACT)).toEqual([]);
+  });
+
+  it('is not a chest too far away, and is one once the hero has walked up to it', () => {
+    const game = newGame(arena({ interactables: [chestAt('chest-1', 5, 3, 'steel-sword')] }));
+    walk(game, 'right', 5);
+
+    expect(game.send(INTERACT), 'a body and a half away').toEqual([]);
+
+    walk(game, 'right', 2);
+
+    expect(game.send(INTERACT), 'within half a tile of its body').toEqual([
+      { type: 'chest-opened', chestId: 'chest-1' },
+      STEEL_SWORD_PICKED_UP,
+    ]);
+  });
+});
+
+describe('the chest Interact acts on when several are in reach', () => {
+  // The hero is at x = 4.125 facing down, a body spanning 3.875 to 4.375: it overlaps both chests below it, the chest
+  // on tile column 4 more than the one on column 3. At x = 4 it is as near to one as to the other.
+  const LEFT = chestAt('left', 3, 4, 'iron-sword');
+  const RIGHT = chestAt('right', 4, 4, 'steel-sword');
+
+  function opens(game: ReturnType<typeof newGame>): string[] {
+    return game.send(INTERACT).flatMap((event) => (event.type === 'chest-opened' ? [event.chestId] : []));
+  }
+
+  it.each([
+    ['listed first', [RIGHT, LEFT]],
+    ['listed last', [LEFT, RIGHT]],
+  ])('is the one nearest the hero, even when it is %s', (_, interactables) => {
+    const game = newGame(arena({ interactables }));
+    walk(game, 'right', 5);
+    face(game, 'down');
+
+    expect(opens(game)).toEqual(['right']);
+    expect(playingView(game).interactables.map((chest) => [chest.id, chest.opened])).toEqual(
+      interactables.map((chest) => [chest.id, chest.id === 'right']),
+    );
+  });
+
+  it.each([
+    ['left', [LEFT, RIGHT]],
+    ['right', [RIGHT, LEFT]],
+  ])('is the one listed first in the content when two are as near as each other: %s', (first, interactables) => {
+    const game = newGame(arena({ interactables }));
+    walk(game, 'right', 4);
+    face(game, 'down');
+
+    expect(opens(game)).toEqual([first]);
+  });
+});
+
+describe('Interact while the game waits', () => {
+  it.each(['stats', 'inventory'] as const)(
+    'does nothing while the %s page is open, and works once it is closed',
+    (page) => {
+      const game = gameWithChestBelow();
+      game.send({ type: 'open-page', page });
+
+      expect(game.send(INTERACT)).toEqual([]);
+      expect(playingView(game).interactables).toMatchObject([{ opened: false }]);
+
+      game.send({ type: 'close-page', page });
+
+      expect(game.send(INTERACT)).toEqual([{ type: 'chest-opened', chestId: 'chest-1' }, STEEL_SWORD_PICKED_UP]);
+    },
+  );
+
+  it('does nothing while a Stat Point waits to be assigned, and works once it is assigned', () => {
+    const game = newGame(
+      arena({
+        interactables: [chestAt('chest-1', 3, 4, 'steel-sword')],
+        milestones: [milestone('start', { col: 3, row: 3, width: 1, height: 1 }, 10)],
+      }),
+    );
+    advance(game, 1);
+    expect(playingView(game).levelUp).not.toBeNull();
+
+    expect(game.send(INTERACT)).toEqual([]);
+
+    game.send({ type: 'assign-stat-point', stat: 'attack' });
+
+    expect(game.send(INTERACT)).toEqual([{ type: 'chest-opened', chestId: 'chest-1' }, STEEL_SWORD_PICKED_UP]);
+  });
+
+  it('does nothing at the title', () => {
+    const game = gameAtTitle();
+
+    expect(game.send(INTERACT)).toEqual([]);
+  });
+});
+
+describe('a chest in the way', () => {
+  it('stops the hero flush against it, whether or not it has been opened', () => {
+    const game = newGame(arena({ interactables: [chestAt('chest-1', 5, 3, 'steel-sword')] }));
+
+    walk(game, 'right', 20);
+    expect(playingView(game).hero.position).toEqual({ x: 4.75, y: 3.5 });
+
+    game.send(INTERACT);
+    walk(game, 'right', 20);
+    expect(playingView(game).hero.position).toEqual({ x: 4.75, y: 3.5 });
+  });
+
+  it('lets the hero go past it', () => {
+    const game = newGame(arena({ interactables: [chestAt('chest-1', 3, 4, 'steel-sword')] }));
+
+    walk(game, 'right', 8);
+    walk(game, 'down', 20);
+
+    expect(playingView(game).hero.position).toEqual({ x: 4.5, y: 4.75 });
+  });
+
+  it('stops a monster that chases the hero too, which cannot walk through it', () => {
+    const game = newGame(
+      arena({ monsters: [biterAt('biter', 1, 3)], interactables: [chestAt('chest-1', 2, 3, 'steel-sword')] }),
+    );
+
+    advance(game, 40);
+
+    expect(monsterNamed(game, 'biter').position.x).toBe(1.75);
+  });
+
+  it('is not one of another Adventure Area: those are neither shown nor in the way of the hero', () => {
+    const cellar = {
+      id: 'cellar',
+      name: 'Cellar',
+      layout: ARENA_LAYOUT,
+      monsters: [],
+      interactables: [chestAt('cellar-chest', 5, 3, 'iron-sword')],
+    };
+    const game = newGame(arena({ otherAreas: [cellar], interactables: [chestAt('chest-1', 3, 4, 'steel-sword')] }));
+
+    walk(game, 'right', 20);
+
+    expect(playingView(game).interactables.map((chest) => chest.id)).toEqual(['chest-1']);
+    expect(playingView(game).hero.position.x).toBe(5.75);
   });
 });
