@@ -144,4 +144,37 @@ describe('the content the game ships with', () => {
     expect(chances.length).toBeGreaterThan(0);
     expect(chances.every((chance) => chance > 0 && chance < 1)).toBe(true);
   });
+
+  it('starts the hero without Healing Potions, with a chest of them and a potion on the ground near the start', () => {
+    const game = newShippedGame();
+    expect(inventoryOf(game).consumables['healing-potion']).toBe(0);
+
+    // Two tiles left of the start, then straight up to the chest, and straight down past the start over the potion.
+    const events = [
+      ...walk(game, 'left', 24),
+      ...walk(game, 'up', 60),
+      ...game.send({ type: 'interact' }),
+      ...walk(game, 'down', 120),
+    ];
+
+    expect(events.filter((event) => event.type === 'chest-opened')).toHaveLength(1);
+    const potionPickups = events.flatMap((event) =>
+      event.type === 'pickup' && event.item.kind === 'consumable' && event.item.id === 'healing-potion'
+        ? [event.item.amount]
+        : [],
+    );
+    expect(potionPickups, 'the chest and the potion on the ground').toHaveLength(2);
+    const total = potionPickups.reduce((sum, amount) => sum + amount, 0);
+    expect(inventoryOf(game).consumables['healing-potion']).toBe(total);
+  });
+
+  it('lets some monster leave a Healing Potion now and then: a chance above 0 and below 1', () => {
+    const chances = Object.values(gameContent.monsterTypes)
+      .flatMap((type) => type.drops ?? [])
+      .filter((drop) => drop.consumable === 'healing-potion')
+      .map((drop) => drop.chance);
+
+    expect(chances.length).toBeGreaterThan(0);
+    expect(chances.every((chance) => chance > 0 && chance < 1)).toBe(true);
+  });
 });
