@@ -114,11 +114,6 @@ export interface PlayState {
   readonly phase: 'playing';
   /** The Adventure Area the hero is in. */
   areaId: string;
-  /**
-   * The tile of that Adventure Area where the hero began or came in, which is where defeat sends it back. It is the
-   * one place to change when Checkpoints send the hero somewhere else.
-   */
-  arrivedAt: Tile;
   /** Where defeat sends the hero. It does not change until the hero touches a Checkpoint (see checkpoints.ts). */
   checkpoint: CheckpointState;
   /** The text of the Adventure Area that is shown now, if any. It runs down while the game is not paused. */
@@ -155,7 +150,6 @@ export function newPlayState(content: Content): PlayState {
   const state: PlayState = {
     phase: 'playing',
     areaId: content.start.areaId,
-    arrivedAt: { ...content.start.tile },
     checkpoint: { areaId: content.start.areaId, tile: { ...content.start.tile } },
     areaText: null,
     hero: {

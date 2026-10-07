@@ -1,37 +1,19 @@
 import type { Content } from './content';
-import { areaOf } from './content';
-import { centerOf } from './geometry';
+import { recoverHero } from './checkpoints';
 import type { GameEvent } from './interface';
 import type { PlayState } from './state';
-import { currentAreaState, freshMonsters } from './state';
-import { heroDefense, heroMaxHealth } from './stats';
+import { heroDefense } from './stats';
 
 /**
- * The hero takes a hit of `damage` before Defense. When that is the last of its Health the hero is defeated and returns
- * (see returnHero). Returns what happened, in order.
+ * The hero takes a hit of `damage` before Defense. When that is the last of its Health the hero is defeated and goes
+ * back to a Checkpoint (see recoverHero in checkpoints.ts). Returns what happened, in order.
  */
 export function hurtHero(state: PlayState, content: Content, monsterId: string, damage: number): GameEvent[] {
   const received = Math.max(content.minimumDamage, damage - heroDefense(state, content));
   state.hero.health = Math.max(0, state.hero.health - received);
   const events: GameEvent[] = [{ type: 'hero-hit', monsterId, damage: received, health: state.hero.health }];
   if (state.hero.health === 0) {
-    events.push({ type: 'hero-defeated' });
-    returnHero(state, content);
+    events.push({ type: 'hero-defeated' }, ...recoverHero(state, content));
   }
   return events;
-}
-
-/**
- * Defeat sends the hero back to where it came into the Adventure Area it is in, at full Health, and starts that area
- * over: its monsters are all there again, at full Health on their starting tiles. Nothing else changes: the monsters of
- * other areas stay as they are, the hero keeps the way it faces and its attack cooldown, the milestones it has reached
- * stay reached, the chests and Ammunition caches it has opened stay opened, it keeps all its Gear, its weapon in hand and
- * its Ammunition, and the direction keys the player holds stay held. The arrows it has in the air are not touched
- * here: `step` takes them out when it sees the defeat.
- */
-function returnHero(state: PlayState, content: Content): void {
-  const checkpointIsHere = state.checkpoint.areaId === state.areaId;
-  state.hero.position = centerOf(checkpointIsHere ? state.checkpoint.tile : state.arrivedAt);
-  state.hero.health = heroMaxHealth(state, content);
-  currentAreaState(state).monsters = freshMonsters(areaOf(content, state.areaId), content);
 }

@@ -404,26 +404,47 @@ describe('Defeat in a connected Adventure Area', () => {
     return { game, events: advance(game, 1) };
   }
 
-  it('sends the hero back to the entrance it came through, at full Health, in the area where it fell', () => {
+  it('sends the hero back to the arena, where the adventure began, at full Health: no Checkpoint of the cellar was touched', () => {
     const { game, events } = fallInTheCellar();
 
-    expect(events.map((event) => event.type)).toEqual(['monster-attacked', 'hero-hit', 'hero-defeated']);
+    expect(events.map((event) => event.type)).toEqual(['monster-attacked', 'hero-hit', 'hero-defeated', 'area-changed']);
+    expect(events.at(-1)).toEqual({ type: 'area-changed', areaId: 'arena' });
     const view = playingView(game);
-    expect(view.area.id).toBe('cellar');
-    expect(view.hero.position).toEqual({ x: 2.5, y: 3.5 });
+    expect(view.area.id).toBe('arena');
+    expect(view.hero.position).toEqual({ x: 3.5, y: 3.5 });
     expect(view.hero.health).toBe(5);
   });
 
-  it('starts only the area where the hero fell over: its monsters are back, and those of the other area stay defeated', () => {
+  it('starts only the area of the Checkpoint: its monsters are back, and those of the area where the hero fell stay as they were', () => {
     const { game } = fallInTheCellar();
 
-    expect(playingView(game).monsters.map((monster) => monster.id)).toEqual(['cellar-weakling', 'cellar-biter']);
-    expect(monsterNamed(game, 'cellar-biter')).toMatchObject({ health: 3, position: { x: 2.5, y: 4.5 }, action: { type: 'idle' } });
+    expect(playingView(game).monsters.map((monster) => monster.id)).toEqual(['arena-weakling']);
+    expect(monsterNamed(game, 'arena-weakling')).toMatchObject({ health: 1, position: { x: 3.5, y: 4.5 }, action: { type: 'idle' } });
 
-    walk(game, 'left', 3);
+    // Back in the cellar the weakling the hero struck down is still down, and the biter is where it was, unhurt.
+    walk(game, 'right', 11);
 
-    expect(playingView(game).area.id).toBe('arena');
-    expect(playingView(game).monsters).toEqual([]);
+    expect(playingView(game).area.id).toBe('cellar');
+    expect(playingView(game).monsters.map((monster) => monster.id)).toEqual(['cellar-biter']);
+    expect(monsterNamed(game, 'cellar-biter')).toMatchObject({ health: 3, position: { x: 2.5, y: 4.5 } });
+  });
+
+  it('calms the monsters of the area where the hero fell, so that none finishes a wind-up when the hero comes back', () => {
+    // Both biters hit on the 31st step after the hero came in. The first one's hit takes all of the hero's Health, and
+    // the second, at the end of its wind-up, is not asked to act again that step.
+    const game = newGame(
+      world({ hero: { health: 5 } }, { monsters: [biterAt('biter-a', 2, 4), biterAt('biter-b', 3, 3)] }),
+    );
+    walk(game, 'right', 11);
+    expect(advance(game, 30).map((event) => event.type)).not.toContain('hero-hit');
+    expect(advance(game, 1).map((event) => event.type)).toEqual(['monster-attacked', 'hero-hit', 'hero-defeated', 'area-changed']);
+
+    // The hero walks back in to (2.5, 3.5): both biters begin their wind-ups over, and the hit lands 31 steps later.
+    walk(game, 'right', 11);
+    expect(playingView(game).area.id).toBe('cellar');
+
+    expect(advance(game, 30).map((event) => event.type)).not.toContain('hero-hit');
+    expect(advance(game, 1)).toContainEqual(expect.objectContaining({ type: 'hero-hit', monsterId: 'biter-a' }));
   });
 
   it('does not send the hero back to the entrance it came in by: with no Checkpoint touched it returns to the start', () => {

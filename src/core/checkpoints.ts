@@ -1,8 +1,9 @@
 import { areaOf } from './content';
 import type { Checkpoint, Content } from './content';
-import { overlaps } from './geometry';
+import { calmMonsters, enterArea } from './areas';
+import { centerOf, overlaps } from './geometry';
 import type { GameEvent } from './interface';
-import { heroBody } from './state';
+import { currentAreaState, freshMonsters, heroBody } from './state';
 import type { PlayState } from './state';
 import { heroMaxHealth } from './stats';
 
@@ -45,4 +46,23 @@ export function isActive(state: PlayState, areaId: string, checkpoint: Checkpoin
     state.checkpoint.tile.col === checkpoint.tile.col &&
     state.checkpoint.tile.row === checkpoint.tile.row
   );
+}
+
+/**
+ * Defeat sends the hero back to the Checkpoint it touched last, or to the start of the adventure before it touched
+ * any, at full Health. When that is in another Adventure Area the hero goes there. Called with the hero's Health at 0.
+ * Returns what happened: the change of area, if any.
+ */
+export function recoverHero(state: PlayState, content: Content): GameEvent[] {
+  const { areaId, tile } = state.checkpoint;
+  const events: GameEvent[] = [];
+  if (areaId !== state.areaId) {
+    calmMonsters(state);
+    state.areaId = areaId;
+    events.push({ type: 'area-changed', areaId }, ...enterArea(state, content));
+  }
+  state.hero.position = centerOf(tile);
+  state.hero.health = heroMaxHealth(state, content);
+  currentAreaState(state).monsters = freshMonsters(areaOf(content, areaId), content);
+  return events;
 }

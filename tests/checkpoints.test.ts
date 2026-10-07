@@ -15,10 +15,13 @@ import {
   biterAt,
   chestAt,
   dummyAt,
+  face,
   fixedRandom,
+  frailMonster,
   newGame,
   pickupAt,
   playingView,
+  strike,
   walk,
 } from './fixtures';
 import type { ArenaOptions } from './fixtures';
@@ -136,6 +139,12 @@ const BITE = { type: 'hero-hit', monsterId: 'biter', damage: 5, health: 5 } as c
 const BEACH: CheckpointDefinition = { id: 'beach', tile: { col: 4, row: 4 } };
 const BEACH_ACTIVATED = { type: 'checkpoint-activated', checkpointId: 'beach' } as const;
 
+// The door is the entrance of the cellar, where the hero arrives coming from the arena.
+const DOOR: CheckpointDefinition = { id: 'cellar-door', tile: { col: 2, row: 3 } };
+const DOOR_ACTIVATED = { type: 'checkpoint-activated', checkpointId: 'cellar-door' } as const;
+
+const WEAKLING = { weakling: frailMonster(0) };
+
 describe('Touching a Checkpoint', () => {
   it('activates it, which the event and the view say', () => {
     const game = newGame(arena({ checkpoints: [CAMP] }));
@@ -176,9 +185,6 @@ describe('Touching a Checkpoint', () => {
 describe('Arriving on a Checkpoint', () => {
   // The hero walks right along row 3 and is in the exit, on tile (5, 3), on the 11th step. It arrives in the cellar at
   // the entrance on tile (2, 3), where the door is.
-  const DOOR: CheckpointDefinition = { id: 'cellar-door', tile: { col: 2, row: 3 } };
-  const DOOR_ACTIVATED = { type: 'checkpoint-activated', checkpointId: 'cellar-door' } as const;
-
   it('activates it once the hero is in the new area, and not again while it stays', () => {
     const game = newGame(world({}, { checkpoints: [DOOR] }));
 
@@ -233,5 +239,68 @@ describe('Defeat with Checkpoints', () => {
     expect(advance(game, 1)).toContainEqual({ type: 'hero-defeated' });
 
     expect(playingView(game).hero).toMatchObject({ position: { x: 3.5, y: 4.5 }, health: 5 });
+  });
+
+  it('does so from another Adventure Area: back to the Checkpoint of the arena, though the hero fell in the cellar', () => {
+    // The camp is touched on the 3rd step, the exit reached on the 14th: the hero arrives in the cellar at (2.5, 3.5),
+    // within the zone of the biter on tile (3, 3), whose hit lands on the 31st step after that.
+    const game = newGame(
+      world({ hero: { health: 5 }, checkpoints: [CAMP] }, { monsters: [biterAt('cellar-biter', 3, 3)] }),
+    );
+    walk(game, 'down', 3);
+    walk(game, 'right', 11);
+    expect(playingView(game).area.id).toBe('cellar');
+    expect(advance(game, 30)).not.toContainEqual({ type: 'hero-defeated' });
+
+    const events = advance(game, 1);
+
+    expect(events.map((event) => event.type)).toEqual(['monster-attacked', 'hero-hit', 'hero-defeated', 'area-changed']);
+    const view = playingView(game);
+    expect(view.area.id).toBe('arena');
+    expect(view.hero).toMatchObject({ position: { x: 3.5, y: 4.5 }, health: 5 });
+    expect(view.checkpoints).toEqual([{ ...CAMP_VIEW, active: true }]);
+  });
+
+  it('may send the hero to a Checkpoint of the cellar, from the arena it has gone back to', () => {
+    // The door of the cellar is touched on arrival. The hero walks back out, to the arena entrance, where the biter at
+    // (4, 4) winds up from the first step after the arrival and hits on the 31st.
+    const game = newGame(
+      world({ hero: { health: 5 }, monsters: [biterAt('arena-biter', 4, 4)] }, { checkpoints: [DOOR] }),
+    );
+    walk(game, 'right', 11);
+    walk(game, 'left', 3);
+    expect(playingView(game).area.id).toBe('arena');
+    expect(advance(game, 30)).not.toContainEqual({ type: 'hero-defeated' });
+
+    const events = advance(game, 1);
+
+    expect(events.map((event) => event.type)).toEqual(['monster-attacked', 'hero-hit', 'hero-defeated', 'area-changed']);
+    expect(events.at(-1)).toEqual({ type: 'area-changed', areaId: 'cellar' });
+    expect(playingView(game).hero).toMatchObject({ position: { x: 2.5, y: 3.5 }, health: 5 });
+  });
+});
+
+describe('Monsters and Checkpoints', () => {
+  it('stay defeated when the hero touches a Checkpoint or goes from one area to the other and back', () => {
+    // The hero turns left and strikes the weakling on tile (2, 3) down. The hero then touches the camp, goes through the
+    // exit to the cellar, where it touches the door, and comes back to the arena.
+    const game = newGame(
+      world(
+        { monsters: [{ id: 'weakling', type: 'weakling', tile: { col: 2, row: 3 } }], monsterTypes: WEAKLING, checkpoints: [CAMP] },
+        { checkpoints: [DOOR] },
+      ),
+    );
+    face(game, 'left');
+    expect(strike(game)).toContainEqual({ type: 'monster-defeated', monsterId: 'weakling' });
+    expect(playingView(game).monsters).toEqual([]);
+
+    expect(walk(game, 'down', 3)).toContainEqual(CAMP_ACTIVATED);
+    expect(playingView(game).monsters).toEqual([]);
+
+    expect(walk(game, 'right', 11)).toContainEqual(DOOR_ACTIVATED);
+    walk(game, 'left', 3);
+
+    expect(playingView(game).area.id).toBe('arena');
+    expect(playingView(game).monsters).toEqual([]);
   });
 });

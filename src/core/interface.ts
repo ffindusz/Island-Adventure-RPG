@@ -99,7 +99,10 @@ export type GameEvent =
   | { readonly type: 'level-up'; readonly level: number }
   /** The hero's body first overlapped the zone of this milestone, and the reward follows. It happens once per game. */
   | { readonly type: 'milestone-reached'; readonly milestoneId: string }
-  /** The hero walked into an exit and is now in this Adventure Area, standing at the entrance the exit leads to. */
+  /**
+   * The hero walked into an exit and is now in this Adventure Area, standing at the entrance the exit leads to. Also
+   * after a defeat that sent the hero to a Checkpoint of another area, where it follows `hero-defeated`.
+   */
   | { readonly type: 'area-changed'; readonly areaId: string }
   /** The hero came into this Adventure Area for the first time: its short text is shown for a few seconds. */
   | { readonly type: 'area-text'; readonly areaId: string; readonly text: string }
@@ -119,9 +122,10 @@ export type GameEvent =
    */
   | { readonly type: 'checkpoint-activated'; readonly checkpointId: string }
   /**
-   * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health where
-   * defeat sends it, and the monsters of the Adventure Area it is in are back as they began: the view shows the new
-   * state. The monsters of other Adventure Areas are as they were.
+   * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health at the
+   * Checkpoint it touched last (the start of the adventure before it touched any), and the monsters of that Adventure
+   * Area are back as they began: the view shows the new state. When that Checkpoint is in another area, `area-changed`
+   * follows this event. The monsters of other Adventure Areas are as they were.
    */
   | { readonly type: 'hero-defeated' };
 
