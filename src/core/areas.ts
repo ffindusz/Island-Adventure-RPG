@@ -8,8 +8,8 @@ import type { PlayState } from './state';
 // Moving between Adventure Areas: the hero walks into an exit and arrives at the entrance that exit leads to.
 
 /**
- * Takes the hero through an exit when its body overlaps one, to the entrance the exit leads to. When it overlaps several
- * at once the first one listed takes it. Returns what happened: nothing when the hero is not in an exit.
+ * Takes the hero through an exit when its body overlaps one, to the entrance the exit leads to. When it overlaps
+ * several at once the first one listed takes it. Returns what happened: nothing when the hero is not in an exit.
  */
 export function crossExits(state: PlayState, content: Content): GameEvent[] {
   const body = heroBody(state, content);
@@ -22,6 +22,8 @@ export function crossExits(state: PlayState, content: Content): GameEvent[] {
   for (const monster of livingMonsters(state)) {
     monster.action = { type: 'idle' };
   }
+  // The arrows in the air were shot in the area the hero leaves, and an arrow flies only in its own area.
+  state.arrows = [];
   state.areaId = destination.id;
   const entrance = entranceOf(destination, exit.to.entranceId);
   state.arrivedAt = { ...entrance.tile };

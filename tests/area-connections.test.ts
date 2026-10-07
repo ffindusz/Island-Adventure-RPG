@@ -10,9 +10,12 @@ import type {
 } from '../src/core';
 import {
   ARENA_LAYOUT,
+  FIELD_LAYOUT,
+  WITH_BOW,
   advance,
   arena,
   biterAt,
+  cacheAt,
   chestAt,
   dummyAt,
   face,
@@ -26,6 +29,7 @@ import {
   throughStorage,
   walk,
 } from './fixtures';
+import type { ArenaOptions } from './fixtures';
 
 // The test world: the arena and a cellar, both 7 x 6 tiles (see fixtures.ts), each with an exit into the other.
 //
@@ -72,8 +76,6 @@ function world(arenaOptions: ArenaOptions = {}, cellar: Partial<AreaDefinition> 
     otherAreas: [{ ...CELLAR, ...cellar }],
   });
 }
-
-type ArenaOptions = NonNullable<Parameters<typeof arena>[0]>;
 
 /** Into the cellar and out again, which leaves the hero in the arena at its entrance, (4.5, 3.5). */
 function goThereAndBack(game: Game): void {
@@ -225,6 +227,68 @@ describe('What the hero left behind in an Adventure Area', () => {
     // Back in the arena the hero is within the biter's reach again, and its wind-up starts over: 30 steps, then the hit.
     expect(advance(game, 30)).not.toContainEqual(expect.objectContaining({ type: 'hero-hit' }));
     expect(advance(game, 1)).toContainEqual(expect.objectContaining({ type: 'hero-hit', monsterId: 'biter-1' }));
+  });
+});
+
+describe('Arrows and Adventure Areas', () => {
+  // The field is 14 x 7 tiles (see fixtures.ts), wide enough for an arrow to be in the air when the hero reaches the
+  // exit. The hero stands at (6.5, 3.5) and shoots to the right, along row 3. The exit is on the tile (8, 3): the
+  // hero's right edge reaches x = 8 after 10 steps and the hero is in the exit on the 11th. An arrow flies 0.25 tile
+  // a step, for 16 steps.
+  const EXIT_ON_THE_FIELD: ExitDefinition = { ...TO_CELLAR, zone: { col: 8, row: 3, width: 1, height: 1 } };
+
+  /** The hero has opened the cache below it, has the bow in hand and faces right. */
+  function archerOnTheField(monsters: ArenaOptions['monsters'] = []): Game {
+    const game = newGame(
+      world({
+        layout: FIELD_LAYOUT,
+        start: { area: 'arena', tile: { col: 6, row: 3 } },
+        hero: { startingGear: WITH_BOW },
+        interactables: [cacheAt('cache', 6, 4, 5)],
+        exits: [EXIT_ON_THE_FIELD],
+        monsters,
+      }),
+    );
+    game.send({ type: 'interact' });
+    game.send({ type: 'switch-weapon' });
+    face(game, 'right');
+    return game;
+  }
+
+  it('are gone when the hero goes through an exit: a save made then holds none, and none flies on when it comes back', () => {
+    const game = archerOnTheField();
+    game.send({ type: 'attack' });
+    walk(game, 'right', 10);
+    expect(playingView(game).arrows, 'still in the air just before the exit').toHaveLength(1);
+
+    walk(game, 'right', 1);
+
+    expect(playingView(game).area.id).toBe('cellar');
+    expect(game.snapshot().state.arrows, 'a save made in the cellar').toEqual([]);
+
+    // The way back takes 3 steps, 14 steps after the shot: the arrow would still have 2 steps of flight left.
+    walk(game, 'left', 3);
+    expect(playingView(game).area.id).toBe('arena');
+    expect(playingView(game).arrows).toEqual([]);
+    advance(game, 5);
+    expect(playingView(game).arrows).toEqual([]);
+    expect(game.snapshot().state.arrows).toEqual([]);
+  });
+
+  it('fly their last step in the area the hero leaves: an arrow that reaches a monster in that step still hurts it', () => {
+    // The dummy on the tile (9, 3), behind the exit, begins at x = 9.25. The tip of the arrow is at x = 9.125 after 10
+    // steps and reaches the dummy in the 11th, the step in which the hero is in the exit.
+    const game = archerOnTheField([dummyAt('dummy-1', 9, 3)]);
+    game.send({ type: 'attack' });
+
+    const events = walk(game, 'right', 11);
+
+    expect(events).toEqual([
+      { type: 'monster-hit', monsterId: 'dummy-1', damage: 3, health: 0 },
+      { type: 'monster-defeated', monsterId: 'dummy-1' },
+      { type: 'experience-gained', amount: 5 },
+      { type: 'area-changed', areaId: 'cellar' },
+    ]);
   });
 });
 
