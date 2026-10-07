@@ -14,6 +14,7 @@ import {
 import { ARTWORK } from './artwork';
 import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import { AutomapPage } from './automap-page';
+import { callsForSave } from './autosave';
 import { scrollFor } from './camera';
 import { DEPTH } from './depths';
 import { Fall, FALL_FADE_OUT_MS } from './fall';
@@ -26,6 +27,9 @@ import { Notice } from './notice';
 import { Overlay } from './overlay';
 import { PlayerInput } from './player-input';
 import { byShooter } from './projectiles';
+import type { SaveStore } from './save-store';
+import { SCENE_KEYS } from './scene-keys';
+import type { PlayStart } from './scene-keys';
 
 /** How long the screen takes to fade in after the hero is defeated and returned, in milliseconds. */
 const DEFEAT_FADE_MS = 500;
@@ -46,9 +50,12 @@ function gameIsWaiting(view: GameView): boolean {
 /**
  * The play screen. Every frame it turns the keyboard into commands, runs the Game core's fixed steps, and draws
  * what the core's view says. It decides nothing about the game, except that no step runs while nobody is watching.
+ * It also saves the game when the hero touches a Checkpoint or comes into another area (autosave.ts), and takes the
+ * player back to the title when the core has gone back to it.
  */
 export class PlayScene extends Phaser.Scene {
   private readonly core: Game;
+  private readonly saves: SaveStore;
   private readonly clock = new FixedStepClock();
   private readonly feedback = new Feedback();
   private readonly inventoryMenu = new InventoryMenu();
@@ -69,10 +76,17 @@ export class PlayScene extends Phaser.Scene {
   /** The fall of the hero that is on the screen now, if any: no step of the Game core runs until it is over. */
   private fall: Fall | null = null;
   private fadingOut = false;
+  /** Whether the first frame saves the game: a New Game counts as a Checkpoint, so that it replaces the old save. */
+  private saveAtOnce = false;
 
-  constructor(core: Game) {
-    super('play');
+  constructor(core: Game, saves: SaveStore) {
+    super(SCENE_KEYS.play);
     this.core = core;
+    this.saves = saves;
+  }
+
+  init(start: PlayStart): void {
+    this.saveAtOnce = start.saveAtOnce === true;
   }
 
   preload(): void {
@@ -149,6 +163,12 @@ export class PlayScene extends Phaser.Scene {
     this.feedback.show(events);
     this.heroSprite.show(events);
     const view = this.core.view();
+    if (view.phase === 'title') {
+      // The core went back to the title, and the title screen shows it from here.
+      this.scene.start(SCENE_KEYS.title);
+      return;
+    }
+    this.autosave(events);
     if (view.phase === 'playing' && events.some((event) => event.type === 'hero-defeated')) {
       // The core has already put the hero back at its Checkpoint, which may be in another area. The screen first shows
       // the place the hero fell in (see fall.ts).
@@ -168,6 +188,20 @@ export class PlayScene extends Phaser.Scene {
     this.draw(view, watching, time);
     if (view.phase === 'playing') {
       this.lastPlaying = view;
+    }
+  }
+
+  /**
+   * Saves the game as it stands when the frame's events call for it, or when this is the first frame of a New Game. A
+   * save the browser refuses does not stop the game: the player is told, and the earlier save stays as it was.
+   */
+  private autosave(events: readonly GameEvent[]): void {
+    if (!this.saveAtOnce && !callsForSave(events)) {
+      return;
+    }
+    this.saveAtOnce = false;
+    if (!this.saves.write(this.core.snapshot())) {
+      this.feedback.saveFailed();
     }
   }
 

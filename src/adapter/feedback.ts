@@ -106,6 +106,11 @@ export class Feedback {
   dismissNotice(): void {
     this.told = null;
   }
+
+  /** Tells the player that the game could not be saved, over whatever the notice told. */
+  saveFailed(): void {
+    this.told = { content: { kind: 'save-failed' }, msLeft: NOTICE_MS };
+  }
 }
 
 function remaining(flashes: readonly ZoneFlash[], frameMs: number): ZoneFlash[] {

@@ -166,4 +166,12 @@ export class PlayerInput {
     const down = pressedAgain(this.walkKeys.down);
     return { step: up === down ? 0 : up ? -1 : 1, confirm: pressedAgain([this.confirmKey]) };
   }
+
+  /**
+   * Whether Esc went down again since the last call, to turn down what a menu asks. Esc also closes the page that is
+   * open, and `pollActions` takes that press: so a screen asks only one of the two, as the title asks this.
+   */
+  pollCancel(): boolean {
+    return pressedAgain([this.closePageKey]);
+  }
 }

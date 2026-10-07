@@ -10,4 +10,6 @@ export const DEPTH = {
   slash: 25,
   /** The strikes of the monsters, over everything of the world. */
   effects: 30,
+  /** The title screen, a scene of its own: nothing of the world shares its display list, so this orders only its parts. */
+  title: 300,
 } as const;
