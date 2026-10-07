@@ -35,8 +35,8 @@ export const shipwreckCoast: AreaDefinition = {
     '~.........#,,,,,,,,~',
     '~~~~~~~~~~~~~~~~~~~~',
   ],
-  // Kept clear of the entrance from the trail as well as the start, so that a hero who comes in there, or is defeated
-  // there and returns, is not at once in danger.
+  // Kept clear of the entrance from the trail as well as the start with its Checkpoint, so that a hero who comes in
+  // there, or returns to the Checkpoint after a defeat, is not at once in danger.
   monsters: [
     { id: 'crab-1', type: 'crab', tile: { col: 12, row: 3 } },
     { id: 'crab-2', type: 'crab', tile: { col: 12, row: 8 } },

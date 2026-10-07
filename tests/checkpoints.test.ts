@@ -22,11 +22,13 @@ import {
   face,
   fixedRandom,
   frailMonster,
+  gameAtTitle,
   milestone,
   newGame,
   pickupAt,
   playingView,
   strike,
+  throughStorage,
   walk,
 } from './fixtures';
 import type { ArenaOptions } from './fixtures';
@@ -377,24 +379,27 @@ describe('Defeat and the consumables', () => {
    *
    *   arrows   5 -> 8 -> 7        potions   2 -> 3 -> 5 -> 4
    */
-  function fallInTheCellar(): Game {
-    const game = newGame(
-      world(
-        {
-          hero: { startingGear: WITH_BOW },
-          checkpoints: [LOOKOUT],
-          interactables: [
-            cacheAt('arena-cache', 3, 4, 5),
-            pickupAt('arena-potions-1', 3, 2, 2),
-            pickupAt('arena-potions-2', 5, 2, 1),
-          ],
-        },
-        {
-          monsters: [biterAt('cellar-biter', 3, 3)],
-          interactables: [pickupAt('cellar-potions', 2, 4, 2), cacheAt('cellar-cache', 3, 4, 3)],
-        },
-      ),
+  function worldOfTheFall(): ContentDefinition {
+    return world(
+      {
+        hero: { startingGear: WITH_BOW },
+        checkpoints: [LOOKOUT],
+        interactables: [
+          cacheAt('arena-cache', 3, 4, 5),
+          pickupAt('arena-potions-1', 3, 2, 2),
+          pickupAt('arena-potions-2', 5, 2, 1),
+        ],
+      },
+      {
+        monsters: [biterAt('cellar-biter', 3, 3)],
+        interactables: [pickupAt('cellar-potions', 2, 4, 2), cacheAt('cellar-cache', 3, 4, 3)],
+      },
     );
+  }
+
+  /** The hero has done all that and has 8 Health, 7 arrows and 4 potions: the biter is about to hit it again. */
+  function aboutToFall(): Game {
+    const game = newGame(worldOfTheFall());
     game.send(INTERACT);
     game.send({ type: 'switch-weapon' });
     walk(game, 'up', 3);
@@ -411,6 +416,11 @@ describe('Defeat and the consumables', () => {
     game.send(USE_POTION);
     game.send(CLOSE_INVENTORY);
     expect(playingView(game).hero).toMatchObject({ health: 8, consumables: { ammunition: 7, 'healing-potion': 4 } });
+    return game;
+  }
+
+  function fallInTheCellar(): Game {
+    const game = aboutToFall();
     untilDefeated(game);
     return game;
   }
@@ -505,6 +515,77 @@ describe('Defeat and the consumables', () => {
     findThem();
     untilDefeated(game);
     expectNoneFound();
+  });
+
+  it('is the same after saving and continuing: the snapshot holds the Checkpoint and what it recorded', () => {
+    const original = aboutToFall();
+    const restored = gameAtTitle(worldOfTheFall());
+    restored.send({ type: 'continue', snapshot: throughStorage(original.snapshot()) });
+    expect(restored.view()).toEqual(original.view());
+
+    untilDefeated(original);
+    untilDefeated(restored);
+
+    expect(restored.view()).toEqual(original.view());
+    const view = playingView(restored);
+    expect(view.area.id).toBe('arena');
+    expect(view.hero).toMatchObject({ health: 10, consumables: { ammunition: 5, 'healing-potion': 2 } });
+    expect(pickupIds(restored)).toEqual(['arena-potions-2']);
+  });
+});
+
+describe('Defeat and the drops of monsters', () => {
+  // The dropper has 1 Health and always leaves 2 arrows when it is defeated.
+  const DROPPER = { ...frailMonster(1), drops: [{ consumable: 'ammunition', chance: 1, amount: 2 }] } as const;
+
+  it('gives back a drop of a monster of the Checkpoint\'s area: the monster is back and drops again', () => {
+    // The hero touches the camp, turns left and strikes the dropper on the tile (2, 4) before the biter's hit on the
+    // 31st step defeats it. The hero is back on the camp when the cooldown of its strike is over, strikes again, and
+    // the monster, which came back with the area, leaves its arrows once more.
+    const game = newGame(
+      arena({
+        hero: { health: 5 },
+        checkpoints: [CAMP],
+        monsters: [BITER_BESIDE_HERO, { id: 'dropper', type: 'dropper', tile: { col: 2, row: 4 } }],
+        monsterTypes: { dropper: DROPPER },
+      }),
+    );
+    walk(game, 'down', 3);
+    face(game, 'left');
+    expect(game.send(ATTACK)).toContainEqual(tookArrows(2));
+    untilDefeated(game);
+    expect(playingView(game).hero.consumables.ammunition).toBe(0);
+
+    face(game, 'left');
+    expect(game.send(ATTACK)).toContainEqual(tookArrows(2));
+
+    expect(playingView(game).hero.consumables.ammunition).toBe(2);
+  });
+
+  it('is lost when the monster is in another area than the Checkpoint: it stays defeated and drops nothing more', () => {
+    // The known edge. The hero touches the camp and goes to the cellar, where it strikes the dropper on the tile (2, 4)
+    // right below its arrival, and the biter on the tile (3, 3) defeats it on the 31st step after the arrival. The
+    // hero is back at the camp without the arrows, and the dropper does not come back with the cellar.
+    const game = newGame(
+      world(
+        { hero: { health: 5 }, checkpoints: [CAMP], monsterTypes: { dropper: DROPPER } },
+        { monsters: [{ id: 'dropper', type: 'dropper', tile: { col: 2, row: 4 } }, biterAt('cellar-biter', 3, 3)] },
+      ),
+    );
+    walk(game, 'down', 3);
+    walk(game, 'right', 11);
+    face(game, 'down');
+    expect(game.send(ATTACK)).toContainEqual(tookArrows(2));
+    untilDefeated(game);
+    expect(playingView(game).hero.consumables.ammunition).toBe(0);
+
+    walk(game, 'up', 3);
+    walk(game, 'right', 11);
+    expect(playingView(game).area.id).toBe('cellar');
+    expect(playingView(game).monsters.map((monster) => monster.id)).toEqual(['cellar-biter']);
+    face(game, 'down');
+    expect(game.send(ATTACK)).not.toContainEqual(expect.objectContaining({ type: 'pickup' }));
+    expect(playingView(game).hero.consumables.ammunition).toBe(0);
   });
 });
 
