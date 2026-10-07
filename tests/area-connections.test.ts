@@ -207,6 +207,41 @@ describe('What the hero left behind in an Adventure Area', () => {
     expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'cellar-chest', opened: true })]);
   });
 
+  it('keeps an Ammunition cache open in either area, and the cache of the other area as it was', () => {
+    const game = newGame(
+      world(
+        { interactables: [cacheAt('arena-cache', 3, 4, 5)] },
+        { interactables: [cacheAt('cellar-cache', 4, 3, 3)] },
+      ),
+    );
+    const caches = () => playingView(game).interactables.map((cache) => [cache.id, cache.holds, cache.opened]);
+    const ammunition = () => playingView(game).hero.consumables.ammunition;
+
+    // The hero starts facing down, beside the cache below it.
+    game.send({ type: 'interact' });
+    expect(ammunition()).toBe(5);
+
+    // Opening the cache of the arena left the one of the cellar closed.
+    walk(game, 'right', 11);
+    expect(caches()).toEqual([['cellar-cache', 'ammunition', false]]);
+    // The cache on tile (4, 3) stops the hero when its right edge is at x = 4, after 10 steps.
+    walk(game, 'right', 10);
+    game.send({ type: 'interact' });
+    expect(ammunition()).toBe(8);
+
+    walk(game, 'left', 13);
+    expect(playingView(game).area.id).toBe('arena');
+    expect(caches()).toEqual([['arena-cache', 'ammunition', true]]);
+    walk(game, 'right', 3);
+    expect(playingView(game).area.id).toBe('cellar');
+    expect(caches()).toEqual([['cellar-cache', 'ammunition', true]]);
+
+    // Both caches are empty now: going there and back gave the hero no second helping from either.
+    walk(game, 'right', 10);
+    expect(game.send({ type: 'interact' })).toEqual([]);
+    expect(ammunition()).toBe(8);
+  });
+
   it('lets a chest block the hero only in the area where it stands', () => {
     const game = newGame(world({ interactables: [chestAt('arena-chest', 3, 4, 'steel-sword')] }));
     walk(game, 'right', 11);
@@ -353,6 +388,68 @@ describe('Defeat in a connected Adventure Area', () => {
     expect(events.map((event) => event.type)).toContain('hero-defeated');
     expect(playingView(game).area.id).toBe('arena');
     expect(playingView(game).hero.position).toEqual({ x: 4.5, y: 3.5 });
+  });
+
+  describe('with the bow and Ammunition found', () => {
+    /**
+     * The hero opens the cache of the arena (5 arrows), takes the bow in hand, goes down to the cellar, opens the cache
+     * there (3 arrows) and comes back to the arena, to its entrance. The biter of the arena was calm while the hero was
+     * away: it winds up from the next step and hits on the 31st. The hero shoots one arrow to the left after the 20th
+     * step, so that the arrow is in the air when the hit lands. Returns the game one step before the hit.
+     */
+    function aboutToFallWithTheBow(): Game {
+      const game = newGame(
+        world(
+          {
+            monsters: [biterAt('arena-biter', 4, 4)],
+            interactables: [cacheAt('arena-cache', 3, 4, 5)],
+            hero: { health: 5, startingGear: WITH_BOW },
+          },
+          { interactables: [cacheAt('cellar-cache', 4, 3, 3)] },
+        ),
+      );
+      game.send({ type: 'interact' });
+      game.send({ type: 'switch-weapon' });
+      walk(game, 'right', 11);
+      walk(game, 'right', 10);
+      game.send({ type: 'interact' });
+      walk(game, 'left', 13);
+      advance(game, 20);
+      face(game, 'left');
+      game.send({ type: 'attack' });
+      advance(game, 10);
+      return game;
+    }
+
+    it('takes the arrows in the air and nothing else from the hero: it keeps the bow in hand and the Ammunition', () => {
+      const game = aboutToFallWithTheBow();
+      expect(playingView(game).arrows, 'in the air just before the hit').toHaveLength(1);
+
+      expect(advance(game, 1).map((event) => event.type)).toEqual(['monster-attacked', 'hero-hit', 'hero-defeated']);
+
+      const view = playingView(game);
+      expect(view.area.id).toBe('arena');
+      expect(view.hero).toMatchObject({
+        position: { x: 4.5, y: 3.5 },
+        health: 5,
+        activeWeapon: 'ranged-weapon',
+        consumables: { ammunition: 7 },
+      });
+      expect(view.arrows).toEqual([]);
+      advance(game, 10);
+      expect(playingView(game).arrows).toEqual([]);
+    });
+
+    it('leaves the caches the hero opened open, in both areas: dying gives no new arrows', () => {
+      const game = aboutToFallWithTheBow();
+      advance(game, 1);
+
+      expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'arena-cache', opened: true })]);
+      walk(game, 'right', 3);
+      expect(playingView(game).area.id).toBe('cellar');
+      expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'cellar-cache', opened: true })]);
+      expect(playingView(game).hero.consumables.ammunition).toBe(7);
+    });
   });
 });
 
