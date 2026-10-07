@@ -2,7 +2,7 @@
 export { createGame } from './game';
 export { STEP_MS, STEPS_PER_SECOND } from './time';
 export { PAGE_IDS, SNAPSHOT_VERSION } from './state';
-export { GEAR_SLOT_STAT, GEAR_SLOTS, STAT_IDS } from './definitions';
+export { GEAR_SLOT_STAT, GEAR_SLOTS, STAT_IDS, WEAPON_SLOTS } from './definitions';
 export type {
   AreaDefinition,
   ChaserMonsterDefinition,
@@ -24,6 +24,7 @@ export type {
   StationaryMonsterDefinition,
   TerrainDefinition,
   TileRect,
+  WeaponSlot,
 } from './definitions';
 export type { Box, Direction, Point, Tile } from './geometry';
 export type {

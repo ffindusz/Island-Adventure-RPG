@@ -24,15 +24,23 @@ export interface MeleeWeaponDefinition {
  * Where Gear is equipped: the hero carries as many pieces as it finds and has one equipped in each slot. The list is
  * open: a new slot is one more entry here and in GEAR_SLOT_STAT.
  */
-export const GEAR_SLOTS = ['melee-weapon', 'armor'] as const;
+export const GEAR_SLOTS = ['melee-weapon', 'ranged-weapon', 'armor'] as const;
 export type GearSlot = (typeof GEAR_SLOTS)[number];
+
+/**
+ * The slots that hold a weapon. The hero has one weapon in hand at a time, and a weapon's bonus counts only for the
+ * attacks made with it: a bow's for arrows, a sword's for strikes.
+ */
+export const WEAPON_SLOTS = ['melee-weapon', 'ranged-weapon'] as const satisfies readonly GearSlot[];
+export type WeaponSlot = (typeof WEAPON_SLOTS)[number];
 
 /** The stats Gear can raise. It never changes anything else. */
 export type GearStat = Extract<StatId, 'attack' | 'defense'>;
 
-/** The stat each slot raises: a Melee Weapon only ever adds to Attack, and armor only to Defense. */
+/** The stat each slot raises: a weapon only ever adds to Attack, and armor only to Defense. */
 export const GEAR_SLOT_STAT: Readonly<Record<GearSlot, GearStat>> = {
   'melee-weapon': 'attack',
+  'ranged-weapon': 'attack',
   armor: 'defense',
 };
 

@@ -37,8 +37,8 @@ import type {
 //   Levels                  the Experience that raises the hero to Levels 2 to 6 is 10, 25, 45, 70 and 100 in all;
 //                           each Stat Point adds 3 to Health, 2 to Attack or 1 to Defense
 //   Gear                    the hero begins with a basic sword and basic armor, which add nothing. The arena has more
-//                           Gear to find: an iron sword (+2 Attack), a steel sword (+5), leather armor (+2 Defense)
-//                           and plate armor (+4)
+//                           Gear to find: an iron sword (+2 Attack), a steel sword (+5), leather armor (+2 Defense),
+//                           plate armor (+4), a short bow (+2 Attack, for arrows only) and a long bow (+4)
 //   monster "dummy"         stationary: it never moves or attacks; body 0.5 tiles; Health 3; worth 5 Experience
 //   monster "biter"         a chaser; body 0.5 tiles; Health 3; worth 8 Experience; damage 5; walks 3.75 tiles a
 //                           second, which is 0.0625 tile a step (16 steps to cross one tile); notices the hero within
@@ -92,7 +92,16 @@ export const ARENA_GEAR: Readonly<Record<string, GearDefinition>> = {
   'steel-sword': { name: 'Steel Sword', slot: 'melee-weapon', bonus: 5 },
   'leather-armor': { name: 'Leather Armor', slot: 'armor', bonus: 2 },
   'plate-armor': { name: 'Plate Armor', slot: 'armor', bonus: 4 },
+  'short-bow': { name: 'Short Bow', slot: 'ranged-weapon', bonus: 2 },
+  'long-bow': { name: 'Long Bow', slot: 'ranged-weapon', bonus: 4 },
 };
+
+/** The hero's starting Gear with a short bow added to the sword and the armor. */
+export const WITH_BOW = {
+  'melee-weapon': 'basic-sword',
+  'ranged-weapon': 'short-bow',
+  armor: 'basic-armor',
+} as const;
 
 interface ArenaOptions {
   readonly monsters?: readonly MonsterPlacement[];
