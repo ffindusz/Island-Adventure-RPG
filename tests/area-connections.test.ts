@@ -1,7 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { createGame } from '../src/core';
-import type { AreaDefinition, ContentDefinition, EntranceDefinition, ExitDefinition } from '../src/core';
-import { ARENA_LAYOUT, advance, arena, fixedRandom, newGame, playingView, walk } from './fixtures';
+import type { AreaDefinition, ContentDefinition, EntranceDefinition, ExitDefinition, Game } from '../src/core';
+import {
+  ARENA_LAYOUT,
+  advance,
+  arena,
+  biterAt,
+  chestAt,
+  dummyAt,
+  face,
+  fixedRandom,
+  frailMonster,
+  monsterNamed,
+  newGame,
+  playingView,
+  strike,
+  walk,
+} from './fixtures';
 
 // The test world: the arena and a cellar, both 7 x 6 tiles (see fixtures.ts), each with an exit into the other.
 //
@@ -39,10 +54,25 @@ function expectRefused(content: ContentDefinition, message: string): void {
   expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
 }
 
-/** The arena and the cellar, with the hero in the arena at (3.5, 3.5). */
-function world(): ContentDefinition {
-  return arena({ entrances: [FROM_CELLAR], exits: [TO_CELLAR], otherAreas: [CELLAR] });
+/** The arena and the cellar, with the hero in the arena at (3.5, 3.5). `cellar` replaces parts of the cellar. */
+function world(arenaOptions: ArenaOptions = {}, cellar: Partial<AreaDefinition> = {}): ContentDefinition {
+  return arena({
+    entrances: [FROM_CELLAR],
+    exits: [TO_CELLAR],
+    ...arenaOptions,
+    otherAreas: [{ ...CELLAR, ...cellar }],
+  });
 }
+
+type ArenaOptions = NonNullable<Parameters<typeof arena>[0]>;
+
+/** Into the cellar and out again, which leaves the hero in the arena at its entrance, (4.5, 3.5). */
+function goThereAndBack(game: Game): void {
+  walk(game, 'right', 11);
+  walk(game, 'left', 3);
+}
+
+const WEAKLING = { weakling: frailMonster(0) };
 
 describe('Moving between Adventure Areas', () => {
   it('takes the hero into the other area, to the entrance the exit leads to, when its body overlaps the exit', () => {
@@ -106,6 +136,86 @@ describe('Moving between Adventure Areas', () => {
     walk(game, 'right', 11);
 
     expect(playingView(game).exits).toEqual([{ id: 'to-arena', zone: { minX: 1, minY: 3, maxX: 2, maxY: 4 } }]);
+  });
+});
+
+describe('What the hero left behind in an Adventure Area', () => {
+  it('keeps a defeated monster defeated in either area when the hero comes back', () => {
+    const game = newGame(
+      world(
+        { monsters: [{ id: 'arena-weakling', type: 'weakling', tile: { col: 3, row: 4 } }], monsterTypes: WEAKLING },
+        { monsters: [{ id: 'cellar-weakling', type: 'weakling', tile: { col: 2, row: 4 } }] },
+      ),
+    );
+    // The hero starts facing down, at the weakling below it.
+    expect(strike(game)).toContainEqual({ type: 'monster-defeated', monsterId: 'arena-weakling' });
+    walk(game, 'right', 11);
+    face(game, 'down');
+    expect(strike(game)).toContainEqual({ type: 'monster-defeated', monsterId: 'cellar-weakling' });
+
+    walk(game, 'left', 3);
+    expect(playingView(game).monsters).toEqual([]);
+    walk(game, 'right', 3);
+
+    expect(playingView(game).area.id).toBe('cellar');
+    expect(playingView(game).monsters).toEqual([]);
+  });
+
+  it('keeps a monster as hurt as the hero left it', () => {
+    const game = newGame(world({ monsters: [dummyAt('dummy-1', 3, 4)] }));
+    strike(game);
+    expect(monsterNamed(game, 'dummy-1').health).toBe(2);
+
+    goThereAndBack(game);
+
+    expect(monsterNamed(game, 'dummy-1').health).toBe(2);
+  });
+
+  it('keeps a chest open in either area once the hero has opened it', () => {
+    const game = newGame(
+      world(
+        { interactables: [chestAt('arena-chest', 3, 4, 'steel-sword')] },
+        { interactables: [chestAt('cellar-chest', 4, 3, 'iron-sword')] },
+      ),
+    );
+    // The hero starts facing down, beside the chest below it.
+    game.send({ type: 'interact' });
+    expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'arena-chest', opened: true })]);
+    walk(game, 'right', 11);
+    // The chest on tile (4, 3) stops the hero when its right edge is at x = 4, after 10 steps.
+    walk(game, 'right', 10);
+    game.send({ type: 'interact' });
+    expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'cellar-chest', opened: true })]);
+
+    walk(game, 'left', 13);
+    expect(playingView(game).area.id).toBe('arena');
+    expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'arena-chest', opened: true })]);
+    walk(game, 'right', 3);
+
+    expect(playingView(game).area.id).toBe('cellar');
+    expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'cellar-chest', opened: true })]);
+  });
+
+  it('lets a chest block the hero only in the area where it stands', () => {
+    const game = newGame(world({ interactables: [chestAt('arena-chest', 3, 4, 'steel-sword')] }));
+    walk(game, 'right', 11);
+
+    // The tile (3, 4) of the cellar is empty: the hero walks down a tile and across it, to the middle of the tile.
+    walk(game, 'down', 8);
+    walk(game, 'right', 8);
+
+    expect(playingView(game).hero.position).toEqual({ x: 3.5, y: 4.5 });
+  });
+
+  it('calms the monsters of the area the hero leaves, so that none resumes a wind-up when it returns', () => {
+    const game = newGame(world({ monsters: [biterAt('biter-1', 4, 4)] }));
+
+    // The biter winds up from the first step, and the hero leaves during its wind-up, which would end on the 31st step.
+    goThereAndBack(game);
+
+    // Back in the arena the hero is within the biter's reach again, and its wind-up starts over: 30 steps, then the hit.
+    expect(advance(game, 30)).not.toContainEqual(expect.objectContaining({ type: 'hero-hit' }));
+    expect(advance(game, 1)).toContainEqual(expect.objectContaining({ type: 'hero-hit', monsterId: 'biter-1' }));
   });
 });
 

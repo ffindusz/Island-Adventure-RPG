@@ -2,7 +2,7 @@ import { areaOf } from './content';
 import type { Area, Content, Entrance } from './content';
 import { centerOf, overlaps } from './geometry';
 import type { GameEvent } from './interface';
-import { heroBody } from './state';
+import { heroBody, livingMonsters } from './state';
 import type { PlayState } from './state';
 
 // Moving between Adventure Areas: the hero walks into an exit and arrives at the entrance that exit leads to.
@@ -18,6 +18,10 @@ export function crossExits(state: PlayState, content: Content): GameEvent[] {
     return [];
   }
   const destination = areaOf(content, exit.to.areaId);
+  // Monsters only act in the area the hero is in, so one left mid wind-up would finish it on the hero's return.
+  for (const monster of livingMonsters(state)) {
+    monster.action = { type: 'idle' };
+  }
   state.areaId = destination.id;
   state.hero.position = centerOf(entranceOf(destination, exit.to.entranceId).tile);
   return [{ type: 'area-changed', areaId: destination.id }];
