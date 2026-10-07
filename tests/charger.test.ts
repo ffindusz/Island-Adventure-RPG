@@ -12,7 +12,7 @@ import {
   playingView,
   walk,
 } from './fixtures';
-import { chargerAt, CHARGER_RECOVERY_STEPS, enemyContent, enemyField } from './enemy-fixtures';
+import { chargerAt, CHARGER, CHARGER_RECOVERY_STEPS, enemyContent, enemyField } from './enemy-fixtures';
 
 // A charger in tile (2, 3) stands at (2.5, 3.5), so its body spans x 2.25 to 2.75 and y 3.25 to 3.75. The hero stands at
 // (6.5, 3.5): its body spans x 6.25 to 6.75 and y 3.25 to 3.75, in the same row of space. The charger's lane to the
@@ -82,6 +82,20 @@ describe('a charger with the hero in its line', () => {
       type: 'winding-up',
       progress: 0,
       zone: { minX: 9.75, minY: 3.25, maxX: 13, maxY: 3.75 },
+    });
+  });
+
+  it('shows a lane as wide as the charger of that type: one a tile wide has a lane a tile wide', () => {
+    // It fills the tile (2, 3), so its front edge is at x = 3 and its lane runs from there to x = 9.
+    const bull = { id: 'charger-1', type: 'bull', tile: { col: 2, row: 3 } };
+    const game = enemyField([bull], { monsterTypes: { bull: { ...CHARGER, size: 1 } } });
+
+    game.step();
+
+    expect(monsterAction(game, 'charger-1')).toEqual({
+      type: 'winding-up',
+      progress: 0,
+      zone: { minX: 3, minY: 3, maxX: 9, maxY: 4 },
     });
   });
 

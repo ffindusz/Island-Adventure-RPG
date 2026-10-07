@@ -54,6 +54,24 @@ describe('a ranged attacker that keeps its distance', () => {
     });
   });
 
+  it.each([
+    // 0.375 tile more than it likes, which is 6 moves of 0.0625: 3.625 between the centres, 3 between the bodies.
+    { what: 'a keeper 0.75 wide', keeper: { ...KEEPER, size: 0.75 }, hero: {}, moves: 6, x: 2.875 },
+    // 0.25 tile more than it likes, which is 4 moves: 3.75 between the centres, 3 between the bodies.
+    { what: 'a hero 1 wide', keeper: KEEPER, hero: { size: 1 }, moves: 4, x: 2.75 },
+  ])('counts the distance between the bodies, not between the centres: $what', ({ keeper, hero, moves, x }) => {
+    const game = enemyField([keeperAt('keeper-1', 2, 3)], { monsterTypes: { keeper }, hero });
+
+    advance(game, moves);
+    expect(monsterNamed(game, 'keeper-1')).toMatchObject({ position: { x, y: 3.5 }, action: { type: 'chasing' } });
+
+    game.step();
+    expect(monsterNamed(game, 'keeper-1')).toMatchObject({
+      position: { x, y: 3.5 },
+      action: { type: 'winding-up', progress: 0 },
+    });
+  });
+
   it('walks only as far as it must: it stops at the distance it likes, and not a step past it', () => {
     // It likes 3.25 tiles here and walks 0.09375 tile a step. From tile (4, 3) it must walk 1.75 tile: 18 moves of
     // 0.09375 and then 0.0625.

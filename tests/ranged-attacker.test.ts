@@ -64,6 +64,18 @@ describe('a ranged attacker that has noticed the hero', () => {
     expect(monsterAction(game, 'shooter-1')).toEqual({ type: 'winding-up', progress: 0, zone: SHOOTER_BODY });
   });
 
+  it('flashes on the whole of its body, which is as large as its type says', () => {
+    const game = enemyField([shooterAt('shooter-1', 2, 3)], { monsterTypes: { shooter: { ...SHOOTER, size: 0.75 } } });
+
+    game.step();
+
+    expect(monsterAction(game, 'shooter-1')).toEqual({
+      type: 'winding-up',
+      progress: 0,
+      zone: { minX: 2.125, minY: 3.125, maxX: 2.875, maxY: 3.875 },
+    });
+  });
+
   it('shows how far the wind-up has come, which is the share of its 30 steps that have passed', () => {
     const game = enemyField([shooterAt('shooter-1', 2, 3)]);
     game.step(); // the wind-up starts
