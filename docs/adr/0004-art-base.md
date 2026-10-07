@@ -8,7 +8,7 @@ Evidence: `docs\assets\art-base-inventory.md` (coverage, gap plan) and `docs\ass
 
 Use the CC0 Ninja Adventure Asset Pack by Pixel-Boy and AAA (https://pixel-boy.itch.io/ninja-adventure-asset-pack) as the art and audio base, and fill these gaps:
 
-1. Shipwreck and old ship: compose from pack pieces first (a washed-up lifeboat, mast, planks, cargo); take a small CC0 supplement only if that looks weak (candidates: 0x72's "16x16 Pirates Tileset", OpenGameArt's "Ship / Destroyed Ship"), recolored to the pack's palette.
+1. Shipwreck and old ship: compose from pack pieces first (a washed-up lifeboat or a plank deck, mast, planks, cargo); take a small CC0 supplement only if that looks weak (candidates: 0x72's "16x16 Pirates Tileset", OpenGameArt's "Ship / Destroyed Ship"), recolored to the pack's palette.
 2. One hero with sword and bow: compose from a standard character's pose, a held weapon sprite, slash effects, and an arrow projectile; the pack has no hand-drawn animation for either weapon on one standard character.
 3. Undead Guardian: recolor a samurai boss and add spectral effects.
 4. Cave and castle terrain, and the ammunition cache: assemble from existing tiles and props.
@@ -50,6 +50,7 @@ Look at:
 
 - The pack's own example screens, `ninja\Ninja Adventure - Asset Pack\Example 1.gif` to `Example 4.gif`, for the overall look.
 - `views\mockup_hero_Hunter.png`, a rough mock-up of one hero swinging a sword and shooting a bow, composed from pack pieces.
+- `views\mockup_gaps.png`, rough mock-ups of the other composed gaps: two versions of the wreck (a half-buried lifeboat and a plank deck), the recolored undead Guardian beside the original, and the ammunition cache. All are static and crude.
 - Contact sheets in `views\`: terrain (`floor.png`, `nature.png`, `water.png`, `relief.png`, `house.png`, `interior.png`), the boat and sail (`vehicles.png`), monsters (`monsters_1.png` to `monsters_3.png`), bosses (`boss_idle.png`, `boss_attack.png`), characters (`hunter_etc.png`, `undead_chars.png`), and the HUD (`ui_receptacle_top.png`, `ui_theme_wood.png`, `ui_dialog.png`). The shipwreck supplement candidate is in `research\0x72-pirates-shot1.png` and `0x72-pirates-shot2.png`.
 - The music in `ninja\Ninja Adventure - Asset Pack\Audio\Musics` and a few sound effects, for fit. An agent cannot listen.
 

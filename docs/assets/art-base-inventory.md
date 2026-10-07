@@ -10,13 +10,13 @@ The pack is a consistent 16 px, warm-palette, chibi top-down pixel-art set with 
 
 How the archive was obtained is set out factually at the end of this file, for the user to judge. It includes one point the user should weigh: the site's `robots.txt` disallows the page path the download script fetched.
 
-Verdict words follow the ticket: Found, Partial (usable but assembled, adapted, or needing a small addition), Missing.
+Verdict words follow the ticket: Found (covered), Partial (usable but assembled, adapted, or needing a small addition), Missing (a gap). Where the pack would be rejected the fallback is TinyRPG Collection (ADR 0004, `licences.md` F1).
 
 ## Coverage matrix
 
 | # | Need | Verdict | Found in the pack | Gap plan |
 | --- | --- | --- | --- | --- |
-| 1 | Terrain: shipwreck coast | Partial | Sand, grass, and water autotiles; plank docks; rocks and palms; a camp set; a boat | No wreck or hull art. Supplement (see Gap plan, G1) |
+| 1 | Terrain: shipwreck coast | Partial | Sand, grass, and water autotiles; plank docks; rocks and palms; a camp set; a lifeboat hull and a top-down rowboat | No wreck and no ship larger than a lifeboat. Compose from pack pieces (crude mock-up exists) or take a supplement (G1) |
 | 2 | Terrain: woods | Found | Grass, dirt, trees, bushes, logs, mushrooms, flowers | None |
 | 3 | Terrain: mountain | Found | Cliffs (grey, snow, orange), stairs, rocks, snow floor | None |
 | 4 | Terrain: cave | Partial | Cave mouths, ladders, rock details, dark stone interior floors and walls, crystals | No cave-wall autotile; assemble from the Relief and Interior sets (G4) |
@@ -28,9 +28,9 @@ Verdict words follow the ticket: Found, Partial (usable but assembled, adapted, 
 | 10 | Monsters: mountain raiders | Found | Armed humanoids: samurai, gladiators, fighters, ninjas, shaman, sorcerers | None |
 | 11 | Monsters: cave creatures | Found | Bats, spiders, moles, eyes, larvae, lizards, mollusc | None |
 | 12 | Monsters: castle undead | Found | Skeleton, skeleton demon, vampire, spirits, skulls, statues | None |
-| 13 | A distinct Guardian | Partial | 20 bosses with hand-drawn idle, walk, hit, attack frames; none is undead | Recolor a samurai boss to read as undead, or use the spirit boss with scripted attacks (G3) |
+| 13 | A distinct Guardian | Partial | 20 bosses with hand-drawn idle, walk, hit, attack frames; none is undead | Recolor a samurai boss to read as undead (crude mock-up exists), or use the spirit boss with scripted attacks (G3) |
 | 14 | Chests | Found | Big and little treasure chests | None |
-| 15 | Ammunition caches | Partial | Crates, barrels, bags, arrow sprites | Compose a cache from a crate plus arrows (G5) |
+| 15 | Ammunition caches | Partial | Crates, barrels, bags, arrow sprites | Compose a cache from a crate plus arrows (G5; crude mock-up exists) |
 | 16 | Healing Potions | Found | Life potion, medipack, heart, empty, milk, and water pots | None |
 | 17 | Keys | Found | Gold key, silver key | None |
 | 18 | Doors | Found | Doors in four colours, locked-door tiles with keyholes | None |
@@ -62,7 +62,7 @@ Tileset files (all in `Backgrounds\Tilesets`, sizes in pixels):
 
 By area:
 
-- **Coast (Partial):** sand, grass, and water autotiles, plank docks, rocks, palms, the camp set (tent, logs, barrels, fire pit), and a small boat all exist. There is no shipwreck and no ship hull.
+- **Coast (Partial):** sand, grass, and water autotiles, plank docks, rocks, palms, the camp set (tent, logs, barrels, fire pit), and small boats all exist: the side-view lifeboat hull `Vehicles\Boat.png` and a top-down rowboat, plank shards, and a buoy in `TilesetWater` (columns 25 to 27, rows 0 and 1). There is no shipwreck and no ship larger than a lifeboat.
 - **Woods (Found):** the Nature and Floor sets give dense forests, clearings, and paths.
 - **Mountain (Found):** the Relief cliffs, stairs, and snow ground.
 - **Cave (Partial):** cave mouths and rock cliffs exist, as do dark stone floors and walls, but there is no dedicated cave-wall autotile.
@@ -104,11 +104,11 @@ Verdict: walk Found; sword Partial; bow Partial. Neither the sword nor the bow e
 
 ## Gap plan
 
-- **G1. Shipwreck and old ship (the supplement).** Preferred: compose the wreck from pack pieces, which needs no new licence. A washed-up lifeboat suits a castaway opening: `Vehicles\Boat.png` (80x32) tilted and half buried in sand and `TilesetWater` shallows, `Vehicles\Sail.png` (30x43) as a broken mast with a torn sail, plank and log pieces from `TilesetWater`, `tileset_camp`, and `TilesetVillageAbandoned`, crates, barrels, and bags as washed-up cargo, rocks, palms, and `FX\Particle` debris. That is cropping, rotating, and recoloring of CC0 pieces. If the composed wreck looks too weak for the opening, take a small CC0 supplement (candidates in `licences.md`). S4 (0x72 "16x16 Pirates Tileset", CC0 by the author's page text) fits the scale best: 16 px pixel art with a side-view ship, sails, a skull flag, and cannons, but with a different palette and no dark outline. S2 (OpenGameArt "Ship / Destroyed Ship", CC0) is a simplified pixel ship in side view with a different palette. S1 and S3 are vector art and do not match. Anything taken is redrawn or recolored to the pack's palette (`Palette.png`, 10x9) and gets its own licence entry first. For the old ship at the harbor, which the player boards for the ending, build a larger hull in the pack's style from `Boat.png` and `Sail.png` pieces, or redraw one.
+- **G1. Shipwreck and old ship (the supplement).** Preferred: compose the wreck from pack pieces, which needs no new licence. A washed-up lifeboat suits a castaway opening: `Vehicles\Boat.png` (80x32) tilted and half buried in sand and `TilesetWater` shallows, `Vehicles\Sail.png` (30x43) as a broken mast with a torn sail, plank and log pieces from `TilesetWater`, `tileset_camp`, and `TilesetVillageAbandoned`, crates, barrels, and bags as washed-up cargo, rocks, palms, and `FX\Particle` debris. That is cropping, rotating, and recoloring of CC0 pieces. Two crude, static compositions are in the top panel of `views\mockup_gaps.png` (download folder): a half-buried `Boat.png` hull with a torn `Sail.png`, camp cargo, and a skull and bone from `TilesetFloorDetail` (row 0, columns 13 and 14), and a top-down wrecked deck built from the `TilesetWater` dock plank tiles with the mast lying across it. For the deck, `TilesetWater` columns 0 to 3 and rows 12 to 15 hold left, middle, right, and single-width variants of top, middle, bottom, and one-row-high strips, so a hull outline with holes for broken planks assembles by an edge rule. `TilesetWater` also has a top-down rowboat (columns 26 and 27, row 0), plank shards (column 25, row 0), and a buoy (column 25, row 1). Both compositions match the pack's palette and scale and read as a half-buried lifeboat and a broken wooden deck. Neither reads as a large sailing ship, so they show that a washed-up-cargo beach is feasible, not that the wreck will look good. If the composed wreck looks too weak for the opening, take a small CC0 supplement (candidates in `licences.md`). S4 (0x72 "16x16 Pirates Tileset", CC0 by the author's page text) fits the scale best: 16 px pixel art with a side-view ship, sails, a skull flag, and cannons, but with a different palette and no dark outline. S2 (OpenGameArt "Ship / Destroyed Ship", CC0) is a simplified pixel ship in side view with a different palette. S1 and S3 are vector art and do not match. Anything taken is redrawn or recolored to the pack's palette (`Palette.png`, 10x9) and gets its own licence entry first. For the old ship at the harbor, which the player boards for the ending, build a larger hull in the pack's style from `Boat.png` and `Sail.png` pieces, or redraw one.
 - **G2. Sword and bow on one hero.** Compose in the Phaser adapter: the standard character's attack pose (one per direction), the held `Sword` sprite rotated about its grip through the swing, and a `FX\Attack\SlashCurved` arc; for the bow, the attack pose with the `Bow` sprite held in front, an arrow spawned in the facing direction from `Items\Weapons\Bow\Arrow.png` or `Items\Projectile\Arrow.png`, and a recoil step. The pack's weapons are drawn for this: the in-hand sprites are tiny (Sword 6x11) and meant to be rotated and attached to a pose, not shipped as full animations. A rough mock-up for Hunter in four directions (an idle cell, three sword steps, three bow steps) is `views\mockup_hero_Hunter.png` in the download folder: it reads as a sword swing and a bow shot, but the placement is crude (slash arcs about twice the hero's size, arrows starting at the bow's centre, swing steps in 90 degree increments), so it shows feasibility, not the final look. If the user prefers hand-drawn frames, redraw the four-direction poses in the pack's style.
-- **G3. Undead Guardian.** Recolor a samurai boss (bone white and ghostly teal), add spectral effects (`FX\Magic\Spirit`, `FX\Smoke`), and keep its hand-drawn walk, charge, and attack animations. Alternative: `GiantSpirit` with scripted attacks, because it has only Idle and Hit.
+- **G3. Undead Guardian.** Recolor a samurai boss (bone white and ghostly teal), add spectral effects (`FX\Magic\Spirit`, `FX\Smoke`), and keep its hand-drawn walk, charge, and attack animations. A luminance gradient-map recolor of the first three `GiantBlueSamurai` idle frames with a 1 px teal glow is in the middle panel of `views\mockup_gaps.png`: it reads as a spectral, armoured guardian in the pack's style, not as a skeleton, and it is a still. Alternative: `GiantSpirit` with scripted attacks, because it has only Idle and Hit.
 - **G4. Cave and castle terrain.** Assemble from the Relief, Interior, House, Desert, Towers, and VillageAbandoned sets; cave darkness by lighting tint in the adapter. The Phaser tilemaps and collision are authored by hand anyway.
-- **G5. Ammunition cache.** A crate (`Items\Object\CrateEmpty` or `TilesetElement` crates) with arrow sprites on top; an open and a closed frame from a recolor.
+- **G5. Ammunition cache.** A crate (`Items\Object\CrateEmpty`, 16x15, or `TilesetElement` crates) with arrow sprites on top; an open and a closed frame from a recolor. The bottom panel of `views\mockup_gaps.png` stacks three rotated `Items\Weapons\Bow\Arrow.png` sprites (13x5) in `CrateEmpty` and reads as a crate of arrows. The pack's own `Items\Projectile\CrateDynamite.png` (16x16) uses the same crate-with-contents pattern for dynamite.
 - **G6. Font.** Replace `Ui\Font\NormalFont.ttf` with a font whose licence is confirmed (the HUD ticket records it in `licences.md`).
 - **G7. Title, ending, and Automap art.** Assemble the title and ending scenes from tiles, characters, and the example screens' look; draw the Automap from map data.
 
@@ -116,7 +116,7 @@ Verdict: walk Found; sword Partial; bow Partial. Neither the sword nor the bow e
 
 - Audio quality and mood were not listened to (an agent cannot); only file metadata was read. Whether the music suits the game is the user's call.
 - Per-file authorship of the art and audio beyond the pack's own CC0 claim, and the real licence of the font (the FontStruct page for it could not be read: the saved copy is a login page).
-- How the composed sword and bow, the composed wreck, and the recolored Guardian look in motion. Only a crude still mock-up of the sword and bow exists; the supplement candidates were seen only in their public preview images.
+- How the composed sword and bow, the composed wreck, the recolored Guardian, and the composed ammunition cache look in motion. Only crude still mock-ups exist (`views\mockup_hero_Hunter.png` and `views\mockup_gaps.png` in the download folder); the supplement candidates were seen only in their public preview images.
 - The 128 preview GIFs were not played and the pack's Godot sample project was not opened; the frames in the sheets were inspected instead.
 - Which character becomes the hero. Hunter, Knight, and the NinjaGreen animated character were looked at closely; the other 89 appear in contact sheets only.
 - Whether the way the archive was obtained is acceptable (below). That is the user's judgment.
