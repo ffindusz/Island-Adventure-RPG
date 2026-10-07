@@ -4,7 +4,7 @@
 
 **Blocked by:** 06: The bow: Ammunition and quick-switching
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 42, 51, 52
 
@@ -18,6 +18,8 @@
 - [ ] Reviewer play check (manual, in a browser): fight a charger and a ranged attacker, avoiding both by moving.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 71d0603
 
 ### Merge with ticket 09
 
