@@ -25,9 +25,11 @@ export type {
   HeroView,
   MonsterActionView,
   MonsterView,
+  PageView,
   PlayingView,
   RandomSource,
   Snapshot,
+  StatPageView,
   TitleView,
 } from './interface';
-export type { AreaState, HeroState, MonsterAction, MonsterState, PlayState } from './state';
+export type { AreaState, HeroState, MonsterAction, MonsterState, PageId, PlayState } from './state';

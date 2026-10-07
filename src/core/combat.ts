@@ -6,6 +6,7 @@ import type { GameEvent } from './interface';
 import { gainExperience } from './progression';
 import { livingMonsters, monsterBody } from './state';
 import type { PlayState } from './state';
+import { heroAttack } from './stats';
 
 /** The hero strikes with the Melee Weapon in the direction it faces. Returns what happened, in order. */
 export function heroStrikes(state: PlayState, content: Content): GameEvent[] {
@@ -18,7 +19,7 @@ export function heroStrikes(state: PlayState, content: Content): GameEvent[] {
   const events: GameEvent[] = [{ type: 'hero-attacked', direction, zone }];
   for (const monster of livingMonsters(state)) {
     if (overlaps(zone, monsterBody(monster, content))) {
-      const damage = content.hero.attack;
+      const damage = heroAttack(content);
       monster.health = Math.max(0, monster.health - damage);
       events.push({ type: 'monster-hit', monsterId: monster.id, damage, health: monster.health });
       if (monster.health === 0) {

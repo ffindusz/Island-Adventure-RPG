@@ -4,6 +4,7 @@ import { loadContent } from './content';
 import type { Direction } from './geometry';
 import type { Game, GameOptions } from './interface';
 import { walkHero } from './movement';
+import { closePage, isPaused, openPage } from './pages';
 import { newPlayState, SNAPSHOT_VERSION, copyState } from './state';
 import type { GameState } from './state';
 import { buildView } from './view';
@@ -38,11 +39,21 @@ export function createGame(options: GameOptions): Game {
           }
           return [];
         case 'attack':
-          return state.phase === 'playing' ? heroStrikes(state, content) : [];
+          return state.phase === 'playing' && !isPaused(state) ? heroStrikes(state, content) : [];
+        case 'open-page':
+          if (state.phase === 'playing') {
+            openPage(state, command.page);
+          }
+          return [];
+        case 'close-page':
+          if (state.phase === 'playing') {
+            closePage(state, command.page);
+          }
+          return [];
       }
     },
     step() {
-      if (state.phase !== 'playing') {
+      if (state.phase !== 'playing' || isPaused(state)) {
         return [];
       }
       coolDownHero(state);

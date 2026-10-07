@@ -46,11 +46,16 @@ export interface HeroState {
   experience: number;
 }
 
+/** A page that can be open over the game, one at a time. A new page is one more id here and one more view. */
+export type PageId = 'stats';
+
 export interface PlayState {
   readonly phase: 'playing';
   /** The Adventure Area the hero is in. */
   areaId: string;
   hero: HeroState;
+  /** The page that is open over the game, if any. While one is open the game is paused (see pages.ts). */
+  page: PageId | null;
   /** World state is kept per Adventure Area, by area id. */
   areas: Record<string, AreaState>;
 }
@@ -77,6 +82,7 @@ export function newPlayState(content: Content): PlayState {
       attackCooldown: 0,
       experience: 0,
     },
+    page: null,
     areas,
   };
 }

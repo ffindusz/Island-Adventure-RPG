@@ -1,6 +1,6 @@
 import type { ContentDefinition } from './definitions';
 import type { Box, Direction, Point } from './geometry';
-import type { PlayState } from './state';
+import type { PageId, PlayState } from './state';
 
 // The Game core's whole public interface, and the only thing tests and the adapter use.
 //
@@ -32,7 +32,15 @@ export type Command =
   /** A direction key came up. */
   | { readonly type: 'stop'; readonly direction: Direction }
   /** Strike with the Melee Weapon in the facing direction, unless the attack cooldown is still running. */
-  | { readonly type: 'attack' };
+  | { readonly type: 'attack' }
+  /**
+   * Open a page over the game, such as the stat page. Ignored at the title and while a page is already open. While a
+   * page is open the game is paused: step() advances nothing and attack does nothing; move and stop still keep track
+   * of the keys that are down.
+   */
+  | { readonly type: 'open-page'; readonly page: PageId }
+  /** Close the page, if it is the one that is open. */
+  | { readonly type: 'close-page'; readonly page: PageId };
 
 /** Something that happened, for the adapter to show or play. Events never carry rules; the state view is the truth. */
 export type GameEvent =
@@ -106,12 +114,32 @@ export interface TitleView {
   readonly phase: 'title';
 }
 
+/** The stat page: what the hero has become. */
+export interface StatPageView {
+  readonly id: 'stats';
+  readonly level: number;
+  /** The highest Level the hero can reach. */
+  readonly maxLevel: number;
+  /** Progress toward the next Level: `earned` of the `needed` Experience since the last. Null at the highest Level. */
+  readonly experience: { readonly earned: number; readonly needed: number } | null;
+  /** The hero's current Health. */
+  readonly health: number;
+  readonly maxHealth: number;
+  readonly attack: number;
+  readonly defense: number;
+}
+
+/** A page that is open over the game. One kind for each page id; `id` says which. */
+export type PageView = StatPageView;
+
 /** Everything the player can see while playing. Monsters that are defeated are not listed. */
 export interface PlayingView {
   readonly phase: 'playing';
   readonly area: AreaView;
   readonly hero: HeroView;
   readonly monsters: readonly MonsterView[];
+  /** The page that is open over the game, if any. While one is open the game is paused. */
+  readonly page: PageView | null;
 }
 
 export type GameView = TitleView | PlayingView;

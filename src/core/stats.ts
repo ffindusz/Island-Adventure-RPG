@@ -14,6 +14,11 @@ export function heroDefense(content: Content): number {
   return content.hero.defense;
 }
 
+/** How much damage each of the hero's strikes does to a monster. */
+export function heroAttack(content: Content): number {
+  return content.hero.attack;
+}
+
 /** The Level the hero's Experience has reached: 1 until the first threshold, and never above the highest Level. */
 export function heroLevel(state: PlayState, content: Content): number {
   const { levelThresholds } = content.progression;
@@ -28,4 +33,22 @@ export function highestLevel(content: Content): number {
 /** The Experience that raises the hero to the highest Level. Experience beyond it changes nothing. */
 export function experienceCap(content: Content): number {
   return content.progression.levelThresholds.at(-1) ?? 0;
+}
+
+/**
+ * How far the hero has come toward the next Level: the Experience earned since reaching the current Level, out of what
+ * the next Level takes. Undefined at the highest Level, which has no next.
+ */
+export function experienceProgress(
+  state: PlayState,
+  content: Content,
+): { earned: number; needed: number } | undefined {
+  const { levelThresholds } = content.progression;
+  const level = heroLevel(state, content);
+  const next = levelThresholds[level - 1];
+  if (next === undefined) {
+    return undefined;
+  }
+  const reached = levelThresholds[level - 2] ?? 0;
+  return { earned: state.hero.experience - reached, needed: next - reached };
 }
