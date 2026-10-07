@@ -64,5 +64,5 @@
 - The return point (tickets 08 and 09): `returnHero` in `src\core\hero-damage.ts`.
 - Charger and ranged behaviors (ticket 12): `monster-attacked` carries a zone, which fits melee; a projectile will need its own view and events.
 - A content check that no monster stands on or beside the start tile; the shipped-content test covers it by behavior only.
-- The HUD covers the top-left corner of the map; ticket 08's camera and ticket 22's art will restyle it.
+- The HUD is already fixed to the screen (scroll factor 0), which ticket 08's camera criterion needs, and it covers the top-left corner of the map; ticket 22 gives it its final look.
 - Glossary terms missing: current Health, hit, telegraph, wind-up, recovery, noticing distance, reach, behavior, minimum damage, defeat (of the hero).
