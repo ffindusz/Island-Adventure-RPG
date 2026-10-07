@@ -4,7 +4,7 @@
 
 **Blocked by:** 05: Gear and the inventory
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 33-35, 37-39, 45
 
@@ -17,6 +17,8 @@
 - [ ] Reviewer play check (manual, in a browser): pick up the bow and a cache, switch with Q, shoot a monster from range, run out of Ammunition, and see the feedback.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at e06b7cd
 
 ### What was built
 
