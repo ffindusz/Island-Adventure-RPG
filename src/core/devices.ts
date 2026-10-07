@@ -1,10 +1,10 @@
 import { areaOf } from './content';
 import type { Content } from './content';
-import type { Key } from './device-content';
+import type { Door, Key } from './device-content';
 import { overlaps } from './geometry';
 import type { GameEvent, KeyInfo } from './interface';
 import { heroBody, interactableStateOf } from './state';
-import type { PlayState } from './state';
+import type { DoorState, PlayState } from './state';
 
 // The devices: the keys, and the doors, gates, levers and signs that go with them, which make up the light puzzles and
 // clues of the Adventure Areas. Loading them is in device-content.ts. That the hero meets them as interactables is
@@ -29,6 +29,25 @@ export function collectKeys(state: PlayState, content: Content): GameEvent[] {
     }
   }
   return events;
+}
+
+/**
+ * Interact on a door. A shut door opens for a hero that holds its key, and takes that key: it stays open for good, and
+ * the key is gone. A hero without the key is told which key the door needs, and nothing changes. An open door does
+ * nothing, and asks for no key.
+ */
+export function useDoor(door: Door, doorState: DoorState, state: PlayState, content: Content): GameEvent[] {
+  if (doorState.open) {
+    return [];
+  }
+  const keyName = keyOf(content, door.key).name;
+  const held = state.hero.keys.indexOf(door.key);
+  if (held < 0) {
+    return [{ type: 'door-locked', doorId: door.id, keyName }];
+  }
+  state.hero.keys.splice(held, 1);
+  doorState.open = true;
+  return [{ type: 'door-opened', doorId: door.id, keyName }];
 }
 
 /** The keys the hero holds, in the order it took them, as the player reads about them. */

@@ -15,6 +15,7 @@ import {
   arena,
   cacheAt,
   chestAt,
+  doorAt,
   dummyAt,
   face,
   fixedRandom,
@@ -44,6 +45,8 @@ import {
 //     pickups     a potion on (4, 4), taken on the way, and one on (9, 4), taken after the Checkpoint; one on (11, 4),
 //                 never taken
 //     keys        the brass key on (4, 3), next to the Checkpoint, taken after it is touched
+//     doors       the brass door on (2, 3), on the other side of the camp from the key, which the brass key opens: the
+//                 hero opens it from the camp, and the door takes the key
 //     monsters    a dummy on (6, 5), which the hero only wounds, and a rat on (3, 5), worth 8 Experience
 //     milestones  the lookout on (5, 4), worth 2 Experience, which the hero reaches; the far point on (11, 1), which
 //                 it does not
@@ -103,6 +106,7 @@ export function adventureContent(): ContentDefinition {
       pickupAt('potion-far', 9, 4, 1),
       pickupAt('potion-spare', 11, 4, 1),
       keyAt('brass-key', 4, 3, 'Brass Key'),
+      doorAt('brass-door', 2, 3, 'brass-key'),
     ],
     milestones: [
       milestone('lookout', { col: 5, row: 4, width: 1, height: 1 }, 2),
@@ -181,6 +185,13 @@ export const CHAPTERS: readonly Chapter[] = [
     play(game) {
       walk(game, 'right', 8);
       walk(game, 'left', 8);
+    },
+  },
+  {
+    id: 'door',
+    does: 'opens the door on the other side of the camp with the brass key, which the door takes',
+    play(game) {
+      game.send({ type: 'interact' });
     },
   },
   {

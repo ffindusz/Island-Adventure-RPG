@@ -1,8 +1,8 @@
 import { checkConnections, loadEntrances, loadExits } from './connections';
 import { loadCheckpoints } from './checkpoint-content';
 import { checkCoveredCorners } from './covered-corner';
-import { loadKey } from './device-content';
-import type { Key } from './device-content';
+import { checkKeysAndDoors, loadDoor, loadKey } from './device-content';
+import type { Door, Key } from './device-content';
 import { CONSUMABLE_IDS, GEAR_SLOTS, STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
@@ -68,7 +68,7 @@ export interface Pickup {
 }
 
 /** An interactable as the rules use it, one member for each kind. */
-export type Interactable = Chest | Pickup | Key;
+export type Interactable = Chest | Pickup | Key | Door;
 
 /** An entrance as the rules use it: the hero arrives standing at the centre of its tile. */
 export interface Entrance {
@@ -279,6 +279,7 @@ export function loadContent(definition: ContentDefinition): Content {
   }
   checkConnections(areas, definition.hero.size);
   checkCoveredCorners(areas);
+  checkKeysAndDoors(Object.values(areas));
   return {
     hero: {
       size: definition.hero.size,
@@ -726,6 +727,8 @@ function loadInteractable(
       return loadPickup(areaId, definition);
     case 'key':
       return loadKey(areaId, definition);
+    case 'door':
+      return loadDoor(definition);
     default:
       return refuseKind(areaId, id, kind);
   }

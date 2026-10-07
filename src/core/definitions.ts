@@ -311,11 +311,29 @@ export interface KeyDefinition {
 }
 
 /**
+ * A locked door filling a tile. It is solid, like a chest, until the hero opens it with Interact while it holds the key
+ * the door names: the door takes that key and stays open. An opened door is one-time like a key: it stays open, defeat
+ * included.
+ */
+export interface DoorDefinition {
+  readonly kind: 'door';
+  /** Unique across all interactables of all Adventure Areas: saves refer to the door by it. */
+  readonly id: string;
+  /** The tile it fills. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+  /**
+   * The id of the key that opens it, a key that some Adventure Area places: it may lie in another area than the door.
+   * Each key opens one door, and each door has a key.
+   */
+  readonly key: string;
+}
+
+/**
  * Something in an Adventure Area that the hero acts on with Interact, or takes by walking onto it (a pickup, a key). Its
  * `kind` names the rules it follows (see interactables.ts); the other fields are what that kind needs. Adding a kind
  * means adding a member here and the cases the recipe in interactables.ts lists.
  */
-export type InteractableDefinition = ChestDefinition | PickupDefinition | KeyDefinition;
+export type InteractableDefinition = ChestDefinition | PickupDefinition | KeyDefinition | DoorDefinition;
 
 /** Where the hero stands when it comes into an Adventure Area through an exit of another. */
 export interface EntranceDefinition {

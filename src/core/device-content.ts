@@ -1,4 +1,5 @@
-import type { KeyDefinition } from './definitions';
+import type { Area } from './content';
+import type { DoorDefinition, KeyDefinition } from './definitions';
 import type { Box, Tile } from './geometry';
 
 // Loading the devices of an Adventure Area: the keys, and the doors, gates, levers and signs that go with them, which
@@ -13,11 +14,67 @@ export interface Key {
   readonly name: string;
 }
 
+/** A door as the rules use it: its body is the box of the tile it fills, which stops walkers while it is shut. */
+export interface Door {
+  readonly kind: 'door';
+  readonly id: string;
+  readonly body: Box;
+  /** The id of the key that opens it. */
+  readonly key: string;
+}
+
 export function loadKey(areaId: string, definition: KeyDefinition): Key {
   if (definition.name.trim() === '') {
     throw new Error(`Area "${areaId}": key "${definition.id}" has no name`);
   }
   return { kind: 'key', id: definition.id, body: tileBox(definition.tile), name: definition.name };
+}
+
+export function loadDoor(definition: DoorDefinition): Door {
+  return { kind: 'door', id: definition.id, body: tileBox(definition.tile), key: definition.key };
+}
+
+/**
+ * Every door has a key that some Adventure Area places, and every key opens exactly one door. It is checked once all the
+ * areas are loaded, because a key may lie in another area than its door.
+ */
+export function checkKeysAndDoors(areas: readonly Area[]): void {
+  const keyAreas = new Map<string, string>();
+  for (const area of areas) {
+    for (const interactable of area.interactables) {
+      if (interactable.kind === 'key') {
+        keyAreas.set(interactable.id, area.id);
+      }
+    }
+  }
+  const doorsOfKey = new Map<string, string[]>();
+  for (const area of areas) {
+    for (const interactable of area.interactables) {
+      if (interactable.kind === 'door') {
+        if (!keyAreas.has(interactable.key)) {
+          throw new Error(
+            `Area "${area.id}": door "${interactable.id}" needs the key "${interactable.key}", but no Adventure Area places a key with that id`,
+          );
+        }
+        doorsOfKey.set(interactable.key, [...(doorsOfKey.get(interactable.key) ?? []), interactable.id]);
+      }
+    }
+  }
+  for (const [keyId, areaId] of keyAreas) {
+    const doors = doorsOfKey.get(keyId) ?? [];
+    if (doors.length === 0) {
+      throw new Error(`Area "${areaId}": key "${keyId}" opens no door: no door needs it`);
+    }
+    if (doors.length > 1) {
+      throw new Error(`Key "${keyId}" is needed by more than one door: ${listed(doors)}`);
+    }
+  }
+}
+
+/** Quoted ids in a sentence: "a", "a" and "b", "a", "b" and "c". */
+function listed(ids: readonly string[]): string {
+  const quoted = ids.map((id) => `"${id}"`);
+  return quoted.length < 2 ? quoted.join('') : `${quoted.slice(0, -1).join(', ')} and ${quoted[quoted.length - 1]}`;
 }
 
 /** The box of a tile, in tile units like the other bodies. */

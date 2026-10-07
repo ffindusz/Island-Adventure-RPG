@@ -110,6 +110,13 @@ export type GameEvent =
   | { readonly type: 'area-text'; readonly areaId: string; readonly text: string }
   /** The hero opened this chest. What was inside follows as a pickup. A chest opens once. */
   | { readonly type: 'chest-opened'; readonly chestId: string }
+  /**
+   * The hero used Interact on a door that is shut, while it holds no key that fits: nothing happened. `keyName` is the
+   * name of the key the door needs, which the player is told so that it knows what to look for.
+   */
+  | { readonly type: 'door-locked'; readonly doorId: string; readonly keyName: string }
+  /** The hero opened this door with the key `keyName`, which the door took. The door stays open for good. */
+  | { readonly type: 'door-opened'; readonly doorId: string; readonly keyName: string }
   /** The hero took an item and now has it. */
   | { readonly type: 'pickup'; readonly item: PickedUpItem }
   /** The hero equipped this Gear in its slot, in place of the piece there. */
@@ -231,7 +238,7 @@ export interface ChestView {
 }
 
 /** Something placed in the Adventure Area, for the adapter to draw: one member for each kind. */
-export type InteractableView = ChestView | PickupView | KeyView;
+export type InteractableView = ChestView | PickupView | KeyView | DoorView;
 
 /** A pickup lying on the ground, for the adapter to draw. One that the hero has taken is not listed any more. */
 export interface PickupView {
@@ -260,6 +267,17 @@ export interface KeyInfo {
   readonly id: string;
   /** What the content calls it, such as "Rusty Key". */
   readonly name: string;
+}
+
+/** A door, for the adapter to draw. It stays where it is once opened, and the hero walks through it then. */
+export interface DoorView {
+  readonly kind: 'door';
+  readonly id: string;
+  /** The centre of the tile it fills. */
+  readonly position: Point;
+  /** Width and height of the tile it fills, in tiles. */
+  readonly size: number;
+  readonly open: boolean;
 }
 
 export interface AreaView {

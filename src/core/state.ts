@@ -70,8 +70,17 @@ export interface KeyState {
   collected: boolean;
 }
 
+/**
+ * What changes about a door: whether it is open. An opened door stays open, defeat included: it is one-time loot, not a
+ * consumable (see consumable-rollback.ts), and it stays open though the key that opened it is gone.
+ */
+export interface DoorState {
+  readonly kind: 'door';
+  open: boolean;
+}
+
 /** What changes about an interactable during the game, one member for each kind. */
-export type InteractableState = ChestState | PickupState | KeyState;
+export type InteractableState = ChestState | PickupState | KeyState | DoorState;
 
 export interface AreaState {
   /** Every monster placed in the Adventure Area, defeated ones included (at 0 Health), so that they stay defeated. */
@@ -262,6 +271,8 @@ function freshInteractable(interactable: Interactable): InteractableState {
       return { kind: 'pickup', collected: false };
     case 'key':
       return { kind: 'key', collected: false };
+    case 'door':
+      return { kind: 'door', open: false };
   }
 }
 

@@ -277,8 +277,14 @@ describe('a save that does not fit the interactables, milestones and Automap of 
       names: 'state.areas.arena.interactables.potion-near.collected',
     },
     {
+      fault: 'a door is neither open nor not open',
+      damage: (saved) => (saved.state.areas['arena'].interactables['brass-door'].open = 'ajar'),
+      problem: 'damaged',
+      names: 'state.areas.arena.interactables.brass-door.open',
+    },
+    {
       fault: 'an interactable is of a kind the game does not know',
-      damage: (saved) => (saved.state.areas['arena'].interactables['armor-chest'] = { kind: 'door', open: false }),
+      damage: (saved) => (saved.state.areas['arena'].interactables['armor-chest'] = { kind: 'portal', open: false }),
       problem: 'damaged',
       names: 'state.areas.arena.interactables.armor-chest.kind',
     },
