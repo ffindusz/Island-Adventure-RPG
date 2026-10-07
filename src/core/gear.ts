@@ -20,6 +20,19 @@ export function grantGear(state: PlayState, content: Content, id: string): GameE
   return [{ type: 'pickup', item: { kind: 'gear', ...describeGear(content, id) } }];
 }
 
+/**
+ * The hero equips a piece of Gear it carries, in place of the one equipped in its slot, and only from the inventory
+ * page. Anything else is ignored: Gear the hero does not carry, or has equipped already. Returns what happened.
+ */
+export function equipGear(state: PlayState, content: Content, id: string): GameEvent[] {
+  if (state.page !== 'inventory' || !state.hero.gear.includes(id) || equippedIds(state).includes(id)) {
+    return [];
+  }
+  const { slot } = gearOf(content, id);
+  state.hero.equipped[slot] = id;
+  return [{ type: 'gear-equipped', gearId: id, slot }];
+}
+
 /** The ids of the Gear the hero has equipped: at most one piece for each slot. */
 function equippedIds(state: PlayState): string[] {
   return GEAR_SLOTS.flatMap((slot) => state.hero.equipped[slot] ?? []);

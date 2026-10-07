@@ -50,7 +50,13 @@ export type Command =
    * Spend a Stat Point on a stat, for good: there is no taking it back. Ignored when no Stat Point waits to be
    * assigned. Until every Stat Point has been assigned the game is paused.
    */
-  | { readonly type: 'assign-stat-point'; readonly stat: StatId };
+  | { readonly type: 'assign-stat-point'; readonly stat: StatId }
+  /**
+   * Equip a piece of Gear the hero carries, in place of the one equipped in its slot, which stays carried. Ignored
+   * unless the inventory page is open, and for Gear the hero does not carry or has equipped already. There is no
+   * taking Gear off: equipping another piece in its slot is how it is swapped.
+   */
+  | { readonly type: 'equip'; readonly gearId: string };
 
 /** Something that happened, for the adapter to show or play. Events never carry rules; the state view is the truth. */
 export type GameEvent =
@@ -74,6 +80,8 @@ export type GameEvent =
   | { readonly type: 'chest-opened'; readonly chestId: string }
   /** The hero took an item and now has it. */
   | { readonly type: 'pickup'; readonly item: PickedUpItem }
+  /** The hero equipped this Gear in its slot, in place of the piece there. */
+  | { readonly type: 'gear-equipped'; readonly gearId: string; readonly slot: GearSlot }
   /**
    * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health where
    * defeat sends it, and the monsters of the Adventure Area are back as they began: the view shows the new state.

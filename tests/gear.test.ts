@@ -1,10 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import type { StatId } from '../src/core';
-import { advance, arena, biterAt, newGame, playingView, prizes, strike } from './fixtures';
+import {
+  COOLDOWN_STEPS,
+  advance,
+  arena,
+  biterAt,
+  chestAt,
+  face,
+  gameAtTitle,
+  newGame,
+  playingView,
+  prizes,
+  strike,
+} from './fixtures';
 
 const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
 const CLOSE_INVENTORY = { type: 'close-page', page: 'inventory' } as const;
 const OPEN_STATS = { type: 'open-page', page: 'stats' } as const;
+const INTERACT = { type: 'interact' } as const;
 
 describe('the Gear the hero begins with', () => {
   it('is a basic sword and basic armor, both equipped, as the inventory page lists them', () => {
@@ -136,5 +149,130 @@ describe('Attack and Defense with Gear', () => {
     const events = advance(game, 31);
 
     expect(events).toContainEqual({ type: 'hero-hit', monsterId: 'biter', damage: 1, health: 9 });
+  });
+});
+
+describe('equipping Gear', () => {
+  const EQUIP_STEEL_SWORD = { type: 'equip', gearId: 'steel-sword' } as const;
+  const STEEL_SWORD_EQUIPPED = { type: 'gear-equipped', gearId: 'steel-sword', slot: 'melee-weapon' } as const;
+
+  /** A game where the hero has found the steel sword and the plate armor, in chests below and above it. Not equipped. */
+  function gameWithFoundGear() {
+    const game = newGame(
+      arena({
+        interactables: [chestAt('sword-chest', 3, 4, 'steel-sword'), chestAt('armor-chest', 3, 2, 'plate-armor')],
+      }),
+    );
+    game.send(INTERACT);
+    face(game, 'up');
+    game.send(INTERACT);
+    return game;
+  }
+
+  function gameWithInventoryOpen() {
+    const game = gameWithFoundGear();
+    game.send(OPEN_INVENTORY);
+    return game;
+  }
+
+  it('puts a carried piece in its slot in place of the one there: the page shows it and Attack follows', () => {
+    const game = gameWithInventoryOpen();
+
+    expect(game.send(EQUIP_STEEL_SWORD)).toEqual([STEEL_SWORD_EQUIPPED]);
+
+    expect(playingView(game).page).toMatchObject({
+      gear: [
+        { id: 'basic-sword', equipped: false },
+        { id: 'steel-sword', equipped: true },
+        { id: 'basic-armor', equipped: true },
+        { id: 'plate-armor', equipped: false },
+      ],
+      attack: 6,
+      defense: 0,
+    });
+  });
+
+  it('can be swapped back: the old piece is still carried, and Attack is what it was', () => {
+    const game = gameWithInventoryOpen();
+    game.send(EQUIP_STEEL_SWORD);
+
+    expect(game.send({ type: 'equip', gearId: 'basic-sword' })).toEqual([
+      { type: 'gear-equipped', gearId: 'basic-sword', slot: 'melee-weapon' },
+    ]);
+
+    expect(playingView(game).page).toMatchObject({
+      gear: [
+        { id: 'basic-sword', equipped: true },
+        { id: 'steel-sword', equipped: false },
+        { id: 'basic-armor', equipped: true },
+        { id: 'plate-armor', equipped: false },
+      ],
+      attack: 1,
+    });
+  });
+
+  it('keeps one piece in each slot: armor is equipped beside the sword, and raises Defense only', () => {
+    const game = gameWithInventoryOpen();
+    game.send(EQUIP_STEEL_SWORD);
+
+    expect(game.send({ type: 'equip', gearId: 'plate-armor' })).toEqual([
+      { type: 'gear-equipped', gearId: 'plate-armor', slot: 'armor' },
+    ]);
+
+    expect(playingView(game).page).toMatchObject({
+      gear: [
+        { id: 'basic-sword', equipped: false },
+        { id: 'steel-sword', equipped: true },
+        { id: 'basic-armor', equipped: false },
+        { id: 'plate-armor', equipped: true },
+      ],
+      attack: 6,
+      defense: 4,
+    });
+  });
+
+  it('is done only while the inventory page is open', () => {
+    const game = gameWithFoundGear();
+    expect(game.send(EQUIP_STEEL_SWORD), 'no page is open').toEqual([]);
+
+    game.send(OPEN_STATS);
+    expect(game.send(EQUIP_STEEL_SWORD), 'the stat page is open').toEqual([]);
+    game.send({ type: 'close-page', page: 'stats' });
+
+    game.send(OPEN_INVENTORY);
+    expect(playingView(game).page).toMatchObject({ attack: 1, defense: 0 });
+  });
+
+  it('does nothing for a piece that is not carried, that is already equipped or that does not exist', () => {
+    const game = gameWithInventoryOpen();
+    const before = game.snapshot();
+
+    expect(game.send({ type: 'equip', gearId: 'iron-sword' }), 'not carried').toEqual([]);
+    expect(game.send({ type: 'equip', gearId: 'basic-sword' }), 'equipped already').toEqual([]);
+    expect(game.send({ type: 'equip', gearId: 'no-such-gear' }), 'unknown').toEqual([]);
+
+    expect(game.snapshot()).toEqual(before);
+  });
+
+  it('does nothing at the title', () => {
+    expect(gameAtTitle().send(EQUIP_STEEL_SWORD)).toEqual([]);
+  });
+
+  it('changes nothing but the stat of its slot: Health, the strike and the attack cooldown stay as they were', () => {
+    const game = gameWithInventoryOpen();
+    game.send(EQUIP_STEEL_SWORD);
+    game.send({ type: 'equip', gearId: 'plate-armor' });
+    expect(playingView(game).page).toMatchObject({ attack: 6, defense: 4 });
+    game.send(CLOSE_INVENTORY);
+
+    expect(playingView(game).hero).toMatchObject({ health: 10, maxHealth: 10, facing: 'up' });
+    expect(strike(game)).toEqual([
+      expect.objectContaining({ type: 'hero-attacked', zone: { minX: 3, minY: 2.25, maxX: 4, maxY: 3.25 } }),
+    ]);
+    expect(game.send({ type: 'attack' }), 'cooling down').toEqual([]);
+    advance(game, COOLDOWN_STEPS - 1);
+    expect(game.send({ type: 'attack' }), 'one step short of the cooldown').toEqual([]);
+    advance(game, 1);
+    expect(game.send({ type: 'attack' })).toHaveLength(1);
   });
 });
