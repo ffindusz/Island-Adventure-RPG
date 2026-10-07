@@ -1,6 +1,7 @@
 import { gearOf } from './content';
 import type { Content } from './content';
 import { GEAR_SLOT_STAT, GEAR_SLOTS } from './definitions';
+import type { GearDefinition } from './definitions';
 import type { GearInfo, GearView } from './interface';
 import type { PlayState } from './state';
 
@@ -13,9 +14,19 @@ export function describeGear(content: Content, id: string): GearInfo {
   return { id, name: gear.name, slot: gear.slot, stat: GEAR_SLOT_STAT[gear.slot], bonus: gear.bonus };
 }
 
+/** The ids of the Gear the hero has equipped: at most one piece for each slot. */
+function equippedIds(state: PlayState): string[] {
+  return GEAR_SLOTS.flatMap((slot) => state.hero.equipped[slot] ?? []);
+}
+
+/** The Gear the hero has equipped. */
+export function equippedGear(state: PlayState, content: Content): GearDefinition[] {
+  return equippedIds(state).map((id) => gearOf(content, id));
+}
+
 /** Everything the hero carries: by slot in the order of the slots, and within a slot in the order the hero found it. */
 export function carriedGear(state: PlayState, content: Content): GearView[] {
-  const equipped = Object.values(state.hero.equipped);
+  const equipped = equippedIds(state);
   const carried = state.hero.gear.map((id) => ({ ...describeGear(content, id), equipped: equipped.includes(id) }));
   return GEAR_SLOTS.flatMap((slot) => carried.filter((gear) => gear.slot === slot));
 }
