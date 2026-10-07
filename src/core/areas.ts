@@ -1,0 +1,71 @@
+import { areaOf } from './content';
+import type { Area, Content, Entrance } from './content';
+import { centerOf, overlaps } from './geometry';
+import type { GameEvent } from './interface';
+import { currentAreaState, heroBody, livingMonsters } from './state';
+import type { PlayState } from './state';
+
+// Moving between Adventure Areas: the hero walks into an exit and arrives at the entrance that exit leads to.
+
+/**
+ * Takes the hero through an exit when its body overlaps one, to the entrance the exit leads to. When it overlaps
+ * several at once the first one listed takes it. Returns what happened: nothing when the hero is not in an exit.
+ */
+export function crossExits(state: PlayState, content: Content): GameEvent[] {
+  const body = heroBody(state, content);
+  const exit = areaOf(content, state.areaId).exits.find((candidate) => overlaps(body, candidate.zone));
+  if (exit === undefined) {
+    return [];
+  }
+  const destination = areaOf(content, exit.to.areaId);
+  // Monsters only act in the area the hero is in, so one left mid wind-up would finish it on the hero's return.
+  for (const monster of livingMonsters(state)) {
+    monster.action = { type: 'idle' };
+  }
+  // The arrows in the air were shot in the area the hero leaves, and an arrow flies only in its own area.
+  state.arrows = [];
+  state.areaId = destination.id;
+  const entrance = entranceOf(destination, exit.to.entranceId);
+  state.arrivedAt = { ...entrance.tile };
+  state.hero.position = centerOf(entrance.tile);
+  return [{ type: 'area-changed', areaId: destination.id }, ...enterArea(state, content)];
+}
+
+/**
+ * The hero is now in the Adventure Area `state.areaId`, whether it began the game there or walked in. What was shown
+ * of the area it left goes, and the first time the hero is in an area its text is shown. Returns what happened.
+ */
+export function enterArea(state: PlayState, content: Content): GameEvent[] {
+  const area = areaOf(content, state.areaId);
+  const world = currentAreaState(state);
+  state.areaText = null;
+  if (world.visited) {
+    return [];
+  }
+  world.visited = true;
+  if (area.text === null) {
+    return [];
+  }
+  state.areaText = { text: area.text, stepsLeft: content.areaTextSteps };
+  return [{ type: 'area-text', areaId: area.id, text: area.text }];
+}
+
+/** One fixed step of the time the text of an Adventure Area stays on the screen. It does not stop the game. */
+export function ageAreaText(state: PlayState): void {
+  if (state.areaText === null) {
+    return;
+  }
+  state.areaText.stepsLeft -= 1;
+  if (state.areaText.stepsLeft <= 0) {
+    state.areaText = null;
+  }
+}
+
+/** Cannot fail for content that loaded: loading checks that every exit leads to an entrance that exists. */
+function entranceOf(area: Area, entranceId: string): Entrance {
+  const entrance = area.entrances.find((candidate) => candidate.id === entranceId);
+  if (entrance === undefined) {
+    throw new Error(`Area "${area.id}" has no entrance "${entranceId}"`);
+  }
+  return entrance;
+}

@@ -2,7 +2,7 @@ import type { Area, Content, Interactable } from './content';
 import { monsterTypeOf } from './content';
 import { GEAR_SLOTS } from './definitions';
 import type { ConsumableId, GearSlot, StatId, WeaponSlot } from './definitions';
-import type { Box, Direction, Point } from './geometry';
+import type { Box, Direction, Point, Tile } from './geometry';
 import { boxAround, centerOf } from './geometry';
 import { heroMaxHealth } from './stats';
 
@@ -46,6 +46,8 @@ export interface AreaState {
   monsters: MonsterState[];
   /** The ids of the milestones of this Adventure Area that the hero has reached. They stay reached, defeat included. */
   reachedMilestones: string[];
+  /** Whether the hero has been in this Adventure Area. Its text is shown the first time only. */
+  visited: boolean;
   /** The state of every interactable placed in the Adventure Area, by id. */
   interactables: Record<string, InteractableState>;
 }
@@ -87,10 +89,23 @@ export interface ArrowState {
   rangeLeft: number;
 }
 
+/** The text of an Adventure Area while it is shown, and for how many more fixed steps. */
+export interface AreaTextState {
+  readonly text: string;
+  stepsLeft: number;
+}
+
 export interface PlayState {
   readonly phase: 'playing';
   /** The Adventure Area the hero is in. */
   areaId: string;
+  /**
+   * The tile of that Adventure Area where the hero began or came in, which is where defeat sends it back. It is the
+   * one place to change when Checkpoints send the hero somewhere else.
+   */
+  arrivedAt: Tile;
+  /** The text of the Adventure Area that is shown now, if any. It runs down while the game is not paused. */
+  areaText: AreaTextState | null;
   hero: HeroState;
   /**
    * The arrows in flight, in the order they were shot. No damage is kept with an arrow: it does the hero's Attack as
@@ -116,12 +131,15 @@ export function newPlayState(content: Content): PlayState {
     areas[area.id] = {
       monsters: freshMonsters(area, content),
       reachedMilestones: [],
+      visited: false,
       interactables: freshInteractables(area),
     };
   }
   const state: PlayState = {
     phase: 'playing',
     areaId: content.start.areaId,
+    arrivedAt: { ...content.start.tile },
+    areaText: null,
     hero: {
       position: centerOf(content.start.tile),
       facing: 'down',

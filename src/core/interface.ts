@@ -93,6 +93,10 @@ export type GameEvent =
   | { readonly type: 'level-up'; readonly level: number }
   /** The hero's body first overlapped the zone of this milestone, and the reward follows. It happens once per game. */
   | { readonly type: 'milestone-reached'; readonly milestoneId: string }
+  /** The hero walked into an exit and is now in this Adventure Area, standing at the entrance the exit leads to. */
+  | { readonly type: 'area-changed'; readonly areaId: string }
+  /** The hero came into this Adventure Area for the first time: its short text is shown for a few seconds. */
+  | { readonly type: 'area-text'; readonly areaId: string; readonly text: string }
   /** The hero opened this chest. What was inside follows as a pickup. A chest opens once. */
   | { readonly type: 'chest-opened'; readonly chestId: string }
   /** The hero took an item and now has it. */
@@ -103,7 +107,8 @@ export type GameEvent =
   | { readonly type: 'weapon-switched'; readonly weapon: WeaponSlot }
   /**
    * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health where
-   * defeat sends it, and the monsters of the Adventure Area are back as they began: the view shows the new state.
+   * defeat sends it, and the monsters of the Adventure Area it is in are back as they began: the view shows the new
+   * state. The monsters of other Adventure Areas are as they were.
    */
   | { readonly type: 'hero-defeated' };
 
@@ -202,6 +207,12 @@ export interface AreaView {
   readonly terrain: readonly (readonly string[])[];
 }
 
+/** An exit of the Adventure Area the hero is in. Its zone is a box in tile units, so that it can be drawn. */
+export interface ExitView {
+  readonly id: string;
+  readonly zone: Box;
+}
+
 export interface TitleView {
   readonly phase: 'title';
 }
@@ -275,6 +286,10 @@ export interface LevelUpView {
 export interface PlayingView {
   readonly phase: 'playing';
   readonly area: AreaView;
+  /** The exits of the Adventure Area the hero is in. */
+  readonly exits: readonly ExitView[];
+  /** The short text of the Adventure Area while it is shown: for a few seconds after the hero first comes in. */
+  readonly areaText: string | null;
   readonly hero: HeroView;
   readonly monsters: readonly MonsterView[];
   /** The arrows in flight in the Adventure Area the hero is in, in the order they were shot. */

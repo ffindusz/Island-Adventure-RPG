@@ -5,6 +5,8 @@ import type {
   ConsumableId,
   ContentDefinition,
   Direction,
+  EntranceDefinition,
+  ExitDefinition,
   Game,
   GameEvent,
   GearDefinition,
@@ -107,11 +109,22 @@ export const WITH_BOW = {
   armor: 'basic-armor',
 } as const;
 
+/** The one entrance an Adventure Area gets unless a test gives it others. Tile (1, 1) is ground in both layouts above. */
+const DEFAULT_ENTRANCE: EntranceDefinition = { id: 'start', tile: { col: 1, row: 1 } };
+
 export interface ArenaOptions {
   readonly monsters?: readonly MonsterPlacement[];
   readonly layout?: readonly string[];
   /** More Adventure Areas besides the arena, which the hero never reaches in these tests. */
   readonly otherAreas?: readonly AreaDefinition[];
+  /** Where the hero can arrive in the arena. Leave it out for a single entrance, at tile (1, 1). */
+  readonly entrances?: readonly EntranceDefinition[];
+  /** The exits of the arena. There are none unless a test gives some. */
+  readonly exits?: readonly ExitDefinition[];
+  /** The text shown the first time the hero enters the arena. There is none unless a test gives some. */
+  readonly text?: string;
+  /** How long area text stays on the screen, in milliseconds. Leave it out to get the default. */
+  readonly areaTextMs?: number;
   readonly start?: ContentDefinition['start'];
   /** Replaces parts of the hero's definition, for tests about a differently built hero. */
   readonly hero?: Partial<HeroDefinition>;
@@ -134,6 +147,10 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     monsters = [],
     layout = ARENA_LAYOUT,
     otherAreas = [],
+    entrances = [DEFAULT_ENTRANCE],
+    exits = [],
+    text,
+    areaTextMs,
     start = { area: 'arena', tile: { col: 3, row: 3 } },
     hero = {},
     monsterTypes = {},
@@ -164,6 +181,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
       ...hero,
     },
     ...(minimumDamage === undefined ? {} : { minimumDamage }),
+    ...(areaTextMs === undefined ? {} : { areaTextMs }),
     progression: {
       levelThresholds: [10, 25, 45, 70, 100],
       statPointValue: { health: 3, attack: 2, defense: 1 },
@@ -175,7 +193,21 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
       biter: BITER,
       ...monsterTypes,
     },
-    areas: [{ id: 'arena', name: 'Arena', layout, monsters, milestones, interactables }, ...otherAreas],
+    areas: [
+      {
+        id: 'arena',
+        name: 'Arena',
+        layout,
+        monsters,
+        milestones,
+        interactables,
+        entrances,
+        exits,
+        ...(text === undefined ? {} : { text }),
+      },
+      // Most tests visit no second area, so it needs no more than the entrance every Adventure Area has.
+      ...otherAreas.map((area) => ({ entrances: [DEFAULT_ENTRANCE], ...area })),
+    ],
     start,
   };
 }

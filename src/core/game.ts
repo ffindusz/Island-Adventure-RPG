@@ -1,3 +1,4 @@
+import { ageAreaText, crossExits, enterArea } from './areas';
 import { flyArrows } from './arrows';
 import { stepMonsters } from './behaviors';
 import { coolDownHero } from './combat';
@@ -28,7 +29,7 @@ export function createGame(options: GameOptions): Game {
         case 'new-game':
           state = newPlayState(content);
           held = [];
-          return [];
+          return enterArea(state, content);
         case 'continue':
           state = copyState(command.snapshot.state);
           held = [];
@@ -76,11 +77,19 @@ export function createGame(options: GameOptions): Game {
       if (state.phase !== 'playing' || isPaused(state, content)) {
         return [];
       }
+      ageAreaText(state);
       coolDownHero(state);
       walkHero(state, content, held.at(-1));
-      // The hero is where it walked to when it reaches a milestone. Then the arrows fly, and then the monsters act.
+      // The hero is where it walked to when it reaches a milestone. Then the arrows fly, a hero that walked into an
+      // exit goes through it, and otherwise the monsters act.
       const milestoneEvents = reachMilestones(state, content);
       const arrowEvents = flyArrows(state, content, options.random);
+      // The step ends when the hero crosses: the arrows have flown their last in the area it leaves, and the
+      // monsters of the area it arrives in first act in the next step.
+      const areaEvents = crossExits(state, content);
+      if (areaEvents.length > 0) {
+        return [...milestoneEvents, ...arrowEvents, ...areaEvents];
+      }
       const monsterEvents = stepMonsters(state, content);
       if (monsterEvents.some((event) => event.type === 'hero-defeated')) {
         // Defeat sends the hero back and the monsters back to where they began: the arrows of that life do not fly on.

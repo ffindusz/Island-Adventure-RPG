@@ -210,6 +210,29 @@ export interface ChestDefinition {
  */
 export type InteractableDefinition = ChestDefinition;
 
+/** Where the hero stands when it comes into an Adventure Area through an exit of another. */
+export interface EntranceDefinition {
+  /** Unique within its Adventure Area: an exit of another area names the entrance it leads to by this id. */
+  readonly id: string;
+  /** The hero arrives at the centre of this tile, which must not be solid, nor inside an exit of the same area. */
+  readonly tile: Tile;
+}
+
+/** Where an exit leads: one entrance of one Adventure Area. */
+export interface ExitDestination {
+  readonly area: string;
+  readonly entrance: string;
+}
+
+/** Ground that takes the hero to another Adventure Area as soon as its body overlaps it. */
+export interface ExitDefinition {
+  /** Unique within its Adventure Area. */
+  readonly id: string;
+  /** The tiles that trigger it, which must lie within the map. */
+  readonly zone: TileRect;
+  readonly to: ExitDestination;
+}
+
 export interface AreaDefinition {
   readonly id: string;
   readonly name: string;
@@ -220,6 +243,12 @@ export interface AreaDefinition {
   readonly milestones?: readonly MilestoneDefinition[];
   /** The interactables of this Adventure Area, such as chests. Leave it out for none. */
   readonly interactables?: readonly InteractableDefinition[];
+  /** Where the hero can arrive in this Adventure Area. Every area needs at least one: it is how the hero comes in. */
+  readonly entrances?: readonly EntranceDefinition[];
+  /** The exits of this Adventure Area. Each leads to an entrance of an area that has an exit back. Leave out for none. */
+  readonly exits?: readonly ExitDefinition[];
+  /** A short text shown the first time the hero enters this Adventure Area. Leave it out for none. */
+  readonly text?: string;
 }
 
 /** The stats a Stat Point can be spent on. */
@@ -249,6 +278,8 @@ export interface ContentDefinition {
   /** Every piece of Gear in the game, by id: what the hero starts with, and what is waiting to be found. */
   readonly gear: Readonly<Record<string, GearDefinition>>;
   readonly monsterTypes: Readonly<Record<string, MonsterTypeDefinition>>;
+  /** How long the text of an Adventure Area stays on screen, in milliseconds. Leave it out for the default of 4000. */
+  readonly areaTextMs?: number;
   readonly areas: readonly AreaDefinition[];
   /** Where a new game begins: the hero stands at the centre of this tile, which must not be solid. */
   readonly start: { readonly area: string; readonly tile: Tile };

@@ -9,23 +9,34 @@ import type { AreaDefinition } from '../../core';
 export const shipwreckCoast: AreaDefinition = {
   id: 'shipwreck-coast',
   name: 'Shipwreck Coast',
+  text: 'You washed up on a strange shore.',
+  entrances: [{ id: 'from-trail', tile: { col: 18, row: 5 } }],
+  exits: [
+    {
+      id: 'to-trail',
+      zone: { col: 19, row: 5, width: 1, height: 2 },
+      to: { area: 'overgrown-trail', entrance: 'from-coast' },
+    },
+  ],
   layout: [
     '~~~~~~~~~~~~~~~~~~~~',
     '~.........#,,,,,,,,~',
     '~.........#,,,,,,,,~',
     '~.........#,,,,,,,,~',
     '~.........#,,,,,,,,~',
-    '~..........,,,,,,,,~',
-    '~..........,,,,,,,,~',
+    '~..........,,,,,,,,,',
+    '~..........,,,,,,,,,',
     '~.........#,,,,,,,,~',
     '~.........#,,,,,,,,~',
     '~.........#,,,,,,,,~',
     '~.........#,,,,,,,,~',
     '~~~~~~~~~~~~~~~~~~~~',
   ],
+  // Kept clear of the entrance from the trail as well as the start, so that a hero who comes in there, or is defeated
+  // there and returns, is not at once in danger.
   monsters: [
-    { id: 'crab-1', type: 'crab', tile: { col: 14, row: 5 } },
-    { id: 'crab-2', type: 'crab', tile: { col: 16, row: 9 } },
+    { id: 'crab-1', type: 'crab', tile: { col: 12, row: 3 } },
+    { id: 'crab-2', type: 'crab', tile: { col: 12, row: 8 } },
   ],
   milestones: [{ id: 'rock-wall-gap', zone: { col: 10, row: 5, width: 1, height: 2 }, reward: { experience: 5 } }],
   interactables: [
