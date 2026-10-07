@@ -41,7 +41,11 @@ export type GameEvent =
   /** A monster took damage; `health` is what it has left. */
   | { readonly type: 'monster-hit'; readonly monsterId: string; readonly damage: number; readonly health: number }
   /** A monster's Health reached zero. It is gone from the view. */
-  | { readonly type: 'monster-defeated'; readonly monsterId: string };
+  | { readonly type: 'monster-defeated'; readonly monsterId: string }
+  /** A monster struck. `zone` is the area its attack covered, whether or not the hero was in it. */
+  | { readonly type: 'monster-attacked'; readonly monsterId: string; readonly zone: Box }
+  /** The hero took damage, after Defense; `health` is what the hero has left. */
+  | { readonly type: 'hero-hit'; readonly monsterId: string; readonly damage: number; readonly health: number };
 
 export interface HeroView {
   readonly position: Point;

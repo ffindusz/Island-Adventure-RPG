@@ -126,11 +126,12 @@ export function advance(game: Game, steps: number): GameEvent[] {
   return events;
 }
 
-/** Presses a direction key, holds it for some steps, and releases it. For moving the hero into place. */
-export function walk(game: Game, direction: Direction, steps: number): void {
+/** Presses a direction key, holds it for some steps, and releases it. Returns the events of those steps. */
+export function walk(game: Game, direction: Direction, steps: number): GameEvent[] {
   game.send({ type: 'move', direction });
-  advance(game, steps);
+  const events = advance(game, steps);
   game.send({ type: 'stop', direction });
+  return events;
 }
 
 /** Waits out the attack cooldown, then strikes. Returns the strike's events. */
