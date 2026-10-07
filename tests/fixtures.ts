@@ -1,12 +1,14 @@
 import { createGame } from '../src/core';
 import type {
   AreaDefinition,
+  ChaserMonsterDefinition,
   ContentDefinition,
   Direction,
   Game,
   GameEvent,
   HeroDefinition,
   MonsterPlacement,
+  MonsterTypeDefinition,
   MonsterView,
   PlayingView,
   Snapshot,
@@ -38,6 +40,18 @@ export const COOLDOWN_STEPS = 24;
 
 export const ARENA_LAYOUT = ['#######', '#.....#', '#.~...#', '#.....#', '#...,.#', '#######'];
 
+export const BITER: ChaserMonsterDefinition = {
+  behavior: 'chaser',
+  health: 3,
+  size: 0.5,
+  damage: 5,
+  speedTilesPerSecond: 3.75,
+  noticingDistance: 2,
+  reach: 0.75,
+  windUpMs: 500,
+  recoveryMs: 400,
+};
+
 interface ArenaOptions {
   readonly monsters?: readonly MonsterPlacement[];
   readonly layout?: readonly string[];
@@ -46,6 +60,8 @@ interface ArenaOptions {
   readonly start?: ContentDefinition['start'];
   /** Replaces parts of the hero's definition, for tests about a differently built hero. */
   readonly hero?: Partial<HeroDefinition>;
+  /** More monster types besides the dummy and the biter, or in place of them. */
+  readonly monsterTypes?: Readonly<Record<string, MonsterTypeDefinition>>;
 }
 
 export function arena(options: ArenaOptions = {}): ContentDefinition {
@@ -55,6 +71,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     otherAreas = [],
     start = { area: 'arena', tile: { col: 3, row: 3 } },
     hero = {},
+    monsterTypes = {},
   } = options;
   return {
     terrain: {
@@ -74,17 +91,8 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     },
     monsterTypes: {
       dummy: { behavior: 'stationary', health: 3, size: 0.5 },
-      biter: {
-        behavior: 'chaser',
-        health: 3,
-        size: 0.5,
-        damage: 5,
-        speedTilesPerSecond: 3.75,
-        noticingDistance: 2,
-        reach: 0.75,
-        windUpMs: 500,
-        recoveryMs: 400,
-      },
+      biter: BITER,
+      ...monsterTypes,
     },
     areas: [{ id: 'arena', name: 'Arena', layout, monsters }, ...otherAreas],
     start,
@@ -154,13 +162,18 @@ export function playingView(game: Game): PlayingView {
   return view;
 }
 
-/** What a monster is doing, as the view shows it. */
-export function monsterAction(game: Game, id: string): MonsterView['action'] {
+/** A monster as the view shows it. */
+export function monsterNamed(game: Game, id: string): MonsterView {
   const monster = playingView(game).monsters.find((candidate) => candidate.id === id);
   if (monster === undefined) {
     throw new Error(`The view shows no monster "${id}"`);
   }
-  return monster.action;
+  return monster;
+}
+
+/** What a monster is doing, as the view shows it. */
+export function monsterAction(game: Game, id: string): MonsterView['action'] {
+  return monsterNamed(game, id).action;
 }
 
 /** What the snapshot looks like after a trip through storage. */

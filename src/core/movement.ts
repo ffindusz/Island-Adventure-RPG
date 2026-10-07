@@ -1,7 +1,7 @@
 import { areaOf, isSolid } from './content';
 import type { Area, Content } from './content';
 import { boxAround, EPSILON, overlapsHorizontally, overlapsVertically, unitVector } from './geometry';
-import type { Box, Direction } from './geometry';
+import type { Box, Direction, Point } from './geometry';
 import { livingMonsters, monsterBody } from './state';
 import type { PlayState } from './state';
 
@@ -10,19 +10,33 @@ export function walkHero(state: PlayState, content: Content, direction: Directio
   if (direction === undefined) {
     return;
   }
-  const area = areaOf(content, state.areaId);
-  const body = boxAround(state.hero.position, content.hero.size);
-  const step = content.hero.speedPerStep;
-  const obstacles = [
-    ...solidTilesAround(area, body, step),
-    ...livingMonsters(state).map((monster) => monsterBody(monster, content)),
-  ];
-  const travel = travelBeforeObstacle(body, direction, step, obstacles);
+  state.hero.position = moveBody(
+    areaOf(content, state.areaId),
+    state.hero.position,
+    content.hero.size,
+    direction,
+    content.hero.speedPerStep,
+    livingMonsters(state).map((monster) => monsterBody(monster, content)),
+  );
+}
+
+/**
+ * Where a body ends up after moving up to `distance` in a direction. It stops flush against solid terrain, or against
+ * any of the `obstacles`, if it meets one on the way. Hero and monsters move by the same rule.
+ */
+export function moveBody(
+  area: Area,
+  position: Point,
+  size: number,
+  direction: Direction,
+  distance: number,
+  obstacles: readonly Box[],
+): Point {
+  const body = boxAround(position, size);
+  const blockers = [...solidTilesAround(area, body, distance), ...obstacles];
+  const travel = travelBeforeObstacle(body, direction, distance, blockers);
   const vector = unitVector(direction);
-  state.hero.position = {
-    x: state.hero.position.x + vector.x * travel,
-    y: state.hero.position.y + vector.y * travel,
-  };
+  return { x: position.x + vector.x * travel, y: position.y + vector.y * travel };
 }
 
 /** The boxes of the solid tiles that a body could reach within `reach`. Tiles beyond the map count as solid. */
