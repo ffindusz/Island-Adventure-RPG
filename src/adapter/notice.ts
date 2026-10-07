@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { PickedUpItem } from '../core';
-import { consumableIcon, gearIcon } from './artwork';
+import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { CONSUMABLE_NAMES, shown, STAT_NAMES } from './labels';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
@@ -72,13 +72,24 @@ export class Notice {
 function iconFor(content: NoticeContent): string | null {
   switch (content.kind) {
     case 'pickup':
-      return content.item.kind === 'gear' ? gearIcon(content.item.id) : consumableIcon(content.item.id);
+      return pickupIcon(content.item);
     case 'out-of-ammunition':
       return consumableIcon('ammunition');
     case 'checkpoint':
       return 'ui-heart';
     case 'save-failed':
       return null;
+  }
+}
+
+function pickupIcon(item: PickedUpItem): string {
+  switch (item.kind) {
+    case 'gear':
+      return gearIcon(item.id);
+    case 'consumable':
+      return consumableIcon(item.id);
+    case 'key':
+      return KEY_ICON;
   }
 }
 
@@ -113,6 +124,11 @@ function pickupLines(item: PickedUpItem): Line[] {
       return [
         { text: `FOUND ${CONSUMABLE_NAMES[item.id]}`, colour: TITLE_COLOUR },
         { text: `+${item.amount}`, colour: GAIN_COLOUR },
+      ];
+    case 'key':
+      return [
+        { text: `FOUND ${item.name}`, colour: TITLE_COLOUR },
+        { text: 'IT OPENS A DOOR', colour: HINT_COLOUR },
       ];
   }
 }

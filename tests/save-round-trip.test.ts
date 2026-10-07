@@ -98,7 +98,7 @@ describe('the saved adventure', () => {
     expect(outlived.areas['ruins']?.monsters.find(({ id }) => id === 'shooter')?.health).toBe(0);
   });
 
-  it('has opened and unopened chests, taken and untaken pickups and caches, reached and unreached milestones', () => {
+  it('has opened and unopened chests, taken and untaken pickups, caches and keys, reached and unreached milestones', () => {
     const arena = stateAfter('crossing').areas['arena'];
     const ruins = stateAfter('crossing').areas['ruins'];
 
@@ -112,12 +112,19 @@ describe('the saved adventure', () => {
       'potion-near': { kind: 'pickup', collected: true },
       'potion-far': { kind: 'pickup', collected: true },
       'potion-spare': { kind: 'pickup', collected: false },
+      'brass-key': { kind: 'key', collected: true },
     });
     expect(ruins?.interactables).toEqual({
       'ruin-cache': { kind: 'chest', opened: false },
       'ruin-potion': { kind: 'pickup', collected: false },
     });
     expect(arena?.reachedMilestones).toEqual(['lookout']);
+  });
+
+  it('has a key in the hero\u2019s hand once it is taken, and none before', () => {
+    expect(stateAfter('camp').hero.keys).toEqual([]);
+    expect(stateAfter('key').hero.keys).toEqual(['brass-key']);
+    expect(stateAfter('defeat').hero.keys).toEqual(['brass-key']);
   });
 
   it('has visited the first area and, from the crossing on, the second, with its text showing', () => {
@@ -278,6 +285,8 @@ describe('a defeat after Continue', () => {
     const { hero, areas } = restored.snapshot().state;
     expect(hero.experience).toBe(16); // the rat and the shooter, and the lookout: nothing is lost
     expect(hero.gear).toHaveLength(5);
+    expect(hero.keys).toEqual(['brass-key']); // taken after the Checkpoint, and not given back like a potion
+    expect(areas['arena']?.interactables['brass-key']).toEqual({ kind: 'key', collected: true });
     expect(areas['arena']?.interactables['potion-far']).toEqual({ kind: 'pickup', collected: false }); // taken after
     expect(areas['arena']?.interactables['potion-near']).toEqual({ kind: 'pickup', collected: true }); // taken before
     expect(areas['arena']?.monsters.map(({ health }) => health)).toEqual([3, 1]); // the dummy and the rat are back

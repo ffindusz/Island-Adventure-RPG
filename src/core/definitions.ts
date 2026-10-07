@@ -296,11 +296,26 @@ export interface PickupDefinition {
 }
 
 /**
- * Something in an Adventure Area that the hero acts on with Interact, or takes by walking onto it (a pickup). Its
+ * A key lying on a tile: the hero takes it by walking onto it, with no key to press, and carries it until the locked door
+ * it belongs to takes it. It is one-time loot, not a consumable: a key that was taken stays taken and the hero keeps it,
+ * defeat included. It is not solid: the hero, the monsters and the arrows pass over it.
+ */
+export interface KeyDefinition {
+  readonly kind: 'key';
+  /** Unique across all interactables of all Adventure Areas: a door names its key by it, and saves refer to the key by it. */
+  readonly id: string;
+  /** The tile it lies on. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+  /** What the player reads it as, in the notice and in the inventory page, such as "Rusty Key". It must not be blank. */
+  readonly name: string;
+}
+
+/**
+ * Something in an Adventure Area that the hero acts on with Interact, or takes by walking onto it (a pickup, a key). Its
  * `kind` names the rules it follows (see interactables.ts); the other fields are what that kind needs. Adding a kind
  * means adding a member here and the cases the recipe in interactables.ts lists.
  */
-export type InteractableDefinition = ChestDefinition | PickupDefinition;
+export type InteractableDefinition = ChestDefinition | PickupDefinition | KeyDefinition;
 
 /** Where the hero stands when it comes into an Adventure Area through an exit of another. */
 export interface EntranceDefinition {

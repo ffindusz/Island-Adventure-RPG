@@ -111,15 +111,18 @@ describe('a text that is not a save', () => {
 });
 
 describe('a save of another version of the game', () => {
-  it.each([0, 2, 99, -1])('is incompatible when it is version %i, whatever else it holds', (version) => {
-    const text = JSON.stringify({ ...JSON.parse(textAfter('camp')), version });
+  it.each([0, SNAPSHOT_VERSION - 1, SNAPSHOT_VERSION + 1, 99, -1])(
+    'is incompatible when it is version %i, whatever else it holds',
+    (version) => {
+      const text = JSON.stringify({ ...JSON.parse(textAfter('camp')), version });
 
-    expect(parseSave(text, content)).toMatchObject({
-      status: 'unusable',
-      problem: 'incompatible',
-      detail: expect.stringContaining('version'),
-    });
-  });
+      expect(parseSave(text, content)).toMatchObject({
+        status: 'unusable',
+        problem: 'incompatible',
+        detail: expect.stringContaining('version'),
+      });
+    },
+  );
 
   it('is incompatible, not damaged, though its state has a shape this game does not know', () => {
     const text = JSON.stringify({ version: SNAPSHOT_VERSION + 1, state: { phase: 'exploring', doors: [] } });
@@ -537,6 +540,47 @@ describe('a save whose hero carries and equips Gear that this game could not hav
       damage: (saved) => delete saved.state.hero.equipped['ranged-weapon'],
       problem: 'damaged',
       names: 'state.hero.activeWeapon',
+    },
+  ])('is $problem when $fault', expectUnusable);
+});
+
+describe('a save whose hero holds keys that this game could not have given it', () => {
+  // After the chapter "key" the hero holds the brass key, which lies taken in the arena.
+  it.each<BadSave>([
+    {
+      fault: 'the hero holds a key the game does not have',
+      after: 'key',
+      damage: (saved) => saved.state.hero.keys.push('master-key'),
+      problem: 'incompatible',
+      names: 'state.hero.keys[1]',
+    },
+    {
+      fault: 'the hero holds a key that is not a name',
+      after: 'key',
+      damage: (saved) => saved.state.hero.keys.push(5),
+      problem: 'damaged',
+      names: 'state.hero.keys[1]',
+    },
+    {
+      fault: 'the hero holds the same key twice',
+      after: 'key',
+      damage: (saved) => saved.state.hero.keys.push('brass-key'),
+      problem: 'damaged',
+      names: 'state.hero.keys[1]',
+    },
+    {
+      fault: 'the keys the hero holds are not a list',
+      after: 'key',
+      damage: (saved) => (saved.state.hero.keys = 'brass-key'),
+      problem: 'damaged',
+      names: 'state.hero.keys',
+    },
+    {
+      fault: 'the hero holds a key that still lies where the area placed it',
+      after: 'key',
+      damage: (saved) => (saved.state.areas.arena.interactables['brass-key'].collected = false),
+      problem: 'damaged',
+      names: 'state.hero.keys[0]',
     },
   ])('is $problem when $fault', expectUnusable);
 });
@@ -1069,7 +1113,7 @@ describe('a save with the shape of a saved game that the game cannot go on from'
   it.each<[string, string | null]>([
     ['there is no save', null],
     ['the text is not JSON', 'the island at dusk'],
-    ['the save is of another version', JSON.stringify({ version: 2, state: {} })],
+    ['the save is of another version', JSON.stringify({ version: SNAPSHOT_VERSION + 1, state: {} })],
     ['the shape of the save is wrong', JSON.stringify({ version: SNAPSHOT_VERSION, state: {} })],
   ])('is not tried at all when %s', (_, slot) => {
     const made: GameOptions[] = [];

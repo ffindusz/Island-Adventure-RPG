@@ -20,6 +20,7 @@ import {
   fixedRandom,
   frailMonster,
   gameAtTitle,
+  keyAt,
   milestone,
   newGame,
   pickupAt,
@@ -42,6 +43,7 @@ import {
 //                 cache on (11, 5) is never opened
 //     pickups     a potion on (4, 4), taken on the way, and one on (9, 4), taken after the Checkpoint; one on (11, 4),
 //                 never taken
+//     keys        the brass key on (4, 3), next to the Checkpoint, taken after it is touched
 //     monsters    a dummy on (6, 5), which the hero only wounds, and a rat on (3, 5), worth 8 Experience
 //     milestones  the lookout on (5, 4), worth 2 Experience, which the hero reaches; the far point on (11, 1), which
 //                 it does not
@@ -100,6 +102,7 @@ export function adventureContent(): ContentDefinition {
       pickupAt('potion-near', 4, 4, 1),
       pickupAt('potion-far', 9, 4, 1),
       pickupAt('potion-spare', 11, 4, 1),
+      keyAt('brass-key', 4, 3, 'Brass Key'),
     ],
     milestones: [
       milestone('lookout', { col: 5, row: 4, width: 1, height: 1 }, 2),
@@ -170,6 +173,14 @@ export const CHAPTERS: readonly Chapter[] = [
       walk(game, 'left', 2);
       game.send({ type: 'interact' });
       walk(game, 'up', 8);
+    },
+  },
+  {
+    id: 'key',
+    does: 'takes the brass key that lies beside the camp and comes back onto the camp',
+    play(game) {
+      walk(game, 'right', 8);
+      walk(game, 'left', 8);
     },
   },
   {

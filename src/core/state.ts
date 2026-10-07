@@ -7,7 +7,7 @@ import { boxAround, centerOf } from './geometry';
 import { heroMaxHealth } from './stats';
 
 /** Bumped whenever the shape of a Snapshot changes in a way an older save cannot satisfy. */
-export const SNAPSHOT_VERSION = 1;
+export const SNAPSHOT_VERSION = 2;
 
 // The state of a running game, as plain data: numbers, strings, arrays and objects only, so it survives
 // JSON.stringify and JSON.parse unchanged. Anything that is not saved belongs elsewhere (see game.ts).
@@ -61,8 +61,17 @@ export interface PickupState {
   collected: boolean;
 }
 
+/**
+ * What changes about a key: whether the hero has taken it. A key stays taken, defeat included: it is one-time loot, not
+ * a consumable (see consumable-rollback.ts), and it stays taken after a door has used it up.
+ */
+export interface KeyState {
+  readonly kind: 'key';
+  collected: boolean;
+}
+
 /** What changes about an interactable during the game, one member for each kind. */
-export type InteractableState = ChestState | PickupState;
+export type InteractableState = ChestState | PickupState | KeyState;
 
 export interface AreaState {
   /** Every monster placed in the Adventure Area, defeated ones included (at 0 Health), so that they stay defeated. */
@@ -99,6 +108,8 @@ export interface HeroState {
   activeWeapon: WeaponSlot;
   /** How many of each consumable the hero has. There is no limit to how much it can carry. */
   consumables: Record<ConsumableId, number>;
+  /** The ids of the keys the hero holds, in the order it took them. A door takes the key it opens with (devices.ts). */
+  keys: string[];
 }
 
 /** The pages that can be open over the game, one at a time. A new page is one more id here and one more view. */
@@ -207,6 +218,7 @@ export function newPlayState(content: Content): PlayState {
       equipped: { ...content.hero.startingGear },
       activeWeapon: 'melee-weapon',
       consumables: { ...NO_CONSUMABLES },
+      keys: [],
     },
     arrows: [],
     page: null,
@@ -248,6 +260,8 @@ function freshInteractable(interactable: Interactable): InteractableState {
       return { kind: 'chest', opened: false };
     case 'pickup':
       return { kind: 'pickup', collected: false };
+    case 'key':
+      return { kind: 'key', collected: false };
   }
 }
 

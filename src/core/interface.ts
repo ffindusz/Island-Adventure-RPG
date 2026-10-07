@@ -136,7 +136,7 @@ export type GameEvent =
   | { readonly type: 'hero-defeated' };
 
 /** What the hero took, as the player is told about it: one member for each kind of item. */
-export type PickedUpItem = PickedUpGear | PickedUpConsumable;
+export type PickedUpItem = PickedUpGear | PickedUpConsumable | PickedUpKey;
 
 /** A piece of Gear the hero took. It is carried, not equipped: the player equips it in the inventory. */
 export interface PickedUpGear extends GearInfo {
@@ -149,6 +149,11 @@ export interface PickedUpConsumable {
   readonly id: ConsumableId;
   /** How many were added, 1 or more. */
   readonly amount: number;
+}
+
+/** A key the hero took. It is carried until a locked door takes it, and it is no Gear and no consumable. */
+export interface PickedUpKey extends KeyInfo {
+  readonly kind: 'key';
 }
 
 export interface HeroView {
@@ -226,7 +231,7 @@ export interface ChestView {
 }
 
 /** Something placed in the Adventure Area, for the adapter to draw: one member for each kind. */
-export type InteractableView = ChestView | PickupView;
+export type InteractableView = ChestView | PickupView | KeyView;
 
 /** A pickup lying on the ground, for the adapter to draw. One that the hero has taken is not listed any more. */
 export interface PickupView {
@@ -238,6 +243,23 @@ export interface PickupView {
   readonly size: number;
   /** What kind of consumable it is, so that it can be drawn as that. It never says how many. */
   readonly consumable: ConsumableId;
+}
+
+/** A key lying on the ground, for the adapter to draw. One that the hero has taken is not listed any more. */
+export interface KeyView {
+  readonly kind: 'key';
+  readonly id: string;
+  /** The centre of the tile it lies on. */
+  readonly position: Point;
+  /** Width and height of the tile it lies on, in tiles. */
+  readonly size: number;
+}
+
+/** A key as the player reads about it. */
+export interface KeyInfo {
+  readonly id: string;
+  /** What the content calls it, such as "Rusty Key". */
+  readonly name: string;
 }
 
 export interface AreaView {
@@ -312,6 +334,8 @@ export interface InventoryPageView {
   readonly gear: readonly GearView[];
   /** How many of each consumable the hero has. */
   readonly consumables: Readonly<Record<ConsumableId, number>>;
+  /** The keys the hero holds, in the order it took them. A door takes the one it opens with. */
+  readonly keys: readonly KeyInfo[];
   /** The hero's Attack and Defense, with the equipped Gear counted in. The Attack is that of the weapon in hand. */
   readonly attack: number;
   readonly defense: number;
@@ -406,7 +430,7 @@ export type GameView = TitleView | PlayingView;
  * It is not validated when restored: whoever reads one from storage must check it first.
  */
 export interface Snapshot {
-  readonly version: 1;
+  readonly version: 2;
   readonly state: PlayState;
 }
 

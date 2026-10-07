@@ -23,6 +23,8 @@ export const ARTWORK = {
   'gear-chain-mail': drawn(MAIL_ROWS, PACK_PALETTE),
   'consumable-ammunition': image('consumable-ammunition.png'),
   'consumable-healing-potion': image('consumable-healing-potion.png'),
+  // The icon of every key, in the notice of finding one and in the inventory page.
+  key: image('key.png'),
   // The pieces the HUD and the pages are built from, see ui-layer.ts: a dark panel, the orange frame of a window, the
   // orange button behind the line the cursor is on, and the heart of Health.
   'ui-panel': image('ui-panel.png'),
@@ -43,6 +45,9 @@ export function gearIcon(id: string): string {
 export function consumableIcon(id: ConsumableId): string {
   return `consumable-${id}`;
 }
+
+/** The name of the icon of a key. Every key has the same one: the keys differ in their names. */
+export const KEY_ICON = 'key' satisfies ArtName;
 
 /** The names of the pictures the content needs: an icon for each Gear and for each consumable. */
 export function neededArt(content: ContentDefinition): string[] {

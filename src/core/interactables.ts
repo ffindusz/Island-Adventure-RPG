@@ -2,6 +2,7 @@ import { areaOf } from './content';
 import type { Chest, Content, Interactable, Pickup } from './content';
 import { grantConsumable } from './consumables';
 import type { ChestContents } from './definitions';
+import type { Key } from './device-content';
 import { grantGear } from './gear';
 import { centerOfBox, overlaps, zoneInFront } from './geometry';
 import type { Box, Point } from './geometry';
@@ -10,8 +11,8 @@ import { interactableStateOf } from './state';
 import type { ChestState, InteractableState, PlayState } from './state';
 
 // Interactables: things placed on a tile of an Adventure Area. The content places each with a kind, and the kind is
-// what it is and does. The hero acts on most with Interact, such as a chest. The hero takes a pickup by walking onto
-// it instead, and that is a step of the game (see pickups.ts).
+// what it is and does. The hero acts on most with Interact, such as a chest. The hero takes a pickup or a key by walking
+// onto it instead, and that is a step of the game (see pickups.ts and devices.ts).
 //
 // To add a kind:
 //   1. add its definition to InteractableDefinition (definitions.ts), its loaded form to Interactable (content.ts) and
@@ -26,7 +27,7 @@ import type { ChestState, InteractableState, PlayState } from './state';
 //   4. if it gives consumables, say in consumable-rollback.ts whether defeat takes it back and what taking it is.
 
 /** The interactables that Interact acts on: all but those the hero takes by walking onto them. */
-type InteractedWith = Exclude<Interactable, Pickup>;
+type InteractedWith = Exclude<Interactable, Pickup | Key>;
 
 /** What one kind of interactable does when the hero interacts with it. Returns what happened, in order. */
 export type Interaction<T extends Interactable> = (
@@ -40,22 +41,24 @@ const INTERACTIONS: { readonly [K in InteractedWith['kind']]: Interaction<Extrac
   chest: openChest,
 };
 
-/** Whether Interact reaches an interactable. A pickup it does not reach: it is taken by walking onto it. */
+/** Whether Interact reaches an interactable. A pickup and a key it does not reach: they are taken by walking onto them. */
 function isInteractedWith(interactable: Interactable): interactable is InteractedWith {
   switch (interactable.kind) {
     case 'chest':
       return true;
     case 'pickup':
+    case 'key':
       return false;
   }
 }
 
-/** Whether the hero and the monsters are stopped by an interactable. A chest is solid, opened or not; a pickup not. */
+/** Whether the hero and the monsters are stopped by an interactable. A chest is solid, opened or not; a pickup, a key not. */
 function blocksWalkers(interactable: Interactable): boolean {
   switch (interactable.kind) {
     case 'chest':
       return true;
     case 'pickup':
+    case 'key':
       return false;
   }
 }

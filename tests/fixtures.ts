@@ -264,6 +264,11 @@ export function pickupAt(
   return { kind: 'pickup', id, tile: { col, row }, consumable, amount };
 }
 
+/** A key on the tile (col, row) to walk onto: the hero takes it and carries it under its name until a door takes it. */
+export function keyAt(id: string, col: number, row: number, name = 'Rusty Key'): InteractableDefinition {
+  return { kind: 'key', id, tile: { col, row }, name };
+}
+
 /** A milestone that gives the given Experience when the hero's body first overlaps the block of tiles `zone`. */
 export function milestone(id: string, zone: TileRect, experience: number): MilestoneDefinition {
   return { id, zone, reward: { experience } };
