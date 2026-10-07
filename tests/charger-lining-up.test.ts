@@ -6,6 +6,18 @@ import { CHARGER, chargerAt, enemyField } from './enemy-fixtures';
 // wind-up as soon as the hero's body overlaps its lane, the strip in front of it that is as wide as its body: the
 // lane to the right is y 3.25 to 3.75 as long as the charger is at y = 3.5. The hero walks 0.125 tile a step.
 
+// The field of fixtures.ts with a wall on column 3, from the top row to the bottom one: it ends the lane to the right of
+// the charger in the tile (2, 3) at x = 3, however far down the charger goes.
+const WALL_ACROSS = [
+  '##############',
+  '#..#.........#',
+  '#..#.........#',
+  '#..#.........#',
+  '#..#.........#',
+  '#..#.........#',
+  '##############',
+];
+
 describe('a charger lining up with the hero', () => {
   it('walks sideways, toward the hero, until its lane reaches the hero, and winds up where it stands', () => {
     // The hero is at (6.5, 5.5): its body spans y 5.25 to 5.75. The charger's lane, y - 0.25 to y + 0.25, touches
@@ -94,6 +106,25 @@ describe('a charger lining up with the hero', () => {
       progress: 0,
       zone: { minX: 4.3125, minY: 3.25, maxX: 6.3125, maxY: 3.75 },
     });
+  });
+
+  it('comes level with a hero it cannot reach and no further, going down in whole steps and then in a short one', () => {
+    // The wall ends the lane at x = 3, so the hero at (6.5, 4.5) is never in it. The charger walks 0.09375 tile a step:
+    // 10 steps take it to y = 4.4375, and the last 0.0625 tile to being level with the hero is a short step.
+    const game = enemyField([chargerAt('charger-1', 2, 3)], {
+      layout: WALL_ACROSS,
+      start: { area: 'arena', tile: { col: 6, row: 4 } },
+      monsterTypes: { charger: { ...CHARGER, speedTilesPerSecond: 5.625 } },
+    });
+
+    advance(game, 10);
+    expect(monsterNamed(game, 'charger-1')).toMatchObject({ position: { x: 2.5, y: 4.4375 }, action: { type: 'chasing' } });
+
+    game.step();
+    expect(monsterNamed(game, 'charger-1').position.y).toBe(4.5);
+
+    advance(game, 20); // it has walked on, to the wall, and has not left the hero's row
+    expect(monsterNamed(game, 'charger-1')).toMatchObject({ position: { x: 2.75, y: 4.5 }, action: { type: 'chasing' } });
   });
 
   it('stands where it is when it does not walk, until the hero comes into its lane', () => {
