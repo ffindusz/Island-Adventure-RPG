@@ -123,7 +123,7 @@ function messageRows(saved: SavedGame): Row[] {
     case 'unusable':
       return saved.problem === 'damaged'
         ? message('THE SAVED GAME IS DAMAGED.', 'A NEW GAME WILL REPLACE IT.')
-        : message('THE SAVED GAME IS FROM', 'ANOTHER VERSION OF THE GAME.', 'A NEW GAME WILL REPLACE IT.');
+        : message('SAVED GAME CANNOT BE USED.', 'IT IS FROM ANOTHER VERSION.', 'A NEW GAME WILL REPLACE IT.');
   }
 }
 
