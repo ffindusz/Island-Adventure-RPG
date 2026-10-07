@@ -2,21 +2,20 @@ import Phaser from 'phaser';
 import type { Command, Game, GameEvent, GameView } from '../core';
 import { AreaBanner } from './area-banner';
 import {
-  drawArrow,
   drawExits,
-  drawHero,
   drawInteractable,
   drawMonster,
   drawStrike,
-  drawSwing,
   drawTelegraph,
   drawTerrain,
 } from './art';
 import { ARTWORK } from './artwork';
 import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import { scrollFor } from './camera';
+import { DEPTH } from './depths';
 import { Feedback } from './feedback';
 import { FixedStepClock } from './fixed-step';
+import { HeroSprite } from './hero-sprite';
 import { Hud } from './hud';
 import { InventoryMenu } from './inventory-menu';
 import { Notice } from './notice';
@@ -49,6 +48,7 @@ export class PlayScene extends Phaser.Scene {
   private readonly feedback = new Feedback();
   private readonly inventoryMenu = new InventoryMenu();
   private playerInput!: PlayerInput;
+  private heroSprite!: HeroSprite;
   private hud!: Hud;
   private banner!: AreaBanner;
   private notice!: Notice;
@@ -71,13 +71,15 @@ export class PlayScene extends Phaser.Scene {
   create(): void {
     buildDrawnArt(this.textures, ARTWORK);
     requireLoadedArt(this.textures, ARTWORK);
-    // Added in drawing order: ground, then the telegraphs of monster attacks, then chests, hero and monsters, then the
-    // swings and strikes on top. The HUD draws above them all, then the text of the area, the notice above that, and the
-    // overlay above that. The world scrolls with the camera; the HUD, the text, the notice and the overlay do not.
+    // Added in drawing order: ground, then the telegraphs of monster attacks, then chests and monsters, which share the
+    // lowest depth. The hero and its arrows are sprites above them (see depths.ts), and the strikes of the monsters
+    // above those. The HUD draws above them all, then the text of the area, the notice above that, and the overlay
+    // above that. The world scrolls with the camera; the HUD, the text, the notice and the overlay do not.
     this.terrainLayer = this.add.graphics();
     this.telegraphLayer = this.add.graphics();
     this.entityLayer = this.add.graphics();
-    this.effectLayer = this.add.graphics();
+    this.heroSprite = new HeroSprite(this);
+    this.effectLayer = this.add.graphics().setDepth(DEPTH.effects);
     this.hud = new Hud(this);
     this.banner = new AreaBanner(this);
     this.notice = new Notice(this);
@@ -113,7 +115,9 @@ export class PlayScene extends Phaser.Scene {
       events.push(...this.core.step());
     }
     this.feedback.age(frameMs);
+    this.heroSprite.age(frameMs);
     this.feedback.show(events);
+    this.heroSprite.show(events);
     if (events.some((event) => event.type === 'hero-defeated')) {
       // The core has already put the hero back; the fade hides the cut. The world keeps running while it plays.
       this.cameras.main.fadeIn(DEFEAT_FADE_MS, 0, 0, 0);
@@ -152,14 +156,8 @@ export class PlayScene extends Phaser.Scene {
       }
       drawMonster(this.entityLayer, monster, this.feedback.isFlashing(monster.id));
     }
-    for (const arrow of view.arrows) {
-      drawArrow(this.entityLayer, arrow);
-    }
-    drawHero(this.entityLayer, view.hero, this.feedback.isHeroHurt());
+    this.heroSprite.draw(view.hero, view.arrows);
     this.effectLayer.clear();
-    for (const zone of this.feedback.swingZones()) {
-      drawSwing(this.effectLayer, zone);
-    }
     for (const zone of this.feedback.strikeZones()) {
       drawStrike(this.effectLayer, zone);
     }

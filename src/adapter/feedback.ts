@@ -2,10 +2,8 @@ import type { Box, GameEvent } from '../core';
 import type { NoticeContent } from './notice';
 
 /** How long each kind of feedback stays on screen, in milliseconds. */
-const SWING_MS = 120;
 const HIT_FLASH_MS = 100;
 const STRIKE_MS = 160;
-const HERO_HURT_MS = 200;
 const NOTICE_MS = 3000;
 
 interface ZoneFlash {
@@ -15,22 +13,17 @@ interface ZoneFlash {
 
 /**
  * Short-lived visual feedback for Game core events. It is cosmetic only: it runs on frame time, and nothing the
- * Game core decides ever depends on it.
+ * Game core decides ever depends on it. What the hero itself shows of its swings, shots and hits is in hero-sprite.ts.
  */
 export class Feedback {
-  private swings: ZoneFlash[] = [];
   private strikes: ZoneFlash[] = [];
   private readonly flashes = new Map<string, number>();
-  private heroHurtMsLeft = 0;
   private told: { readonly content: NoticeContent; readonly msLeft: number } | null = null;
 
   /** Starts the feedback for events the Game core just reported. */
   show(events: readonly GameEvent[]): void {
     for (const event of events) {
       switch (event.type) {
-        case 'hero-attacked':
-          this.swings.push({ zone: event.zone, msLeft: SWING_MS });
-          break;
         case 'monster-hit':
           this.flashes.set(event.monsterId, HIT_FLASH_MS);
           break;
@@ -39,9 +32,6 @@ export class Feedback {
           break;
         case 'monster-attacked':
           this.strikes.push({ zone: event.zone, msLeft: STRIKE_MS });
-          break;
-        case 'hero-hit':
-          this.heroHurtMsLeft = HERO_HURT_MS;
           break;
         case 'pickup':
           this.told = { content: { kind: 'pickup', item: event.item }, msLeft: NOTICE_MS };
@@ -55,24 +45,20 @@ export class Feedback {
         case 'hero-defeated':
           // The fight is over and the monsters are back as they began: nothing of it should linger on the new scene.
           this.clearFight();
-          this.heroHurtMsLeft = 0;
           break;
       }
     }
   }
 
-  /** Forgets the swings, strikes and flashes of a fight, such as when its monsters are left behind in another area. */
+  /** Forgets the strikes and flashes of a fight, such as when its monsters are left behind in another area. */
   private clearFight(): void {
-    this.swings = [];
     this.strikes = [];
     this.flashes.clear();
   }
 
   /** Lets one frame's time pass; feedback that has run out disappears. */
   age(frameMs: number): void {
-    this.swings = remaining(this.swings, frameMs);
     this.strikes = remaining(this.strikes, frameMs);
-    this.heroHurtMsLeft = Math.max(0, this.heroHurtMsLeft - frameMs);
     if (this.told !== null) {
       const { content, msLeft } = this.told;
       this.told = msLeft > frameMs ? { content, msLeft: msLeft - frameMs } : null;
@@ -86,11 +72,6 @@ export class Feedback {
     }
   }
 
-  /** The areas of the hero's swings to draw now. */
-  swingZones(): Box[] {
-    return this.swings.map((swing) => swing.zone);
-  }
-
   /** The areas of the monsters' strikes to draw now. */
   strikeZones(): Box[] {
     return this.strikes.map((strike) => strike.zone);
@@ -98,11 +79,6 @@ export class Feedback {
 
   isFlashing(monsterId: string): boolean {
     return this.flashes.has(monsterId);
-  }
-
-  /** Whether the hero is showing that it was just hit. */
-  isHeroHurt(): boolean {
-    return this.heroHurtMsLeft > 0;
   }
 
   /** What the player is being told about, the latest of what the hero found and that the bow has nothing to shoot. */
