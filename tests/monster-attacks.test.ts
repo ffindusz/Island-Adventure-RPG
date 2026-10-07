@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { advance, biterAt, dummyAt, monsterAction, newGameWithMonsters, playingView, walk } from './fixtures';
+import type { Game } from '../src/core';
+import {
+  advance,
+  arena,
+  biterAt,
+  dummyAt,
+  monsterAction,
+  monsterNamed,
+  newGame,
+  newGameWithMonsters,
+  playingView,
+  walk,
+} from './fixtures';
 
 // The hero stands at (3.5, 3.5) with a body 0.5 wide, so its body spans 3.25 to 3.75 each way, and it has 10 Health.
 // A biter has a body 0.5 wide and its attack reaches 0.75 tile beyond its body, in every direction. Its wind-up lasts
@@ -111,5 +123,51 @@ describe('the damage of a monster attack', () => {
     const events = [...walk(game, direction, 10), ...advance(game, WIND_UP_STEPS - 10)];
 
     expect(events.map((event) => event.type)).toEqual(['monster-attacked']);
+  });
+});
+
+describe('a monster recovering from its attack', () => {
+  // The hero has 20 Health here, so that two hits do not defeat it. The first attack lands on step 31 (the wind-up
+  // starts on step 1 and lasts 30 steps). The recovery lasts 24 steps, so a monster that finds the hero still in reach
+  // starts its next wind-up on step 55, and that attack lands 30 steps later, on step 85.
+  function recoveringGame(): Game {
+    return newGame(arena({ hero: { health: 20 }, monsters: [biterAt('biter-1', 4, 3)] }));
+  }
+
+  it('rests after its attack, which the view shows, and then winds up again if the hero is still in reach', () => {
+    const game = recoveringGame();
+
+    advance(game, 31);
+    expect(monsterAction(game, 'biter-1')).toEqual({ type: 'recovering' });
+
+    advance(game, 23); // step 54: one step of the recovery is left
+    expect(monsterAction(game, 'biter-1')).toEqual({ type: 'recovering' });
+
+    game.step(); // step 55
+    expect(monsterAction(game, 'biter-1')).toEqual({ type: 'winding-up', progress: 0, zone: ATTACK_ZONE });
+  });
+
+  it('attacks again once the wind-up and the recovery are over: 54 steps after the last attack', () => {
+    const game = recoveringGame();
+    advance(game, 31); // the first attack lands
+
+    const between = advance(game, 53); // steps 32 to 84
+
+    expect(between).toEqual([]);
+    expect(game.step().map((event) => event.type)).toEqual(['monster-attacked', 'hero-hit']);
+    expect(playingView(game).hero.health).toBe(10);
+  });
+
+  it('walks after the hero instead, when the hero has moved out of its reach during the recovery', () => {
+    const game = recoveringGame();
+    advance(game, 31); // the first attack lands
+    walk(game, 'left', 8); // steps 32 to 39: the hero walks a tile away, to x = 2.5
+
+    advance(game, 16); // steps 40 to 55: the recovery ends in the last of them, and the monster sets off at once
+
+    expect(monsterNamed(game, 'biter-1')).toMatchObject({
+      position: { x: 4.4375, y: 3.5 },
+      action: { type: 'chasing' },
+    });
   });
 });

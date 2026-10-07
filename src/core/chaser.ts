@@ -25,6 +25,12 @@ export function stepChaser(
     action.elapsed += 1;
     return action.elapsed >= action.length ? strike(monster, action, type, state, content) : [];
   }
+  if (action.type === 'recovering') {
+    action.stepsLeft -= 1;
+    if (action.stepsLeft > 0) {
+      return [];
+    }
+  }
   const body = monsterBody(monster, content);
   const hero = heroBody(state, content);
   const zone = expandBox(body, type.reach);
@@ -70,7 +76,7 @@ function strike(
   state: PlayState,
   content: Content,
 ): GameEvent[] {
-  monster.action = { type: 'idle' };
+  monster.action = { type: 'recovering', stepsLeft: type.recoverySteps };
   const events: GameEvent[] = [{ type: 'monster-attacked', monsterId: monster.id, zone: windUp.zone }];
   if (overlaps(heroBody(state, content), windUp.zone)) {
     events.push(...hurtHero(state, content, monster.id, type.damage));
