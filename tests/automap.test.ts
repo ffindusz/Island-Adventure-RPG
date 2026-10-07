@@ -355,3 +355,49 @@ describe('The route on the Automap', () => {
     expect(areaOnMap(game, 'attic').hero).toBeNull();
   });
 });
+
+describe('Exits on the Automap', () => {
+  const exitIds = (game: Game, areaId: string): string[] => areaOnMap(game, areaId).exits.map((exit) => exit.id);
+
+  it('marks an exit once the hero has revealed a tile of it, and not before', () => {
+    const game = newGame(route({ automapRevealDistance: 1.5 }));
+    expect(exitIds(game, 'arena')).toEqual([]);
+
+    // The exit is on tile (5, 3). The 4th step takes the hero to tile (4, 3), which has tile (5, 3) next to it.
+    walk(game, 'right', 3);
+    expect(exitIds(game, 'arena')).toEqual([]);
+
+    walk(game, 'right', 1);
+    expect(areaOnMap(game, 'arena').exits).toEqual([{ id: 'to-cellar', zone: { minX: 5, minY: 3, maxX: 6, maxY: 4 } }]);
+    expect(exitIds(game, 'cellar')).toEqual([]);
+  });
+
+  it('marks an exit when any tile of its zone has been revealed, not only when all of them have', () => {
+    const tall = { ...door('to-cellar', 5, 'cellar', 'from-arena'), zone: { col: 5, row: 3, width: 1, height: 2 } };
+    const game = newGame(route({ automapRevealDistance: 1, exits: [tall] }));
+
+    // The plus of tiles around tile (3, 3) where the hero started, and the plus around tile (4, 3) where it is now: the
+    // second reveals tile (5, 3) of the exit, but not tile (5, 4) below it.
+    walk(game, 'right', 4);
+
+    expect(picture(areaOnMap(game, 'arena'))).toEqual([
+      '       ',
+      '       ',
+      '   ..  ',
+      '  .... ',
+      '   .,  ',
+      '       ',
+    ]);
+    expect(exitIds(game, 'arena')).toEqual(['to-cellar']);
+  });
+
+  it('keeps an exit marked when the hero walks away from it', () => {
+    const game = newGame(route({ automapRevealDistance: 1.5 }));
+
+    // Back to x 3.0: on tile (3, 3) the exit on tile (5, 3) is out of reach.
+    walk(game, 'right', 4);
+    walk(game, 'left', 8);
+
+    expect(exitIds(game, 'arena')).toEqual(['to-cellar']);
+  });
+});

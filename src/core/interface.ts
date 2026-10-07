@@ -333,6 +333,8 @@ export interface AutomapAreaView {
   readonly connections: readonly string[];
   /** Where the hero is in this area, in tile units, if it is in this area now. */
   readonly hero: Point | null;
+  /** The exits of this area that the hero has found: the ones it has revealed a tile of. */
+  readonly exits: readonly ExitView[];
   /** The kind of terrain on each tile the hero has explored, indexed [row][col]; null on a tile it has not. */
   readonly terrain: readonly (readonly (string | null)[])[];
 }

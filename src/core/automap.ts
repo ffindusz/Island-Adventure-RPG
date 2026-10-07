@@ -1,5 +1,6 @@
 import { areaOf } from './content';
 import type { Area, Content } from './content';
+import type { Box } from './geometry';
 import type { AutomapAreaView, AutomapPageView } from './interface';
 import { areaStateOf } from './state';
 import type { PlayState } from './state';
@@ -55,6 +56,21 @@ function automapArea(state: PlayState, area: Area): AutomapAreaView {
     discovered,
     connections: [...new Set(area.exits.map((exit) => exit.to.areaId))],
     hero: area.id === state.areaId ? { ...state.hero.position } : null,
+    exits: area.exits
+      .filter((exit) => isRevealedAnywhere(revealed, exit.zone))
+      .map((exit) => ({ id: exit.id, zone: { ...exit.zone } })),
     terrain,
   };
+}
+
+/** Whether the hero has revealed any tile of a zone, which is a block of whole tiles. */
+function isRevealedAnywhere(revealed: readonly (readonly boolean[])[], zone: Box): boolean {
+  for (let row = zone.minY; row < zone.maxY; row++) {
+    for (let col = zone.minX; col < zone.maxX; col++) {
+      if (revealed[row]?.[col] === true) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
