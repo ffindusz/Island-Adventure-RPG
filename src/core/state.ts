@@ -132,7 +132,7 @@ export function newPlayState(content: Content): PlayState {
       gear: GEAR_SLOTS.flatMap((slot) => content.hero.startingGear[slot] ?? []),
       equipped: { ...content.hero.startingGear },
       activeWeapon: 'melee-weapon',
-      consumables: { ammunition: 0 },
+      consumables: { ammunition: 0, 'healing-potion': 0 },
     },
     arrows: [],
     page: null,

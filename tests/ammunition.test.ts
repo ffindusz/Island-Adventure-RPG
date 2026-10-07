@@ -28,7 +28,7 @@ function gameWithCacheBelow() {
 
 describe('Ammunition', () => {
   it('is none to begin with: the hero has to find it', () => {
-    expect(playingView(newGame()).hero.consumables).toEqual({ ammunition: 0 });
+    expect(playingView(newGame()).hero.consumables).toMatchObject({ ammunition: 0 });
   });
 
   it('is found in a cache, which opens like a chest: the hero takes all the Ammunition inside', () => {
@@ -36,7 +36,7 @@ describe('Ammunition', () => {
 
     expect(game.send(INTERACT)).toEqual([{ type: 'chest-opened', chestId: 'cache-1' }, SIX_ARROWS_PICKED_UP]);
 
-    expect(playingView(game).hero.consumables).toEqual({ ammunition: 6 });
+    expect(playingView(game).hero.consumables).toMatchObject({ ammunition: 6 });
   });
 
   it('is granted once: an opened cache is empty, so opening it again gives nothing', () => {
@@ -45,7 +45,7 @@ describe('Ammunition', () => {
 
     expect(game.send(INTERACT)).toEqual([]);
 
-    expect(playingView(game).hero.consumables).toEqual({ ammunition: 6 });
+    expect(playingView(game).hero.consumables).toMatchObject({ ammunition: 6 });
   });
 
   it('is one count for all caches: each cache adds what it holds to what the hero has', () => {
@@ -58,7 +58,7 @@ describe('Ammunition', () => {
       { type: 'pickup', item: { kind: 'consumable', id: 'ammunition', amount: 5 } },
     ]);
 
-    expect(playingView(game).hero.consumables).toEqual({ ammunition: 11 });
+    expect(playingView(game).hero.consumables).toMatchObject({ ammunition: 11 });
   });
 
   it('is told apart from Gear in the view: a cache shows that it holds Ammunition, a chest that it holds Gear', () => {
@@ -101,9 +101,9 @@ describe('Ammunition', () => {
     const restored = gameAtTitle(content);
     restored.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
 
-    expect(playingView(restored).hero.consumables).toEqual({ ammunition: 6 });
+    expect(playingView(restored).hero.consumables).toMatchObject({ ammunition: 6 });
     expect(restored.send(INTERACT), 'the cache stays empty').toEqual([]);
-    expect(playingView(restored).hero.consumables).toEqual({ ammunition: 6 });
+    expect(playingView(restored).hero.consumables).toMatchObject({ ammunition: 6 });
   });
 
   it('is not given by time passing: the hero has only what it picked up', () => {
@@ -111,7 +111,7 @@ describe('Ammunition', () => {
 
     advance(game, 200);
 
-    expect(playingView(game).hero.consumables).toEqual({ ammunition: 0 });
+    expect(playingView(game).hero.consumables).toMatchObject({ ammunition: 0 });
   });
 });
 

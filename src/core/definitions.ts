@@ -182,7 +182,7 @@ export interface MilestoneDefinition {
  * What the hero carries in counts and spends: it has none until it finds some. The list is open: a new consumable is
  * one more id here and one more count in the hero's state.
  */
-export const CONSUMABLE_IDS = ['ammunition'] as const;
+export const CONSUMABLE_IDS = ['ammunition', 'healing-potion'] as const;
 export type ConsumableId = (typeof CONSUMABLE_IDS)[number];
 
 /**

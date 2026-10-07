@@ -107,7 +107,7 @@ describe('the content the game ships with', () => {
     const inventory = inventoryOf(newShippedGame());
 
     expect(inventory.gear.filter((piece) => piece.slot === 'ranged-weapon')).toEqual([]);
-    expect(inventory.consumables).toEqual({ ammunition: 0 });
+    expect(inventory.consumables).toEqual({ ammunition: 0, 'healing-potion': 0 });
   });
 
   it('has a chest with a bow and a cache of Ammunition within a short walk of the start, and the bow shoots', () => {
