@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AreaDefinition, AutomapAreaView, AutomapPageView, Game } from '../src/core';
-import { ARENA_LAYOUT, arena, newGame, playingView, walk } from './fixtures';
+import { ARENA_LAYOUT, FIELD_LAYOUT, arena, gameAtTitle, newGame, playingView, walk } from './fixtures';
 
 // The Automap, tested at the Game core's interface: commands and steps in, the page view and the snapshot out.
 //
@@ -137,5 +137,61 @@ describe('The Automap while the hero walks', () => {
       '  ..,  ',
       '  ###  ',
     ]);
+  });
+});
+
+describe('The reveal distance', () => {
+  it.each([
+    {
+      distance: 0,
+      reveals: "only the hero's own tile",
+      expected: ['       ', '       ', '       ', '   .   ', '       ', '       '],
+    },
+    {
+      distance: 1,
+      reveals: "the hero's tile and the 4 tiles that share an edge with it",
+      expected: ['       ', '       ', '   .   ', '  ...  ', '   .   ', '       '],
+    },
+    {
+      distance: 2,
+      reveals: 'the 3 x 3 square and the 4 tiles two away in a straight line',
+      expected: ['       ', '   .   ', '  ~..  ', ' ..... ', '  ..,  ', '   #   '],
+    },
+    {
+      distance: 100,
+      reveals: 'the whole Adventure Area when it is beyond the farthest tile',
+      expected: ARENA_LAYOUT,
+    },
+  ])('of $distance tiles reveals $reveals', ({ distance, expected }) => {
+    const game = newGame(arena({ automapRevealDistance: distance }));
+
+    expect(picture(areaOnMap(game, 'arena'))).toEqual(expected);
+  });
+
+  it('is 4 tiles when the content does not say', () => {
+    const content = arena({ layout: FIELD_LAYOUT, start: { area: 'arena', tile: { col: 6, row: 3 } } });
+
+    const game = newGame(content);
+
+    // Row by row from the top, the hero's tile is (6, 3): the rows 3 away show 5 tiles, the rows 2 and 1 away 7, and the
+    // hero's row 9. The 1 tile that is 4 away above and below the hero is in no row of this field.
+    expect(picture(areaOnMap(game, 'arena'))).toEqual([
+      '    #####     ',
+      '   .......    ',
+      '   .......    ',
+      '  .........   ',
+      '   .......    ',
+      '   .......    ',
+      '    #####     ',
+    ]);
+  });
+
+  it.each([
+    { what: 'below 0', distance: -1, shown: '-1' },
+    { what: 'not a number', distance: Number.NaN, shown: 'NaN' },
+  ])('is refused when it is $what', ({ distance, shown }) => {
+    expect(() => gameAtTitle(arena({ automapRevealDistance: distance }))).toThrow(
+      `The Automap reveal distance must be 0 or more, but it is ${shown}`,
+    );
   });
 });

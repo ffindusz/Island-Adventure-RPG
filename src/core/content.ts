@@ -190,6 +190,8 @@ export function loadContent(definition: ContentDefinition): Content {
     );
   }
   const progression = loadProgression(definition.progression);
+  const automapRevealDistance = definition.automapRevealDistance ?? DEFAULT_AUTOMAP_REVEAL_DISTANCE;
+  requireZeroOrMore('The Automap reveal distance', automapRevealDistance);
   requireMoreThanZero('The Health a Healing Potion restores', definition.healingPotion.restores);
   const monsterTypes: Record<string, MonsterType> = {};
   for (const [name, monsterType] of Object.entries(definition.monsterTypes)) {
@@ -241,7 +243,7 @@ export function loadContent(definition: ContentDefinition): Content {
     monsterTypes,
     areas,
     areaTextSteps: msToSteps(areaTextMs),
-    automapRevealDistance: definition.automapRevealDistance ?? DEFAULT_AUTOMAP_REVEAL_DISTANCE,
+    automapRevealDistance,
     start: { areaId: definition.start.area, tile: definition.start.tile },
   };
 }

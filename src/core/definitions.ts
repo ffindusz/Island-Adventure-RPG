@@ -328,7 +328,8 @@ export interface ContentDefinition {
   readonly areaTextMs?: number;
   /**
    * How far from the hero's tile the Automap reveals terrain, in tiles: every tile whose middle is no farther than this
-   * from the middle of the hero's tile. Leave it out for the default of 4.
+   * from the middle of the hero's tile. It is 0 or more: 0 reveals only the hero's own tile. Leave it out for the
+   * default of 4.
    */
   readonly automapRevealDistance?: number;
   readonly areas: readonly AreaDefinition[];
