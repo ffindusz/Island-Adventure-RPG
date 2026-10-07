@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import { VIEW_WIDTH } from './config';
+import { HUD_BOTTOM } from './hud';
 import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Graphics } from './pixel-font';
 
@@ -10,12 +11,14 @@ import type { Graphics } from './pixel-font';
 /** Above the HUD, below the notice of what the hero found, and below the overlay. */
 const BANNER_DEPTH = 120;
 
-/** Below the HUD, which sits at the top left. */
-const TOP = 36;
 const SIDE_MARGIN = 6;
 const PADDING = 6;
 const BORDER = 2;
 const LINE_GAP = 4;
+/** The air between the HUD and the border of the banner, in canvas pixels. */
+const BELOW_HUD = 4;
+/** Where the banner's panel starts: below the HUD and the banner's own border, so that the two never overlap. */
+const TOP = HUD_BOTTOM + BELOW_HUD + BORDER;
 
 const PANEL_COLOUR = 0x1b1b24;
 const PANEL_ALPHA = 0.85;
