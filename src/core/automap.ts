@@ -36,7 +36,7 @@ export function revealAroundHero(state: PlayState, content: Content): void {
 export function automapPage(state: PlayState, content: Content): AutomapPageView {
   return {
     id: 'automap',
-    areas: Object.values(content.areas).map((area) => automapArea(state, area)),
+    areas: content.areaOrder.map((id) => automapArea(state, areaOf(content, id))),
   };
 }
 
@@ -53,6 +53,7 @@ function automapArea(state: PlayState, area: Area): AutomapAreaView {
     height: area.height,
     current: area.id === state.areaId,
     discovered,
+    connections: [...new Set(area.exits.map((exit) => exit.to.areaId))],
     hero: area.id === state.areaId ? { ...state.hero.position } : null,
     terrain,
   };

@@ -168,6 +168,8 @@ export interface Content {
   readonly gear: Readonly<Record<string, GearDefinition>>;
   readonly monsterTypes: Readonly<Record<string, MonsterType>>;
   readonly areas: Readonly<Record<string, Area>>;
+  /** The ids of the areas in the order the definition lists them, which an object does not keep for all keys. */
+  readonly areaOrder: readonly string[];
   /** How many fixed steps the text of an Adventure Area stays on the screen. */
   readonly areaTextSteps: number;
   /** How far from the hero's tile the Automap reveals terrain, in tiles. */
@@ -242,6 +244,7 @@ export function loadContent(definition: ContentDefinition): Content {
     gear,
     monsterTypes,
     areas,
+    areaOrder: definition.areas.map((area) => area.id),
     areaTextSteps: msToSteps(areaTextMs),
     automapRevealDistance,
     start: { areaId: definition.start.area, tile: definition.start.tile },

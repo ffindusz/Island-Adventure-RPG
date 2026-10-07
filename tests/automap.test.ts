@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import type { AreaDefinition, AutomapAreaView, AutomapPageView, Game } from '../src/core';
+import type {
+  AreaDefinition,
+  AutomapAreaView,
+  AutomapPageView,
+  ContentDefinition,
+  Direction,
+  ExitDefinition,
+  Game,
+} from '../src/core';
 import { ARENA_LAYOUT, FIELD_LAYOUT, arena, gameAtTitle, newGame, playingView, walk } from './fixtures';
+import type { ArenaOptions } from './fixtures';
 
 // The Automap, tested at the Game core's interface: commands and steps in, the page view and the snapshot out.
 //
@@ -59,6 +68,63 @@ function picture(area: AutomapAreaView): string[] {
 }
 
 const CELLAR: AreaDefinition = { id: 'cellar', name: 'Cellar', layout: ARENA_LAYOUT, monsters: [] };
+
+// A route of three rooms in a row, each of the arena's size and layout. A door on tile (5, 3) leads on to the next room
+// and a door on tile (1, 3) leads back. The hero arrives from the west at tile (2, 3) and from the east at tile (4, 3),
+// and starts in the arena at (3.5, 3.5). The content lists the rooms in the order of the route, which is not the order
+// of their names.
+//
+//   arena   exit "to-cellar" (5, 3)                         entrance "from-cellar" (4, 3)
+//   cellar  exits "to-arena" (1, 3) and "to-attic" (5, 3)   entrances "from-arena" (2, 3) and "from-attic" (4, 3)
+//   attic   exit "to-cellar" (1, 3)                         entrance "from-cellar" (2, 3)
+
+function door(id: string, col: number, area: string, entrance: string, row = 3): ExitDefinition {
+  return { id, zone: { col, row, width: 1, height: 1 }, to: { area, entrance } };
+}
+
+const CELLAR_ROOM: AreaDefinition = {
+  id: 'cellar',
+  name: 'Cellar',
+  layout: ARENA_LAYOUT,
+  monsters: [],
+  entrances: [
+    { id: 'from-arena', tile: { col: 2, row: 3 } },
+    { id: 'from-attic', tile: { col: 4, row: 3 } },
+  ],
+  exits: [door('to-arena', 1, 'arena', 'from-cellar'), door('to-attic', 5, 'attic', 'from-cellar')],
+};
+
+const ATTIC_ROOM: AreaDefinition = {
+  id: 'attic',
+  name: 'Attic',
+  layout: ARENA_LAYOUT,
+  monsters: [],
+  entrances: [{ id: 'from-cellar', tile: { col: 2, row: 3 } }],
+  exits: [door('to-cellar', 1, 'cellar', 'from-attic')],
+};
+
+/** The arena, the cellar and the attic, with the hero in the arena. `options` replaces parts of the arena. */
+function route(options: ArenaOptions = {}): ContentDefinition {
+  return arena({
+    entrances: [{ id: 'from-cellar', tile: { col: 4, row: 3 } }],
+    exits: [door('to-cellar', 5, 'cellar', 'from-arena')],
+    otherAreas: [CELLAR_ROOM, ATTIC_ROOM],
+    ...options,
+  });
+}
+
+/** Walks the hero in a direction until it has gone through an exit, and stops it there. */
+function crossExit(game: Game, direction: Direction): void {
+  const from = playingView(game).area.id;
+  game.send({ type: 'move', direction });
+  for (let steps = 0; steps < 100 && playingView(game).area.id === from; steps++) {
+    game.step();
+  }
+  game.send({ type: 'stop', direction });
+  if (playingView(game).area.id === from) {
+    throw new Error(`The hero did not leave area "${from}"`);
+  }
+}
 
 describe('The Automap at the start of the adventure', () => {
   it('shows the terrain around the hero and nothing else of its area', () => {
@@ -212,5 +278,80 @@ describe('The reveal distance', () => {
     expect(() => gameAtTitle(arena({ automapRevealDistance: distance }))).toThrow(
       `The Automap reveal distance must be 0 or more, but it is ${shown}`,
     );
+  });
+});
+
+describe('The route on the Automap', () => {
+  const idsOnMap = (game: Game): string[] => automap(game).areas.map((area) => area.id);
+
+  it('lists every Adventure Area of the content in the order the content lists them', () => {
+    const game = newGame(route());
+
+    expect(idsOnMap(game)).toEqual(['arena', 'cellar', 'attic']);
+  });
+
+  it('keeps that order whatever the ids look like', () => {
+    // An object lists the keys that look like whole numbers first, in ascending order, whatever order they were added in.
+    const game = newGame(arena({ otherAreas: [{ ...CELLAR, id: '2' }, { ...CELLAR, id: '1' }] }));
+
+    expect(idsOnMap(game)).toEqual(['arena', '2', '1']);
+  });
+
+  it('shows the connections of each area: the areas its exits lead to, in the order of its exits', () => {
+    const game = newGame(route());
+
+    expect(automap(game).areas.map((area) => [area.id, area.connections])).toEqual([
+      ['arena', ['cellar']],
+      ['cellar', ['arena', 'attic']],
+      ['attic', ['cellar']],
+    ]);
+  });
+
+  it('shows a connection once, however many exits lead to the same area', () => {
+    const exits = [door('to-cellar', 5, 'cellar', 'from-arena'), door('to-cellar-too', 5, 'cellar', 'from-arena', 2)];
+    const game = newGame(route({ exits }));
+
+    expect(areaOnMap(game, 'arena').connections).toEqual(['cellar']);
+  });
+
+  it('shows an Adventure Area with no exit as connected to nothing', () => {
+    const game = newGame(arena());
+
+    expect(areaOnMap(game, 'arena').connections).toEqual([]);
+  });
+
+  it('shows an area the hero has not been to on the route, with its connections but not what it is', () => {
+    const game = newGame(route());
+
+    expect(areaOnMap(game, 'attic')).toMatchObject({ name: null, discovered: false, connections: ['cellar'] });
+  });
+
+  it('highlights the area the hero is in, wherever it goes', () => {
+    const game = newGame(route());
+    const currentAreas = (): string[] =>
+      automap(game)
+        .areas.filter((area) => area.current)
+        .map((area) => area.id);
+
+    expect(currentAreas()).toEqual(['arena']);
+
+    crossExit(game, 'right');
+    expect(currentAreas()).toEqual(['cellar']);
+
+    crossExit(game, 'right');
+    expect(currentAreas()).toEqual(['attic']);
+
+    crossExit(game, 'left');
+    expect(currentAreas()).toEqual(['cellar']);
+  });
+
+  it('puts the hero in the area it has gone into, at the entrance, and in no other', () => {
+    const game = newGame(route());
+
+    crossExit(game, 'right');
+
+    expect(areaOnMap(game, 'cellar').hero).toEqual({ x: 2.5, y: 3.5 });
+    expect(areaOnMap(game, 'arena').hero).toBeNull();
+    expect(areaOnMap(game, 'attic').hero).toBeNull();
   });
 });

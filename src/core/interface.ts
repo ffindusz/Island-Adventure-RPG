@@ -329,6 +329,8 @@ export interface AutomapAreaView {
   readonly current: boolean;
   /** Whether the hero has been in this area, so that it has explored some of it. */
   readonly discovered: boolean;
+  /** The ids of the areas that its exits lead to, each once, in the order of its exits. The route shows them all along. */
+  readonly connections: readonly string[];
   /** Where the hero is in this area, in tile units, if it is in this area now. */
   readonly hero: Point | null;
   /** The kind of terrain on each tile the hero has explored, indexed [row][col]; null on a tile it has not. */
