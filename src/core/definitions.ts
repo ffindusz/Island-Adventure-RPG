@@ -139,10 +139,35 @@ export interface ChaserMonsterDefinition extends MonsterTypeBase {
 }
 
 /**
+ * A monster that notices the hero, lines up with it, winds up and then dashes in a straight line. The wind-up
+ * telegraphs the lane the dash will follow: the strip, as wide as the monster, from its body to the first solid terrain
+ * or chest in that direction, or as far as the dash reaches. The lane is fixed when the wind-up begins. The dash hurts
+ * the hero only if the hero is in its way, and stops at whatever is: solid terrain, a chest, another monster, the hero.
+ * Afterwards the monster rests, and it can be hit like any other.
+ */
+export interface ChargerMonsterDefinition extends MonsterTypeBase {
+  readonly behavior: 'charger';
+  /** The damage of the hit when the dash reaches the hero, before the hero's Defense reduces it. */
+  readonly damage: number;
+  /** How fast the monster walks to line up with the hero. 0 makes it stand still until the hero is in its line. */
+  readonly speedTilesPerSecond: number;
+  /** How near the hero must come to the monster's body, in tiles, for the monster to notice it and line up. */
+  readonly noticingDistance: number;
+  /** How long the monster winds up before it dashes: the time the player has to leave the lane. */
+  readonly windUpMs: number;
+  /** How fast the monster dashes. */
+  readonly dashSpeedTilesPerSecond: number;
+  /** The farthest the dash goes, in tiles, if nothing stops it before. */
+  readonly dashRange: number;
+  /** How long the monster rests after its dash before it may wind up again: the time the hero can hit it freely. */
+  readonly recoveryMs: number;
+}
+
+/**
  * A monster type. Its `behavior` names the rules the monster follows (see behaviors.ts); the other fields are the
  * numbers that behavior needs. Adding a behavior means adding a member here and an entry in the behavior registry.
  */
-export type MonsterTypeDefinition = StationaryMonsterDefinition | ChaserMonsterDefinition;
+export type MonsterTypeDefinition = StationaryMonsterDefinition | ChaserMonsterDefinition | ChargerMonsterDefinition;
 
 /** One monster standing in an Adventure Area. */
 export interface MonsterPlacement {

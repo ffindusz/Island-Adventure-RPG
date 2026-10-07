@@ -1,6 +1,7 @@
 import type { Content, MonsterType } from './content';
 import { monsterTypeOf } from './content';
 import { stepChaser } from './chaser';
+import { stepCharger } from './charger';
 import type { GameEvent } from './interface';
 import type { MonsterState, PlayState } from './state';
 import { livingMonsters } from './state';
@@ -26,6 +27,7 @@ export type Behavior<T extends MonsterType> = (
 const BEHAVIORS: { readonly [B in MonsterType['behavior']]: Behavior<Extract<MonsterType, { behavior: B }>> } = {
   stationary: () => [],
   chaser: stepChaser,
+  charger: stepCharger,
 };
 
 /** Lets every living monster of the current Adventure Area act for one fixed step. Returns what happened, in order. */

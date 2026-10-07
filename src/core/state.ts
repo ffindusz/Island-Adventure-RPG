@@ -27,8 +27,17 @@ export type MonsterAction =
   | { readonly type: 'idle' }
   /** Has noticed the hero and walks toward it. */
   | { readonly type: 'chasing' }
-  /** Telegraphing an attack: it lands on `zone`, which was fixed when the wind-up began, after `length` steps. */
-  | { readonly type: 'winding-up'; readonly zone: Box; elapsed: number; readonly length: number }
+  /**
+   * Telegraphing an attack: it lands on `zone`, which was fixed when the wind-up began, after `length` steps. A
+   * monster whose attack is a dash also keeps the `direction` it will dash in, fixed at the same time.
+   */
+  | {
+      readonly type: 'winding-up';
+      readonly zone: Box;
+      elapsed: number;
+      readonly length: number;
+      readonly direction?: Direction;
+    }
   /** Resting after an attack, for this many more steps. */
   | { readonly type: 'recovering'; stepsLeft: number };
 

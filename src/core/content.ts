@@ -3,6 +3,7 @@ import { CONSUMABLE_IDS, GEAR_SLOTS, STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
   ChaserMonsterDefinition,
+  ChargerMonsterDefinition,
   ChestContents,
   ChestDefinition,
   ConsumableId,
@@ -120,8 +121,27 @@ export interface ChaserMonsterType {
   readonly recoverySteps: number;
 }
 
+export interface ChargerMonsterType {
+  readonly behavior: 'charger';
+  readonly health: number;
+  readonly size: number;
+  readonly experience: number;
+  /** Never absent: a type without a drop table has an empty one. */
+  readonly drops: readonly DropDefinition[];
+  readonly damage: number;
+  /** Tiles walked in one fixed step to line up with the hero. */
+  readonly speedPerStep: number;
+  readonly noticingDistance: number;
+  readonly windUpSteps: number;
+  /** Tiles dashed in one fixed step. */
+  readonly dashSpeedPerStep: number;
+  /** The farthest the dash goes, in tiles. */
+  readonly dashRange: number;
+  readonly recoverySteps: number;
+}
+
 /** A monster type as the rules use it, one member for each behavior. */
-export type MonsterType = StationaryMonsterType | ChaserMonsterType;
+export type MonsterType = StationaryMonsterType | ChaserMonsterType | ChargerMonsterType;
 
 /** The hero's Ranged Weapon as the rules use it. */
 export interface RangedWeapon {
@@ -286,6 +306,8 @@ function loadMonsterType(name: string, definition: MonsterTypeDefinition): Monst
       };
     case 'chaser':
       return loadChaser(name, definition, drops);
+    case 'charger':
+      return loadCharger(name, definition, drops);
     default:
       return refuseBehavior(name, definition);
   }
@@ -322,11 +344,7 @@ function loadChaser(
   requireZeroOrMore(field('noticingDistance'), definition.noticingDistance);
   requireMoreThanZero(field('reach'), definition.reach);
   requireZeroOrMore(field('recoveryMs'), definition.recoveryMs);
-  if (!(definition.windUpMs >= STEP_MS)) {
-    throw new Error(
-      `${field('windUpMs')} must be at least one fixed step (${STEP_MS.toFixed(1)} ms), but it is ${definition.windUpMs}`,
-    );
-  }
+  requireAtLeastOneStep(field('windUpMs'), definition.windUpMs);
   return {
     behavior: 'chaser',
     health: definition.health,
@@ -340,6 +358,42 @@ function loadChaser(
     windUpSteps: msToSteps(definition.windUpMs),
     recoverySteps: msToSteps(definition.recoveryMs),
   };
+}
+
+function loadCharger(
+  name: string,
+  definition: ChargerMonsterDefinition,
+  drops: readonly DropDefinition[],
+): ChargerMonsterType {
+  const field = (fieldName: string) => `Monster type "${name}": ${fieldName}`;
+  requireMoreThanZero(field('damage'), definition.damage);
+  requireZeroOrMore(field('speedTilesPerSecond'), definition.speedTilesPerSecond);
+  requireZeroOrMore(field('noticingDistance'), definition.noticingDistance);
+  requireAtLeastOneStep(field('windUpMs'), definition.windUpMs);
+  requireMoreThanZero(field('dashSpeedTilesPerSecond'), definition.dashSpeedTilesPerSecond);
+  requireMoreThanZero(field('dashRange'), definition.dashRange);
+  requireZeroOrMore(field('recoveryMs'), definition.recoveryMs);
+  return {
+    behavior: 'charger',
+    health: definition.health,
+    size: definition.size,
+    experience: definition.experience,
+    drops,
+    damage: definition.damage,
+    speedPerStep: definition.speedTilesPerSecond / STEPS_PER_SECOND,
+    noticingDistance: definition.noticingDistance,
+    windUpSteps: msToSteps(definition.windUpMs),
+    dashSpeedPerStep: definition.dashSpeedTilesPerSecond / STEPS_PER_SECOND,
+    dashRange: definition.dashRange,
+    recoverySteps: msToSteps(definition.recoveryMs),
+  };
+}
+
+/** A wind-up shorter than one fixed step would be over before it showed: the telegraph needs at least one. */
+function requireAtLeastOneStep(what: string, ms: number): void {
+  if (!(ms >= STEP_MS)) {
+    throw new Error(`${what} must be at least one fixed step (${STEP_MS.toFixed(1)} ms), but it is ${ms}`);
+  }
 }
 
 // These also refuse NaN, which no comparison with a number is true for.
