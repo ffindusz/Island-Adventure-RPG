@@ -23,6 +23,7 @@ import { InventoryMenu } from './inventory-menu';
 import { Notice } from './notice';
 import { Overlay } from './overlay';
 import { PlayerInput } from './player-input';
+import { byShooter } from './projectiles';
 
 /** How long the screen takes to fade in after the hero is defeated and returned, in milliseconds. */
 const DEFEAT_FADE_MS = 500;
@@ -162,10 +163,8 @@ export class PlayScene extends Phaser.Scene {
       drawMonster(this.entityLayer, monster, this.feedback.isFlashing(monster.id));
     }
     // The hero's arrows are sprites of the hero (hero-sprite.ts); a monster's projectile is an orb drawn here.
-    for (const arrow of view.arrows) {
-      if (arrow.shooter === 'monster') {
-        drawProjectile(this.entityLayer, arrow);
-      }
+    for (const projectile of byShooter(view.arrows).monster) {
+      drawProjectile(this.entityLayer, projectile);
     }
     this.heroSprite.draw(view.hero, view.arrows);
     this.effectLayer.clear();

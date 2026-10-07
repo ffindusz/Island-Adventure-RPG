@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { ArrowView, Direction, GameEvent, HeroView, Point } from '../core';
 import { TILE_SIZE } from './config';
 import { DEPTH } from './depths';
+import { byShooter } from './projectiles';
 
 // The hero, the weapon in its hand, the slash of the sword and the hero's arrows in flight, as sprites. The Hunter's
 // sheet has one attack pose for each direction and nothing for being hit, so the weapon, the slash and the flash of a
@@ -143,7 +144,7 @@ export class HeroSprite {
     this.walkMs = this.movingMsLeft > 0 ? this.walkMs + frameMs : 0;
   }
 
-  /** Puts every sprite where and how the view says. */
+  /** Puts every sprite where and how the view says. Of the arrows in the air it draws the hero's own. */
   draw(hero: HeroView, arrows: readonly ArrowView[]): void {
     this.noteMoving(hero.position);
     const middle = { x: px(hero.position.x), y: px(hero.position.y) };
@@ -159,7 +160,7 @@ export class HeroSprite {
         this.drawBow(middle, this.pose);
       }
     }
-    this.drawArrows(arrows);
+    this.drawArrows(byShooter(arrows).hero);
   }
 
   private noteMoving(position: Point): void {
