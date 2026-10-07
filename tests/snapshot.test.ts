@@ -3,9 +3,11 @@ import type { Snapshot } from '../src/core';
 import {
   advance,
   arena,
+  biterAt,
   dummyAt,
   face,
   gameAtTitle,
+  monsterAction,
   newGame,
   playingView,
   strike,
@@ -94,5 +96,55 @@ describe('the snapshot', () => {
 
   it('cannot be taken at the title, where there is nothing to save', () => {
     expect(() => gameAtTitle(content).snapshot()).toThrow('There is nothing to save at the title');
+  });
+});
+
+describe('the snapshot of a fight', () => {
+  // A biter beside the hero starts its wind-up on step 1 and hits on step 31, and then rests for 24 steps. The hero has
+  // 20 Health, so that it survives the hits.
+  const fightContent = arena({ hero: { health: 20 }, monsters: [biterAt('biter-1', 4, 3)] });
+
+  function continuedFromFight(snapshot: Snapshot) {
+    const game = gameAtTitle(fightContent);
+    game.send({ type: 'continue', snapshot: throughStorage(snapshot) });
+    return game;
+  }
+
+  it('restores a wind-up in progress: the telegraph looks the same and the damage lands when it would have', () => {
+    const original = newGame(fightContent);
+    advance(original, 10); // 9 of the 30 wind-up steps are over
+
+    const restored = continuedFromFight(original.snapshot());
+
+    expect(restored.view()).toEqual(original.view());
+    expect(monsterAction(restored, 'biter-1')).toMatchObject({
+      type: 'winding-up',
+      zone: { minX: 3.5, minY: 2.5, maxX: 5.5, maxY: 4.5 },
+    });
+    expect(advance(restored, 20)).toEqual([]); // steps 11 to 30
+    expect(restored.step().map((event) => event.type)).toEqual(['monster-attacked', 'hero-hit']); // step 31
+    expect(playingView(restored).hero.health).toBe(15);
+  });
+
+  it('restores a monster resting after its attack: it winds up again when the rest would have ended', () => {
+    const original = newGame(fightContent);
+    advance(original, 40); // 9 of the 24 recovery steps are over
+
+    const restored = continuedFromFight(original.snapshot());
+
+    expect(monsterAction(restored, 'biter-1')).toEqual({ type: 'recovering' });
+    advance(restored, 14); // step 54
+    expect(monsterAction(restored, 'biter-1')).toEqual({ type: 'recovering' });
+    restored.step(); // step 55
+    expect(monsterAction(restored, 'biter-1')).toMatchObject({ type: 'winding-up', progress: 0 });
+  });
+
+  it('plays on exactly as the game it was taken from does', () => {
+    const original = newGame(fightContent);
+    advance(original, 17);
+    const restored = continuedFromFight(original.snapshot());
+
+    expect(advance(restored, 100)).toEqual(advance(original, 100));
+    expect(restored.view()).toEqual(original.view());
   });
 });
