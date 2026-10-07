@@ -1,4 +1,13 @@
-import type { AreaDefinition, ContentDefinition, EntranceDefinition, ExitDefinition, Game, GameEvent, GameView, Snapshot } from '../src/core';
+import type {
+  AreaDefinition,
+  ContentDefinition,
+  EntranceDefinition,
+  ExitDefinition,
+  Game,
+  GameEvent,
+  GameView,
+  Snapshot,
+} from '../src/core';
 import { CHARGER, SHOOTER, chargerAt, shooterAt } from './enemy-fixtures';
 import {
   FIELD_LAYOUT,
@@ -31,9 +40,11 @@ import {
 //     chests      the armor chest on tile (5, 3), the bow chest on (7, 3) and the iron chest on (6, 2), right around the
 //                 hero; the steel chest on (2, 1), never opened. The arrow cache on (2, 4) holds 6 Ammunition; a second
 //                 cache on (11, 5) is never opened
-//     pickups     a potion on (4, 4), taken on the way, and one on (9, 4), taken after the Checkpoint; one on (11, 4), never taken
+//     pickups     a potion on (4, 4), taken on the way, and one on (9, 4), taken after the Checkpoint; one on (11, 4),
+//                 never taken
 //     monsters    a dummy on (6, 5), which the hero only wounds, and a rat on (3, 5), worth 8 Experience
-//     milestones  the lookout on (5, 4), worth 2 Experience, which the hero reaches; the far point on (11, 1), which it does not
+//     milestones  the lookout on (5, 4), worth 2 Experience, which the hero reaches; the far point on (11, 1), which
+//                 it does not
 //     Checkpoint  the camp on (3, 3)
 //     exit        on (12, 3), to the ruins; the entrance from the ruins is on (11, 3)
 //   ruins  (the hero arrives on tile (2, 3), at (2.5, 3.5))
