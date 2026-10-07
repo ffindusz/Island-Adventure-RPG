@@ -1,7 +1,7 @@
 import type { Content } from './content';
 import { monsterTypeOf } from './content';
-import type { Direction, Point } from './geometry';
-import { centerOf } from './geometry';
+import type { Box, Direction, Point } from './geometry';
+import { boxAround, centerOf } from './geometry';
 
 /** Bumped whenever the shape of a Snapshot changes in a way an older save cannot satisfy. */
 export const SNAPSHOT_VERSION = 1;
@@ -71,4 +71,13 @@ export function currentAreaState(state: PlayState): AreaState {
     throw new Error(`The state has no world for area "${state.areaId}"`);
   }
   return area;
+}
+
+/** The monsters of the current Adventure Area that have not been defeated. */
+export function livingMonsters(state: PlayState): MonsterState[] {
+  return currentAreaState(state).monsters.filter((monster) => monster.health > 0);
+}
+
+export function monsterBody(monster: MonsterState, content: Content): Box {
+  return boxAround(monster.position, monsterTypeOf(content, monster.type).size);
 }
