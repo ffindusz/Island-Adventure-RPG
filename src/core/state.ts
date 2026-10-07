@@ -42,6 +42,8 @@ export interface HeroState {
   health: number;
   /** Fixed steps left before the hero can attack again; 0 means ready. */
   attackCooldown: number;
+  /** The Experience the hero has earned in all. The Level is worked out from it (see stats.ts). */
+  experience: number;
 }
 
 export interface PlayState {
@@ -68,7 +70,13 @@ export function newPlayState(content: Content): PlayState {
   return {
     phase: 'playing',
     areaId: content.start.areaId,
-    hero: { position: centerOf(content.start.tile), facing: 'down', health: heroMaxHealth(content), attackCooldown: 0 },
+    hero: {
+      position: centerOf(content.start.tile),
+      facing: 'down',
+      health: heroMaxHealth(content),
+      attackCooldown: 0,
+      experience: 0,
+    },
     areas,
   };
 }

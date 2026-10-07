@@ -46,6 +46,8 @@ export type GameEvent =
   | { readonly type: 'monster-attacked'; readonly monsterId: string; readonly zone: Box }
   /** The hero took damage, after Defense; `health` is what the hero has left. */
   | { readonly type: 'hero-hit'; readonly monsterId: string; readonly damage: number; readonly health: number }
+  /** The hero earned Experience, by defeating a monster. `amount` is what was added to the hero's total. */
+  | { readonly type: 'experience-gained'; readonly amount: number }
   /**
    * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health where
    * defeat sends it, and the monsters of the Adventure Area are back as they began: the view shows the new state.

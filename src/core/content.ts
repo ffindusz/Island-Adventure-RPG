@@ -34,6 +34,7 @@ export interface ChaserMonsterType {
   readonly behavior: 'chaser';
   readonly health: number;
   readonly size: number;
+  readonly experience: number;
   readonly damage: number;
   /** Tiles walked in one fixed step. */
   readonly speedPerStep: number;
@@ -109,9 +110,15 @@ export function loadContent(definition: ContentDefinition): Content {
 }
 
 function loadMonsterType(name: string, definition: MonsterTypeDefinition): MonsterType {
+  requireZeroOrMore(`Monster type "${name}": experience`, definition.experience);
   switch (definition.behavior) {
     case 'stationary':
-      return { behavior: 'stationary', health: definition.health, size: definition.size };
+      return {
+        behavior: 'stationary',
+        health: definition.health,
+        size: definition.size,
+        experience: definition.experience,
+      };
     case 'chaser':
       return loadChaser(name, definition);
     default:
@@ -141,6 +148,7 @@ function loadChaser(name: string, definition: ChaserMonsterDefinition): ChaserMo
     behavior: 'chaser',
     health: definition.health,
     size: definition.size,
+    experience: definition.experience,
     damage: definition.damage,
     speedPerStep: definition.speedTilesPerSecond / STEPS_PER_SECOND,
     noticingDistance: definition.noticingDistance,

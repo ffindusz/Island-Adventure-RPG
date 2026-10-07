@@ -39,6 +39,8 @@ export interface MonsterTypeBase {
   readonly health: number;
   /** Width and height of the monster's body, in tiles. */
   readonly size: number;
+  /** The Experience the hero earns each time it defeats a monster of this type. */
+  readonly experience: number;
 }
 
 /** A monster that stays where it was placed and never attacks. */

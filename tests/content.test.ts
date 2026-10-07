@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGame } from '../src/core';
 import type { ChaserMonsterDefinition, ContentDefinition, MonsterTypeDefinition } from '../src/core';
-import { ARENA_LAYOUT, arena, BITER, dummyAt, fixedRandom } from './fixtures';
+import { ARENA_LAYOUT, arena, BITER, dummyAt, fixedRandom, frailMonster } from './fixtures';
 
 function expectRefused(content: ContentDefinition, message: string): void {
   expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
@@ -68,7 +68,7 @@ describe('content that does not make sense is refused when the game is created',
 
   it('a monster type has a behavior that does not exist', () => {
     // Content read from a file could say this, and the compiler would not notice.
-    const ghost = { behavior: 'teleporter', health: 3, size: 0.5 } as unknown as MonsterTypeDefinition;
+    const ghost = { behavior: 'teleporter', health: 3, size: 0.5, experience: 1 } as unknown as MonsterTypeDefinition;
 
     expectRefused(arena({ monsterTypes: { ghost } }), 'Monster type "ghost" has unknown behavior "teleporter"');
   });
@@ -124,6 +124,16 @@ describe('numbers the rules cannot work with are refused when the game is create
       content: biterWith({ recoveryMs: -1 }),
       message: 'Monster type "biter": recoveryMs must be 0 or more, but it is -1',
     },
+    {
+      what: 'a monster that earns the hero negative Experience',
+      content: biterWith({ experience: -1 }),
+      message: 'Monster type "biter": experience must be 0 or more, but it is -1',
+    },
+    {
+      what: 'a stationary monster that earns the hero negative Experience',
+      content: arena({ monsterTypes: { dummy: frailMonster(-5) } }),
+      message: 'Monster type "dummy": experience must be 0 or more, but it is -5',
+    },
   ])('$what', ({ content, message }) => {
     expectRefused(content, message);
   });
@@ -133,7 +143,15 @@ describe('numbers the rules cannot work with are refused when the game is create
       hero: { defense: 0 },
       minimumDamage: 0,
       monsterTypes: {
-        biter: { ...BITER, speedTilesPerSecond: 0, noticingDistance: 0, recoveryMs: 0, windUpMs: 1000 / 60 },
+        biter: {
+          ...BITER,
+          speedTilesPerSecond: 0,
+          noticingDistance: 0,
+          recoveryMs: 0,
+          windUpMs: 1000 / 60,
+          experience: 0,
+        },
+        dummy: frailMonster(0),
       },
     });
 
