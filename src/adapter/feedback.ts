@@ -57,7 +57,8 @@ export class Feedback {
           break;
         case 'hero-defeated':
           // The fight is over and the monsters are back as they began: nothing of it should linger on the new scene.
-          // What the hero found since the Checkpoint is back where it was, so the notice of finding it goes too.
+          // The notice on the screen told of what happened before the fall, and what the hero found since the Checkpoint
+          // is back where it was, so it goes too.
           this.clearFight();
           this.heroHurtMsLeft = 0;
           this.told = null;
