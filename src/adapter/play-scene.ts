@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
-import type { Game, GameEvent, GameView } from '../core';
-import { drawHero, drawMonster, drawStrike, drawSwing, drawTelegraph, drawTerrain } from './art';
+import type { Command, Game, GameEvent, GameView } from '../core';
+import { drawHero, drawInteractable, drawMonster, drawStrike, drawSwing, drawTelegraph, drawTerrain } from './art';
 import { Feedback } from './feedback';
 import { FixedStepClock } from './fixed-step';
 import { Hud } from './hud';
+import { InventoryMenu } from './inventory-menu';
+import { Notice } from './notice';
 import { Overlay } from './overlay';
 import { PlayerInput } from './player-input';
 
@@ -15,6 +17,11 @@ function playerIsWatching(): boolean {
   return document.hasFocus() && !document.hidden;
 }
 
+/** Whether the game waits for the player: a page is open, or a Stat Point has to be assigned. */
+function gameIsWaiting(view: GameView): boolean {
+  return view.phase === 'playing' && (view.page !== null || view.levelUp !== null);
+}
+
 /**
  * The play screen. Every frame it turns the keyboard into commands, runs the Game core's fixed steps, and draws
  * what the core's view says. It decides nothing about the game, except that no step runs while nobody is watching.
@@ -23,8 +30,10 @@ export class PlayScene extends Phaser.Scene {
   private readonly core: Game;
   private readonly clock = new FixedStepClock();
   private readonly feedback = new Feedback();
+  private readonly inventoryMenu = new InventoryMenu();
   private playerInput!: PlayerInput;
   private hud!: Hud;
+  private notice!: Notice;
   private overlay!: Overlay;
   private terrainLayer!: Phaser.GameObjects.Graphics;
   private telegraphLayer!: Phaser.GameObjects.Graphics;
@@ -38,13 +47,14 @@ export class PlayScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Added in drawing order: ground, then the telegraphs of monster attacks, then hero and monsters, then the
-    // swings and strikes on top. The HUD draws above them all, and the overlay above the HUD.
+    // Added in drawing order: ground, then the telegraphs of monster attacks, then chests, hero and monsters, then the
+    // swings and strikes on top. The HUD draws above them all, the notice above the HUD, and the overlay above that.
     this.terrainLayer = this.add.graphics();
     this.telegraphLayer = this.add.graphics();
     this.entityLayer = this.add.graphics();
     this.effectLayer = this.add.graphics();
     this.hud = new Hud(this);
+    this.notice = new Notice(this);
     this.overlay = new Overlay(this);
     const keyboard = this.input.keyboard;
     if (keyboard === null) {
@@ -56,8 +66,22 @@ export class PlayScene extends Phaser.Scene {
   override update(_time: number, frameMs: number): void {
     const watching = playerIsWatching();
     const events: GameEvent[] = [];
-    for (const command of this.playerInput.poll()) {
-      events.push(...this.core.send(command));
+    const send = (commands: readonly Command[]): void => {
+      for (const command of commands) {
+        events.push(...this.core.send(command));
+      }
+    };
+    const viewAtStart = this.core.view();
+    const waiting = gameIsWaiting(viewAtStart);
+    if (!waiting) {
+      send(this.playerInput.pollWalking());
+    }
+    send(this.inventoryMenu.update(viewAtStart, this.playerInput.pollMenu()));
+    send(this.playerInput.pollActions());
+    if (waiting && !gameIsWaiting(this.core.view())) {
+      // The wait ended just now. The walk keys were left alone during it, so the hero walks by the keys that are down
+      // now, from the first step of this frame.
+      send(this.playerInput.pollWalking());
     }
     for (let steps = this.clock.stepsDue(frameMs, watching); steps > 0; steps -= 1) {
       events.push(...this.core.step());
@@ -68,7 +92,12 @@ export class PlayScene extends Phaser.Scene {
       // The core has already put the hero back; the fade hides the cut. The world keeps running while it plays.
       this.cameras.main.fadeIn(DEFEAT_FADE_MS, 0, 0, 0);
     }
-    this.draw(this.core.view(), watching);
+    const view = this.core.view();
+    if (gameIsWaiting(view)) {
+      // A page or a Stat Point covers the notice, and the player is already where it pointed them.
+      this.feedback.dismissPickup();
+    }
+    this.draw(view, watching);
   }
 
   private draw(view: GameView, watching: boolean): void {
@@ -81,6 +110,9 @@ export class PlayScene extends Phaser.Scene {
     }
     this.telegraphLayer.clear();
     this.entityLayer.clear();
+    for (const interactable of view.interactables) {
+      drawInteractable(this.entityLayer, interactable);
+    }
     for (const monster of view.monsters) {
       if (monster.action.type === 'winding-up') {
         drawTelegraph(this.telegraphLayer, monster.action.zone, monster.action.progress);
@@ -96,6 +128,7 @@ export class PlayScene extends Phaser.Scene {
       drawStrike(this.effectLayer, zone);
     }
     this.hud.draw(view);
-    this.overlay.draw(view, watching);
+    this.notice.draw(this.feedback.pickupNotice());
+    this.overlay.draw(view, watching, this.inventoryMenu.position);
   }
 }

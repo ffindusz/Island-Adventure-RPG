@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { createGame } from '../src/core';
-import type { ChaserMonsterDefinition, ContentDefinition, MonsterTypeDefinition, TileRect } from '../src/core';
-import { ARENA_LAYOUT, arena, BITER, dummyAt, fixedRandom, frailMonster, milestone } from './fixtures';
+import type {
+  ChaserMonsterDefinition,
+  ContentDefinition,
+  GearDefinition,
+  HeroDefinition,
+  InteractableDefinition,
+  MonsterTypeDefinition,
+  TileRect,
+} from '../src/core';
+import { ARENA_LAYOUT, arena, BITER, chestAt, dummyAt, fixedRandom, frailMonster, milestone } from './fixtures';
 
 function expectRefused(content: ContentDefinition, message: string): void {
   expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
@@ -246,6 +254,152 @@ describe('numbers the rules cannot work with are refused when the game is create
         },
         dummy: frailMonster(0),
       },
+    });
+
+    expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
+  });
+});
+
+describe('Gear and interactables that do not make sense are refused when the game is created', () => {
+  // Content read from a file could say these, and the compiler would not notice.
+  const headGear = { name: 'Cap', slot: 'head', bonus: 1 } as unknown as GearDefinition;
+  const headStart = { head: 'basic-armor' } as unknown as HeroDefinition['startingGear'];
+  const lever = { kind: 'lever', id: 'lever-1', tile: { col: 1, row: 1 } } as unknown as InteractableDefinition;
+  const potionChest = {
+    kind: 'chest',
+    id: 'chest-1',
+    tile: { col: 1, row: 1 },
+    contents: { kind: 'potion' },
+  } as unknown as InteractableDefinition;
+
+  it.each([
+    {
+      what: 'a piece of Gear for a slot that does not exist',
+      content: arena({ gear: { cap: headGear } }),
+      message: 'Gear "cap" has unknown slot "head"',
+    },
+    {
+      what: 'a piece of Gear that has no name for the player to read',
+      content: arena({ gear: { cap: { name: ' ', slot: 'armor', bonus: 1 } } }),
+      message: 'Gear "cap" has no name',
+    },
+    {
+      what: 'a piece of Gear with a negative bonus',
+      content: arena({ gear: { rusty: { name: 'Rusty Sword', slot: 'melee-weapon', bonus: -1 } } }),
+      message: 'Gear "rusty": bonus must be 0 or more, but it is -1',
+    },
+    {
+      what: 'a hero that cannot reach anything to interact with',
+      content: arena({ hero: { interactionReach: 0 } }),
+      message: "The hero's interaction reach must be more than 0, but it is 0",
+    },
+    {
+      what: 'starting Gear that does not exist',
+      content: arena({ hero: { startingGear: { armor: 'nothing' } } }),
+      message: 'The hero starts with unknown Gear "nothing"',
+    },
+    {
+      what: 'starting Gear in a slot it does not belong in',
+      content: arena({ hero: { startingGear: { armor: 'iron-sword' } } }),
+      message: 'The hero\'s starting Gear for slot "armor" is "iron-sword", which belongs in slot "melee-weapon"',
+    },
+    {
+      what: 'starting Gear for a slot that does not exist',
+      content: arena({ hero: { startingGear: headStart } }),
+      message: 'The hero starts with Gear for unknown slot "head"',
+    },
+    {
+      what: 'a chest that holds Gear that does not exist',
+      content: arena({ interactables: [chestAt('chest-1', 1, 1, 'nothing')] }),
+      message: 'Area "arena": chest "chest-1" holds unknown Gear "nothing"',
+    },
+    {
+      what: 'a chest with contents of a kind that does not exist',
+      content: arena({ interactables: [potionChest] }),
+      message: 'Area "arena": chest "chest-1" holds unknown contents "potion"',
+    },
+    {
+      what: 'an interactable of a kind that does not exist',
+      content: arena({ interactables: [lever] }),
+      message: 'Area "arena": interactable "lever-1" has unknown kind "lever"',
+    },
+    {
+      what: 'a chest on solid terrain',
+      content: arena({ interactables: [chestAt('chest-1', 2, 2, 'iron-sword')] }), // the water
+      message: 'Area "arena": chest "chest-1" is placed at (col 2, row 2), which is solid terrain or outside the map',
+    },
+    {
+      what: 'a chest outside the map',
+      content: arena({ interactables: [chestAt('chest-1', 9, 3, 'iron-sword')] }),
+      message: 'Area "arena": chest "chest-1" is placed at (col 9, row 3), which is solid terrain or outside the map',
+    },
+    {
+      what: 'a chest where the hero starts',
+      content: arena({ interactables: [chestAt('chest-1', 3, 3, 'iron-sword')] }),
+      message: 'Area "arena": chest "chest-1" is placed at (col 3, row 3), where the hero starts',
+    },
+    {
+      what: 'a chest where a monster starts',
+      content: arena({
+        monsters: [dummyAt('dummy-1', 5, 3)],
+        interactables: [chestAt('chest-1', 5, 3, 'iron-sword')],
+      }),
+      message: 'Area "arena": chest "chest-1" is placed at (col 5, row 3), where monster "dummy-1" starts',
+    },
+    {
+      what: 'two chests on the same tile',
+      content: arena({
+        interactables: [chestAt('chest-1', 4, 3, 'iron-sword'), chestAt('chest-2', 4, 3, 'steel-sword')],
+      }),
+      message: 'Area "arena": chest "chest-2" is placed at (col 4, row 3), where chest "chest-1" already stands',
+    },
+    {
+      what: 'two interactables with the same id, even in different Adventure Areas',
+      content: arena({
+        interactables: [chestAt('chest-1', 4, 3, 'iron-sword')],
+        otherAreas: [
+          {
+            id: 'cellar',
+            name: 'Cellar',
+            layout: ARENA_LAYOUT,
+            monsters: [],
+            interactables: [chestAt('chest-1', 4, 3, 'steel-sword')],
+          },
+        ],
+      }),
+      message: 'Interactable id "chest-1" is used more than once',
+    },
+    {
+      what: 'the same piece of Gear in two chests: the hero carries each piece at most once',
+      content: arena({
+        interactables: [chestAt('chest-1', 4, 3, 'iron-sword'), chestAt('chest-2', 5, 3, 'iron-sword')],
+      }),
+      message: 'Gear "iron-sword" is given more than once: by chest "chest-1" and by chest "chest-2"',
+    },
+    {
+      what: 'Gear in a chest that the hero starts with',
+      content: arena({ interactables: [chestAt('chest-1', 4, 3, 'basic-sword')] }),
+      message: 'Gear "basic-sword" is given more than once: by the hero\'s starting Gear and by chest "chest-1"',
+    },
+  ])('$what', ({ content, message }) => {
+    expectRefused(content, message);
+  });
+
+  it('the Gear and chests that still make sense are accepted', () => {
+    const content = arena({
+      hero: { startingGear: { 'melee-weapon': 'basic-sword' }, interactionReach: 0.01 },
+      gear: { 'spare-ring': { name: 'Ring', slot: 'armor', bonus: 0 } },
+      monsters: [dummyAt('dummy-1', 5, 3)],
+      interactables: [chestAt('beside-hero', 3, 4, 'iron-sword'), chestAt('beside-monster', 5, 4, 'spare-ring')],
+      otherAreas: [
+        {
+          id: 'cellar',
+          name: 'Cellar',
+          layout: ARENA_LAYOUT,
+          monsters: [],
+          interactables: [chestAt('on-hero-start-tile-of-another-area', 3, 3, 'steel-sword')],
+        },
+      ],
     });
 
     expect(() => createGame({ content, random: fixedRandom })).not.toThrow();

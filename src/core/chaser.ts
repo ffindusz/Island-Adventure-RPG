@@ -3,6 +3,7 @@ import type { Content, ChaserMonsterType } from './content';
 import { expandBox, overlaps } from './geometry';
 import type { Direction, Point } from './geometry';
 import { hurtHero } from './hero-damage';
+import { interactableObstacles } from './interactables';
 import type { GameEvent } from './interface';
 import { moveBody } from './movement';
 import { heroBody, livingMonsters, monsterBody } from './state';
@@ -54,7 +55,11 @@ function approach(monster: MonsterState, type: ChaserMonsterType, state: PlaySta
     type.size,
     directionToward(monster.position, state.hero.position),
     type.speedPerStep,
-    [heroBody(state, content), ...others.map((other) => monsterBody(other, content))],
+    [
+      heroBody(state, content),
+      ...others.map((other) => monsterBody(other, content)),
+      ...interactableObstacles(state, content),
+    ],
   );
 }
 

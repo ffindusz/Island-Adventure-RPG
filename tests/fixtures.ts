@@ -6,7 +6,9 @@ import type {
   Direction,
   Game,
   GameEvent,
+  GearDefinition,
   HeroDefinition,
+  InteractableDefinition,
   MilestoneDefinition,
   MonsterPlacement,
   MonsterTypeDefinition,
@@ -30,9 +32,13 @@ import type {
 //                           #######
 //   hero                    body 0.5 tiles; walks 7.5 tiles a second, which is 0.125 tile a fixed step
 //                           (8 steps to cross one tile); Health 10; Defense 0; Attack 1; attack cooldown 400 ms,
-//                           which is 24 steps; strike reaches 1 tile beyond the body and is 1 tile wide
+//                           which is 24 steps; strike reaches 1 tile beyond the body and is 1 tile wide; interacts with
+//                           what is within 0.5 tile beyond its body, in the width of its body
 //   Levels                  the Experience that raises the hero to Levels 2 to 6 is 10, 25, 45, 70 and 100 in all;
 //                           each Stat Point adds 3 to Health, 2 to Attack or 1 to Defense
+//   Gear                    the hero begins with a basic sword and basic armor, which add nothing. The arena has more
+//                           Gear to find: an iron sword (+2 Attack), a steel sword (+5), leather armor (+2 Defense)
+//                           and plate armor (+4)
 //   monster "dummy"         stationary: it never moves or attacks; body 0.5 tiles; Health 3; worth 5 Experience
 //   monster "biter"         a chaser; body 0.5 tiles; Health 3; worth 8 Experience; damage 5; walks 3.75 tiles a
 //                           second, which is 0.0625 tile a step (16 steps to cross one tile); notices the hero within
@@ -79,6 +85,15 @@ export const BITER: ChaserMonsterDefinition = {
   recoveryMs: 400,
 };
 
+export const ARENA_GEAR: Readonly<Record<string, GearDefinition>> = {
+  'basic-sword': { name: 'Basic Sword', slot: 'melee-weapon', bonus: 0 },
+  'basic-armor': { name: 'Basic Armor', slot: 'armor', bonus: 0 },
+  'iron-sword': { name: 'Iron Sword', slot: 'melee-weapon', bonus: 2 },
+  'steel-sword': { name: 'Steel Sword', slot: 'melee-weapon', bonus: 5 },
+  'leather-armor': { name: 'Leather Armor', slot: 'armor', bonus: 2 },
+  'plate-armor': { name: 'Plate Armor', slot: 'armor', bonus: 4 },
+};
+
 interface ArenaOptions {
   readonly monsters?: readonly MonsterPlacement[];
   readonly layout?: readonly string[];
@@ -95,6 +110,10 @@ interface ArenaOptions {
   readonly progression?: Partial<ProgressionDefinition>;
   /** The milestones of the arena. There are none unless a test gives some. */
   readonly milestones?: readonly MilestoneDefinition[];
+  /** The interactables of the arena, such as chests. There are none unless a test gives some. */
+  readonly interactables?: readonly InteractableDefinition[];
+  /** More Gear besides ARENA_GEAR, or in place of it. */
+  readonly gear?: Readonly<Record<string, GearDefinition>>;
 }
 
 export function arena(options: ArenaOptions = {}): ContentDefinition {
@@ -108,6 +127,8 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     minimumDamage,
     progression = {},
     milestones = [],
+    interactables = [],
+    gear = {},
   } = options;
   return {
     terrain: {
@@ -124,6 +145,8 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
       attack: 1,
       attackCooldownMs: 400,
       meleeWeapon: { reach: 1, width: 1 },
+      interactionReach: 0.5,
+      startingGear: { 'melee-weapon': 'basic-sword', armor: 'basic-armor' },
       ...hero,
     },
     ...(minimumDamage === undefined ? {} : { minimumDamage }),
@@ -132,14 +155,20 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
       statPointValue: { health: 3, attack: 2, defense: 1 },
       ...progression,
     },
+    gear: { ...ARENA_GEAR, ...gear },
     monsterTypes: {
       dummy: { behavior: 'stationary', health: 3, size: 0.5, experience: 5 },
       biter: BITER,
       ...monsterTypes,
     },
-    areas: [{ id: 'arena', name: 'Arena', layout, monsters, milestones }, ...otherAreas],
+    areas: [{ id: 'arena', name: 'Arena', layout, monsters, milestones, interactables }, ...otherAreas],
     start,
   };
+}
+
+/** A chest on the tile (col, row) that holds the piece of Gear with the given id. */
+export function chestAt(id: string, col: number, row: number, gear: string): InteractableDefinition {
+  return { kind: 'chest', id, tile: { col, row }, contents: { kind: 'gear', gear } };
 }
 
 /** A milestone that gives the given Experience when the hero's body first overlaps the block of tiles `zone`. */

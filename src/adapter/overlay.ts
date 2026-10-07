@@ -1,19 +1,22 @@
 import type Phaser from 'phaser';
-import type { LevelUpView, PageView, PlayingView, StatId, StatPageView } from '../core';
+import type { InventoryPageView, LevelUpView, PageView, PlayingView, StatPageView } from '../core';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
-import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
-import type { Graphics } from './pixel-font';
+import { GEAR_STAT_ABBREVIATIONS, shown, STAT_NAMES } from './labels';
+import { bitmapWidth, drawBitmap, drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
+import type { Bitmap, Graphics } from './pixel-font';
 import { statKeyLabel } from './player-input';
 
 // The overlay: what covers the game while it waits for the player. It shows the level-up choice or the page that is
 // open, or says the game is paused when the window has lost focus. It is drawn from the Game core's view alone, on a
-// dimmed copy of the game, and every number on it is a number the view gives: it works out nothing.
+// dimmed copy of the game, and every number on it is a number the view gives: it works out nothing. The one thing it
+// is given besides the view is where the player's cursor is on the inventory page.
 
 /** Above the HUD. */
 const OVERLAY_DEPTH = 200;
 
 const WIDE_PANEL = 160;
 const NARROW_PANEL = 96;
+const INVENTORY_PANEL = 216;
 /** From the panel's edge to what it holds, and the border around the panel, in canvas pixels. */
 const PADDING = 8;
 const BORDER = 2;
@@ -21,6 +24,12 @@ const BORDER = 2;
 const ROW_GAP = 4;
 const BAR_HEIGHT = 4;
 const COLUMN_GAP = 8;
+
+/** How many pieces of Gear the inventory page lists at once. A longer list scrolls to keep the cursor in view. */
+const VISIBLE_GEAR = 5;
+/** The space between a piece of Gear's mark and its name, and how far its highlight reaches past the row. */
+const MARK_GAP = 6;
+const HIGHLIGHT_REACH = 4;
 
 const BACKDROP_COLOUR = 0x000000;
 const BACKDROP_ALPHA = 0.55;
@@ -32,14 +41,25 @@ const HINT_COLOUR = 0xa0a0b0;
 const GAIN_COLOUR = 0x7bd35f;
 const EXPERIENCE_COLOUR = 0x58a6ff;
 const BAR_TRACK_COLOUR = 0x4a4a5a;
+const HIGHLIGHT_COLOUR = 0x3a3a52;
 
-const STAT_NAMES: Readonly<Record<StatId, string>> = { health: 'HEALTH', attack: 'ATTACK', defense: 'DEFENSE' };
+/** The mark in front of a piece of Gear: filled when it is equipped, hollow when the hero only carries it. */
+const MARK_EQUIPPED: Bitmap = ['.###.', '#####', '#####', '#####', '.###.'];
+const MARK_CARRIED: Bitmap = ['.###.', '#...#', '#...#', '#...#', '.###.'];
 
 type Row =
   /** Centred. */
   | { readonly kind: 'text'; readonly text: string; readonly colour: number }
   /** A name on the left and a value on the right, and a gain after the value when there is one. */
   | { readonly kind: 'stat'; readonly label: string; readonly value: string; readonly gain: string | null }
+  /** A piece of Gear: its mark, its name and its bonus on the right, highlighted when the cursor is on it. */
+  | {
+      readonly kind: 'gear';
+      readonly name: string;
+      readonly bonus: string;
+      readonly equipped: boolean;
+      readonly highlighted: boolean;
+    }
   /** A bar across the panel, filled by `share` from 0 to 1. */
   | { readonly kind: 'bar'; readonly share: number }
   /** A little more room. */
@@ -60,8 +80,8 @@ export class Overlay {
   }
 
   /** Shows what the view says. It draws again only when what it shows has changed. */
-  draw(view: PlayingView, focused: boolean): void {
-    const panel = panelFor(view, focused);
+  draw(view: PlayingView, focused: boolean, inventoryCursor: number): void {
+    const panel = panelFor(view, focused, inventoryCursor);
     const key = JSON.stringify(panel);
     if (key === this.shown) {
       return;
@@ -75,12 +95,12 @@ export class Overlay {
 }
 
 /** The choice that waits comes first, then the page that is open, then the notice that the window lost focus. */
-function panelFor(view: PlayingView, focused: boolean): Panel | null {
+function panelFor(view: PlayingView, focused: boolean, inventoryCursor: number): Panel | null {
   if (view.levelUp !== null) {
     return levelUpPanel(view.levelUp);
   }
   if (view.page !== null) {
-    return pagePanel(view.page);
+    return pagePanel(view.page, inventoryCursor);
   }
   if (!focused) {
     return { width: NARROW_PANEL, rows: [{ kind: 'text', text: 'PAUSED', colour: TITLE_COLOUR }] };
@@ -110,11 +130,46 @@ function levelUpPanel(levelUp: LevelUpView): Panel {
   return { width: WIDE_PANEL, rows };
 }
 
-function pagePanel(page: PageView): Panel {
+function pagePanel(page: PageView, inventoryCursor: number): Panel {
   switch (page.id) {
     case 'stats':
       return statPagePanel(page);
+    case 'inventory':
+      return inventoryPagePanel(page, inventoryCursor);
   }
+}
+
+function inventoryPagePanel(page: InventoryPageView, cursor: number): Panel {
+  const { gear } = page;
+  // The window shows the cursor in the middle of the list when it can, and never runs past either end of it.
+  const first = Math.min(Math.max(0, cursor - Math.floor(VISIBLE_GEAR / 2)), Math.max(0, gear.length - VISIBLE_GEAR));
+  const rows: Row[] = [
+    { kind: 'text', text: 'INVENTORY', colour: TITLE_COLOUR },
+    { kind: 'space' },
+    ...gear.slice(first, first + VISIBLE_GEAR).map(
+      (piece, offset): Row => ({
+        kind: 'gear',
+        name: piece.name,
+        bonus: `+${shown(piece.bonus)} ${GEAR_STAT_ABBREVIATIONS[piece.stat]}`,
+        equipped: piece.equipped,
+        highlighted: first + offset === cursor,
+      }),
+    ),
+  ];
+  if (gear.length === 0) {
+    rows.push({ kind: 'text', text: 'NO GEAR YET', colour: HINT_COLOUR });
+  }
+  if (gear.length > VISIBLE_GEAR) {
+    rows.push({ kind: 'text', text: `${cursor + 1}/${gear.length}`, colour: HINT_COLOUR });
+  }
+  rows.push(
+    { kind: 'space' },
+    { kind: 'text', text: `ATTACK ${shown(page.attack)}  DEFENSE ${shown(page.defense)}`, colour: TEXT_COLOUR },
+    { kind: 'space' },
+    { kind: 'text', text: 'UP/DOWN PICK ENTER EQUIP', colour: HINT_COLOUR },
+    { kind: 'text', text: 'ESC TO CLOSE', colour: HINT_COLOUR },
+  );
+  return { width: INVENTORY_PANEL, rows };
 }
 
 function statPagePanel(page: StatPageView): Panel {
@@ -142,15 +197,20 @@ function statPagePanel(page: StatPageView): Panel {
   };
 }
 
-/** A number as the player reads it: whole when it is whole, with no more than two decimals otherwise. */
-function shown(value: number): string {
-  return String(Math.round(value * 100) / 100);
+/** The text, cut short from the end until it fits the width. */
+function fitted(text: string, width: number): string {
+  let fitting = text;
+  while (fitting.length > 0 && textWidthOf(fitting) > width) {
+    fitting = fitting.slice(0, -1);
+  }
+  return fitting;
 }
 
 function heightOf(row: Row): number {
   switch (row.kind) {
     case 'text':
     case 'stat':
+    case 'gear':
       return TEXT_HEIGHT;
     case 'bar':
       return BAR_HEIGHT;
@@ -202,6 +262,21 @@ function drawRow(graphics: Graphics, row: Row, space: RowSpace, gainColumn: numb
       }
       drawText(graphics, row.value, right - gainColumn - textWidthOf(row.value), top, TEXT_COLOUR);
       return;
+    case 'gear': {
+      if (row.highlighted) {
+        graphics.fillStyle(HIGHLIGHT_COLOUR);
+        graphics.fillRect(left - HIGHLIGHT_REACH, top - 1, right - left + 2 * HIGHLIGHT_REACH, TEXT_HEIGHT + 2);
+        graphics.fillStyle(TITLE_COLOUR);
+        graphics.fillRect(left - HIGHLIGHT_REACH, top - 1, 2, TEXT_HEIGHT + 2);
+      }
+      const colour = row.equipped ? GAIN_COLOUR : TEXT_COLOUR;
+      drawBitmap(graphics, row.equipped ? MARK_EQUIPPED : MARK_CARRIED, left, top, colour);
+      const nameLeft = left + bitmapWidth(MARK_EQUIPPED) + MARK_GAP;
+      const nameWidth = right - textWidthOf(row.bonus) - COLUMN_GAP - nameLeft;
+      drawText(graphics, fitted(row.name, nameWidth), nameLeft, top, colour);
+      drawText(graphics, row.bonus, right - textWidthOf(row.bonus), top, colour);
+      return;
+    }
     case 'bar':
       graphics.fillStyle(BAR_TRACK_COLOUR);
       graphics.fillRect(left, top, right - left, BAR_HEIGHT);

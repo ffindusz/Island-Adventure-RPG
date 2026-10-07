@@ -26,7 +26,8 @@ const GATE_TILE = { col: 5, row: 3, width: 1, height: 1 };
 /** The Experience the hero has earned toward its next Level, as the stat page shows it. */
 function earned(game: Game): number | undefined {
   game.send({ type: 'open-page', page: 'stats' });
-  const experience = playingView(game).page?.experience?.earned;
+  const { page } = playingView(game);
+  const experience = page?.id === 'stats' ? page.experience?.earned : undefined;
   game.send({ type: 'close-page', page: 'stats' });
   return experience;
 }

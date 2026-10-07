@@ -1,4 +1,4 @@
-import type { ContentDefinition, StatId } from './definitions';
+import type { ContentDefinition, GearSlot, GearStat, StatId } from './definitions';
 import type { Box, Direction, Point } from './geometry';
 import type { PageId, PlayState } from './state';
 
@@ -34,6 +34,11 @@ export type Command =
   /** Strike with the Melee Weapon in the facing direction, unless the attack cooldown is still running. */
   | { readonly type: 'attack' }
   /**
+   * Interact with what is in front of the hero within its reach, such as opening a chest. When several interactables
+   * are in reach, the one nearest the hero is the one. Ignored while the game is paused, like attack.
+   */
+  | { readonly type: 'interact' }
+  /**
    * Open a page over the game, such as the stat page. Ignored at the title and while the game is paused already: a
    * page is open, or a Stat Point waits to be assigned. While the game is paused step() advances nothing and attack
    * does nothing; move and stop still keep track of the keys that are down.
@@ -45,7 +50,13 @@ export type Command =
    * Spend a Stat Point on a stat, for good: there is no taking it back. Ignored when no Stat Point waits to be
    * assigned. Until every Stat Point has been assigned the game is paused.
    */
-  | { readonly type: 'assign-stat-point'; readonly stat: StatId };
+  | { readonly type: 'assign-stat-point'; readonly stat: StatId }
+  /**
+   * Equip a piece of Gear the hero carries, in place of the one equipped in its slot, which stays carried. Ignored
+   * unless the inventory page is open, and for Gear the hero does not carry or has equipped already. There is no
+   * taking Gear off: equipping another piece in its slot is how it is swapped.
+   */
+  | { readonly type: 'equip'; readonly gearId: string };
 
 /** Something that happened, for the adapter to show or play. Events never carry rules; the state view is the truth. */
 export type GameEvent =
@@ -65,11 +76,25 @@ export type GameEvent =
   | { readonly type: 'level-up'; readonly level: number }
   /** The hero's body first overlapped the zone of this milestone, and the reward follows. It happens once per game. */
   | { readonly type: 'milestone-reached'; readonly milestoneId: string }
+  /** The hero opened this chest. What was inside follows as a pickup. A chest opens once. */
+  | { readonly type: 'chest-opened'; readonly chestId: string }
+  /** The hero took an item and now has it. */
+  | { readonly type: 'pickup'; readonly item: PickedUpItem }
+  /** The hero equipped this Gear in its slot, in place of the piece there. */
+  | { readonly type: 'gear-equipped'; readonly gearId: string; readonly slot: GearSlot }
   /**
    * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health where
    * defeat sends it, and the monsters of the Adventure Area are back as they began: the view shows the new state.
    */
   | { readonly type: 'hero-defeated' };
+
+/** What the hero took, as the player is told about it: one member for each kind of item. */
+export type PickedUpItem = PickedUpGear;
+
+/** A piece of Gear the hero took. It is carried, not equipped: the player equips it in the inventory. */
+export interface PickedUpGear extends GearInfo {
+  readonly kind: 'gear';
+}
 
 export interface HeroView {
   readonly position: Point;
@@ -107,6 +132,20 @@ export type MonsterActionView =
   /** Resting after an attack. */
   | { readonly type: 'recovering' };
 
+/** A chest, for the adapter to draw. It stays where it is once opened. */
+export interface ChestView {
+  readonly kind: 'chest';
+  readonly id: string;
+  /** The centre of the chest. */
+  readonly position: Point;
+  /** Width and height of the chest's body, in tiles. */
+  readonly size: number;
+  readonly opened: boolean;
+}
+
+/** Something the hero can interact with, one member for each kind. */
+export type InteractableView = ChestView;
+
 export interface AreaView {
   readonly id: string;
   readonly name: string;
@@ -137,7 +176,33 @@ export interface StatPageView {
 }
 
 /** A page that is open over the game. One kind for each page id; `id` says which. */
-export type PageView = StatPageView;
+export type PageView = StatPageView | InventoryPageView;
+
+/** A piece of Gear as the player reads about it. */
+export interface GearInfo {
+  readonly id: string;
+  readonly name: string;
+  readonly slot: GearSlot;
+  /** The stat the Gear adds to, which its slot decides: a Melee Weapon adds to Attack, armor to Defense. */
+  readonly stat: GearStat;
+  readonly bonus: number;
+}
+
+/** A piece of Gear the hero carries. */
+export interface GearView extends GearInfo {
+  /** Whether it is the Gear equipped in its slot. */
+  readonly equipped: boolean;
+}
+
+/** The inventory page: everything the hero carries, and what the Gear makes of its Attack and Defense. */
+export interface InventoryPageView {
+  readonly id: 'inventory';
+  /** The Gear the hero carries, equipped or not: by slot in the order of the slots, then in the order found. */
+  readonly gear: readonly GearView[];
+  /** The hero's Attack and Defense, with the equipped Gear counted in. */
+  readonly attack: number;
+  readonly defense: number;
+}
 
 /** One place a Stat Point can go. */
 export interface StatChoiceView {
@@ -164,6 +229,8 @@ export interface PlayingView {
   readonly area: AreaView;
   readonly hero: HeroView;
   readonly monsters: readonly MonsterView[];
+  /** The interactables of the Adventure Area the hero is in, such as chests, opened ones included. */
+  readonly interactables: readonly InteractableView[];
   /** The page that is open over the game, if any. While one is open the game is paused. */
   readonly page: PageView | null;
   /** The Stat Point the hero has to assign, if any. While one waits the game is paused. */

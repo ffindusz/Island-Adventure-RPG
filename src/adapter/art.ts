@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import type { AreaView, Box, Direction, HeroView, MonsterView, Point } from '../core';
+import type { AreaView, Box, ChestView, Direction, HeroView, InteractableView, MonsterView, Point } from '../core';
 import { TILE_SIZE } from './config';
 
 // The placeholder look of the game: flat shapes drawn from the state view. Real art replaces this module; the
@@ -31,6 +31,10 @@ const SWING_COLOUR = 0xffffff;
 const HEALTH_COLOUR = 0x7bd35f;
 const TELEGRAPH_COLOUR = 0xe0392e;
 const STRIKE_COLOUR = 0xff8a3d;
+const CHEST_COLOUR = 0xa0692b;
+const CHEST_OPENED_COLOUR = 0x5a3a1a;
+const CHEST_INSIDE_COLOUR = 0x1a0f06;
+const CHEST_LATCH_COLOUR = 0xf2c94c;
 
 /** Side of the square on the hero that shows which way it faces, in pixels. */
 const FACING_MARKER_SIZE = 4;
@@ -81,6 +85,31 @@ export function drawTerrain(graphics: Graphics, area: AreaView): void {
       graphics.fillRect(x + TILE_SIZE - 1, y, 1, TILE_SIZE - 1);
     });
   });
+}
+
+/** Draws what the hero can interact with. Real art replaces this, one kind at a time. */
+export function drawInteractable(graphics: Graphics, interactable: InteractableView): void {
+  switch (interactable.kind) {
+    case 'chest':
+      drawChest(graphics, interactable);
+      return;
+  }
+}
+
+/** A closed chest is a brown box with a gold latch on its lid. Once opened it is dark, with an empty inside. */
+function drawChest(graphics: Graphics, chest: ChestView): void {
+  const body = bodyRect(chest.position, chest.size);
+  const lidY = body.y + Math.floor(body.height * 0.4);
+  fillWithOutline(graphics, body, chest.opened ? CHEST_OPENED_COLOUR : CHEST_COLOUR);
+  if (chest.opened) {
+    graphics.fillStyle(CHEST_INSIDE_COLOUR);
+    graphics.fillRect(body.x + 2, body.y + 2, body.width - 4, lidY - body.y - 2);
+    return;
+  }
+  graphics.fillStyle(OUTLINE_COLOUR);
+  graphics.fillRect(body.x + 1, lidY, body.width - 2, 1);
+  graphics.fillStyle(CHEST_LATCH_COLOUR);
+  graphics.fillRect(body.x + Math.floor(body.width / 2) - 2, lidY - 1, 4, 4);
 }
 
 /** Draws the hero as a square with a dark marker on the side it faces, red while it flashes from a hit. */

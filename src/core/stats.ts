@@ -1,30 +1,38 @@
 import type { Content } from './content';
-import { STAT_IDS } from './definitions';
-import type { StatId } from './definitions';
+import { GEAR_SLOT_STAT, STAT_IDS } from './definitions';
+import type { GearStat, StatId } from './definitions';
+import { equippedGear } from './gear';
 import type { PlayState } from './state';
 
 // The hero's stats as the rules use them, and the one place that works them out: a stat is its base number from the
-// content plus what the hero's Stat Points add to it. Gear will add to them here too, so no rule reads a base number
-// directly and growth changes only this file.
+// content plus what the hero's Stat Points add to it, plus, for Attack and Defense, what its equipped Gear adds. No
+// rule reads a base number directly, so growth and Gear change only this file.
 
 /** What the Stat Points the hero has put into a stat add to it. */
 function statPointBonus(state: PlayState, content: Content, stat: StatId): number {
   return state.hero.statPoints[stat] * content.progression.statPointValue[stat];
 }
 
-/** The most Health the hero can have. */
+/** What the hero's equipped Gear adds to a stat: the bonuses of the pieces whose slots raise that stat. */
+function gearBonus(state: PlayState, content: Content, stat: GearStat): number {
+  return equippedGear(state, content)
+    .filter((gear) => GEAR_SLOT_STAT[gear.slot] === stat)
+    .reduce((total, gear) => total + gear.bonus, 0);
+}
+
+/** The most Health the hero can have. Gear does not change it. */
 export function heroMaxHealth(state: PlayState, content: Content): number {
   return content.hero.health + statPointBonus(state, content, 'health');
 }
 
 /** How much damage each of the hero's strikes does to a monster. */
 export function heroAttack(state: PlayState, content: Content): number {
-  return content.hero.attack + statPointBonus(state, content, 'attack');
+  return content.hero.attack + statPointBonus(state, content, 'attack') + gearBonus(state, content, 'attack');
 }
 
 /** How much each hit's damage is reduced by. */
 export function heroDefense(state: PlayState, content: Content): number {
-  return content.hero.defense + statPointBonus(state, content, 'defense');
+  return content.hero.defense + statPointBonus(state, content, 'defense') + gearBonus(state, content, 'defense');
 }
 
 /** A stat by name, for what treats the stats alike, such as the choice of where to put a Stat Point. */

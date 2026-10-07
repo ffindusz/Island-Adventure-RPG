@@ -1,6 +1,6 @@
 import type { Content } from './content';
 import { monsterTypeOf } from './content';
-import { boxAround, overlaps } from './geometry';
+import { overlaps, zoneInFront } from './geometry';
 import type { Box, Direction, Point } from './geometry';
 import type { GameEvent } from './interface';
 import { gainExperience } from './progression';
@@ -38,17 +38,6 @@ export function coolDownHero(state: PlayState): void {
 
 /** What a strike covers: the ground right in front of the hero's body, as far as the weapon reaches and as wide as it sweeps. */
 function strikeZone(position: Point, direction: Direction, content: Content): Box {
-  const body = boxAround(position, content.hero.size);
   const { reach, width } = content.hero.meleeWeapon;
-  const halfWidth = width / 2;
-  switch (direction) {
-    case 'right':
-      return { minX: body.maxX, minY: position.y - halfWidth, maxX: body.maxX + reach, maxY: position.y + halfWidth };
-    case 'left':
-      return { minX: body.minX - reach, minY: position.y - halfWidth, maxX: body.minX, maxY: position.y + halfWidth };
-    case 'down':
-      return { minX: position.x - halfWidth, minY: body.maxY, maxX: position.x + halfWidth, maxY: body.maxY + reach };
-    case 'up':
-      return { minX: position.x - halfWidth, minY: body.minY - reach, maxX: position.x + halfWidth, maxY: body.minY };
-  }
+  return zoneInFront(position, content.hero.size, direction, reach, width);
 }

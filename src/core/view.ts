@@ -1,7 +1,9 @@
 import { areaOf, monsterTypeOf } from './content';
-import type { Content } from './content';
+import type { Content, Interactable } from './content';
 import { STAT_IDS } from './definitions';
-import type { GameView, LevelUpView, MonsterActionView, PageView } from './interface';
+import { carriedGear } from './gear';
+import { centerOfBox } from './geometry';
+import type { GameView, InteractableView, LevelUpView, MonsterActionView, PageView } from './interface';
 import {
   experienceProgress,
   heroAttack,
@@ -12,7 +14,7 @@ import {
   highestLevel,
   unassignedStatPoints,
 } from './stats';
-import { livingMonsters } from './state';
+import { interactableStateOf, livingMonsters } from './state';
 import type { GameState, MonsterAction, PlayState } from './state';
 
 /** Builds a fresh view of the state. Only the terrain grid is shared, because it never changes. */
@@ -43,9 +45,23 @@ export function buildView(state: GameState, content: Content): GameView {
         action: actionView(monster.action),
       };
     }),
+    interactables: area.interactables.map((interactable) => interactableView(interactable, state)),
     page: pageView(state, content),
     levelUp: levelUpView(state, content),
   };
+}
+
+function interactableView(interactable: Interactable, state: PlayState): InteractableView {
+  switch (interactable.kind) {
+    case 'chest':
+      return {
+        kind: 'chest',
+        id: interactable.id,
+        position: centerOfBox(interactable.body),
+        size: interactable.body.maxX - interactable.body.minX,
+        opened: interactableStateOf(state, interactable.id).opened,
+      };
+  }
 }
 
 function pageView(state: PlayState, content: Content): PageView | null {
@@ -60,6 +76,13 @@ function pageView(state: PlayState, content: Content): PageView | null {
         experience: experienceProgress(state, content) ?? null,
         health: state.hero.health,
         maxHealth: heroMaxHealth(state, content),
+        attack: heroAttack(state, content),
+        defense: heroDefense(state, content),
+      };
+    case 'inventory':
+      return {
+        id: 'inventory',
+        gear: carriedGear(state, content),
         attack: heroAttack(state, content),
         defense: heroDefense(state, content),
       };

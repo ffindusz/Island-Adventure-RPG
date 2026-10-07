@@ -20,6 +20,31 @@ export interface MeleeWeaponDefinition {
   readonly width: number;
 }
 
+/**
+ * Where Gear is equipped: the hero carries as many pieces as it finds and has one equipped in each slot. The list is
+ * open: a new slot is one more entry here and in GEAR_SLOT_STAT.
+ */
+export const GEAR_SLOTS = ['melee-weapon', 'armor'] as const;
+export type GearSlot = (typeof GEAR_SLOTS)[number];
+
+/** The stats Gear can raise. It never changes anything else. */
+export type GearStat = Extract<StatId, 'attack' | 'defense'>;
+
+/** The stat each slot raises: a Melee Weapon only ever adds to Attack, and armor only to Defense. */
+export const GEAR_SLOT_STAT: Readonly<Record<GearSlot, GearStat>> = {
+  'melee-weapon': 'attack',
+  armor: 'defense',
+};
+
+/** A piece of Gear. The content names each piece by an id, and the hero carries each piece at most once. */
+export interface GearDefinition {
+  /** What the player reads in the inventory. */
+  readonly name: string;
+  readonly slot: GearSlot;
+  /** What the Gear adds to the stat of its slot while it is equipped, 0 or more. */
+  readonly bonus: number;
+}
+
 export interface HeroDefinition {
   /** Width and height of the hero's body, in tiles. */
   readonly size: number;
@@ -32,6 +57,13 @@ export interface HeroDefinition {
   readonly attack: number;
   readonly attackCooldownMs: number;
   readonly meleeWeapon: MeleeWeaponDefinition;
+  /**
+   * How far the hero reaches beyond its body, in tiles, to interact with something in front of it, such as a chest.
+   * It is as wide as the hero's body. Must be more than 0.
+   */
+  readonly interactionReach: number;
+  /** The Gear the hero begins the game with, carried and equipped: the id of the piece for each slot, if any. */
+  readonly startingGear: Readonly<Partial<Record<GearSlot, string>>>;
 }
 
 /** What every kind of monster has, whatever its behavior. */
@@ -107,6 +139,26 @@ export interface MilestoneDefinition {
   readonly reward: MilestoneReward;
 }
 
+/** What a chest holds. Gear is the first kind of contents; ammunition and potions will be members beside it. */
+export type ChestContents = { readonly kind: 'gear'; readonly gear: string };
+
+/** A chest: the hero opens it once by interacting with it and takes what is inside. It fills one tile and is solid. */
+export interface ChestDefinition {
+  readonly kind: 'chest';
+  /** Unique across all interactables of all Adventure Areas: events and saves refer to the chest by it. */
+  readonly id: string;
+  /** The tile the chest fills. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+  readonly contents: ChestContents;
+}
+
+/**
+ * Something in an Adventure Area that the hero acts on with Interact. Its `kind` names the rules it follows (see
+ * interactables.ts); the other fields are what that kind needs. Adding a kind means adding a member here and an entry
+ * in the interaction registry.
+ */
+export type InteractableDefinition = ChestDefinition;
+
 export interface AreaDefinition {
   readonly id: string;
   readonly name: string;
@@ -115,6 +167,8 @@ export interface AreaDefinition {
   readonly monsters: readonly MonsterPlacement[];
   /** The milestones of this Adventure Area. Leave it out for none. */
   readonly milestones?: readonly MilestoneDefinition[];
+  /** The interactables of this Adventure Area, such as chests. Leave it out for none. */
+  readonly interactables?: readonly InteractableDefinition[];
 }
 
 /** The stats a Stat Point can be spent on. */
@@ -141,6 +195,8 @@ export interface ContentDefinition {
   readonly progression: ProgressionDefinition;
   /** The least damage a hit does to the hero, however high its Defense. Leave it out for the default of 1. */
   readonly minimumDamage?: number;
+  /** Every piece of Gear in the game, by id: what the hero starts with, and what is waiting to be found. */
+  readonly gear: Readonly<Record<string, GearDefinition>>;
   readonly monsterTypes: Readonly<Record<string, MonsterTypeDefinition>>;
   readonly areas: readonly AreaDefinition[];
   /** Where a new game begins: the hero stands at the centre of this tile, which must not be solid. */

@@ -1,7 +1,9 @@
 import { stepMonsters } from './behaviors';
 import { coolDownHero, heroStrikes } from './combat';
 import { loadContent } from './content';
+import { equipGear } from './gear';
 import type { Direction } from './geometry';
+import { heroInteracts } from './interactables';
 import type { Game, GameOptions } from './interface';
 import { reachMilestones } from './milestones';
 import { walkHero } from './movement';
@@ -43,6 +45,8 @@ export function createGame(options: GameOptions): Game {
           return [];
         case 'attack':
           return state.phase === 'playing' && !isPaused(state, content) ? heroStrikes(state, content) : [];
+        case 'interact':
+          return state.phase === 'playing' && !isPaused(state, content) ? heroInteracts(state, content) : [];
         case 'open-page':
           if (state.phase === 'playing') {
             openPage(state, content, command.page);
@@ -58,6 +62,8 @@ export function createGame(options: GameOptions): Game {
             assignStatPoint(state, content, command.stat);
           }
           return [];
+        case 'equip':
+          return state.phase === 'playing' ? equipGear(state, content, command.gearId) : [];
       }
     },
     step() {

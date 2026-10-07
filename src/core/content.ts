@@ -1,8 +1,13 @@
-import { STAT_IDS } from './definitions';
+import { GEAR_SLOTS, STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
   ChaserMonsterDefinition,
+  ChestContents,
+  ChestDefinition,
   ContentDefinition,
+  GearDefinition,
+  GearSlot,
+  InteractableDefinition,
   MeleeWeaponDefinition,
   MilestoneDefinition,
   MilestoneReward,
@@ -28,6 +33,17 @@ export interface Milestone {
   readonly reward: MilestoneReward;
 }
 
+/** A chest as the rules use it: its body is the box of the tile it fills, in tile units like the other bodies. */
+export interface Chest {
+  readonly kind: 'chest';
+  readonly id: string;
+  readonly body: Box;
+  readonly contents: ChestContents;
+}
+
+/** An interactable as the rules use it, one member for each kind. */
+export type Interactable = Chest;
+
 export interface Area {
   readonly id: string;
   readonly name: string;
@@ -39,6 +55,7 @@ export interface Area {
   readonly solid: readonly (readonly boolean[])[];
   readonly monsters: readonly MonsterPlacement[];
   readonly milestones: readonly Milestone[];
+  readonly interactables: readonly Interactable[];
 }
 
 export type StationaryMonsterType = StationaryMonsterDefinition;
@@ -70,10 +87,14 @@ export interface Content {
     readonly attack: number;
     readonly attackCooldownSteps: number;
     readonly meleeWeapon: MeleeWeaponDefinition;
+    /** Tiles beyond the hero's body, in front of it, within which it interacts. */
+    readonly interactionReach: number;
+    readonly startingGear: Readonly<Partial<Record<GearSlot, string>>>;
   };
   readonly progression: ProgressionDefinition;
   /** The least damage a hit does to the hero, however high its Defense. */
   readonly minimumDamage: number;
+  readonly gear: Readonly<Record<string, GearDefinition>>;
   readonly monsterTypes: Readonly<Record<string, MonsterType>>;
   readonly areas: Readonly<Record<string, Area>>;
   readonly start: { readonly areaId: string; readonly tile: Tile };
@@ -83,6 +104,7 @@ export interface Content {
 export function loadContent(definition: ContentDefinition): Content {
   requireMoreThanZero("The hero's health", definition.hero.health);
   requireZeroOrMore("The hero's defense", definition.hero.defense);
+  requireMoreThanZero("The hero's interaction reach", definition.hero.interactionReach);
   const minimumDamage = definition.minimumDamage ?? DEFAULT_MINIMUM_DAMAGE;
   requireZeroOrMore('The minimum damage', minimumDamage);
   const progression = loadProgression(definition.progression);
@@ -90,8 +112,15 @@ export function loadContent(definition: ContentDefinition): Content {
   for (const [name, monsterType] of Object.entries(definition.monsterTypes)) {
     monsterTypes[name] = loadMonsterType(name, monsterType);
   }
+  const gear = loadGear(definition.gear);
+  const usedIds: UsedIds = {
+    monsters: new Set<string>(),
+    milestones: new Set<string>(),
+    interactables: new Set<string>(),
+    gear: new Map<string, string>(),
+  };
+  const startingGear = loadStartingGear(definition.hero.startingGear, gear, usedIds);
   const areas: Record<string, Area> = {};
-  const usedIds = { monsters: new Set<string>(), milestones: new Set<string>() };
   for (const area of definition.areas) {
     if (areas[area.id] !== undefined) {
       throw new Error(`Area id "${area.id}" is used more than once`);
@@ -116,9 +145,12 @@ export function loadContent(definition: ContentDefinition): Content {
       attack: definition.hero.attack,
       attackCooldownSteps: msToSteps(definition.hero.attackCooldownMs),
       meleeWeapon: definition.hero.meleeWeapon,
+      interactionReach: definition.hero.interactionReach,
+      startingGear,
     },
     progression,
     minimumDamage,
+    gear,
     monsterTypes,
     areas,
     start: { areaId: definition.start.area, tile: definition.start.tile },
@@ -210,10 +242,66 @@ function requireZeroOrMore(what: string, value: number): void {
   }
 }
 
-/** The ids used so far, which are unique across all Adventure Areas. */
+/** What has been used so far across all Adventure Areas: ids that must be unique, and who gives each piece of Gear. */
 interface UsedIds {
   readonly monsters: Set<string>;
   readonly milestones: Set<string>;
+  readonly interactables: Set<string>;
+  /** Each piece of Gear that is given somewhere, with who gives it: the hero carries each piece at most once. */
+  readonly gear: Map<string, string>;
+}
+
+function loadGear(definition: ContentDefinition['gear']): Content['gear'] {
+  for (const [id, piece] of Object.entries(definition)) {
+    if (!isGearSlot(piece.slot)) {
+      throw new Error(`Gear "${id}" has unknown slot "${String(piece.slot)}"`);
+    }
+    if (piece.name.trim() === '') {
+      throw new Error(`Gear "${id}" has no name`);
+    }
+    requireZeroOrMore(`Gear "${id}": bonus`, piece.bonus);
+  }
+  return { ...definition };
+}
+
+/** Content read from a file could name a slot that does not exist, and the compiler would not notice. */
+function isGearSlot(slot: string): slot is GearSlot {
+  return (GEAR_SLOTS as readonly string[]).includes(slot);
+}
+
+function loadStartingGear(
+  startingGear: ContentDefinition['hero']['startingGear'],
+  gear: Content['gear'],
+  usedIds: UsedIds,
+): Content['hero']['startingGear'] {
+  for (const [slot, id] of Object.entries(startingGear)) {
+    if (!isGearSlot(slot)) {
+      throw new Error(`The hero starts with Gear for unknown slot "${slot}"`);
+    }
+    if (id === undefined) {
+      continue;
+    }
+    const piece = gear[id];
+    if (piece === undefined) {
+      throw new Error(`The hero starts with unknown Gear "${id}"`);
+    }
+    if (piece.slot !== slot) {
+      throw new Error(
+        `The hero's starting Gear for slot "${slot}" is "${id}", which belongs in slot "${piece.slot}"`,
+      );
+    }
+    claimGear(usedIds, id, "the hero's starting Gear");
+  }
+  return { ...startingGear };
+}
+
+/** Records that `giver` gives the hero the piece of Gear, and refuses a piece that something else already gives. */
+function claimGear(usedIds: UsedIds, gearId: string, giver: string): void {
+  const firstGiver = usedIds.gear.get(gearId);
+  if (firstGiver !== undefined) {
+    throw new Error(`Gear "${gearId}" is given more than once: by ${firstGiver} and by ${giver}`);
+  }
+  usedIds.gear.set(gearId, giver);
 }
 
 function loadArea(area: AreaDefinition, definition: ContentDefinition, usedIds: UsedIds): Area {
@@ -237,7 +325,7 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition, usedIds: 
   });
   const width = tiles[0]?.length ?? 0;
   const height = tiles.length;
-  const loaded: Area = {
+  const loaded: Omit<Area, 'interactables'> = {
     id: area.id,
     name: area.name,
     width,
@@ -261,7 +349,7 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition, usedIds: 
     }
     usedIds.monsters.add(monster.id);
   }
-  return loaded;
+  return { ...loaded, interactables: loadInteractables(area, definition, loaded, usedIds) };
 }
 
 /** `width` and `height` are the size of the map of the Adventure Area, in tiles. */
@@ -296,6 +384,110 @@ function describeZone(zone: TileRect): string {
   return `(col ${zone.col}, row ${zone.row}, ${zone.width} wide, ${zone.height} high)`;
 }
 
+/**
+ * The interactables of an Adventure Area. Each stands alone on a walkable tile: not where the hero or a monster
+ * starts, and not where another interactable stands. `loaded` is the area as far as it is loaded: its monsters are
+ * checked.
+ */
+function loadInteractables(
+  area: AreaDefinition,
+  definition: ContentDefinition,
+  loaded: Omit<Area, 'interactables'>,
+  usedIds: UsedIds,
+): Interactable[] {
+  const occupied = new Map<string, string>();
+  for (const monster of area.monsters) {
+    occupied.set(tileKey(monster.tile), `where monster "${monster.id}" starts`);
+  }
+  if (definition.start.area === area.id) {
+    occupied.set(tileKey(definition.start.tile), 'where the hero starts');
+  }
+  return (area.interactables ?? []).map((interactable) => {
+    const what = `${interactable.kind} "${interactable.id}"`;
+    if (usedIds.interactables.has(interactable.id)) {
+      throw new Error(`Interactable id "${interactable.id}" is used more than once`);
+    }
+    usedIds.interactables.add(interactable.id);
+    const { tile } = interactable;
+    const placed = `Area "${area.id}": ${what} is placed at ${describeTile(tile)}`;
+    if (isSolid(loaded, tile)) {
+      throw new Error(`${placed}, which is ${NOT_WALKABLE}`);
+    }
+    const taken = occupied.get(tileKey(tile));
+    if (taken !== undefined) {
+      throw new Error(`${placed}, ${taken}`);
+    }
+    occupied.set(tileKey(tile), `where ${what} already stands`);
+    return loadInteractable(area.id, interactable, definition.gear, usedIds);
+  });
+}
+
+function tileKey(tile: Tile): string {
+  return `${tile.col},${tile.row}`;
+}
+
+/** One case for each kind of interactable: it checks the definition and converts it into the form the rules use. */
+function loadInteractable(
+  areaId: string,
+  definition: InteractableDefinition,
+  gear: ContentDefinition['gear'],
+  usedIds: UsedIds,
+): Interactable {
+  const { id, kind } = definition;
+  switch (kind) {
+    case 'chest':
+      return loadChest(areaId, definition, gear, usedIds);
+    default:
+      return refuseKind(areaId, id, kind);
+  }
+}
+
+/** Only content that got past the compiler gets here. A kind without a case is a compile error. */
+function refuseKind(areaId: string, id: string, kind: never): never {
+  throw new Error(`Area "${areaId}": interactable "${id}" has unknown kind "${String(kind)}"`);
+}
+
+function loadChest(
+  areaId: string,
+  definition: ChestDefinition,
+  gear: ContentDefinition['gear'],
+  usedIds: UsedIds,
+): Chest {
+  const { col, row } = definition.tile;
+  return {
+    kind: 'chest',
+    id: definition.id,
+    body: { minX: col, minY: row, maxX: col + 1, maxY: row + 1 },
+    contents: loadChestContents(areaId, definition, gear, usedIds),
+  };
+}
+
+/** One case for each kind of chest contents. */
+function loadChestContents(
+  areaId: string,
+  definition: ChestDefinition,
+  gear: ContentDefinition['gear'],
+  usedIds: UsedIds,
+): ChestContents {
+  const { contents } = definition;
+  const { kind } = contents;
+  const what = `Area "${areaId}": chest "${definition.id}"`;
+  switch (kind) {
+    case 'gear':
+      if (gear[contents.gear] === undefined) {
+        throw new Error(`${what} holds unknown Gear "${contents.gear}"`);
+      }
+      claimGear(usedIds, contents.gear, `chest "${definition.id}"`);
+      return { kind: 'gear', gear: contents.gear };
+    default:
+      return refuseContents(what, kind);
+  }
+}
+
+function refuseContents(what: string, kind: never): never {
+  throw new Error(`${what} holds unknown contents "${String(kind)}"`);
+}
+
 const NOT_WALKABLE = 'solid terrain or outside the map';
 
 function describeTile(tile: Tile): string {
@@ -303,7 +495,7 @@ function describeTile(tile: Tile): string {
 }
 
 /** Whether a tile blocks movement. Tiles beyond the map count as solid. */
-export function isSolid(area: Area, tile: Tile): boolean {
+export function isSolid(area: Pick<Area, 'solid'>, tile: Tile): boolean {
   return area.solid[tile.row]?.[tile.col] ?? true;
 }
 
@@ -320,6 +512,14 @@ export function monsterTypeOf(content: Content, type: string): MonsterType {
   const found = content.monsterTypes[type];
   if (found === undefined) {
     throw new Error(`Unknown monster type "${type}"`);
+  }
+  return found;
+}
+
+export function gearOf(content: Content, id: string): GearDefinition {
+  const found = content.gear[id];
+  if (found === undefined) {
+    throw new Error(`Unknown Gear "${id}"`);
   }
   return found;
 }
