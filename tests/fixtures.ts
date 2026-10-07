@@ -136,6 +136,8 @@ export interface ArenaOptions {
   readonly text?: string;
   /** How long area text stays on the screen, in milliseconds. Leave it out to get the default. */
   readonly areaTextMs?: number;
+  /** How far from the hero the Automap reveals terrain, in tiles. Leave it out to get the default. */
+  readonly automapRevealDistance?: number;
   readonly start?: ContentDefinition['start'];
   /** Replaces parts of the hero's definition, for tests about a differently built hero. */
   readonly hero?: Partial<HeroDefinition>;
@@ -165,6 +167,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     checkpoints = [defaultCheckpoint('arena')],
     text,
     areaTextMs,
+    automapRevealDistance,
     start = { area: 'arena', tile: { col: 3, row: 3 } },
     hero = {},
     monsterTypes = {},
@@ -197,6 +200,7 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     },
     ...(minimumDamage === undefined ? {} : { minimumDamage }),
     ...(areaTextMs === undefined ? {} : { areaTextMs }),
+    ...(automapRevealDistance === undefined ? {} : { automapRevealDistance }),
     progression: {
       levelThresholds: [10, 25, 45, 70, 100],
       statPointValue: { health: 3, attack: 2, defense: 1 },

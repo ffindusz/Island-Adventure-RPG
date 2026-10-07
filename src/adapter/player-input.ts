@@ -27,7 +27,7 @@ export function switchWeaponKeyLabel(): string {
 const CONFIRM_KEY = 'ENTER';
 
 /** The key that opens each page. */
-const PAGE_KEYS: Readonly<Record<PageId, string>> = { stats: 'C', inventory: 'I' };
+const PAGE_KEYS: Readonly<Record<PageId, string>> = { stats: 'C', inventory: 'I', automap: 'M' };
 
 /** The key that opens the page, as the player reads it. */
 export function pageKeyLabel(page: PageId): string {
