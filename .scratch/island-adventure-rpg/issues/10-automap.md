@@ -4,7 +4,7 @@
 
 **Blocked by:** 09: Checkpoints and defeat recovery
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 85, 87-91
 
@@ -17,6 +17,8 @@
 - [ ] Reviewer play check (manual, in a browser): explore part of an area, open the map, leave and re-enter, die and return, and confirm the discoveries remain.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at f773c63
 
 ### What was built
 
