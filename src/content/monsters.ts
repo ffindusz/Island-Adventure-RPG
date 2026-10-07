@@ -1,7 +1,18 @@
 import type { MonsterTypeDefinition } from '../core';
 
-/** Every kind of monster, by type id. */
+/** Every kind of monster, by type id. Speeds are in tiles per second, distances in tiles, times in milliseconds. */
 export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
-  // A placeholder: it stands still, and takes three hits from the hero's basic sword.
-  crab: { health: 3, size: 0.75 },
+  // A placeholder chaser: slow enough to outrun, it takes three hits from the hero's basic sword. It notices the hero
+  // from four tiles away, winds up for half a second, hits for 4 (3 after the hero's Defense) and rests before the next.
+  crab: {
+    behavior: 'chaser',
+    health: 3,
+    size: 0.75,
+    damage: 4,
+    speedTilesPerSecond: 1.5,
+    noticingDistance: 4,
+    reach: 0.5,
+    windUpMs: 500,
+    recoveryMs: 900,
+  },
 };

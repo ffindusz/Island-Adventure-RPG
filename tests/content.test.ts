@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGame } from '../src/core';
-import type { ContentDefinition } from '../src/core';
-import { ARENA_LAYOUT, arena, dummyAt, fixedRandom } from './fixtures';
+import type { ChaserMonsterDefinition, ContentDefinition, MonsterTypeDefinition } from '../src/core';
+import { ARENA_LAYOUT, arena, BITER, dummyAt, fixedRandom } from './fixtures';
 
 function expectRefused(content: ContentDefinition, message: string): void {
   expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
@@ -64,5 +64,79 @@ describe('content that does not make sense is refused when the game is created',
       arena({ monsters: [dummyAt('dummy-1', 2, 2)] }),
       'Area "arena": monster "dummy-1" is placed at (col 2, row 2), which is solid terrain or outside the map',
     );
+  });
+
+  it('a monster type has a behavior that does not exist', () => {
+    // Content read from a file could say this, and the compiler would not notice.
+    const ghost = { behavior: 'teleporter', health: 3, size: 0.5 } as unknown as MonsterTypeDefinition;
+
+    expectRefused(arena({ monsterTypes: { ghost } }), 'Monster type "ghost" has unknown behavior "teleporter"');
+  });
+});
+
+describe('numbers the rules cannot work with are refused when the game is created', () => {
+  const biterWith = (changes: Partial<ChaserMonsterDefinition>) =>
+    arena({ monsterTypes: { biter: { ...BITER, ...changes } } });
+
+  it.each([
+    {
+      what: 'a hero with no Health',
+      content: arena({ hero: { health: 0 } }),
+      message: "The hero's health must be more than 0, but it is 0",
+    },
+    {
+      what: 'a hero with negative Defense',
+      content: arena({ hero: { defense: -1 } }),
+      message: "The hero's defense must be 0 or more, but it is -1",
+    },
+    {
+      what: 'a negative minimum damage',
+      content: arena({ minimumDamage: -1 }),
+      message: 'The minimum damage must be 0 or more, but it is -1',
+    },
+    {
+      what: 'a monster whose hits do no damage',
+      content: biterWith({ damage: 0 }),
+      message: 'Monster type "biter": damage must be more than 0, but it is 0',
+    },
+    {
+      what: 'a monster with a negative speed',
+      content: biterWith({ speedTilesPerSecond: -1 }),
+      message: 'Monster type "biter": speedTilesPerSecond must be 0 or more, but it is -1',
+    },
+    {
+      what: 'a monster with a negative noticing distance',
+      content: biterWith({ noticingDistance: -2 }),
+      message: 'Monster type "biter": noticingDistance must be 0 or more, but it is -2',
+    },
+    {
+      what: 'a monster whose attack has no reach',
+      content: biterWith({ reach: 0 }),
+      message: 'Monster type "biter": reach must be more than 0, but it is 0',
+    },
+    {
+      what: 'a monster that does not wind up before it attacks, so that there is nothing to see coming',
+      content: biterWith({ windUpMs: 0 }),
+      message: 'Monster type "biter": windUpMs must be at least one fixed step (16.7 ms), but it is 0',
+    },
+    {
+      what: 'a monster with a negative recovery',
+      content: biterWith({ recoveryMs: -1 }),
+      message: 'Monster type "biter": recoveryMs must be 0 or more, but it is -1',
+    },
+  ])('$what', ({ content, message }) => {
+    expectRefused(content, message);
+  });
+
+  it('the lowest numbers that still make sense are accepted', () => {
+    const content = arena({
+      hero: { defense: 0 },
+      minimumDamage: 0,
+      monsterTypes: {
+        biter: { ...BITER, speedTilesPerSecond: 0, noticingDistance: 0, recoveryMs: 0, windUpMs: 1000 / 60 },
+      },
+    });
+
+    expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
   });
 });

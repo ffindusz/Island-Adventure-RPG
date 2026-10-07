@@ -1,15 +1,20 @@
 import type {
   AreaDefinition,
+  ChaserMonsterDefinition,
   ContentDefinition,
   MeleeWeaponDefinition,
   MonsterPlacement,
   MonsterTypeDefinition,
+  StationaryMonsterDefinition,
 } from './definitions';
 import type { Tile } from './geometry';
-import { msToSteps, STEPS_PER_SECOND } from './time';
+import { msToSteps, STEP_MS, STEPS_PER_SECOND } from './time';
 
 // Content as the rules use it: checked once when the game is created, with the lookups prepared and
 // durations and speeds converted to fixed steps. This is where new kinds of content get validated.
+
+/** Used when the content does not set a minimum damage: a hit always takes at least 1 Health. */
+const DEFAULT_MINIMUM_DAMAGE = 1;
 
 export interface Area {
   readonly id: string;
@@ -23,22 +28,52 @@ export interface Area {
   readonly monsters: readonly MonsterPlacement[];
 }
 
+export type StationaryMonsterType = StationaryMonsterDefinition;
+
+export interface ChaserMonsterType {
+  readonly behavior: 'chaser';
+  readonly health: number;
+  readonly size: number;
+  readonly damage: number;
+  /** Tiles walked in one fixed step. */
+  readonly speedPerStep: number;
+  readonly noticingDistance: number;
+  readonly reach: number;
+  readonly windUpSteps: number;
+  readonly recoverySteps: number;
+}
+
+/** A monster type as the rules use it, one member for each behavior. */
+export type MonsterType = StationaryMonsterType | ChaserMonsterType;
+
 export interface Content {
   readonly hero: {
     readonly size: number;
     /** Tiles walked in one fixed step. */
     readonly speedPerStep: number;
+    readonly health: number;
+    readonly defense: number;
     readonly attack: number;
     readonly attackCooldownSteps: number;
     readonly meleeWeapon: MeleeWeaponDefinition;
   };
-  readonly monsterTypes: Readonly<Record<string, MonsterTypeDefinition>>;
+  /** The least damage a hit does to the hero, however high its Defense. */
+  readonly minimumDamage: number;
+  readonly monsterTypes: Readonly<Record<string, MonsterType>>;
   readonly areas: Readonly<Record<string, Area>>;
   readonly start: { readonly areaId: string; readonly tile: Tile };
 }
 
 /** Throws an Error that says what is wrong when the definition does not make sense. */
 export function loadContent(definition: ContentDefinition): Content {
+  requireMoreThanZero("The hero's health", definition.hero.health);
+  requireZeroOrMore("The hero's defense", definition.hero.defense);
+  const minimumDamage = definition.minimumDamage ?? DEFAULT_MINIMUM_DAMAGE;
+  requireZeroOrMore('The minimum damage', minimumDamage);
+  const monsterTypes: Record<string, MonsterType> = {};
+  for (const [name, monsterType] of Object.entries(definition.monsterTypes)) {
+    monsterTypes[name] = loadMonsterType(name, monsterType);
+  }
   const areas: Record<string, Area> = {};
   const monsterIds = new Set<string>();
   for (const area of definition.areas) {
@@ -60,14 +95,72 @@ export function loadContent(definition: ContentDefinition): Content {
     hero: {
       size: definition.hero.size,
       speedPerStep: definition.hero.speedTilesPerSecond / STEPS_PER_SECOND,
+      health: definition.hero.health,
+      defense: definition.hero.defense,
       attack: definition.hero.attack,
       attackCooldownSteps: msToSteps(definition.hero.attackCooldownMs),
       meleeWeapon: definition.hero.meleeWeapon,
     },
-    monsterTypes: definition.monsterTypes,
+    minimumDamage,
+    monsterTypes,
     areas,
     start: { areaId: definition.start.area, tile: definition.start.tile },
   };
+}
+
+function loadMonsterType(name: string, definition: MonsterTypeDefinition): MonsterType {
+  switch (definition.behavior) {
+    case 'stationary':
+      return { behavior: 'stationary', health: definition.health, size: definition.size };
+    case 'chaser':
+      return loadChaser(name, definition);
+    default:
+      return refuseBehavior(name, definition);
+  }
+}
+
+/** Only content that got past the compiler gets here. Its parameter type makes a behavior without a case a compile error. */
+function refuseBehavior(name: string, definition: never): never {
+  const { behavior } = definition as { behavior?: unknown };
+  throw new Error(`Monster type "${name}" has unknown behavior "${String(behavior)}"`);
+}
+
+function loadChaser(name: string, definition: ChaserMonsterDefinition): ChaserMonsterType {
+  const field = (fieldName: string) => `Monster type "${name}": ${fieldName}`;
+  requireMoreThanZero(field('damage'), definition.damage);
+  requireZeroOrMore(field('speedTilesPerSecond'), definition.speedTilesPerSecond);
+  requireZeroOrMore(field('noticingDistance'), definition.noticingDistance);
+  requireMoreThanZero(field('reach'), definition.reach);
+  requireZeroOrMore(field('recoveryMs'), definition.recoveryMs);
+  if (!(definition.windUpMs >= STEP_MS)) {
+    throw new Error(
+      `${field('windUpMs')} must be at least one fixed step (${STEP_MS.toFixed(1)} ms), but it is ${definition.windUpMs}`,
+    );
+  }
+  return {
+    behavior: 'chaser',
+    health: definition.health,
+    size: definition.size,
+    damage: definition.damage,
+    speedPerStep: definition.speedTilesPerSecond / STEPS_PER_SECOND,
+    noticingDistance: definition.noticingDistance,
+    reach: definition.reach,
+    windUpSteps: msToSteps(definition.windUpMs),
+    recoverySteps: msToSteps(definition.recoveryMs),
+  };
+}
+
+// These also refuse NaN, which no comparison with a number is true for.
+function requireMoreThanZero(what: string, value: number): void {
+  if (!(value > 0)) {
+    throw new Error(`${what} must be more than 0, but it is ${value}`);
+  }
+}
+
+function requireZeroOrMore(what: string, value: number): void {
+  if (!(value >= 0)) {
+    throw new Error(`${what} must be 0 or more, but it is ${value}`);
+  }
 }
 
 function loadArea(area: AreaDefinition, definition: ContentDefinition, monsterIds: Set<string>): Area {
@@ -135,7 +228,7 @@ export function areaOf(content: Content, areaId: string): Area {
   return area;
 }
 
-export function monsterTypeOf(content: Content, type: string): MonsterTypeDefinition {
+export function monsterTypeOf(content: Content, type: string): MonsterType {
   const found = content.monsterTypes[type];
   if (found === undefined) {
     throw new Error(`Unknown monster type "${type}"`);

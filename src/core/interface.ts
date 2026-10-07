@@ -41,13 +41,26 @@ export type GameEvent =
   /** A monster took damage; `health` is what it has left. */
   | { readonly type: 'monster-hit'; readonly monsterId: string; readonly damage: number; readonly health: number }
   /** A monster's Health reached zero. It is gone from the view. */
-  | { readonly type: 'monster-defeated'; readonly monsterId: string };
+  | { readonly type: 'monster-defeated'; readonly monsterId: string }
+  /** A monster struck. `zone` is the area its attack covered, whether or not the hero was in it. */
+  | { readonly type: 'monster-attacked'; readonly monsterId: string; readonly zone: Box }
+  /** The hero took damage, after Defense; `health` is what the hero has left. */
+  | { readonly type: 'hero-hit'; readonly monsterId: string; readonly damage: number; readonly health: number }
+  /**
+   * The hero's Health reached zero. By the time the caller sees this event the hero is back at full Health where
+   * defeat sends it, and the monsters of the Adventure Area are back as they began: the view shows the new state.
+   */
+  | { readonly type: 'hero-defeated' };
 
 export interface HeroView {
   readonly position: Point;
   /** Width and height of the hero's body, in tiles. */
   readonly size: number;
   readonly facing: Direction;
+  /** The hero's current Health. */
+  readonly health: number;
+  /** The hero's maximum Health. */
+  readonly maxHealth: number;
 }
 
 export interface MonsterView {
@@ -58,7 +71,22 @@ export interface MonsterView {
   readonly size: number;
   readonly health: number;
   readonly maxHealth: number;
+  readonly action: MonsterActionView;
 }
+
+/** What a monster is doing, for the adapter to show. */
+export type MonsterActionView =
+  /** Standing where it is. */
+  | { readonly type: 'idle' }
+  /** Has noticed the hero and is walking toward it. */
+  | { readonly type: 'chasing' }
+  /**
+   * The telegraph. The attack lands on `zone` when the wind-up ends: `progress` is the share of the wind-up that has
+   * passed, from 0 when it begins up to (but never reaching) 1. `zone` does not change during the wind-up.
+   */
+  | { readonly type: 'winding-up'; readonly progress: number; readonly zone: Box }
+  /** Resting after an attack. */
+  | { readonly type: 'recovering' };
 
 export interface AreaView {
   readonly id: string;

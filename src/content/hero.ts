@@ -4,6 +4,8 @@ import type { HeroDefinition } from '../core';
 export const hero: HeroDefinition = {
   size: 0.75,
   speedTilesPerSecond: 5,
+  health: 10,
+  defense: 1,
   attack: 1,
   attackCooldownMs: 400,
   meleeWeapon: { reach: 0.75, width: 1 },

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
-import { createGame } from '../src/core';
-import type { Direction } from '../src/core';
+import { STEPS_PER_SECOND, createGame } from '../src/core';
+import type { Direction, GameEvent } from '../src/core';
 import { fixedRandom, playingView, walk } from './fixtures';
 
 // Only what must hold for any content the game ships with. The tests of the rules use purpose-built content
@@ -35,5 +35,18 @@ describe('the content the game ships with', () => {
     });
 
     expect(free).not.toEqual([]);
+  });
+
+  it('keeps the monsters away from the start: a hero who stays there is never hurt', () => {
+    const game = newShippedGame();
+    const events: GameEvent[] = [];
+
+    for (let step = 0; step < 60 * STEPS_PER_SECOND; step += 1) {
+      events.push(...game.step());
+    }
+
+    expect(events.filter((event) => event.type === 'hero-hit')).toEqual([]);
+    const { health, maxHealth } = playingView(game).hero;
+    expect(health).toBe(maxHealth);
   });
 });

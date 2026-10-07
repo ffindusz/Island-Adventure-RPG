@@ -23,9 +23,23 @@ describe('starting a game', () => {
     const game = newGameWithMonsters(dummyAt('dummy-1', 5, 3));
 
     const view = playingView(game);
-    expect(view.hero).toEqual({ position: { x: 3.5, y: 3.5 }, size: 0.5, facing: 'down' });
+    expect(view.hero).toEqual({
+      position: { x: 3.5, y: 3.5 },
+      size: 0.5,
+      facing: 'down',
+      health: 10,
+      maxHealth: 10,
+    });
     expect(view.monsters).toEqual([
-      { id: 'dummy-1', type: 'dummy', position: { x: 5.5, y: 3.5 }, size: 0.5, health: 3, maxHealth: 3 },
+      {
+        id: 'dummy-1',
+        type: 'dummy',
+        position: { x: 5.5, y: 3.5 },
+        size: 0.5,
+        health: 3,
+        maxHealth: 3,
+        action: { type: 'idle' },
+      },
     ]);
   });
 

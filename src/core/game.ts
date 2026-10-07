@@ -1,3 +1,4 @@
+import { stepMonsters } from './behaviors';
 import { coolDownHero, heroStrikes } from './combat';
 import { loadContent } from './content';
 import type { Direction } from './geometry';
@@ -41,11 +42,12 @@ export function createGame(options: GameOptions): Game {
       }
     },
     step() {
-      if (state.phase === 'playing') {
-        coolDownHero(state);
-        walkHero(state, content, held.at(-1));
+      if (state.phase !== 'playing') {
+        return [];
       }
-      return [];
+      coolDownHero(state);
+      walkHero(state, content, held.at(-1));
+      return stepMonsters(state, content);
     },
     view: () => buildView(state, content),
     snapshot: () => {

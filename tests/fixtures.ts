@@ -1,12 +1,15 @@
 import { createGame } from '../src/core';
 import type {
   AreaDefinition,
+  ChaserMonsterDefinition,
   ContentDefinition,
   Direction,
   Game,
   GameEvent,
   HeroDefinition,
   MonsterPlacement,
+  MonsterTypeDefinition,
+  MonsterView,
   PlayingView,
   Snapshot,
 } from '../src/core';
@@ -21,9 +24,13 @@ import type {
 //                           #...,.#      The hero starts in the middle of tile (3, 3), at (3.5, 3.5).
 //                           #######
 //   hero                    body 0.5 tiles; walks 7.5 tiles a second, which is 0.125 tile a fixed step
-//                           (8 steps to cross one tile); Attack 1; attack cooldown 400 ms, which is 24 steps;
-//                           strike reaches 1 tile beyond the body and is 1 tile wide
-//   monster "dummy"         body 0.5 tiles; Health 3
+//                           (8 steps to cross one tile); Health 10; Defense 0; Attack 1; attack cooldown 400 ms,
+//                           which is 24 steps; strike reaches 1 tile beyond the body and is 1 tile wide
+//   monster "dummy"         stationary: it never moves or attacks; body 0.5 tiles; Health 3
+//   monster "biter"         a chaser; body 0.5 tiles; Health 3; damage 5; walks 3.75 tiles a second, which is
+//                           0.0625 tile a step (16 steps to cross one tile); notices the hero within 2 tiles of its
+//                           body; its attack reaches 0.75 tile beyond its body; the wind-up lasts 500 ms (30 steps)
+//                           and the recovery after a strike 400 ms (24 steps)
 //
 // Because the hero's half-width is 0.25, its centre can reach x = 1.25 to 5.75 and y = 1.25 to 4.75.
 
@@ -33,6 +40,37 @@ export const COOLDOWN_STEPS = 24;
 
 export const ARENA_LAYOUT = ['#######', '#.....#', '#.~...#', '#.....#', '#...,.#', '#######'];
 
+// A wide, empty field for tests that need room, such as monsters being farther from the hero than they can notice it:
+//
+//   ##############      14 x 7 tiles, walkable in columns 1 to 12 and rows 1 to 5.
+//   #............#      The hero starts in the middle of tile (6, 3), at (6.5, 3.5): its body spans x 6.25 to 6.75
+//   #............#      and y 3.25 to 3.75.
+//   #............#
+//   #............#
+//   #............#
+//   ##############
+export const FIELD_LAYOUT = [
+  '##############',
+  '#............#',
+  '#............#',
+  '#............#',
+  '#............#',
+  '#............#',
+  '##############',
+];
+
+export const BITER: ChaserMonsterDefinition = {
+  behavior: 'chaser',
+  health: 3,
+  size: 0.5,
+  damage: 5,
+  speedTilesPerSecond: 3.75,
+  noticingDistance: 2,
+  reach: 0.75,
+  windUpMs: 500,
+  recoveryMs: 400,
+};
+
 interface ArenaOptions {
   readonly monsters?: readonly MonsterPlacement[];
   readonly layout?: readonly string[];
@@ -41,6 +79,10 @@ interface ArenaOptions {
   readonly start?: ContentDefinition['start'];
   /** Replaces parts of the hero's definition, for tests about a differently built hero. */
   readonly hero?: Partial<HeroDefinition>;
+  /** More monster types besides the dummy and the biter, or in place of them. */
+  readonly monsterTypes?: Readonly<Record<string, MonsterTypeDefinition>>;
+  /** The least damage the hero takes from a hit. Leave it out to get the default. */
+  readonly minimumDamage?: number;
 }
 
 export function arena(options: ArenaOptions = {}): ContentDefinition {
@@ -50,6 +92,8 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     otherAreas = [],
     start = { area: 'arena', tile: { col: 3, row: 3 } },
     hero = {},
+    monsterTypes = {},
+    minimumDamage,
   } = options;
   return {
     terrain: {
@@ -61,21 +105,40 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     hero: {
       size: 0.5,
       speedTilesPerSecond: 7.5,
+      health: 10,
+      defense: 0,
       attack: 1,
       attackCooldownMs: 400,
       meleeWeapon: { reach: 1, width: 1 },
       ...hero,
     },
+    ...(minimumDamage === undefined ? {} : { minimumDamage }),
     monsterTypes: {
-      dummy: { health: 3, size: 0.5 },
+      dummy: { behavior: 'stationary', health: 3, size: 0.5 },
+      biter: BITER,
+      ...monsterTypes,
     },
     areas: [{ id: 'arena', name: 'Arena', layout, monsters }, ...otherAreas],
     start,
   };
 }
 
+/** A game in the wide field, with the hero at (6.5, 3.5). */
+export function fieldGame(
+  monsters: readonly MonsterPlacement[],
+  monsterTypes?: Readonly<Record<string, MonsterTypeDefinition>>,
+): Game {
+  return newGame(
+    arena({ layout: FIELD_LAYOUT, start: { area: 'arena', tile: { col: 6, row: 3 } }, monsters, monsterTypes }),
+  );
+}
+
 export function dummyAt(id: string, col: number, row: number): MonsterPlacement {
   return { id, type: 'dummy', tile: { col, row } };
+}
+
+export function biterAt(id: string, col: number, row: number): MonsterPlacement {
+  return { id, type: 'biter', tile: { col, row } };
 }
 
 /** The random source for tests: no rule uses randomness yet, so any fixed value will do. */
@@ -105,11 +168,12 @@ export function advance(game: Game, steps: number): GameEvent[] {
   return events;
 }
 
-/** Presses a direction key, holds it for some steps, and releases it. For moving the hero into place. */
-export function walk(game: Game, direction: Direction, steps: number): void {
+/** Presses a direction key, holds it for some steps, and releases it. Returns the events of those steps. */
+export function walk(game: Game, direction: Direction, steps: number): GameEvent[] {
   game.send({ type: 'move', direction });
-  advance(game, steps);
+  const events = advance(game, steps);
   game.send({ type: 'stop', direction });
+  return events;
 }
 
 /** Waits out the attack cooldown, then strikes. Returns the strike's events. */
@@ -130,6 +194,20 @@ export function playingView(game: Game): PlayingView {
     throw new Error(`Expected a game in play, but it is at the ${view.phase}`);
   }
   return view;
+}
+
+/** A monster as the view shows it. */
+export function monsterNamed(game: Game, id: string): MonsterView {
+  const monster = playingView(game).monsters.find((candidate) => candidate.id === id);
+  if (monster === undefined) {
+    throw new Error(`The view shows no monster "${id}"`);
+  }
+  return monster;
+}
+
+/** What a monster is doing, as the view shows it. */
+export function monsterAction(game: Game, id: string): MonsterView['action'] {
+  return monsterNamed(game, id).action;
 }
 
 /** What the snapshot looks like after a trip through storage. */

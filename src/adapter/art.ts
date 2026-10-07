@@ -3,7 +3,7 @@ import type { AreaView, Box, Direction, HeroView, MonsterView, Point } from '../
 import { TILE_SIZE } from './config';
 
 // The placeholder look of the game: flat shapes drawn from the state view. Real art replaces this module; the
-// rest of the adapter only calls the four draw functions below.
+// rest of the adapter only calls the draw functions below.
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -24,10 +24,13 @@ const MONSTER_COLOURS: Readonly<Record<string, number>> = {
 const UNKNOWN_COLOUR = 0xff00ff;
 
 const HERO_COLOUR = 0xf2c14e;
+const HERO_HURT_COLOUR = 0xff3b3b;
 const OUTLINE_COLOUR = 0x1b1b24;
 const HIT_FLASH_COLOUR = 0xffffff;
 const SWING_COLOUR = 0xffffff;
 const HEALTH_COLOUR = 0x7bd35f;
+const TELEGRAPH_COLOUR = 0xe0392e;
+const STRIKE_COLOUR = 0xff8a3d;
 
 /** Side of the square on the hero that shows which way it faces, in pixels. */
 const FACING_MARKER_SIZE = 4;
@@ -80,10 +83,10 @@ export function drawTerrain(graphics: Graphics, area: AreaView): void {
   });
 }
 
-/** Draws the hero as a square with a dark marker on the side it faces. */
-export function drawHero(graphics: Graphics, hero: HeroView): void {
+/** Draws the hero as a square with a dark marker on the side it faces, red while it flashes from a hit. */
+export function drawHero(graphics: Graphics, hero: HeroView, flashing: boolean): void {
   const body = bodyRect(hero.position, hero.size);
-  fillWithOutline(graphics, body, HERO_COLOUR);
+  fillWithOutline(graphics, body, flashing ? HERO_HURT_COLOUR : HERO_COLOUR);
   const step = FACING_STEP[hero.facing];
   const inset = body.width / 2 - FACING_MARKER_SIZE / 2 - 2;
   graphics.fillStyle(OUTLINE_COLOUR);
@@ -95,10 +98,15 @@ export function drawHero(graphics: Graphics, hero: HeroView): void {
   );
 }
 
-/** Draws a monster as a square, white while it flashes from a hit, with a Health bar once it is hurt. */
+/**
+ * Draws a monster as a square: white while it flashes from a hit, dimmed while it rests after an attack, with a Health
+ * bar once it is hurt.
+ */
 export function drawMonster(graphics: Graphics, monster: MonsterView, flashing: boolean): void {
   const body = bodyRect(monster.position, monster.size);
-  fillWithOutline(graphics, body, flashing ? HIT_FLASH_COLOUR : (MONSTER_COLOURS[monster.type] ?? UNKNOWN_COLOUR));
+  const colour = MONSTER_COLOURS[monster.type] ?? UNKNOWN_COLOUR;
+  const resting = monster.action.type === 'recovering';
+  fillWithOutline(graphics, body, flashing ? HIT_FLASH_COLOUR : resting ? dimmed(colour) : colour);
   if (monster.health < monster.maxHealth) {
     const innerWidth = body.width - 2;
     graphics.fillStyle(OUTLINE_COLOUR);
@@ -110,8 +118,45 @@ export function drawMonster(graphics: Graphics, monster: MonsterView, flashing: 
 
 /** Shows where a strike landed: the area the Game core says the swing covered. */
 export function drawSwing(graphics: Graphics, zone: Box): void {
+  const rect = zoneRect(zone);
+  graphics.fillStyle(SWING_COLOUR, 0.5);
+  graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
+}
+
+/**
+ * The telegraph: where a monster's attack is about to land, which the Game core fixed when the wind-up began. The
+ * zone is outlined from the start and fills from its middle outward as the wind-up runs out, so the player can see how
+ * long is left to move away. `progress` is the share of the wind-up that has passed, from 0 up to but not including 1.
+ */
+export function drawTelegraph(graphics: Graphics, zone: Box, progress: number): void {
+  const rect = zoneRect(zone);
+  const done = Math.min(1, Math.max(0, progress));
+  graphics.fillStyle(TELEGRAPH_COLOUR, 0.18);
+  graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
+  const inset = Math.round(((1 - done) * Math.min(rect.width, rect.height)) / 2);
+  graphics.fillStyle(TELEGRAPH_COLOUR, 0.55);
+  graphics.fillRect(rect.x + inset, rect.y + inset, rect.width - 2 * inset, rect.height - 2 * inset);
+  graphics.fillStyle(TELEGRAPH_COLOUR, 1);
+  graphics.fillRect(rect.x, rect.y, rect.width, 1);
+  graphics.fillRect(rect.x, rect.y + rect.height - 1, rect.width, 1);
+  graphics.fillRect(rect.x, rect.y + 1, 1, rect.height - 2);
+  graphics.fillRect(rect.x + rect.width - 1, rect.y + 1, 1, rect.height - 2);
+}
+
+/** Shows where a monster's attack landed, for the moment of impact: the zone the Game core says it covered. */
+export function drawStrike(graphics: Graphics, zone: Box): void {
+  const rect = zoneRect(zone);
+  graphics.fillStyle(STRIKE_COLOUR, 0.7);
+  graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
+}
+
+function zoneRect(zone: Box): Rect {
   const x = px(zone.minX);
   const y = px(zone.minY);
-  graphics.fillStyle(SWING_COLOUR, 0.5);
-  graphics.fillRect(x, y, px(zone.maxX) - x, px(zone.maxY) - y);
+  return { x, y, width: px(zone.maxX) - x, height: px(zone.maxY) - y };
+}
+
+/** The colour at half the brightness. */
+function dimmed(colour: number): number {
+  return (colour >> 1) & 0x7f7f7f;
 }

@@ -1,7 +1,8 @@
 import type { AreaDefinition } from '../../core';
 
 // A placeholder that grows into the real shipwreck coast in a later ticket: a beach and a meadow, split by a wall of
-// rock with a two-tile gap, and one crab on the meadow side. Water and rock are solid.
+// rock with a two-tile gap, and two crabs on the meadow side, far from where the hero starts on the beach (so a hero
+// who is defeated and returns there is not at once in danger). Water and rock are solid.
 export const shipwreckCoast: AreaDefinition = {
   id: 'shipwreck-coast',
   name: 'Shipwreck Coast',
@@ -19,5 +20,8 @@ export const shipwreckCoast: AreaDefinition = {
     '~.........#,,,,,,,,~',
     '~~~~~~~~~~~~~~~~~~~~',
   ],
-  monsters: [{ id: 'crab-1', type: 'crab', tile: { col: 14, row: 5 } }],
+  monsters: [
+    { id: 'crab-1', type: 'crab', tile: { col: 14, row: 5 } },
+    { id: 'crab-2', type: 'crab', tile: { col: 16, row: 9 } },
+  ],
 };
