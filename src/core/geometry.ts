@@ -31,6 +31,11 @@ export function boxAround(center: Point, size: number): Box {
   return { minX: center.x - half, minY: center.y - half, maxX: center.x + half, maxY: center.y + half };
 }
 
+/** The box grown by `margin` on every side. */
+export function expandBox(box: Box, margin: number): Box {
+  return { minX: box.minX - margin, minY: box.minY - margin, maxX: box.maxX + margin, maxY: box.maxY + margin };
+}
+
 /** Overlaps smaller than this are rounding noise: boxes that touch edge to edge are not overlapping. */
 export const EPSILON = 1e-9;
 

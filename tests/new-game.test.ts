@@ -31,7 +31,15 @@ describe('starting a game', () => {
       maxHealth: 10,
     });
     expect(view.monsters).toEqual([
-      { id: 'dummy-1', type: 'dummy', position: { x: 5.5, y: 3.5 }, size: 0.5, health: 3, maxHealth: 3 },
+      {
+        id: 'dummy-1',
+        type: 'dummy',
+        position: { x: 5.5, y: 3.5 },
+        size: 0.5,
+        health: 3,
+        maxHealth: 3,
+        action: { type: 'idle' },
+      },
     ]);
   });
 

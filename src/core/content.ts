@@ -1,9 +1,11 @@
 import type {
   AreaDefinition,
+  ChaserMonsterDefinition,
   ContentDefinition,
   MeleeWeaponDefinition,
   MonsterPlacement,
   MonsterTypeDefinition,
+  StationaryMonsterDefinition,
 } from './definitions';
 import type { Tile } from './geometry';
 import { msToSteps, STEPS_PER_SECOND } from './time';
@@ -23,6 +25,24 @@ export interface Area {
   readonly monsters: readonly MonsterPlacement[];
 }
 
+export type StationaryMonsterType = StationaryMonsterDefinition;
+
+export interface ChaserMonsterType {
+  readonly behavior: 'chaser';
+  readonly health: number;
+  readonly size: number;
+  readonly damage: number;
+  /** Tiles walked in one fixed step. */
+  readonly speedPerStep: number;
+  readonly noticingDistance: number;
+  readonly reach: number;
+  readonly windUpSteps: number;
+  readonly recoverySteps: number;
+}
+
+/** A monster type as the rules use it, one member for each behavior. */
+export type MonsterType = StationaryMonsterType | ChaserMonsterType;
+
 export interface Content {
   readonly hero: {
     readonly size: number;
@@ -33,13 +53,17 @@ export interface Content {
     readonly attackCooldownSteps: number;
     readonly meleeWeapon: MeleeWeaponDefinition;
   };
-  readonly monsterTypes: Readonly<Record<string, MonsterTypeDefinition>>;
+  readonly monsterTypes: Readonly<Record<string, MonsterType>>;
   readonly areas: Readonly<Record<string, Area>>;
   readonly start: { readonly areaId: string; readonly tile: Tile };
 }
 
 /** Throws an Error that says what is wrong when the definition does not make sense. */
 export function loadContent(definition: ContentDefinition): Content {
+  const monsterTypes: Record<string, MonsterType> = {};
+  for (const [name, monsterType] of Object.entries(definition.monsterTypes)) {
+    monsterTypes[name] = loadMonsterType(monsterType);
+  }
   const areas: Record<string, Area> = {};
   const monsterIds = new Set<string>();
   for (const area of definition.areas) {
@@ -66,9 +90,32 @@ export function loadContent(definition: ContentDefinition): Content {
       attackCooldownSteps: msToSteps(definition.hero.attackCooldownMs),
       meleeWeapon: definition.hero.meleeWeapon,
     },
-    monsterTypes: definition.monsterTypes,
+    monsterTypes,
     areas,
     start: { areaId: definition.start.area, tile: definition.start.tile },
+  };
+}
+
+function loadMonsterType(definition: MonsterTypeDefinition): MonsterType {
+  switch (definition.behavior) {
+    case 'stationary':
+      return { behavior: 'stationary', health: definition.health, size: definition.size };
+    case 'chaser':
+      return loadChaser(definition);
+  }
+}
+
+function loadChaser(definition: ChaserMonsterDefinition): ChaserMonsterType {
+  return {
+    behavior: 'chaser',
+    health: definition.health,
+    size: definition.size,
+    damage: definition.damage,
+    speedPerStep: definition.speedTilesPerSecond / STEPS_PER_SECOND,
+    noticingDistance: definition.noticingDistance,
+    reach: definition.reach,
+    windUpSteps: msToSteps(definition.windUpMs),
+    recoverySteps: msToSteps(definition.recoveryMs),
   };
 }
 
@@ -137,7 +184,7 @@ export function areaOf(content: Content, areaId: string): Area {
   return area;
 }
 
-export function monsterTypeOf(content: Content, type: string): MonsterTypeDefinition {
+export function monsterTypeOf(content: Content, type: string): MonsterType {
   const found = content.monsterTypes[type];
   if (found === undefined) {
     throw new Error(`Unknown monster type "${type}"`);

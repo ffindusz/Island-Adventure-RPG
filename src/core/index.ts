@@ -4,11 +4,13 @@ export { STEP_MS, STEPS_PER_SECOND } from './time';
 export { SNAPSHOT_VERSION } from './state';
 export type {
   AreaDefinition,
+  ChaserMonsterDefinition,
   ContentDefinition,
   HeroDefinition,
   MeleeWeaponDefinition,
   MonsterPlacement,
   MonsterTypeDefinition,
+  StationaryMonsterDefinition,
   TerrainDefinition,
 } from './definitions';
 export type { Box, Direction, Point, Tile } from './geometry';
@@ -20,10 +22,11 @@ export type {
   GameOptions,
   GameView,
   HeroView,
+  MonsterActionView,
   MonsterView,
   PlayingView,
   RandomSource,
   Snapshot,
   TitleView,
 } from './interface';
-export type { AreaState, HeroState, MonsterState, PlayState } from './state';
+export type { AreaState, HeroState, MonsterAction, MonsterState, PlayState } from './state';

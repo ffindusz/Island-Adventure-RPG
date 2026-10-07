@@ -1,9 +1,9 @@
 import { areaOf, monsterTypeOf } from './content';
 import type { Content } from './content';
-import type { GameView } from './interface';
+import type { GameView, MonsterActionView } from './interface';
 import { heroMaxHealth } from './stats';
 import { livingMonsters } from './state';
-import type { GameState } from './state';
+import type { GameState, MonsterAction } from './state';
 
 /** Builds a fresh view of the state. Only the terrain grid is shared, because it never changes. */
 export function buildView(state: GameState, content: Content): GameView {
@@ -30,7 +30,19 @@ export function buildView(state: GameState, content: Content): GameView {
         size: type.size,
         health: monster.health,
         maxHealth: type.health,
+        action: actionView(monster.action),
       };
     }),
   };
+}
+
+function actionView(action: MonsterAction): MonsterActionView {
+  switch (action.type) {
+    case 'winding-up':
+      return { type: 'winding-up', progress: action.elapsed / action.length, zone: { ...action.zone } };
+    case 'idle':
+    case 'chasing':
+    case 'recovering':
+      return { type: action.type };
+  }
 }

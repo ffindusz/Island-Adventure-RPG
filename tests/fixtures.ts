@@ -7,6 +7,7 @@ import type {
   GameEvent,
   HeroDefinition,
   MonsterPlacement,
+  MonsterView,
   PlayingView,
   Snapshot,
 } from '../src/core';
@@ -23,7 +24,11 @@ import type {
 //   hero                    body 0.5 tiles; walks 7.5 tiles a second, which is 0.125 tile a fixed step
 //                           (8 steps to cross one tile); Attack 1; attack cooldown 400 ms, which is 24 steps;
 //                           strike reaches 1 tile beyond the body and is 1 tile wide
-//   monster "dummy"         body 0.5 tiles; Health 3
+//   monster "dummy"         stationary: it never moves or attacks; body 0.5 tiles; Health 3
+//   monster "biter"         a chaser; body 0.5 tiles; Health 3; damage 5; walks 3.75 tiles a second, which is
+//                           0.0625 tile a step (16 steps to cross one tile); notices the hero within 2 tiles of its
+//                           body; its attack reaches 0.75 tile beyond its body; the wind-up lasts 500 ms (30 steps)
+//                           and the recovery after a strike 400 ms (24 steps)
 //
 // Because the hero's half-width is 0.25, its centre can reach x = 1.25 to 5.75 and y = 1.25 to 4.75.
 
@@ -68,7 +73,18 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
       ...hero,
     },
     monsterTypes: {
-      dummy: { health: 3, size: 0.5 },
+      dummy: { behavior: 'stationary', health: 3, size: 0.5 },
+      biter: {
+        behavior: 'chaser',
+        health: 3,
+        size: 0.5,
+        damage: 5,
+        speedTilesPerSecond: 3.75,
+        noticingDistance: 2,
+        reach: 0.75,
+        windUpMs: 500,
+        recoveryMs: 400,
+      },
     },
     areas: [{ id: 'arena', name: 'Arena', layout, monsters }, ...otherAreas],
     start,
@@ -77,6 +93,10 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
 
 export function dummyAt(id: string, col: number, row: number): MonsterPlacement {
   return { id, type: 'dummy', tile: { col, row } };
+}
+
+export function biterAt(id: string, col: number, row: number): MonsterPlacement {
+  return { id, type: 'biter', tile: { col, row } };
 }
 
 /** The random source for tests: no rule uses randomness yet, so any fixed value will do. */
@@ -131,6 +151,15 @@ export function playingView(game: Game): PlayingView {
     throw new Error(`Expected a game in play, but it is at the ${view.phase}`);
   }
   return view;
+}
+
+/** What a monster is doing, as the view shows it. */
+export function monsterAction(game: Game, id: string): MonsterView['action'] {
+  const monster = playingView(game).monsters.find((candidate) => candidate.id === id);
+  if (monster === undefined) {
+    throw new Error(`The view shows no monster "${id}"`);
+  }
+  return monster.action;
 }
 
 /** What the snapshot looks like after a trip through storage. */

@@ -1,4 +1,4 @@
-import type { Content } from './content';
+import type { Area, Content } from './content';
 import { monsterTypeOf } from './content';
 import type { Box, Direction, Point } from './geometry';
 import { boxAround, centerOf } from './geometry';
@@ -15,7 +15,20 @@ export interface MonsterState {
   readonly type: string;
   position: Point;
   health: number;
+  /** What the monster is doing now. Every behavior moves a monster through these same few kinds of action. */
+  action: MonsterAction;
 }
+
+/** What a monster is doing. Like all state it is plain data, so a wind-up in progress is saved with the game. */
+export type MonsterAction =
+  /** Standing where it is. */
+  | { readonly type: 'idle' }
+  /** Has noticed the hero and walks toward it. */
+  | { readonly type: 'chasing' }
+  /** Telegraphing an attack: it lands on `zone`, which was fixed when the wind-up began, after `length` steps. */
+  | { readonly type: 'winding-up'; readonly zone: Box; elapsed: number; readonly length: number }
+  /** Resting after an attack, for this many more steps. */
+  | { readonly type: 'recovering'; stepsLeft: number };
 
 export interface AreaState {
   /** Every monster placed in the Adventure Area, defeated ones included (at 0 Health), so that they stay defeated. */
@@ -50,14 +63,7 @@ export type GameState = TitleState | PlayState;
 export function newPlayState(content: Content): PlayState {
   const areas: Record<string, AreaState> = {};
   for (const area of Object.values(content.areas)) {
-    areas[area.id] = {
-      monsters: area.monsters.map((placement) => ({
-        id: placement.id,
-        type: placement.type,
-        position: centerOf(placement.tile),
-        health: monsterTypeOf(content, placement.type).health,
-      })),
-    };
+    areas[area.id] = { monsters: freshMonsters(area, content) };
   }
   return {
     phase: 'playing',
@@ -65,6 +71,17 @@ export function newPlayState(content: Content): PlayState {
     hero: { position: centerOf(content.start.tile), facing: 'down', health: heroMaxHealth(content), attackCooldown: 0 },
     areas,
   };
+}
+
+/** Every monster of an Adventure Area as the content places it: at full Health, on its starting tile, doing nothing. */
+export function freshMonsters(area: Area, content: Content): MonsterState[] {
+  return area.monsters.map((placement) => ({
+    id: placement.id,
+    type: placement.type,
+    position: centerOf(placement.tile),
+    health: monsterTypeOf(content, placement.type).health,
+    action: { type: 'idle' },
+  }));
 }
 
 /**
@@ -91,4 +108,8 @@ export function livingMonsters(state: PlayState): MonsterState[] {
 
 export function monsterBody(monster: MonsterState, content: Content): Box {
   return boxAround(monster.position, monsterTypeOf(content, monster.type).size);
+}
+
+export function heroBody(state: PlayState, content: Content): Box {
+  return boxAround(state.hero.position, content.hero.size);
 }

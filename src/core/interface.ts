@@ -62,7 +62,22 @@ export interface MonsterView {
   readonly size: number;
   readonly health: number;
   readonly maxHealth: number;
+  readonly action: MonsterActionView;
 }
+
+/** What a monster is doing, for the adapter to show. */
+export type MonsterActionView =
+  /** Standing where it is. */
+  | { readonly type: 'idle' }
+  /** Has noticed the hero and is walking toward it. */
+  | { readonly type: 'chasing' }
+  /**
+   * The telegraph. The attack lands on `zone` when the wind-up ends: `progress` is the share of the wind-up that has
+   * passed, from 0 when it begins up to (but never reaching) 1. `zone` does not change during the wind-up.
+   */
+  | { readonly type: 'winding-up'; readonly progress: number; readonly zone: Box }
+  /** Resting after an attack. */
+  | { readonly type: 'recovering' };
 
 export interface AreaView {
   readonly id: string;

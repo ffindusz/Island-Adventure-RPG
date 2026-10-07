@@ -32,11 +32,42 @@ export interface HeroDefinition {
   readonly meleeWeapon: MeleeWeaponDefinition;
 }
 
-export interface MonsterTypeDefinition {
+/** What every kind of monster has, whatever its behavior. */
+export interface MonsterTypeBase {
   readonly health: number;
   /** Width and height of the monster's body, in tiles. */
   readonly size: number;
 }
+
+/** A monster that stays where it was placed and never attacks. */
+export interface StationaryMonsterDefinition extends MonsterTypeBase {
+  readonly behavior: 'stationary';
+}
+
+/**
+ * A monster that notices the hero, walks up to it and attacks. The attack is telegraphed: the monster winds up first,
+ * and only then does the damage land, on whatever is within its reach of the monster's body at that moment.
+ */
+export interface ChaserMonsterDefinition extends MonsterTypeBase {
+  readonly behavior: 'chaser';
+  /** The damage of one hit, before the hero's Defense reduces it. */
+  readonly damage: number;
+  readonly speedTilesPerSecond: number;
+  /** How near the hero must come to the monster's body, in tiles, for the monster to notice it and approach. */
+  readonly noticingDistance: number;
+  /** How far the attack reaches beyond the monster's body, in every direction, in tiles. */
+  readonly reach: number;
+  /** How long the monster winds up before the damage lands: the time the player has to avoid the attack. */
+  readonly windUpMs: number;
+  /** How long the monster rests after its attack before it may wind up again. */
+  readonly recoveryMs: number;
+}
+
+/**
+ * A monster type. Its `behavior` names the rules the monster follows (see behaviors.ts); the other fields are the
+ * numbers that behavior needs. Adding a behavior means adding a member here and an entry in the behavior registry.
+ */
+export type MonsterTypeDefinition = StationaryMonsterDefinition | ChaserMonsterDefinition;
 
 /** One monster standing in an Adventure Area. */
 export interface MonsterPlacement {
