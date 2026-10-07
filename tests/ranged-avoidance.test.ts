@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Game, RangedMonsterDefinition, Snapshot } from '../src/core';
+import type { Game, Snapshot } from '../src/core';
 import {
   advance,
   face,
@@ -11,7 +11,7 @@ import {
   throughStorage,
   walk,
 } from './fixtures';
-import { SHOOTER, enemyContent, enemyField, shooterAt, untilFired } from './enemy-fixtures';
+import { enemyContent, enemyField, shooterAt, SNIPER, untilFired } from './enemy-fixtures';
 
 // The timeline is that of ranged-attacker.test.ts: a shooter in tile (2, 3) and the hero at (6.5, 3.5), in the same row.
 // The wind-up begins in step 1 and the shot is fired in step 31. It flies 0.0625 tile a step and meets a hero who stays
@@ -137,17 +137,8 @@ describe('a shooter that has been hit', () => {
 });
 
 describe('a tougher shooter is a change of data', () => {
-  // The sniper has 6 Health, winds up for 300 ms (18 steps), rests for 400 ms (24 steps), and its shot does 6 damage and
-  // flies 7.5 tiles a second (0.125 tile a step). It is fired in step 19 and makes 29 moves to the hero, so it arrives
-  // in step 48. The rest is over in step 43, when the sniper winds up again.
-  const SNIPER: RangedMonsterDefinition = {
-    ...SHOOTER,
-    health: 6,
-    windUpMs: 300,
-    recoveryMs: 400,
-    projectile: { damage: 6, speedTilesPerSecond: 7.5, range: 6, size: 0.25 },
-  };
-
+  // The sniper fires in step 19 and its shot makes 29 moves to the hero, so it arrives in step 48. The rest is over in
+  // step 43, when the sniper winds up again.
   it('winds up, shoots, hurts and rests by its own numbers, with no code of its own', () => {
     const game = enemyField([{ id: 'sniper-1', type: 'sniper', tile: { col: 2, row: 3 } }], {
       monsterTypes: { sniper: SNIPER },

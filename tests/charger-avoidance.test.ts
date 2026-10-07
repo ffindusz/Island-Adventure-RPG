@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ChargerMonsterDefinition, Game, Snapshot } from '../src/core';
+import type { Game, Snapshot } from '../src/core';
 import {
   advance,
   face,
@@ -11,7 +11,7 @@ import {
   throughStorage,
   walk,
 } from './fixtures';
-import { CHARGER, chargerAt, enemyContent, enemyField } from './enemy-fixtures';
+import { chargerAt, enemyContent, enemyField, HEAVY } from './enemy-fixtures';
 
 // The timeline is that of charger.test.ts: a charger in tile (2, 3) and the hero at (6.5, 3.5), in the same row. The
 // wind-up begins in step 1 and the dash is launched in step 31. The dash meets a hero who stays in step 45, and when
@@ -136,18 +136,8 @@ describe('a charger that stands in any direction from the hero', () => {
 });
 
 describe('a tougher charger is a change of data', () => {
-  // The heavy charger has 6 Health, hits for 8, winds up for 300 ms (18 steps), dashes at 22.5 tiles a second (0.375
-  // tile a step) and recovers for 400 ms (24 steps). Its dash is launched in step 19 and has made 9 moves in step 28,
-  // when its right edge is 0.125 tile short of the hero. The tenth move meets the hero, in step 29.
-  const HEAVY: ChargerMonsterDefinition = {
-    ...CHARGER,
-    health: 6,
-    damage: 8,
-    windUpMs: 300,
-    dashSpeedTilesPerSecond: 22.5,
-    recoveryMs: 400,
-  };
-
+  // The dash of the heavy charger is launched in step 19 and has made 9 moves in step 28, when its right edge is 0.125
+  // tile short of the hero. The tenth move meets the hero, in step 29.
   it('winds up, dashes, hits and recovers by its own numbers, with no code of its own', () => {
     const game = enemyField([{ id: 'heavy-1', type: 'heavy', tile: { col: 2, row: 3 } }], {
       monsterTypes: { heavy: HEAVY },

@@ -55,6 +55,29 @@ export const KEEPER: RangedMonsterDefinition = {
   keepsDistance: { preferredDistance: 3, speedTilesPerSecond: 3.75 },
 };
 
+// Tougher kinds of the same behaviors, by their numbers alone.
+//   monster "heavy"     the charger with 6 Health, damage 8, a wind-up of 300 ms (18 steps), a dash of 22.5 tiles a second
+//                       (0.375 tile a step) and a recovery of 400 ms (24 steps)
+//   monster "sniper"    the shooter with 6 Health, a wind-up of 300 ms (18 steps), a recovery of 400 ms (24 steps), and a
+//                       projectile that does 6 damage, flies 7.5 tiles a second (0.125 tile a step) and falls 6 tiles away
+
+export const HEAVY: ChargerMonsterDefinition = {
+  ...CHARGER,
+  health: 6,
+  damage: 8,
+  windUpMs: 300,
+  dashSpeedTilesPerSecond: 22.5,
+  recoveryMs: 400,
+};
+
+export const SNIPER: RangedMonsterDefinition = {
+  ...SHOOTER,
+  health: 6,
+  windUpMs: 300,
+  recoveryMs: 400,
+  projectile: { damage: 6, speedTilesPerSecond: 7.5, range: 6, size: 0.25 },
+};
+
 export const WIND_UP_STEPS = 30;
 export const CHARGER_RECOVERY_STEPS = 48;
 export const DASH_STEP = 0.25;
