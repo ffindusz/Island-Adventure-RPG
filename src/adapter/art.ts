@@ -1,0 +1,117 @@
+import type Phaser from 'phaser';
+import type { AreaView, Box, Direction, HeroView, MonsterView, Point } from '../core';
+import { TILE_SIZE } from './config';
+
+// The placeholder look of the game: flat shapes drawn from the state view. Real art replaces this module; the
+// rest of the adapter only calls the four draw functions below.
+
+type Graphics = Phaser.GameObjects.Graphics;
+
+/** Terrain colours, by the `kind` the content gives each terrain. */
+const TERRAIN_COLOURS: Readonly<Record<string, number>> = {
+  water: 0x2f6db5,
+  rock: 0x6e6e78,
+  sand: 0xdcc58a,
+  grass: 0x5a9e45,
+};
+
+/** Monster colours, by monster type. */
+const MONSTER_COLOURS: Readonly<Record<string, number>> = {
+  crab: 0xd9534f,
+};
+
+/** Anything the art has no colour for is drawn in this colour, so a missing one cannot be overlooked. */
+const UNKNOWN_COLOUR = 0xff00ff;
+
+const HERO_COLOUR = 0xf2c14e;
+const OUTLINE_COLOUR = 0x1b1b24;
+const HIT_FLASH_COLOUR = 0xffffff;
+const SWING_COLOUR = 0xffffff;
+const HEALTH_COLOUR = 0x7bd35f;
+
+/** Side of the square on the hero that shows which way it faces, in pixels. */
+const FACING_MARKER_SIZE = 4;
+
+const FACING_STEP: Readonly<Record<Direction, Point>> = {
+  up: { x: 0, y: -1 },
+  down: { x: 0, y: 1 },
+  left: { x: -1, y: 0 },
+  right: { x: 1, y: 0 },
+};
+
+interface Rect {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** Tiles to whole canvas pixels, so every shape lands exactly on pixels and stays crisp. */
+function px(tiles: number): number {
+  return Math.round(tiles * TILE_SIZE);
+}
+
+/** A body's rectangle in pixels. Its size is fixed, so it never flickers between sizes as it moves. */
+function bodyRect(position: Point, size: number): Rect {
+  return { x: px(position.x - size / 2), y: px(position.y - size / 2), width: px(size), height: px(size) };
+}
+
+function fillWithOutline(graphics: Graphics, rect: Rect, fill: number): void {
+  graphics.fillStyle(OUTLINE_COLOUR);
+  graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
+  graphics.fillStyle(fill);
+  graphics.fillRect(rect.x + 1, rect.y + 1, rect.width - 2, rect.height - 2);
+}
+
+/** Draws the ground of the whole area. Call it once per area: terrain never changes. */
+export function drawTerrain(graphics: Graphics, area: AreaView): void {
+  graphics.clear();
+  area.terrain.forEach((row, rowIndex) => {
+    row.forEach((kind, colIndex) => {
+      const x = colIndex * TILE_SIZE;
+      const y = rowIndex * TILE_SIZE;
+      graphics.fillStyle(TERRAIN_COLOURS[kind] ?? UNKNOWN_COLOUR);
+      graphics.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+      // A faint edge on two sides, so single tiles can be told apart and blurry scaling would show.
+      graphics.fillStyle(0x000000, 0.12);
+      graphics.fillRect(x, y + TILE_SIZE - 1, TILE_SIZE, 1);
+      graphics.fillRect(x + TILE_SIZE - 1, y, 1, TILE_SIZE - 1);
+    });
+  });
+}
+
+/** Draws the hero as a square with a dark marker on the side it faces. */
+export function drawHero(graphics: Graphics, hero: HeroView): void {
+  const body = bodyRect(hero.position, hero.size);
+  fillWithOutline(graphics, body, HERO_COLOUR);
+  const step = FACING_STEP[hero.facing];
+  const inset = body.width / 2 - FACING_MARKER_SIZE / 2 - 2;
+  graphics.fillStyle(OUTLINE_COLOUR);
+  graphics.fillRect(
+    Math.round(body.x + body.width / 2 + step.x * inset - FACING_MARKER_SIZE / 2),
+    Math.round(body.y + body.height / 2 + step.y * inset - FACING_MARKER_SIZE / 2),
+    FACING_MARKER_SIZE,
+    FACING_MARKER_SIZE,
+  );
+}
+
+/** Draws a monster as a square, white while it flashes from a hit, with a Health bar once it is hurt. */
+export function drawMonster(graphics: Graphics, monster: MonsterView, flashing: boolean): void {
+  const body = bodyRect(monster.position, monster.size);
+  fillWithOutline(graphics, body, flashing ? HIT_FLASH_COLOUR : (MONSTER_COLOURS[monster.type] ?? UNKNOWN_COLOUR));
+  if (monster.health < monster.maxHealth) {
+    const innerWidth = body.width - 2;
+    graphics.fillStyle(OUTLINE_COLOUR);
+    graphics.fillRect(body.x, body.y - 5, body.width, 4);
+    graphics.fillStyle(HEALTH_COLOUR);
+    graphics.fillRect(body.x + 1, body.y - 4, Math.max(1, Math.round((innerWidth * monster.health) / monster.maxHealth)), 2);
+  }
+}
+
+/** Shows where a strike landed: the area the Game core says the swing covered. */
+export function drawSwing(graphics: Graphics, zone: Box): void {
+  const x = px(zone.minX);
+  const y = px(zone.minY);
+  graphics.fillStyle(SWING_COLOUR, 0.5);
+  graphics.fillRect(x, y, px(zone.maxX) - x, px(zone.maxY) - y);
+}
