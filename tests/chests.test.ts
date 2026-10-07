@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Direction } from '../src/core';
+import type { AreaDefinition, Direction, InteractableDefinition, Snapshot } from '../src/core';
 import {
   ARENA_LAYOUT,
   advance,
@@ -12,6 +12,7 @@ import {
   monsterNamed,
   newGame,
   playingView,
+  throughStorage,
   walk,
 } from './fixtures';
 
@@ -29,6 +30,11 @@ const STEEL_SWORD_PICKED_UP = {
 /** A game where the hero stands above a chest, on the tile (3, 4), that holds the steel sword. The hero faces it. */
 function gameWithChestBelow() {
   return newGame(arena({ interactables: [chestAt('chest-1', 3, 4, 'steel-sword')] }));
+}
+
+/** A second Adventure Area, which the hero does not reach, with the given interactables. */
+function cellarWith(...interactables: InteractableDefinition[]): AreaDefinition {
+  return { id: 'cellar', name: 'Cellar', layout: ARENA_LAYOUT, monsters: [], interactables };
 }
 
 function carriedIds(game: ReturnType<typeof newGame>): string[] {
@@ -238,18 +244,100 @@ describe('a chest in the way', () => {
   });
 
   it('is not one of another Adventure Area: those are neither shown nor in the way of the hero', () => {
-    const cellar = {
-      id: 'cellar',
-      name: 'Cellar',
-      layout: ARENA_LAYOUT,
-      monsters: [],
-      interactables: [chestAt('cellar-chest', 5, 3, 'iron-sword')],
-    };
+    const cellar = cellarWith(chestAt('cellar-chest', 5, 3, 'iron-sword'));
     const game = newGame(arena({ otherAreas: [cellar], interactables: [chestAt('chest-1', 3, 4, 'steel-sword')] }));
 
     walk(game, 'right', 20);
 
     expect(playingView(game).interactables.map((chest) => chest.id)).toEqual(['chest-1']);
     expect(playingView(game).hero.position.x).toBe(5.75);
+  });
+});
+
+describe('chests and Gear in a saved game', () => {
+  const content = arena({
+    interactables: [chestAt('chest-1', 3, 4, 'steel-sword')],
+    otherAreas: [cellarWith(chestAt('cellar-chest', 3, 4, 'iron-sword'))],
+  });
+
+  /** The hero has opened the chest below it and equipped the steel sword that was inside. */
+  function gameWithSteelSwordEquipped(gameContent = content) {
+    const game = newGame(gameContent);
+    game.send(INTERACT);
+    game.send(OPEN_INVENTORY);
+    game.send({ type: 'equip', gearId: 'steel-sword' });
+    game.send({ type: 'close-page', page: 'inventory' });
+    return game;
+  }
+
+  function continuedFrom(snapshot: Snapshot) {
+    const game = gameAtTitle(content);
+    game.send({ type: 'continue', snapshot: throughStorage(snapshot) });
+    return game;
+  }
+
+  it('keeps an opened chest opened: a game continued from a save finds nothing more in it', () => {
+    const game = newGame(content);
+    game.send(INTERACT);
+
+    const restored = continuedFrom(game.snapshot());
+
+    expect(playingView(restored).interactables).toMatchObject([{ id: 'chest-1', opened: true }]);
+    expect(restored.send(INTERACT)).toEqual([]);
+    expect(carriedIds(restored)).toEqual(['basic-sword', 'steel-sword', 'basic-armor']);
+  });
+
+  it('keeps a chest that was not opened closed', () => {
+    const restored = continuedFrom(newGame(content).snapshot());
+
+    expect(playingView(restored).interactables).toMatchObject([{ id: 'chest-1', opened: false }]);
+    expect(restored.send(INTERACT)).toEqual([{ type: 'chest-opened', chestId: 'chest-1' }, STEEL_SWORD_PICKED_UP]);
+  });
+
+  it('keeps the Gear that the hero carries and has equipped', () => {
+    const restored = continuedFrom(gameWithSteelSwordEquipped().snapshot());
+
+    restored.send(OPEN_INVENTORY);
+
+    expect(playingView(restored).page).toMatchObject({
+      gear: [
+        { id: 'basic-sword', equipped: false },
+        { id: 'steel-sword', equipped: true },
+        { id: 'basic-armor', equipped: true },
+      ],
+      attack: 6,
+    });
+  });
+
+  it('keeps the chests of each Adventure Area apart: opening one leaves those of the other areas as they were', () => {
+    const game = newGame(content);
+    game.send(INTERACT);
+
+    const { areas } = game.snapshot().state;
+
+    expect(areas['arena']?.interactables).toEqual({ 'chest-1': { kind: 'chest', opened: true } });
+    expect(areas['cellar']?.interactables).toEqual({ 'cellar-chest': { kind: 'chest', opened: false } });
+  });
+
+  it('keeps what the hero found, equipped and opened when the hero is defeated: defeat takes none of it back', () => {
+    const doomed = arena({
+      hero: { health: 5 },
+      monsters: [biterAt('biter', 4, 3)],
+      interactables: [chestAt('chest-1', 3, 4, 'steel-sword')],
+    });
+    const game = gameWithSteelSwordEquipped(doomed);
+
+    expect(advance(game, 31).map((event) => event.type)).toContain('hero-defeated');
+
+    expect(playingView(game).interactables).toMatchObject([{ id: 'chest-1', opened: true }]);
+    game.send(OPEN_INVENTORY);
+    expect(playingView(game).page).toMatchObject({
+      gear: [
+        { id: 'basic-sword', equipped: false },
+        { id: 'steel-sword', equipped: true },
+        { id: 'basic-armor', equipped: true },
+      ],
+      attack: 6,
+    });
   });
 });

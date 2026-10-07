@@ -24,7 +24,8 @@ export function hurtHero(state: PlayState, content: Content, monsterId: string, 
 /**
  * Defeat sends the hero back at full Health and starts the Adventure Area it returns to over: its monsters are all
  * there again, at full Health on their starting tiles. Nothing else changes: the hero keeps the way it faces and its
- * attack cooldown, the milestones it has reached stay reached, and the direction keys the player holds stay held.
+ * attack cooldown, the milestones it has reached stay reached, the chests it has opened stay opened, it keeps all its
+ * Gear, and the direction keys the player holds stay held.
  */
 function returnHero(state: PlayState, content: Content): void {
   // Until Adventure Areas have entrances and Checkpoints, the one place to return to is where the adventure began.
