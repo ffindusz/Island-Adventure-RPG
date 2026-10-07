@@ -198,6 +198,21 @@ describe('Touching a Checkpoint', () => {
     expect(playingView(game).checkpoints).toEqual([{ ...CAMP_VIEW, active: true }]);
   });
 
+  it('is active in its own Adventure Area only: a Checkpoint on the same tile of another area is not', () => {
+    // The adventure starts on tile (3, 3) of the arena, which is where defeat sends the hero until it touches another
+    // Checkpoint. The cellar has a Checkpoint on its own tile (3, 3), which the hero does not touch when it comes in
+    // at (2.5, 3.5).
+    const twin: CheckpointDefinition = { id: 'cellar-twin', tile: { col: 3, row: 3 } };
+    const game = newGame(world({}, { checkpoints: [twin] }));
+
+    walk(game, 'right', 11);
+
+    expect(playingView(game).area.id).toBe('cellar');
+    expect(playingView(game).checkpoints).toEqual([
+      { id: 'cellar-twin', position: { x: 3.5, y: 3.5 }, size: 1, active: false },
+    ]);
+  });
+
   it('restores the hero to full Health', () => {
     const game = newGame(arena({ checkpoints: [CAMP], monsters: [BITER_BESIDE_HERO] }));
     expect(advance(game, 31)).toContainEqual(BITE);
