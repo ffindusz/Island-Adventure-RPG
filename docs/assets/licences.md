@@ -8,19 +8,19 @@ How it is used:
 - The credits screen draws from the "Credits text" lines of entries that are "In use".
 - Rule from the spec: every graphics and audio asset must permit public and commercial use.
 
-Last updated: 2026-10-07. Nothing is in use yet: ticket 02 only inspected the pack outside the repository, and no asset file has been copied into the repository.
+Last updated: 2026-10-07. The user approved the Ninja Adventure pack as the art base that day (ADR 0004). Nothing is in use yet: ticket 02 only inspected the pack outside the repository, and no asset file has been copied into the repository.
 
 ## Summary
 
 | ID | Source | Licence | Checked | Status |
 | --- | --- | --- | --- | --- |
-| A1 | Ninja Adventure Asset Pack: art, audio, and the other files | CC0 1.0 Universal | 2026-10-06, re-read 2026-10-07 | Proposed base, awaiting the user's approval (ADR 0004) |
-| A2 | Ninja Adventure `Ui\Font\NormalFont.ttf` | FontStruct Non-Commercial License (embedded in the font file), conflicting with the pack's CC0 claim | 2026-10-07 | Do not use |
+| A1 | Ninja Adventure Asset Pack: art, audio, and the other files | CC0 1.0 Universal | 2026-10-06, re-read 2026-10-07 | Approved base on 2026-10-07 (ADR 0004); nothing in use yet |
+| A2 | Ninja Adventure `Ui\Font\NormalFont.ttf` | FontStruct Non-Commercial License (embedded in the font file), conflicting with the pack's CC0 claim | 2026-10-07 | Do not use; the user confirmed on 2026-10-07 that it is replaced |
 | A3 | Ninja Adventure `Ui\Input` and `Ui\Skill Icon` | Covered only by the pack's blanket CC0 claim; no separate provenance | 2026-10-07 | Not needed; avoid |
 | S1 | Kenney Pirate Pack (shipwreck supplement candidate) | CC0 | 2026-10-06 | Candidate, poor style match |
 | S2 | OpenGameArt "Ship / Destroyed Ship" by Kutejnikov (shipwreck supplement candidate) | CC0 | 2026-10-06 | Candidate, side view |
 | S3 | OpenGameArt "Shipwreck" by nicubunu (shipwreck supplement candidate) | CC0 | 2026-10-06 | Candidate, vector, poor style match |
-| S4 | 16x16 Pirates Tileset by 0x72 (shipwreck supplement candidate) | CC0, as stated in the author's page text (the page has no formal licence field) | 2026-10-07 | Candidate, 16 px pixel art, side view, different palette |
+| S4 | 16x16 Pirates Tileset by 0x72 (shipwreck supplement candidate) | CC0, as stated in the author's page text (the page has no formal licence field) | 2026-10-07 | Candidate, 16 px pixel art, side view, different palette. Fallback only if the composed wreck is weak (ADR 0004); downloading it needs the user's permission |
 | F1 | TinyRPG Collection by ansimuz (fallback) | Custom itch.io text: personal and commercial use, no resale or redistribution | 2026-10-06 | Fallback, not bought |
 | F2 | Pixel RPG Characters Pack by Mithrillor (fallback) | Custom itch.io text: commercial use, no resale, redistribution, or re-upload | 2026-10-06 | Fallback, not bought |
 | F3 | Another Perspective by VEXED (fallback) | CC BY 4.0 (attribution required) | 2026-10-06 | Fallback, not bought |
@@ -45,7 +45,7 @@ Last updated: 2026-10-07. Nothing is in use yet: ticket 02 only inspected the pa
 ### A2. Ninja Adventure font `Ui\Font\NormalFont.ttf`: do not use
 
 - **Finding:** the font file's own name table says "Copyright pixel-boy 2021", family "NinjaAdventure", licence "FontStruct Non-Commercial License", built with FontStruct. That is not CC0. Taken by its name, it is a non-commercial licence. FontStruct's own announcement of the licences (https://fontstruct.com/news/2013/07/05/new-licensing-options/, July 5th 2013, saved 2026-10-06) says that "Downloaders are free to use these fonts either commercially or non-commercially depending on which of the two is used" and that both new FontStruct licences "prohibit redistribution of the downloads by anyone apart from the designing FontStructor". FontStruct's FAQ "Can I use FontStruction X in a project?" (saved 2026-10-06) adds that all licences in use on FontStruct require crediting the original designer. The designer is the pack's author, so he may have meant it as CC0, but the shipped file says otherwise, and the font's FontStruct page could not be read (the saved copy is a login page), so its exact terms are unconfirmed.
-- **Decision for the project:** do not use or ship `NormalFont.ttf`. The HUD and pages use a font with a confirmed licence instead (the art ticket for the HUD picks it and adds its own entry here). The bitmap fonts `font8x8.png` and `font24x30.png` in the same folder have no stated provenance, so they are not relied on either.
+- **Decision for the project:** do not use or ship `NormalFont.ttf`; the user confirmed on 2026-10-07 that it is replaced (ADR 0004). The HUD and pages use a font with a confirmed licence instead (ticket 22 picks it and adds its own entry here; fetching a font needs the user's permission, because the download permission covered the pack only). The bitmap fonts `font8x8.png` and `font24x30.png` in the same folder have no stated provenance, so they are not relied on either.
 - **Optional follow-up for the user:** ask the pack's author which licence the font really has.
 
 ### A3. Ninja Adventure `Ui\Input` and `Ui\Skill Icon`
