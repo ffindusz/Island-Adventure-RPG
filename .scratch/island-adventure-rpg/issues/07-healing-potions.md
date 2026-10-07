@@ -49,6 +49,16 @@
 - Mutation checks, each reverted afterwards (tests that failed): a cap that ignores a Stat Point (1); no inventory-page gate (3); no consumption (3); no refusal at full Health (1); no refusal with none (1); regeneration in `step()` (6, among them the "never done by itself" test); the potion id left out of `CONSUMABLE_IDS` (34); a chest of consumables that always gives Ammunition (13); a pickup that is never marked taken (5); a solid pickup (8); a taken pickup still in the view (2).
 - Headless Edge on `vite preview` (port 5107, now stopped), real key presses with the shared smoke tool, screenshots viewed, no console errors: the boot HUD (sword, arrow, grey 0, then a pink flask and a grey 0; the purple potion crate and the loose flask on the beach); the chest and the flask open and take with their notices (+2, then +1: HUD 3, the crate drawn dark); a crab hit (7/10), I, Down, Down, Enter: the line is highlighted with the hint UP/DOWN PICK ENTER USE, and Health 10/10 (only the 3 that fitted), potions 2 to 1; two more Enters at full Health change nothing.
 
+### Merging with ticket 08
+
+- Ticket 08 (areas and the camera) was not in integration when this was done (integration tip `2622de3`, 08's branch tip `79689bb`), so this branch does not contain it. The merge is rehearsed, resolved and green on the branch `merge-rehearsal/07-with-08` (this branch plus 08, 465 tests in 28 files, `npm.cmd run check` passing). Merging that branch into integration is clean whichever of the two went in first, so whoever merges second can take it instead of resolving by hand.
+- Four files conflict, `README.md`, `src/adapter/art.ts`, `src/adapter/hud.ts` and `src/core/game.ts`. Both sides stay in each: 08's exits art, area text and `HUD_BOTTOM` with this ticket's pickup art, potion slot and `collectPickups`.
+- Three things git does not flag, all handled in the rehearsal:
+  - `game.ts`: `pickupEvents` must also be in the early return after `crossExits`. Without it a pickup taken on the very step that takes the hero through an exit loses its event.
+  - `tests/area-connections.test.ts` reads the caches with `chestViews`. `InteractableView` is now `ChestView | PickupView`, so `cache.holds` stops compiling.
+  - The trail's north-west rock (`overgrown-trail.ts`) was placed by hand for 08's HUD, 62 px wide. The potion slot makes it 88 px, so the hero could walk under the HUD at tiles (4,1) to (5,2) (seen in the browser). The rock grows to column 5 on rows 1 and 2, and the HUD then sits over rock; checked in the browser again. A wider or taller HUD needs this checked each time.
+- Two tests added there, next to the chest and cache ones: a taken pickup stays taken in either area, and the pickup event is kept on the crossing step. Mutation checks: dropping `pickupEvents` from the early return fails the second, and resetting the taken pickups on entering an area fails the first.
+
 ### Left for manual review
 
 - The reviewer play check (the last criterion) stays unticked. The runs above were driven by a script, not by a person: how the flask and the crate read, whether 5 Health a potion feels right, and how the cursor line reads are for the reviewer.
@@ -57,7 +67,7 @@
 ### Suggestions
 
 - Ticket 09: roll back the potion count together with the collected state of consumable pickups, caches and chests (`AreaState.interactables`, `collected` for pickups and `opened` for chests), and leave Gear chests opened.
-- Ticket 08 promises that a collected pickup stays collected when the hero backtracks. The pickup state is per Adventure Area, so it should; a test belongs with whichever of the two merges second.
+- Ticket 08 promises that a collected pickup stays collected when the hero backtracks. The pickup state is per Adventure Area, so it does; the test for it needs 08's areas, so it is in the merge rehearsal (see "Merging with ticket 08") and has to travel with whichever merge comes second.
 - The page pauses the game, so a heal flash would be invisible: feedback for a potion used is for the audio ticket (21) or a short message on the page.
 - An on-screen E prompt when the hero faces a chest (still none).
 - GLOSSARY.md lacks pickup (a consumable lying on a tile that the hero takes by walking onto it), and, as ticket 06 said, cache, drop and consumable.
