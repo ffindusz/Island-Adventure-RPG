@@ -94,6 +94,12 @@ export function walk(game: Game, direction: Direction, steps: number): void {
   game.send({ type: 'stop', direction });
 }
 
+/** Turns the hero on the spot: the key goes down and up again before any step, so the hero does not move. */
+export function face(game: Game, direction: Direction): void {
+  game.send({ type: 'move', direction });
+  game.send({ type: 'stop', direction });
+}
+
 export function playingView(game: Game): PlayingView {
   const view = game.view();
   if (view.phase !== 'playing') {

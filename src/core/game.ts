@@ -1,3 +1,4 @@
+import { heroStrikes } from './combat';
 import { loadContent } from './content';
 import type { Direction } from './geometry';
 import type { Game, GameOptions } from './interface';
@@ -31,6 +32,8 @@ export function createGame(options: GameOptions): Game {
             state.hero.facing = held.at(-1) ?? state.hero.facing;
           }
           return [];
+        case 'attack':
+          return state.phase === 'playing' ? heroStrikes(state, content) : [];
         default:
           return [];
       }
