@@ -142,15 +142,15 @@ function levelUpPanel(levelUp: LevelUpView): Panel {
   return { width: WIDE_PANEL, rows };
 }
 
-function pagePanel(page: PageView, hero: HeroView, inventoryCursor: number): Panel {
+function pagePanel(page: PageView, hero: HeroView, inventoryCursor: number): Panel | null {
   switch (page.id) {
     case 'stats':
       return statPagePanel(page);
     case 'inventory':
       return inventoryPagePanel(page, hero, inventoryCursor);
     case 'automap':
-      // Until the adapter draws the map, the page only says it is open.
-      return { width: NARROW_PANEL, rows: [{ kind: 'text', text: 'AUTOMAP', colour: TITLE_COLOUR }] };
+      // The Automap is a map, not rows of text: it draws itself (automap-page.ts), and the overlay shows nothing for it.
+      return null;
   }
 }
 

@@ -167,11 +167,33 @@ export function layoutRoute(areas: readonly RouteArea[], space: Rect, metrics: M
   return { scale: scaleAt(step), places };
 }
 
+/** What a name that had to be cut short ends with. */
+const CUT_MARK = '..';
+
+/**
+ * The name, cut from its end and finished with two dots until it is no wider than `width`. `measure` gives the width
+ * of a text in the font that draws it.
+ */
+export function fitLabel(name: string, width: number, measure: (text: string) => number): string {
+  if (measure(name) <= width) {
+    return name;
+  }
+  for (let kept = name.length - 1; kept > 0; kept -= 1) {
+    const cut = `${name.slice(0, kept)}${CUT_MARK}`;
+    if (measure(cut) <= width) {
+      return cut;
+    }
+  }
+  return CUT_MARK;
+}
+
 /** Whether each area is linked to the next one in the route: an exit of either leads to the other. */
 export function linkedWithNext(areas: readonly Pick<AutomapAreaView, 'id' | 'connections'>[]): boolean[] {
   return areas.slice(1).map((next, index) => {
     const previous = areas[index];
-    return previous !== undefined && (previous.connections.includes(next.id) || next.connections.includes(previous.id));
+    return (
+      previous !== undefined && (previous.connections.includes(next.id) || next.connections.includes(previous.id))
+    );
   });
 }
 

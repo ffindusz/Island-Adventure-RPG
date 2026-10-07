@@ -14,6 +14,7 @@ import {
   drawTelegraph,
   drawTerrain,
 } from './art';
+import { AutomapPage } from './automap-page';
 import { scrollFor } from './camera';
 import { Feedback } from './feedback';
 import { FixedStepClock } from './fixed-step';
@@ -53,6 +54,7 @@ export class PlayScene extends Phaser.Scene {
   private banner!: AreaBanner;
   private notice!: Notice;
   private overlay!: Overlay;
+  private automapPage!: AutomapPage;
   private terrainLayer!: Phaser.GameObjects.Graphics;
   private telegraphLayer!: Phaser.GameObjects.Graphics;
   private entityLayer!: Phaser.GameObjects.Graphics;
@@ -67,8 +69,8 @@ export class PlayScene extends Phaser.Scene {
   create(): void {
     // Added in drawing order: ground, then the telegraphs of monster attacks, then Checkpoints, chests, hero and
     // monsters, then the swings and strikes on top. The HUD draws above them all, then the text of the area, the notice
-    // above that, and the overlay above that. The world scrolls with the camera; the HUD, the text, the notice and the
-    // overlay do not.
+    // above that, and the overlay above that, which shares its place with the Automap page. The world scrolls with the
+    // camera; the HUD, the text, the notice, the overlay and the Automap page do not.
     this.terrainLayer = this.add.graphics();
     this.telegraphLayer = this.add.graphics();
     this.entityLayer = this.add.graphics();
@@ -77,6 +79,7 @@ export class PlayScene extends Phaser.Scene {
     this.banner = new AreaBanner(this);
     this.notice = new Notice(this);
     this.overlay = new Overlay(this);
+    this.automapPage = new AutomapPage(this);
     const keyboard = this.input.keyboard;
     if (keyboard === null) {
       throw new Error('The keyboard plugin is not available, so nothing could control the hero.');
@@ -84,7 +87,7 @@ export class PlayScene extends Phaser.Scene {
     this.playerInput = new PlayerInput(keyboard);
   }
 
-  override update(_time: number, frameMs: number): void {
+  override update(time: number, frameMs: number): void {
     const watching = playerIsWatching();
     const events: GameEvent[] = [];
     const send = (commands: readonly Command[]): void => {
@@ -121,10 +124,10 @@ export class PlayScene extends Phaser.Scene {
       // A page or a Stat Point covers the notice, and the player is already where it pointed them.
       this.feedback.dismissNotice();
     }
-    this.draw(view, watching);
+    this.draw(view, watching, time);
   }
 
-  private draw(view: GameView, watching: boolean): void {
+  private draw(view: GameView, watching: boolean, time: number): void {
     if (view.phase !== 'playing') {
       return;
     }
@@ -168,5 +171,6 @@ export class PlayScene extends Phaser.Scene {
     this.banner.draw(gameIsWaiting(view) ? null : view.areaText);
     this.notice.draw(this.feedback.notice());
     this.overlay.draw(view, watching, this.inventoryMenu.position);
+    this.automapPage.draw(view, time);
   }
 }

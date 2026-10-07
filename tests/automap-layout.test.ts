@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { edgeOf, exitRect, layoutRoute, linkedWithNext, markerRect, routeLinks, tileRects } from '../src/adapter/automap-layout';
+import {
+  edgeOf,
+  exitRect,
+  fitLabel,
+  layoutRoute,
+  linkedWithNext,
+  markerRect,
+  routeLinks,
+  tileRects,
+} from '../src/adapter/automap-layout';
 import type { Metrics, Place, Rect, RouteArea, RouteLayout } from '../src/adapter/automap-layout';
 
 // Where the Automap page puts the areas of the route, and the shapes it draws in them, as numbers: no drawing, so no
@@ -389,5 +398,29 @@ describe('the links between the areas of the route', () => {
 
   it('draws nothing for areas that are not linked', () => {
     expect(routeLinks(THREE_THEN_TWO, [false, false, false, false], LINK)).toEqual([]);
+  });
+});
+
+describe('the names of the areas on the Automap', () => {
+  /** A letter is 10 pixels wide and a dot is 2, as in a font whose letters differ in width from its dots. */
+  const measure = (text: string): number => [...text].reduce((total, mark) => total + (mark === '.' ? 2 : 10), 0);
+
+  it('leaves a name as it is when it fits, even when it fits exactly', () => {
+    expect(fitLabel('COAST', 50, measure)).toBe('COAST');
+  });
+
+  it('cuts a name that is too wide from its end, and finishes it with two dots, as long as the width allows', () => {
+    // 8 letters and the two dots are 84 pixels: 9 letters would be 94.
+    expect(fitLabel('SHIPWRECK COAST', 84, measure)).toBe('SHIPWREC..');
+  });
+
+  it('cuts no more than it has to: one letter less than the name when that is already narrow enough', () => {
+    // COAS and the dots are 44 pixels, and COAST is 50.
+    expect(fitLabel('COAST', 45, measure)).toBe('COAS..');
+  });
+
+  it('is left with the dots alone when not even one letter fits with them', () => {
+    expect(fitLabel('SHIPWRECK', 14, measure)).toBe('S..');
+    expect(fitLabel('SHIPWRECK', 13, measure)).toBe('..');
   });
 });
