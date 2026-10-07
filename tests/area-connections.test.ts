@@ -18,10 +18,12 @@ import {
   face,
   fixedRandom,
   frailMonster,
+  gameAtTitle,
   monsterNamed,
   newGame,
   playingView,
   strike,
+  throughStorage,
   walk,
 } from './fixtures';
 
@@ -330,6 +332,81 @@ describe('Area text', () => {
     expect(events.map((event) => event.type)).not.toContain('area-text');
     expect(playingView(game).areaText).toBeNull();
   });
+
+  it('is shown at the start of a new game when the start area has one, so that the first view already has it', () => {
+    const game = gameAtTitle(arena({ text: 'The wreck.' }));
+
+    expect(game.send({ type: 'new-game' })).toEqual([{ type: 'area-text', areaId: 'arena', text: 'The wreck.' }]);
+
+    expect(playingView(game).areaText).toBe('The wreck.');
+  });
+
+  it('is replaced when the hero leaves: by the text of an area it has not seen, or by nothing for one it has', () => {
+    const game = newGame(world({ text: 'The wreck.' }, { text: CELLAR_TEXT }));
+    expect(playingView(game).areaText).toBe('The wreck.');
+
+    walk(game, 'right', 11);
+    expect(playingView(game).areaText).toBe(CELLAR_TEXT);
+
+    walk(game, 'left', 3);
+    expect(playingView(game).areaText).toBeNull();
+  });
+
+  it('stays for 4 seconds, which is 240 steps, unless the content says otherwise, and then goes', () => {
+    const game = newGame(world({}, { text: CELLAR_TEXT }));
+    walk(game, 'right', 11);
+
+    advance(game, 239);
+    expect(playingView(game).areaText).toBe(CELLAR_TEXT);
+
+    advance(game, 1);
+    expect(playingView(game).areaText).toBeNull();
+  });
+
+  it('stays for as long as the content says: half a second is 30 steps', () => {
+    const game = newGame(world({ areaTextMs: 500 }, { text: CELLAR_TEXT }));
+    walk(game, 'right', 11);
+
+    advance(game, 29);
+    expect(playingView(game).areaText).toBe(CELLAR_TEXT);
+
+    advance(game, 1);
+    expect(playingView(game).areaText).toBeNull();
+  });
+
+  it('waits while a page is open over the game, because the game is paused then', () => {
+    const game = newGame(world({}, { text: CELLAR_TEXT }));
+    walk(game, 'right', 11);
+
+    game.send({ type: 'open-page', page: 'stats' });
+    advance(game, 300);
+    expect(playingView(game).areaText).toBe(CELLAR_TEXT);
+
+    game.send({ type: 'close-page', page: 'stats' });
+    advance(game, 239);
+    expect(playingView(game).areaText).toBe(CELLAR_TEXT);
+    advance(game, 1);
+    expect(playingView(game).areaText).toBeNull();
+  });
+
+  it('is not shown again for a game that was saved and continued, and a text on show runs on', () => {
+    const game = newGame(world({}, { text: CELLAR_TEXT }));
+    walk(game, 'right', 11);
+    advance(game, 100);
+    const resumed = gameAtTitle(world({}, { text: CELLAR_TEXT }));
+    resumed.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
+
+    expect(playingView(resumed).areaText).toBe(CELLAR_TEXT);
+    advance(resumed, 139);
+    expect(playingView(resumed).areaText).toBe(CELLAR_TEXT);
+    advance(resumed, 1);
+    expect(playingView(resumed).areaText).toBeNull();
+
+    walk(resumed, 'left', 3);
+    const events = walk(resumed, 'right', 3);
+    expect(events).toContainEqual({ type: 'area-changed', areaId: 'cellar' });
+    expect(events.map((event) => event.type)).not.toContain('area-text');
+  });
 });
 
 describe('Content validation of connected Adventure Areas', () => {
@@ -428,6 +505,17 @@ describe('Content validation of connected Adventure Areas', () => {
     expectRefused(
       arena({ entrances: [insideTheExit], exits: [TO_CELLAR], otherAreas: [CELLAR] }),
       'Area "arena": entrance "from-cellar" is inside exit "to-cellar", which would send the hero straight back',
+    );
+  });
+
+  it('refuses an area text that is blank', () => {
+    expectRefused(world({}, { text: '   ' }), 'Area "cellar": the area text is blank');
+  });
+
+  it.each([0, -5, Number.NaN])('refuses an area text duration of %s milliseconds', (areaTextMs) => {
+    expectRefused(
+      world({ areaTextMs }),
+      `The area text duration must be at least one fixed step (16.7 ms), but it is ${areaTextMs}`,
     );
   });
 });

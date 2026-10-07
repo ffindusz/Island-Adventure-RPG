@@ -391,7 +391,13 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition, usedIds: 
 
 /** The text of an Adventure Area, or null when it has none. */
 function loadAreaText(area: AreaDefinition): string | null {
-  return area.text ?? null;
+  if (area.text === undefined) {
+    return null;
+  }
+  if (area.text.trim() === '') {
+    throw new Error(`Area "${area.id}": the area text is blank`);
+  }
+  return area.text;
 }
 
 /** `width` and `height` are the size of the map of the Adventure Area, in tiles. */
