@@ -6,4 +6,5 @@ export const terrain: ContentDefinition['terrain'] = {
   '#': { kind: 'rock', solid: true },
   '.': { kind: 'sand', solid: false },
   ',': { kind: 'grass', solid: false },
+  W: { kind: 'wreckage', solid: true },
 };

@@ -27,6 +27,7 @@ const TERRAIN_COLOURS: Readonly<Record<string, number>> = {
   rock: 0x6e6e78,
   sand: 0xdcc58a,
   grass: 0x5a9e45,
+  wreckage: 0x7b5a3a,
 };
 
 /** Monster colours, by monster type. */

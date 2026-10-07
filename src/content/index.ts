@@ -22,5 +22,6 @@ export const gameContent: ContentDefinition = {
   gear,
   monsterTypes,
   areas: [shipwreckCoast, overgrownTrail],
-  start: { area: shipwreckCoast.id, tile: { col: 4, row: 5 } },
+  checkCoveredCorner: true,
+  start: { area: shipwreckCoast.id, tile: { col: 5, row: 9 } },
 };

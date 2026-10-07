@@ -12,7 +12,7 @@ import type {
   InventoryPageView,
 } from '../src/core';
 import { fixedRandom, playingView, walk } from './fixtures';
-import { isInZone, openTilesOf, routeBetween, walkRoute } from './routes';
+import { isInZone, openTilesOf, quietGameOf, routeBetween, walkRoute } from './routes';
 
 // Only what must hold for any content the game ships with. The tests of the rules use purpose-built content
 // (fixtures.ts), so that changing what ships never breaks them.
@@ -189,10 +189,7 @@ describe('the Automap of the content the game ships with', () => {
 
   /** A new game of the shipped content without its monsters, which are not what these tests are about. */
   function newQuietGame() {
-    const quiet = { ...gameContent, areas: gameContent.areas.map((area) => ({ ...area, monsters: [] })) };
-    const game = createGame({ content: quiet, random: fixedRandom });
-    game.send({ type: 'new-game' });
-    return game;
+    return quietGameOf(gameContent);
   }
 
   /** Walks from the start along the way to the exit of the first area for as long as `keepGoing` says so. */

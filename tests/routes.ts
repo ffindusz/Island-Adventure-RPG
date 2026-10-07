@@ -1,5 +1,5 @@
 import type { AreaDefinition, ContentDefinition, Direction, Game, GameEvent, Tile, TileRect } from '../src/core';
-import { playingView, walk } from './fixtures';
+import { newGame, playingView, walk } from './fixtures';
 
 // Walking the hero from place to place with the core's own movement, for the tests of the content the game ships
 // with. The route comes from the content's own map, so that changing what ships never breaks these tests.
@@ -14,8 +14,18 @@ const NEIGHBOURS: readonly (readonly [number, number])[] = [
   [0, -1],
 ];
 
-function keyOf({ col, row }: Tile): string {
+export function keyOf({ col, row }: Tile): string {
   return `${col},${row}`;
+}
+
+/** The four tiles the hero can step to from a tile, whatever is on them. */
+export function neighboursOf({ col, row }: Tile): Tile[] {
+  return NEIGHBOURS.map(([stepCol, stepRow]) => ({ col: col + stepCol, row: row + stepRow }));
+}
+
+/** A new game of the content with every monster taken out, for the tests that are not about the monsters. */
+export function quietGameOf(content: ContentDefinition): Game {
+  return newGame({ ...content, areas: content.areas.map((area) => ({ ...area, monsters: [] })) });
 }
 
 export function isInZone(zone: TileRect, { col, row }: Tile): boolean {
@@ -48,8 +58,7 @@ export function routeBetween(isOpen: (tile: Tile) => boolean, from: Tile, isGoal
       }
       return route;
     }
-    for (const [stepCol, stepRow] of NEIGHBOURS) {
-      const next = { col: tile.col + stepCol, row: tile.row + stepRow };
+    for (const next of neighboursOf(tile)) {
       if (!cameFrom.has(keyOf(next)) && isOpen(next)) {
         cameFrom.set(keyOf(next), tile);
         frontier.push(next);
@@ -59,7 +68,8 @@ export function routeBetween(isOpen: (tile: Tile) => boolean, from: Tile, isGoal
   return null;
 }
 
-function directionBetween(from: Tile, to: Tile): Direction {
+/** The way to hold to get from a tile to a neighbouring one. */
+export function directionBetween(from: Tile, to: Tile): Direction {
   if (to.col !== from.col) {
     return to.col > from.col ? 'right' : 'left';
   }

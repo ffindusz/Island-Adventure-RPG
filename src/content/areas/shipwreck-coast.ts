@@ -1,67 +1,68 @@
 import type { AreaDefinition } from '../../core';
 
-// A placeholder that grows into the real shipwreck coast in a later ticket: a beach and a meadow, split by a wall of
-// rock with a two-tile gap, and on the meadow side two crabs, a boar and a spitter, far from where the hero starts on
-// the beach (so a hero who is defeated and returns there is not at once in danger). Water and rock are solid. Passing
-// through the gap is a milestone, worth a little Experience. Two chests on the beach, one up and one down the column of
-// the start, hold a better sword and better armor. Two more, in the column two tiles right of the start, hold a short
-// bow and a cache of arrows. In the column two tiles left of it, a chest up the beach holds two Healing Potions and a
-// third lies on the ground down the beach, to be taken by walking over it. The Checkpoint of the area is where the hero
-// starts: the start of the adventure counts as the first.
+// The shipwreck coast, where the adventure begins: 40 by 18 tiles, so the view follows the hero. The hero comes to on
+// a beach under the hull of the wreck in the north-west, the sea behind it. A path of sand runs east along the beach,
+// through a gap in the rocks into a bay with an outcrop of rock, and out of the bay by a mouth in the east wall, with
+// a piece of wreckage beside it. Beyond lies a corridor that turns from sand to grass at the exit toward the woods.
+// Water, rock and wreckage are solid. Passing the mouth is the milestone, worth a little Experience. Chests are solid
+// too. A chest of Healing Potions stands under the hull and a third potion lies on the beach, to be taken by walking
+// over it. A crevice in the south wall of the bay, with no sign to it, leads to a cove: the side path, where a better
+// sword waits in a chest at the far end. Three crabs, the weak chasers, keep the bay, the corridor and the cove, far
+// from where the hero starts and comes in, so that a hero who is defeated and returns to the Checkpoint is not at once
+// in danger. The Checkpoint is where the hero starts: the start of the adventure counts as the first. Rows 0 to 2 are
+// water, so that the top-left corner, which the HUD covers (core/covered-corner.ts), is solid.
 export const shipwreckCoast: AreaDefinition = {
   id: 'shipwreck-coast',
   name: 'Shipwreck Coast',
-  text: 'You washed up on a strange shore.',
-  entrances: [{ id: 'from-trail', tile: { col: 18, row: 5 } }],
-  checkpoints: [{ id: 'coast-checkpoint', tile: { col: 4, row: 5 } }],
+  text: 'Wreckage litters the shore. Follow the beach east.',
+  entrances: [{ id: 'from-trail', tile: { col: 38, row: 8 } }],
+  checkpoints: [{ id: 'coast-checkpoint', tile: { col: 5, row: 9 } }],
   exits: [
     {
       id: 'to-trail',
-      zone: { col: 19, row: 5, width: 1, height: 2 },
+      zone: { col: 39, row: 8, width: 1, height: 2 },
       to: { area: 'overgrown-trail', entrance: 'from-coast' },
     },
   ],
   layout: [
-    '~~~~~~~~~~~~~~~~~~~~',
-    '~.........#,,,,,,,,~',
-    '~.........#,,,,,,,,~',
-    '~.........#,,,,,,,,~',
-    '~.........#,,,,,,,,~',
-    '~..........,,,,,,,,,',
-    '~..........,,,,,,,,,',
-    '~.........#,,,,,,,,~',
-    '~.........#,,,,,,,,~',
-    '~.........#,,,,,,,,~',
-    '~.........#,,,,,,,,~',
-    '~~~~~~~~~~~~~~~~~~~~',
+    '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+    '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+    '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+    '~~~WWWWW~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+    '~~WWWWWWWW~~~~~~~~~~~~~~..~~~~~~~~~~~~~~',
+    '~~WWWWWWWWW~..###............###########',
+    '~.WWWWWWWW....###............WW#########',
+    '~.............###....##..........,,,,,,#',
+    '~....................##..........,,,,,,,',
+    '~................................,,,,,,,',
+    '~.............###................,,,,,,#',
+    '~.............###............###########',
+    '~...........#####............###########',
+    '~########################.##############',
+    '~####################..........#########',
+    '~####################...........########',
+    '~####################..........#########',
+    '~#######################################',
   ],
   // Kept clear of the entrance from the trail as well as the start with its Checkpoint, so that a hero who comes in
   // there, or returns to the Checkpoint after a defeat, is not at once in danger: no monster's noticing distance
-  // reaches a hero who stands on either (shipped-enemies.test.ts). The boar waits on the bottom row of the meadow and
-  // the spitter in its north-west corner.
+  // reaches a hero who stands on either (shipped-enemies.test.ts). The first crab waits in the bay, the second in the
+  // corridor, and the third in the cove, by the chest.
   monsters: [
-    { id: 'crab-1', type: 'crab', tile: { col: 12, row: 3 } },
-    { id: 'crab-2', type: 'crab', tile: { col: 12, row: 8 } },
-    { id: 'boar-1', type: 'boar', tile: { col: 15, row: 10 } },
-    { id: 'spitter-1', type: 'spitter', tile: { col: 12, row: 1 } },
+    { id: 'crab-1', type: 'crab', tile: { col: 22, row: 10 } },
+    { id: 'crab-2', type: 'crab', tile: { col: 32, row: 9 } },
+    { id: 'crab-3', type: 'crab', tile: { col: 26, row: 16 } },
   ],
-  milestones: [{ id: 'rock-wall-gap', zone: { col: 10, row: 5, width: 1, height: 2 }, reward: { experience: 5 } }],
+  // The mouth in the east wall, all four tiles of it: every way to the exit crosses it.
+  milestones: [{ id: 'broken-mast', zone: { col: 29, row: 7, width: 1, height: 4 }, reward: { experience: 5 } }],
   interactables: [
-    { kind: 'chest', id: 'sword-chest', tile: { col: 4, row: 3 }, contents: { kind: 'gear', gear: 'steel-sword' } },
-    { kind: 'chest', id: 'armor-chest', tile: { col: 4, row: 7 }, contents: { kind: 'gear', gear: 'chain-mail' } },
-    { kind: 'chest', id: 'bow-chest', tile: { col: 6, row: 3 }, contents: { kind: 'gear', gear: 'short-bow' } },
-    {
-      kind: 'chest',
-      id: 'arrow-cache',
-      tile: { col: 6, row: 7 },
-      contents: { kind: 'consumable', consumable: 'ammunition', amount: 6 },
-    },
     {
       kind: 'chest',
       id: 'potion-chest',
-      tile: { col: 2, row: 3 },
+      tile: { col: 8, row: 7 },
       contents: { kind: 'consumable', consumable: 'healing-potion', amount: 2 },
     },
-    { kind: 'pickup', id: 'beach-potion', tile: { col: 2, row: 7 }, consumable: 'healing-potion', amount: 1 },
+    { kind: 'pickup', id: 'beach-potion', tile: { col: 9, row: 11 }, consumable: 'healing-potion', amount: 1 },
+    { kind: 'chest', id: 'sword-chest', tile: { col: 31, row: 15 }, contents: { kind: 'gear', gear: 'steel-sword' } },
   ],
 };
