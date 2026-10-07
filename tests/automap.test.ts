@@ -140,6 +140,25 @@ describe('The Automap while the hero walks', () => {
   });
 });
 
+describe('The hero on the Automap', () => {
+  it('is shown where it is, in the Adventure Area it is in, and follows it as it walks', () => {
+    const game = newGame(arena());
+
+    expect(areaOnMap(game, 'arena').hero).toEqual({ x: 3.5, y: 3.5 });
+
+    walk(game, 'right', 4);
+    walk(game, 'down', 2);
+
+    expect(areaOnMap(game, 'arena').hero).toEqual({ x: 4, y: 3.75 });
+  });
+
+  it('is shown in no other Adventure Area', () => {
+    const game = newGame(arena({ otherAreas: [CELLAR] }));
+
+    expect(areaOnMap(game, 'cellar').hero).toBeNull();
+  });
+});
+
 describe('The reveal distance', () => {
   it.each([
     {

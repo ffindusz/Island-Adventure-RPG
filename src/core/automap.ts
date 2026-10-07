@@ -53,6 +53,7 @@ function automapArea(state: PlayState, area: Area): AutomapAreaView {
     height: area.height,
     current: area.id === state.areaId,
     discovered,
+    hero: area.id === state.areaId ? { ...state.hero.position } : null,
     terrain,
   };
 }
