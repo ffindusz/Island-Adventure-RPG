@@ -6,12 +6,14 @@ import type { AreaDefinition } from '../../core';
 // through the gap is a milestone, worth a little Experience. Two chests on the beach, one up and one down the column of
 // the start, hold a better sword and better armor. Two more, in the column two tiles right of the start, hold a short
 // bow and a cache of arrows. In the column two tiles left of it, a chest up the beach holds two Healing Potions and a
-// third lies on the ground down the beach, to be taken by walking over it.
+// third lies on the ground down the beach, to be taken by walking over it. The Checkpoint of the area is where the hero
+// starts: the start of the adventure counts as the first.
 export const shipwreckCoast: AreaDefinition = {
   id: 'shipwreck-coast',
   name: 'Shipwreck Coast',
   text: 'You washed up on a strange shore.',
   entrances: [{ id: 'from-trail', tile: { col: 18, row: 5 } }],
+  checkpoints: [{ id: 'coast-checkpoint', tile: { col: 4, row: 5 } }],
   exits: [
     {
       id: 'to-trail',
@@ -33,9 +35,10 @@ export const shipwreckCoast: AreaDefinition = {
     '~.........#,,,,,,,,~',
     '~~~~~~~~~~~~~~~~~~~~',
   ],
-  // Kept clear of the entrance from the trail as well as the start, so that a hero who comes in there, or is defeated
-  // there and returns, is not at once in danger: no monster's noticing distance reaches a hero who stands on either
-  // (shipped-enemies.test.ts). The boar waits on the bottom row of the meadow and the spitter in its north-west corner.
+  // Kept clear of the entrance from the trail as well as the start with its Checkpoint, so that a hero who comes in
+  // there, or returns to the Checkpoint after a defeat, is not at once in danger: no monster's noticing distance
+  // reaches a hero who stands on either (shipped-enemies.test.ts). The boar waits on the bottom row of the meadow and
+  // the spitter in its north-west corner.
   monsters: [
     { id: 'crab-1', type: 'crab', tile: { col: 12, row: 3 } },
     { id: 'crab-2', type: 'crab', tile: { col: 12, row: 8 } },

@@ -22,7 +22,8 @@ import type { ChestState, InteractableState, PlayState } from './state';
 //      happens by walking is a step in game.ts instead. Add the case that shows it to interactableView (view.ts);
 //   3. decide in blocksWalkers whether the hero and the monsters walk through it, and in isInteractedWith whether
 //      Interact reaches it. If Interact does not, leave the kind out of InteractedWith, as the pickup is; if it does,
-//      add it to INTERACTIONS. The compiler refuses a kind that is missing from any of these.
+//      add it to INTERACTIONS. The compiler refuses a kind that is missing from any of these;
+//   4. if it gives consumables, say in consumable-rollback.ts whether defeat takes it back and what taking it is.
 
 /** The interactables that Interact acts on: all but those the hero takes by walking onto them. */
 type InteractedWith = Exclude<Interactable, Pickup>;

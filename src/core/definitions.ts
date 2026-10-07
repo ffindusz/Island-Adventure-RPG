@@ -266,7 +266,10 @@ export type ChestContents =
   | { readonly kind: 'gear'; readonly gear: string }
   | { readonly kind: 'consumable'; readonly consumable: ConsumableId; readonly amount: number };
 
-/** A chest: the hero opens it once by interacting with it and takes what is inside. It fills one tile and is solid. */
+/**
+ * A chest: the hero opens it once by interacting with it and takes what is inside. It fills one tile and is solid.
+ * Defeat closes it again when it holds a consumable that the hero took after its Checkpoint (see consumable-rollback.ts).
+ */
 export interface ChestDefinition {
   readonly kind: 'chest';
   /** Unique across all interactables of all Adventure Areas: events and saves refer to the chest by it. */
@@ -278,7 +281,8 @@ export interface ChestDefinition {
 
 /**
  * Some of a consumable lying on a tile: the hero takes all of it by walking onto it, with no key to press, and it is
- * gone for good. It is not solid: the hero, the monsters and the arrows pass over it.
+ * gone, unless defeat puts it back (see consumable-rollback.ts). It is not solid: the hero, the monsters and the arrows
+ * pass over it.
  */
 export interface PickupDefinition {
   readonly kind: 'pickup';
@@ -312,6 +316,20 @@ export interface ExitDestination {
   readonly entrance: string;
 }
 
+/**
+ * A safe place the hero activates by touching it: it restores the hero's Health and records where defeat sends the
+ * hero back to (see checkpoints.ts). It fills one tile and is not solid.
+ */
+export interface CheckpointDefinition {
+  /** Unique across all Adventure Areas: events refer to the Checkpoint by it. */
+  readonly id: string;
+  /**
+   * The tile it stands on, which must not be solid, nor inside an exit of the same area, nor where an interactable
+   * stands or a monster starts: after defeat the hero stands at the centre of this tile.
+   */
+  readonly tile: Tile;
+}
+
 /** Ground that takes the hero to another Adventure Area as soon as its body overlaps it. */
 export interface ExitDefinition {
   /** Unique within its Adventure Area. */
@@ -335,6 +353,11 @@ export interface AreaDefinition {
   readonly entrances?: readonly EntranceDefinition[];
   /** The exits of this Adventure Area. Each leads to an entrance of an area that has an exit back. Leave out for none. */
   readonly exits?: readonly ExitDefinition[];
+  /**
+   * The Checkpoints of this Adventure Area. Every area needs at least one: the one at its entrance, where the hero
+   * comes in (for the first area, where the game begins).
+   */
+  readonly checkpoints?: readonly CheckpointDefinition[];
   /** A short text shown the first time the hero enters this Adventure Area. Leave it out for none. */
   readonly text?: string;
 }

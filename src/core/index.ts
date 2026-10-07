@@ -7,6 +7,7 @@ export type {
   AreaDefinition,
   ChaserMonsterDefinition,
   ChargerMonsterDefinition,
+  CheckpointDefinition,
   ChestContents,
   ChestDefinition,
   ConsumableId,
@@ -41,6 +42,7 @@ export type { Box, Direction, Point, Tile } from './geometry';
 export type {
   AreaView,
   ArrowView,
+  CheckpointView,
   ChestView,
   Command,
   ExitView,
@@ -71,6 +73,7 @@ export type {
 export type {
   AreaState,
   ArrowState,
+  CheckpointState,
   ChestState,
   HeroState,
   InteractableState,

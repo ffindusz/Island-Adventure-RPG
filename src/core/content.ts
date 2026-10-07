@@ -1,4 +1,5 @@
 import { checkConnections, loadEntrances, loadExits } from './connections';
+import { loadCheckpoints } from './checkpoint-content';
 import { CONSUMABLE_IDS, GEAR_SLOTS, STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
@@ -76,6 +77,13 @@ export interface Exit {
   readonly to: { readonly areaId: string; readonly entranceId: string };
 }
 
+/** A Checkpoint as the rules use it: its body is the box of the tile it stands on, which the hero's body has to overlap. */
+export interface Checkpoint {
+  readonly id: string;
+  readonly tile: Tile;
+  readonly body: Box;
+}
+
 export interface Area {
   readonly id: string;
   readonly name: string;
@@ -92,6 +100,8 @@ export interface Area {
   readonly entrances: readonly Entrance[];
   /** Where the hero can leave: the exits, each leading to an entrance of another area. */
   readonly exits: readonly Exit[];
+  /** The safe places the hero can touch: at least one. */
+  readonly checkpoints: readonly Checkpoint[];
   /** A short text shown the first time the hero enters, or null for none. */
   readonly text: string | null;
 }
@@ -235,6 +245,7 @@ export function loadContent(definition: ContentDefinition): Content {
     monsters: new Set<string>(),
     milestones: new Set<string>(),
     interactables: new Set<string>(),
+    checkpoints: new Set<string>(),
     gear: new Map<string, string>(),
   };
   const startingGear = loadStartingGear(definition.hero.startingGear, gear, usedIds);
@@ -501,6 +512,7 @@ interface UsedIds {
   readonly monsters: Set<string>;
   readonly milestones: Set<string>;
   readonly interactables: Set<string>;
+  readonly checkpoints: Set<string>;
   /** Each piece of Gear that is given somewhere, with who gives it: the hero carries each piece at most once. */
   readonly gear: Map<string, string>;
 }
@@ -591,6 +603,7 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition, usedIds: 
     milestones: (area.milestones ?? []).map((milestone) => loadMilestone(area.id, milestone, width, height, usedIds)),
     entrances: loadEntrances(area, isWalkable),
     exits: loadExits(area, width, height),
+    checkpoints: loadCheckpoints(area, isWalkable, usedIds.checkpoints),
     text: loadAreaText(area),
   };
   for (const monster of area.monsters) {
@@ -640,8 +653,8 @@ function loadMilestone(
 
 /**
  * The interactables of an Adventure Area. Each stands alone on a walkable tile: not where the hero or a monster
- * starts, and not where another interactable stands. `loaded` is the area as far as it is loaded: its monsters are
- * checked.
+ * starts, not where a Checkpoint stands, and not where another interactable stands. `loaded` is the area as far as it
+ * is loaded: its monsters and Checkpoints are checked.
  */
 function loadInteractables(
   area: AreaDefinition,
@@ -652,6 +665,9 @@ function loadInteractables(
   const occupied = new Map<string, string>();
   for (const monster of area.monsters) {
     occupied.set(tileKey(monster.tile), `where monster "${monster.id}" starts`);
+  }
+  for (const checkpoint of loaded.checkpoints) {
+    occupied.set(tileKey(checkpoint.tile), `where Checkpoint "${checkpoint.id}" stands`);
   }
   if (definition.start.area === area.id) {
     occupied.set(tileKey(definition.start.tile), 'where the hero starts');

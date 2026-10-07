@@ -18,17 +18,23 @@ export function crossExits(state: PlayState, content: Content): GameEvent[] {
     return [];
   }
   const destination = areaOf(content, exit.to.areaId);
-  // Monsters only act in the area the hero is in, so one left mid wind-up would finish it on the hero's return.
-  for (const monster of livingMonsters(state)) {
-    monster.action = { type: 'idle' };
-  }
+  calmMonsters(state);
   // The arrows in the air were shot in the area the hero leaves, and an arrow flies only in its own area.
   state.arrows = [];
   state.areaId = destination.id;
   const entrance = entranceOf(destination, exit.to.entranceId);
-  state.arrivedAt = { ...entrance.tile };
   state.hero.position = centerOf(entrance.tile);
   return [{ type: 'area-changed', areaId: destination.id }, ...enterArea(state, content)];
+}
+
+/**
+ * The living monsters of the area the hero is in stop what they are doing. Called as the hero leaves the area: monsters
+ * only act in the area the hero is in, so one left mid wind-up would finish it on the hero's return.
+ */
+export function calmMonsters(state: PlayState): void {
+  for (const monster of livingMonsters(state)) {
+    monster.action = { type: 'idle' };
+  }
 }
 
 /**

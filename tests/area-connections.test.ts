@@ -404,29 +404,50 @@ describe('Defeat in a connected Adventure Area', () => {
     return { game, events: advance(game, 1) };
   }
 
-  it('sends the hero back to the entrance it came through, at full Health, in the area where it fell', () => {
+  it('sends the hero back to the arena, where the adventure began, at full Health: no Checkpoint of the cellar was touched', () => {
     const { game, events } = fallInTheCellar();
 
-    expect(events.map((event) => event.type)).toEqual(['monster-attacked', 'hero-hit', 'hero-defeated']);
+    expect(events.map((event) => event.type)).toEqual(['monster-attacked', 'hero-hit', 'hero-defeated', 'area-changed']);
+    expect(events.at(-1)).toEqual({ type: 'area-changed', areaId: 'arena' });
     const view = playingView(game);
-    expect(view.area.id).toBe('cellar');
-    expect(view.hero.position).toEqual({ x: 2.5, y: 3.5 });
+    expect(view.area.id).toBe('arena');
+    expect(view.hero.position).toEqual({ x: 3.5, y: 3.5 });
     expect(view.hero.health).toBe(5);
   });
 
-  it('starts only the area where the hero fell over: its monsters are back, and those of the other area stay defeated', () => {
+  it('starts only the area of the Checkpoint: its monsters are back, and those of the area where the hero fell stay as they were', () => {
     const { game } = fallInTheCellar();
 
-    expect(playingView(game).monsters.map((monster) => monster.id)).toEqual(['cellar-weakling', 'cellar-biter']);
-    expect(monsterNamed(game, 'cellar-biter')).toMatchObject({ health: 3, position: { x: 2.5, y: 4.5 }, action: { type: 'idle' } });
+    expect(playingView(game).monsters.map((monster) => monster.id)).toEqual(['arena-weakling']);
+    expect(monsterNamed(game, 'arena-weakling')).toMatchObject({ health: 1, position: { x: 3.5, y: 4.5 }, action: { type: 'idle' } });
 
-    walk(game, 'left', 3);
+    // Back in the cellar the weakling the hero struck down is still down, and the biter is where it was, unhurt.
+    walk(game, 'right', 11);
 
-    expect(playingView(game).area.id).toBe('arena');
-    expect(playingView(game).monsters).toEqual([]);
+    expect(playingView(game).area.id).toBe('cellar');
+    expect(playingView(game).monsters.map((monster) => monster.id)).toEqual(['cellar-biter']);
+    expect(monsterNamed(game, 'cellar-biter')).toMatchObject({ health: 3, position: { x: 2.5, y: 4.5 } });
   });
 
-  it('sends the hero back to the entrance it last came in by, not to the start or the first entrance listed', () => {
+  it('calms the monsters of the area where the hero fell, so that none finishes a wind-up when the hero comes back', () => {
+    // Both biters hit on the 31st step after the hero came in. The first one's hit takes all of the hero's Health, and
+    // the second, at the end of its wind-up, is not asked to act again that step.
+    const game = newGame(
+      world({ hero: { health: 5 } }, { monsters: [biterAt('biter-a', 2, 4), biterAt('biter-b', 3, 3)] }),
+    );
+    walk(game, 'right', 11);
+    expect(advance(game, 30).map((event) => event.type)).not.toContain('hero-hit');
+    expect(advance(game, 1).map((event) => event.type)).toEqual(['monster-attacked', 'hero-hit', 'hero-defeated', 'area-changed']);
+
+    // The hero walks back in to (2.5, 3.5): both biters begin their wind-ups over, and the hit lands 31 steps later.
+    walk(game, 'right', 11);
+    expect(playingView(game).area.id).toBe('cellar');
+
+    expect(advance(game, 30).map((event) => event.type)).not.toContain('hero-hit');
+    expect(advance(game, 1)).toContainEqual(expect.objectContaining({ type: 'hero-hit', monsterId: 'biter-a' }));
+  });
+
+  it('does not send the hero back to the entrance it came in by: with no Checkpoint touched it returns to the start', () => {
     const first: EntranceDefinition = { id: 'first', tile: { col: 1, row: 1 } };
     const game = newGame(
       world({ monsters: [biterAt('arena-biter', 4, 4)], entrances: [first, FROM_CELLAR], hero: { health: 5 } }),
@@ -440,7 +461,7 @@ describe('Defeat in a connected Adventure Area', () => {
 
     expect(events.map((event) => event.type)).toContain('hero-defeated');
     expect(playingView(game).area.id).toBe('arena');
-    expect(playingView(game).hero.position).toEqual({ x: 4.5, y: 3.5 });
+    expect(playingView(game).hero.position).toEqual({ x: 3.5, y: 3.5 });
   });
 
   describe('with the bow and Ammunition found', () => {
@@ -474,7 +495,7 @@ describe('Defeat in a connected Adventure Area', () => {
       return game;
     }
 
-    it('takes the arrows in the air and nothing else from the hero: it keeps the bow in hand and the Ammunition', () => {
+    it('takes the arrows in the air and the Ammunition found since the start from the hero, and nothing else: it keeps the bow in hand', () => {
       const game = aboutToFallWithTheBow();
       expect(playingView(game).arrows, 'in the air just before the hit').toHaveLength(1);
 
@@ -483,25 +504,25 @@ describe('Defeat in a connected Adventure Area', () => {
       const view = playingView(game);
       expect(view.area.id).toBe('arena');
       expect(view.hero).toMatchObject({
-        position: { x: 4.5, y: 3.5 },
+        position: { x: 3.5, y: 3.5 },
         health: 5,
         activeWeapon: 'ranged-weapon',
-        consumables: { ammunition: 7 },
+        consumables: { ammunition: 0 },
       });
       expect(view.arrows).toEqual([]);
       advance(game, 10);
       expect(playingView(game).arrows).toEqual([]);
     });
 
-    it('leaves the caches the hero opened open, in both areas: dying gives no new arrows', () => {
+    it('closes the caches the hero opened since the start again, in both areas: the arrows in them can be taken again', () => {
       const game = aboutToFallWithTheBow();
       advance(game, 1);
 
-      expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'arena-cache', opened: true })]);
-      walk(game, 'right', 3);
+      expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'arena-cache', opened: false })]);
+      walk(game, 'right', 11);
       expect(playingView(game).area.id).toBe('cellar');
-      expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'cellar-cache', opened: true })]);
-      expect(playingView(game).hero.consumables.ammunition).toBe(7);
+      expect(playingView(game).interactables).toEqual([expect.objectContaining({ id: 'cellar-cache', opened: false })]);
+      expect(playingView(game).hero.consumables.ammunition).toBe(0);
     });
   });
 });

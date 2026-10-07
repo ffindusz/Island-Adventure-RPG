@@ -16,7 +16,8 @@ import {
 } from './fixtures';
 
 // A pickup is a consumable that lies on a tile of an Adventure Area. The hero takes it by walking onto it, with no key
-// to press, and it is gone for good. It is no obstacle: it is not solid and Interact does not reach it.
+// to press, and it is gone, unless defeat puts it back (see checkpoints.test.ts). It is no obstacle: it is not solid and
+// Interact does not reach it.
 //
 // The hero stands at (3.5, 3.5) and walks 0.125 tile a step. Walking right, its body (0.5 wide) only touches the tile
 // (5, 3) after 10 steps, at x = 4.75, and overlaps it after 11, at x = 4.875.

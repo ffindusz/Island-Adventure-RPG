@@ -3,6 +3,7 @@ import type {
   AreaView,
   ArrowView,
   Box,
+  CheckpointView,
   ChestView,
   ConsumableId,
   Direction,
@@ -147,6 +148,36 @@ export function drawExits(graphics: Graphics, exits: readonly ExitView[]): void 
     graphics.fillRect(rect.x, rect.y + rect.height - 1, rect.width, 1);
     graphics.fillRect(rect.x, rect.y + 1, 1, rect.height - 2);
     graphics.fillRect(rect.x + rect.width - 1, rect.y + 1, 1, rect.height - 2);
+  }
+}
+
+/** The post and flag of a Checkpoint, the pale glow under the one that is active, and the grey flag of the others. */
+const CHECKPOINT_POST_COLOUR = 0x5a3a1a;
+const CHECKPOINT_ACTIVE_COLOUR = 0xffd34d;
+const CHECKPOINT_IDLE_COLOUR = 0x8a8a9a;
+const CHECKPOINT_GLOW_COLOUR = 0xfff3a0;
+
+/**
+ * Draws the Checkpoints of the area: a post with a flag. The one defeat sends the hero back to has its flag up in gold
+ * on a pale glow; the others hang a grey flag half way down, so that they can be told apart without the colours. Draw
+ * them every frame, before the hero and the monsters that walk over them, because which one is active changes.
+ */
+export function drawCheckpoints(graphics: Graphics, checkpoints: readonly CheckpointView[]): void {
+  for (const checkpoint of checkpoints) {
+    const tile = bodyRect(checkpoint.position, checkpoint.size);
+    if (checkpoint.active) {
+      graphics.fillStyle(CHECKPOINT_GLOW_COLOUR, 0.3);
+      graphics.fillRect(tile.x, tile.y, tile.width, tile.height);
+      graphics.fillStyle(CHECKPOINT_GLOW_COLOUR, 0.9);
+      graphics.fillRect(tile.x, tile.y, tile.width, 1);
+      graphics.fillRect(tile.x, tile.y + tile.height - 1, tile.width, 1);
+      graphics.fillRect(tile.x, tile.y + 1, 1, tile.height - 2);
+      graphics.fillRect(tile.x + tile.width - 1, tile.y + 1, 1, tile.height - 2);
+    }
+    const post = { x: tile.x + 3, y: tile.y + 1, width: 4, height: tile.height - 2 };
+    fillWithOutline(graphics, post, CHECKPOINT_POST_COLOUR);
+    const flag = { x: tile.x + 6, y: tile.y + (checkpoint.active ? 2 : 7), width: 8, height: 6 };
+    fillWithOutline(graphics, flag, checkpoint.active ? CHECKPOINT_ACTIVE_COLOUR : CHECKPOINT_IDLE_COLOUR);
   }
 }
 
