@@ -40,8 +40,12 @@ export interface Content {
 /** Throws an Error that says what is wrong when the definition does not make sense. */
 export function loadContent(definition: ContentDefinition): Content {
   const areas: Record<string, Area> = {};
+  const monsterIds = new Set<string>();
   for (const area of definition.areas) {
-    areas[area.id] = loadArea(area, definition);
+    if (areas[area.id] !== undefined) {
+      throw new Error(`Area id "${area.id}" is used more than once`);
+    }
+    areas[area.id] = loadArea(area, definition, monsterIds);
   }
   if (areas[definition.start.area] === undefined) {
     throw new Error(`The start is in unknown area "${definition.start.area}"`);
@@ -60,9 +64,16 @@ export function loadContent(definition: ContentDefinition): Content {
   };
 }
 
-function loadArea(area: AreaDefinition, definition: ContentDefinition): Area {
-  const tiles = area.layout.map((row, rowIndex) =>
-    Array.from(row, (symbol) => {
+function loadArea(area: AreaDefinition, definition: ContentDefinition, monsterIds: Set<string>): Area {
+  const firstRowWidth = Array.from(area.layout[0] ?? '').length;
+  const tiles = area.layout.map((row, rowIndex) => {
+    const symbols = Array.from(row);
+    if (symbols.length !== firstRowWidth) {
+      throw new Error(
+        `Area "${area.id}": row ${rowIndex} is ${symbols.length} tiles wide, but the first row is ${firstRowWidth} tiles wide`,
+      );
+    }
+    return symbols.map((symbol) => {
       const terrain = definition.terrain[symbol];
       if (terrain === undefined) {
         throw new Error(
@@ -70,12 +81,16 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition): Area {
         );
       }
       return terrain;
-    }),
-  );
+    });
+  });
   for (const monster of area.monsters) {
     if (definition.monsterTypes[monster.type] === undefined) {
       throw new Error(`Area "${area.id}": monster "${monster.id}" has unknown type "${monster.type}"`);
     }
+    if (monsterIds.has(monster.id)) {
+      throw new Error(`Monster id "${monster.id}" is used more than once`);
+    }
+    monsterIds.add(monster.id);
   }
   return {
     id: area.id,
