@@ -6,19 +6,24 @@ import type { Metrics, Place, Rect } from './automap-layout';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Graphics } from './pixel-font';
+import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
 
 // The Automap page: the route of Adventure Areas drawn as a map, from the Game core's view alone. It is a window like
-// the panels of the overlay, which draws nothing while this page is open. Where each area goes is worked out in
-// automap-layout.ts; this file draws what that says and decides nothing about the game.
+// the panels of the overlay, which draws nothing while this page is open, with the same frames (ui-layer.ts). Where
+// each area goes is worked out in automap-layout.ts; this file draws what that says and decides nothing about the game.
 
-/** Where the overlay is: it has nothing on the screen while the Automap is open. The hero's mark is one above. */
+/**
+ * Where the overlay is: it has nothing on the screen while the Automap is open. The map is drawn in shapes at this
+ * depth, over the window, which is one below it, and the dimming of the game is one below that. The hero's mark is one
+ * above the map.
+ */
 const PAGE_DEPTH = 200;
 
-/** The window, in canvas pixels: in the middle of the screen, with the padding and the border of the overlay. */
+/** The window, in canvas pixels: in the middle of the screen, with the padding of the overlay's windows. */
 const PANEL_WIDTH = 300;
 const PANEL_HEIGHT = 172;
-const PADDING = 8;
-const BORDER = 2;
+/** From the window's edge to what it holds, the window's frame being the first 4 pixels of it. */
+const PADDING = 12;
 /** The space between the title, or the hint, and the route. */
 const TITLE_GAP = 6;
 
@@ -65,25 +70,26 @@ const UNKNOWN_NAME = 'UNKNOWN';
 
 const BACKDROP_COLOUR = 0x000000;
 const BACKDROP_ALPHA = 0.55;
-const PANEL_COLOUR = 0x1b1b24;
-const BORDER_COLOUR = 0x6a6a7a;
-const TITLE_COLOUR = 0xf2c94c;
-const TEXT_COLOUR = 0xffffff;
-const HINT_COLOUR = 0xa0a0b0;
-const LINK_COLOUR = 0x4a4a5a;
-const CURRENT_COLOUR = 0xf2c94c;
-const DISCOVERED_RING_COLOUR = 0x6a6a7a;
-const UNDISCOVERED_RING_COLOUR = 0x3a3a48;
-const UNDISCOVERED_TEXT_COLOUR = 0x6a6a7a;
+// The names, rings and links take the colours of the window they are in (ui-layer.ts); the terrain, the exits and the
+// hero's mark keep their own.
+const TITLE_COLOUR = INK.title;
+const TEXT_COLOUR = INK.text;
+const LINK_COLOUR = 0x5f7160;
+const CURRENT_COLOUR = INK.title;
+const DISCOVERED_RING_COLOUR = INK.dim;
+const UNDISCOVERED_RING_COLOUR = 0x4d4a43;
+const UNDISCOVERED_TEXT_COLOUR = INK.dim;
 /** What a map shows where the hero has not looked yet, and what stands for an area the hero has not been in. */
-const MAP_COLOUR = 0x0f0f14;
-const UNDISCOVERED_COLOUR = 0x24242e;
+const MAP_COLOUR = 0x141b1b;
+const UNDISCOVERED_COLOUR = 0x2a2824;
 const EXIT_COLOUR = 0xbfeaff;
 const MARK_COLOURS: readonly [number, number] = [0xf2c14e, 0xffffff];
-const MARK_OUTLINE_COLOUR = 0x1b1b24;
+const MARK_OUTLINE_COLOUR = 0x141b1b;
 
 /** The Automap, while its page is open. */
 export class AutomapPage {
+  private readonly backdrop: Graphics;
+  private readonly window: UiLayer;
   private readonly pageLayer: Graphics;
   private readonly markLayer: Graphics;
   /** What is drawn now, as text, or null while the page is closed: it is drawn again only when this changes. */
@@ -94,8 +100,10 @@ export class AutomapPage {
   private markPhase: number | null = null;
 
   constructor(scene: Phaser.Scene) {
-    // The mark has a layer of its own: it changes colour while the rest of the page stays as it is.
+    this.backdrop = scene.add.graphics().setScrollFactor(0).setDepth(PAGE_DEPTH - 2);
+    this.window = new UiLayer(scene, PAGE_DEPTH - 1);
     this.pageLayer = scene.add.graphics().setScrollFactor(0).setDepth(PAGE_DEPTH);
+    // The mark has a layer of its own: it changes colour while the rest of the page stays as it is.
     this.markLayer = scene.add.graphics().setScrollFactor(0).setDepth(PAGE_DEPTH + 1);
   }
 
@@ -110,6 +118,7 @@ export class AutomapPage {
     if (key !== this.shown) {
       this.shown = key;
       this.markPhase = null;
+      drawWindow(this.backdrop, this.window);
       this.mark = drawPage(this.pageLayer, page);
     }
     this.blink(timeMs);
@@ -135,6 +144,8 @@ export class AutomapPage {
     this.shown = null;
     this.mark = null;
     this.markPhase = null;
+    this.backdrop.clear();
+    this.window.clear();
     this.pageLayer.clear();
     this.markLayer.clear();
   }
@@ -155,23 +166,31 @@ function grown(rect: Rect, by: number): Rect {
   return { left: rect.left - by, top: rect.top - by, width: rect.width + 2 * by, height: rect.height + 2 * by };
 }
 
-function drawCentred(graphics: Graphics, text: string, top: number, colour: number): void {
-  drawText(graphics, text, CONTENT.left + Math.floor((CONTENT.width - textWidthOf(text)) / 2), top, colour);
+function drawCentred(layer: UiLayer, text: string, top: number, colour: number): void {
+  layer.text(text, CONTENT.left + Math.floor((CONTENT.width - textWidthOf(text)) / 2), top, colour);
 }
 
-function drawWindow(graphics: Graphics): void {
-  graphics.fillStyle(BACKDROP_COLOUR, BACKDROP_ALPHA);
-  graphics.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
-  fill(graphics, BORDER_COLOUR, grown(PANEL, BORDER));
-  fill(graphics, PANEL_COLOUR, PANEL);
-  drawCentred(graphics, 'AUTOMAP', CONTENT.top, TITLE_COLOUR);
-  drawCentred(graphics, 'ESC TO CLOSE', CONTENT.top + CONTENT.height - TEXT_HEIGHT, HINT_COLOUR);
+/** The window with its title and hint, over the dimmed game, drawn as the overlay draws its windows. */
+function drawWindow(backdrop: Graphics, layer: UiLayer): void {
+  backdrop.clear();
+  backdrop.fillStyle(BACKDROP_COLOUR, BACKDROP_ALPHA);
+  backdrop.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+  layer.clear();
+  layer.frame('window', PANEL.left, PANEL.top, PANEL.width, PANEL.height);
+  layer.frame(
+    'panel',
+    PANEL.left + WINDOW_FRAME,
+    PANEL.top + WINDOW_FRAME,
+    PANEL.width - 2 * WINDOW_FRAME,
+    PANEL.height - 2 * WINDOW_FRAME,
+  );
+  drawCentred(layer, 'AUTOMAP', CONTENT.top, INK.title);
+  drawCentred(layer, 'ESC TO CLOSE', CONTENT.top + CONTENT.height - TEXT_HEIGHT, INK.hint);
 }
 
-/** Draws the window and the route in it. Returns where the hero's mark goes, if the hero is on the map of an area. */
+/** Draws the route. Returns where the hero's mark goes, if the hero is on the map of an area. */
 function drawPage(graphics: Graphics, page: AutomapPageView): Rect | null {
   graphics.clear();
-  drawWindow(graphics);
   const cards = page.areas.map((area) => ({
     area,
     label: fitLabel(area.name ?? UNKNOWN_NAME, MAX_LABEL_WIDTH, textWidthOf),

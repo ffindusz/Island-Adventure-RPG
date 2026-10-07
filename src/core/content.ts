@@ -1,5 +1,6 @@
 import { checkConnections, loadEntrances, loadExits } from './connections';
 import { loadCheckpoints } from './checkpoint-content';
+import { checkCoveredCorners } from './covered-corner';
 import { CONSUMABLE_IDS, GEAR_SLOTS, STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
@@ -275,6 +276,7 @@ export function loadContent(definition: ContentDefinition): Content {
     );
   }
   checkConnections(areas, definition.hero.size);
+  checkCoveredCorners(areas);
   return {
     hero: {
       size: definition.hero.size,

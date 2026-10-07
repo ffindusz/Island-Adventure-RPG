@@ -1,145 +1,139 @@
 import type Phaser from 'phaser';
-import type { HeroView, PlayingView, WeaponSlot } from '../core';
-import { bitmapHeight, bitmapWidth, drawBitmap, drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
-import type { Bitmap, Graphics } from './pixel-font';
+import { COVERED_CORNER } from '../core';
+import type { PlayingView, WeaponSlot } from '../core';
+import { consumableIcon } from './artwork';
+import { TILE_SIZE } from './config';
+import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
+import { INK, UiLayer } from './ui-layer';
 
-// The heads-up display: what the player must always see, drawn from the Game core's view and nothing else. It sits at
-// the top left, fixed to the screen. Text objects blur at this size, so the digits are a tiny bitmap font drawn with
-// rectangles, which stays sharp at every zoom.
+// The heads-up display: what the player must always see, drawn from the Game core's view and nothing else. It is a dark
+// panel at the top left, fixed to the screen, with pictures of the pack and the bitmap font on it. Text objects blur
+// at this size, so the numbers are drawn with rectangles, which stay sharp at every zoom.
 
 /** Above everything the play screen draws. */
 const HUD_DEPTH = 100;
 
 /** Distance from the screen's edge to the panel, and from the panel's edge to what it holds, in canvas pixels. */
 const MARGIN = 2;
-const PADDING = 3;
-/** Gap between the heart and the numbers, and between the numbers and the bar, in canvas pixels. */
-const GAP = 4;
-const BAR_HEIGHT = 4;
+const PADDING = 4;
 
-const PANEL_COLOUR = 0x1b1b24;
-const PANEL_ALPHA = 0.85;
-const TEXT_COLOUR = 0xffffff;
-const HEART_COLOUR = 0xe8505b;
-const BAR_COLOUR = 0x7bd35f;
-const BAR_TRACK_COLOUR = 0x4a4a5a;
-const ARROW_COLOUR = 0xe8d8a8;
-const POTION_COLOUR = 0xff6b81;
-/** The count of a consumable when there is none left, greyed like an empty slot. */
-const NONE_LEFT_COLOUR = 0x8a8a9a;
-
-const HEART: Bitmap = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
-const SWORD: Bitmap = ['..#..', '..#..', '..#..', '..#..', '#####', '..#..', '.###.'];
-const BOW: Bitmap = ['..###', '.#..#', '#...#', '#...#', '#...#', '.#..#', '..###'];
-const ARROW: Bitmap = ['....#..', '##...#.', '#######', '##...#.', '....#..'];
-const POTION: Bitmap = ['.###.', '..#..', '.###.', '#####', '#####', '#####', '.###.'];
-
-/** What shows the weapon in hand, by the slot it is equipped in. */
-const WEAPON_ICONS: Readonly<Record<WeaponSlot, { readonly bitmap: Bitmap; readonly colour: number }>> = {
-  'melee-weapon': { bitmap: SWORD, colour: 0xdfe6ee },
-  'ranged-weapon': { bitmap: BOW, colour: 0xd9a441 },
-};
-
-/** The room the weapon's picture takes, whichever it is, so that the panel does not change size with the weapon. */
-const WEAPON_WIDTH = Math.max(...Object.values(WEAPON_ICONS).map((icon) => bitmapWidth(icon.bitmap)));
-const WEAPON_HEIGHT = Math.max(...Object.values(WEAPON_ICONS).map((icon) => bitmapHeight(icon.bitmap)));
-
-/** How many digits of a count the panel keeps room for, so that it does not change size as the counts do. */
-const COUNT_DIGITS = 2;
-
-/** The room a count takes: two digits, or more if it needs them. */
-function countWidth(count: string): number {
-  return Math.max(textWidthOf(count), textWidthOf('0'.repeat(COUNT_DIGITS)));
-}
-
-/** The height of the row of the heart and the numbers of Health. */
-const HEALTH_ROW_HEIGHT = bitmapHeight(HEART);
-/** The height of the panel: its rows one under the other with a gap between, inside the padding. Add a new row here. */
-const PANEL_HEIGHT = HEALTH_ROW_HEIGHT + GAP + BAR_HEIGHT + GAP + WEAPON_HEIGHT + 2 * PADDING;
+/**
+ * How much of the screen the HUD covers, in canvas pixels: a deliberate pair of numbers, so that growing the HUD is a
+ * decision. An area bigger than the screen keeps the corner under the HUD solid (COVERED_CORNER in the Game core), so
+ * that nothing walkable hides there, and `checkHudFootprint` refuses to start the game while the HUD is bigger than
+ * that corner.
+ */
+export const HUD_WIDTH = 88;
+export const HUD_HEIGHT = 46;
+export const HUD_RIGHT = MARGIN + HUD_WIDTH;
 
 /**
  * The canvas pixel row where the HUD ends. What else sits at the top of the screen, the text of an Adventure Area for
  * one, starts below it and so follows when the panel grows.
  */
-export const HUD_BOTTOM = MARGIN + PANEL_HEIGHT;
+export const HUD_BOTTOM = MARGIN + HUD_HEIGHT;
+
+/** The panel's inside, in canvas pixels. */
+const LEFT = MARGIN + PADDING;
+const INSIDE_RIGHT = HUD_RIGHT - PADDING;
+const GAP = 2;
+
+/** Three rows under the heart's: the two bars, then the weapon and the supplies. Each starts below the one before. */
+const HEALTH_ROW_HEIGHT = 12;
+const HEALTH_BAR_TOP = MARGIN + PADDING + HEALTH_ROW_HEIGHT + GAP;
+const BAR_HEIGHT = 5;
+const EXPERIENCE_BAR_TOP = HEALTH_BAR_TOP + BAR_HEIGHT + GAP;
+const EXPERIENCE_BAR_HEIGHT = 4;
+const SUPPLY_TOP = EXPERIENCE_BAR_TOP + EXPERIENCE_BAR_HEIGHT + GAP;
+const SUPPLY_HEIGHT = 11;
+
+/** The heart's picture is 14 wide; the numbers of Health start 3 pixels after it. */
+const HEART_ROOM = 17;
+/** The weapon has this much room, whichever it is, so that nothing moves when the hero switches. */
+const WEAPON_ROOM = 15;
+const ARROW_ROOM = 13;
+const POTION_ROOM = 9;
+/** How many digits of a count have room, so that nothing moves as the counts change. */
+const COUNT_ROOM = textWidthOf('00');
+
+/** What shows the weapon in hand, by the slot it is equipped in: the picture the hero holds, a sword point up. */
+const WEAPON_ICONS: Readonly<Record<WeaponSlot, { readonly texture: string; readonly flipped: boolean }>> = {
+  'melee-weapon': { texture: 'sword-held', flipped: true },
+  'ranged-weapon': { texture: 'bow-held', flipped: false },
+};
+
+const POTION_ICON = consumableIcon('healing-potion');
 
 /**
- * The hero's Health, as a heart, "current/maximum" and a bar, and under it the weapon in hand, the Ammunition and the
- * Healing Potions.
+ * Refuses to start the game when the HUD covers more than the corner the content keeps solid for it, because a hero
+ * could then stand somewhere on the screen that it cannot see.
+ */
+export function checkHudFootprint(): void {
+  const width = COVERED_CORNER.cols * TILE_SIZE;
+  const height = COVERED_CORNER.rows * TILE_SIZE;
+  if (HUD_RIGHT > width || HUD_BOTTOM > height) {
+    throw new Error(
+      `The HUD covers the top left ${HUD_RIGHT} by ${HUD_BOTTOM} pixels, but the content keeps only ${width} by ` +
+        `${height} solid under it (COVERED_CORNER in the Game core): make the HUD smaller, or make that corner bigger.`,
+    );
+  }
+}
+
+/**
+ * The hero's Health, as a heart, "current/maximum" and a bar, and its Level; then a bar of the Experience towards the
+ * next Level, and under it the weapon in hand, the Ammunition and the Healing Potions.
  */
 export class Hud {
-  private readonly graphics: Graphics;
+  private readonly layer: UiLayer;
   private shown = 'nothing';
 
   constructor(scene: Phaser.Scene) {
-    this.graphics = scene.add.graphics().setScrollFactor(0).setDepth(HUD_DEPTH);
+    this.layer = new UiLayer(scene, HUD_DEPTH);
   }
 
   /** Shows what the view says. It draws again only when what it shows has changed. */
   draw(view: PlayingView): void {
-    const { health, maxHealth, activeWeapon, consumables } = view.hero;
-    const key = [health, maxHealth, activeWeapon, consumables.ammunition, consumables['healing-potion']].join('/');
+    const { hero, progress } = view;
+    const key = JSON.stringify([hero.health, hero.maxHealth, hero.activeWeapon, hero.consumables, progress]);
     if (key === this.shown) {
       return;
     }
     this.shown = key;
-    this.drawPanel(view.hero);
-  }
+    const layer = this.layer;
+    const { health, maxHealth, activeWeapon, consumables } = hero;
+    layer.clear();
+    layer.frame('panel', MARGIN, MARGIN, HUD_WIDTH, HUD_HEIGHT);
 
-  private drawPanel({ health, maxHealth, activeWeapon, consumables }: HeroView): void {
-    // Rounded up, so a hero that is still standing never reads as 0.
-    const current = Math.ceil(health);
-    const maximum = Math.ceil(maxHealth);
-    const ammunition = String(consumables.ammunition);
-    const potions = String(consumables['healing-potion']);
+    layer.icon('ui-heart', LEFT, MARGIN + PADDING);
+    // Health is rounded up, so a hero that is still standing never reads as 0.
+    const textTop = MARGIN + PADDING + Math.ceil((HEALTH_ROW_HEIGHT - TEXT_HEIGHT) / 2);
+    layer.text(`${Math.ceil(health)}/${Math.ceil(maxHealth)}`, LEFT + HEART_ROOM, textTop, INK.text);
+    const level = `LV ${progress.level}`;
+    layer.text(level, INSIDE_RIGHT - textWidthOf(level), textTop, INK.title);
+
+    const barWidth = INSIDE_RIGHT - LEFT;
+    layer.bar(LEFT, HEALTH_BAR_TOP, barWidth, BAR_HEIGHT, health / maxHealth, INK.health);
+    // At the highest Level there is no next one, and the bar stays full.
+    const experience = progress.experience;
+    const experienceShare = experience === null ? 1 : experience.earned / experience.needed;
+    layer.bar(LEFT, EXPERIENCE_BAR_TOP, barWidth, EXPERIENCE_BAR_HEIGHT, experienceShare, INK.experience);
+
+    const countTop = SUPPLY_TOP + Math.floor((SUPPLY_HEIGHT - TEXT_HEIGHT) / 2);
     const weapon = WEAPON_ICONS[activeWeapon];
-    // The panel is as wide as the numbers are when Health is full, so it does not change size as Health drops.
-    const textWidth = textWidthOf(`${maximum}/${maximum}`);
-    const heartWidth = bitmapWidth(HEART);
-    const arrowWidth = bitmapWidth(ARROW);
-    const potionWidth = bitmapWidth(POTION);
-    const healthWidth = heartWidth + GAP + textWidth;
-    const left = MARGIN + PADDING;
-    const top = MARGIN + PADDING;
-    const barTop = top + HEALTH_ROW_HEIGHT + GAP;
-    const weaponTop = barTop + BAR_HEIGHT + GAP;
-    const arrowLeft = left + WEAPON_WIDTH + GAP;
-    const ammunitionLeft = arrowLeft + arrowWidth + GAP;
-    const potionLeft = ammunitionLeft + countWidth(ammunition) + 2 * GAP;
-    const potionCountLeft = potionLeft + potionWidth + GAP;
-    const supplyWidth = potionCountLeft + countWidth(potions) - left;
-    const contentWidth = Math.max(healthWidth, supplyWidth);
-
-    const graphics = this.graphics;
-    graphics.clear();
-    graphics.fillStyle(PANEL_COLOUR, PANEL_ALPHA);
-    graphics.fillRect(MARGIN, MARGIN, contentWidth + 2 * PADDING, PANEL_HEIGHT);
-    drawBitmap(graphics, HEART, left, top, HEART_COLOUR);
-    const textTop = top + (HEALTH_ROW_HEIGHT - TEXT_HEIGHT) / 2;
-    drawText(graphics, `${current}/${maximum}`, left + heartWidth + GAP, textTop, TEXT_COLOUR);
-    graphics.fillStyle(BAR_TRACK_COLOUR);
-    graphics.fillRect(left, barTop, contentWidth, BAR_HEIGHT);
-    graphics.fillStyle(BAR_COLOUR);
-    graphics.fillRect(left, barTop, filledWidth(contentWidth, health, maxHealth), BAR_HEIGHT);
-
-    const countTop = weaponTop + (WEAPON_HEIGHT - TEXT_HEIGHT) / 2;
-    drawBitmap(graphics, weapon.bitmap, left, weaponTop, weapon.colour);
-    drawBitmap(graphics, ARROW, arrowLeft, weaponTop + (WEAPON_HEIGHT - bitmapHeight(ARROW)) / 2, ARROW_COLOUR);
-    drawText(graphics, ammunition, ammunitionLeft, countTop, countColour(consumables.ammunition));
-    drawBitmap(graphics, POTION, potionLeft, weaponTop + (WEAPON_HEIGHT - bitmapHeight(POTION)) / 2, POTION_COLOUR);
-    drawText(graphics, potions, potionCountLeft, countTop, countColour(consumables['healing-potion']));
+    layer.icon(weapon.texture, LEFT, SUPPLY_TOP, WEAPON_ROOM, SUPPLY_HEIGHT, weapon.flipped);
+    const arrowLeft = LEFT + WEAPON_ROOM + 4;
+    layer.icon('arrow', arrowLeft, SUPPLY_TOP, ARROW_ROOM, SUPPLY_HEIGHT);
+    const ammunition = String(consumables.ammunition);
+    const ammunitionLeft = arrowLeft + ARROW_ROOM + GAP;
+    layer.text(ammunition, ammunitionLeft, countTop, countColour(consumables.ammunition));
+    const potionLeft = ammunitionLeft + Math.max(COUNT_ROOM, textWidthOf(ammunition)) + 5;
+    layer.icon(POTION_ICON, potionLeft, SUPPLY_TOP, POTION_ROOM, SUPPLY_HEIGHT);
+    const potions = consumables['healing-potion'];
+    layer.text(String(potions), potionLeft + POTION_ROOM + GAP, countTop, countColour(potions));
   }
 }
 
-/** A count is white, and greyed when there is none left. */
+/** A count is plain, and greyed when there is none left. */
 function countColour(count: number): number {
-  return count === 0 ? NONE_LEFT_COLOUR : TEXT_COLOUR;
-}
-
-/** How much of a bar is filled: all of it at full Health, a sliver while any Health is left, none at 0. */
-function filledWidth(width: number, health: number, maxHealth: number): number {
-  if (health <= 0) {
-    return 0;
-  }
-  return Math.min(width, Math.max(1, Math.round((width * health) / maxHealth)));
+  return count === 0 ? INK.dim : INK.text;
 }

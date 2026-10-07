@@ -8,7 +8,6 @@ import type {
   ConsumableId,
   Direction,
   ExitView,
-  HeroView,
   InteractableView,
   MonsterView,
   PickupView,
@@ -16,8 +15,9 @@ import type {
 } from '../core';
 import { TILE_SIZE } from './config';
 
-// The placeholder look of the game: flat shapes drawn from the state view. Real art replaces this module; the
-// rest of the adapter only calls the draw functions below.
+// The placeholder look of what is not yet real art: flat shapes drawn from the state view. The ground, the Checkpoints,
+// the chests, the pickups, the monsters and their projectiles are still drawn here. The hero and its arrows are sprites
+// (hero-sprite.ts). The rest of the adapter only calls the draw functions below.
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -39,11 +39,8 @@ const MONSTER_COLOURS: Readonly<Record<string, number>> = {
 /** Anything the art has no colour for is drawn in this colour, so a missing one cannot be overlooked. */
 const UNKNOWN_COLOUR = 0xff00ff;
 
-const HERO_COLOUR = 0xf2c14e;
-const HERO_HURT_COLOUR = 0xff3b3b;
 const OUTLINE_COLOUR = 0x1b1b24;
 const HIT_FLASH_COLOUR = 0xffffff;
-const SWING_COLOUR = 0xffffff;
 const HEALTH_COLOUR = 0x7bd35f;
 const TELEGRAPH_COLOUR = 0xe0392e;
 const STRIKE_COLOUR = 0xff8a3d;
@@ -58,21 +55,10 @@ const POTION_CRATE_COLOUR = 0x7b5b8c;
 const FLASK_GLASS_COLOUR = 0xcfe8f0;
 const FLASK_LIQUID_COLOUR = 0xe0455f;
 const FLASK_SHINE_COLOUR = 0xffffff;
-const ARROW_SHAFT_COLOUR = 0xf0e6c8;
-const ARROW_HEAD_COLOUR = 0xffffff;
 const PROJECTILE_COLOUR = 0xd28bff;
 const PROJECTILE_CORE_COLOUR = 0xffffff;
 const WIND_UP_COLOUR = 0xff6b5b;
 const EXIT_COLOUR = 0xbfeaff;
-
-/** The shape of an arrow in flight, in pixels: how far the shaft and the head reach back from the tip, and how wide. */
-const ARROW_SHAFT_LENGTH = 12;
-const ARROW_SHAFT_WIDTH = 2;
-const ARROW_HEAD_LENGTH = 3;
-const ARROW_HEAD_WIDTH = 4;
-
-/** Side of the square on the hero that shows which way it faces, in pixels. */
-const FACING_MARKER_SIZE = 4;
 
 /** A monster that warns by flashing alternates on and off over this many equal parts of its wind-up, ending on. */
 const WIND_UP_FLASH_PARTS = 7;
@@ -161,11 +147,15 @@ const CHECKPOINT_POST_COLOUR = 0x5a3a1a;
 const CHECKPOINT_ACTIVE_COLOUR = 0xffd34d;
 const CHECKPOINT_IDLE_COLOUR = 0x8a8a9a;
 const CHECKPOINT_GLOW_COLOUR = 0xfff3a0;
+/** How far the post stands above its tile, so that the flag of the active one shows over a hero standing on it. */
+const CHECKPOINT_POST_RISE = 10;
 
 /**
  * Draws the Checkpoints of the area: a post with a flag. The one defeat sends the hero back to has its flag up in gold
- * on a pale glow; the others hang a grey flag half way down, so that they can be told apart without the colours. Draw
- * them every frame, before the hero and the monsters that walk over them, because which one is active changes.
+ * at the top of the post, which rises above its tile so that the hero, who stands on it after a defeat and at the start,
+ * does not hide it, on a pale glow; the others hang a grey flag half way down, so that they can be told apart without
+ * the colours. Draw them every frame, before the hero and the monsters that walk over them, because which one is active
+ * changes.
  */
 export function drawCheckpoints(graphics: Graphics, checkpoints: readonly CheckpointView[]): void {
   for (const checkpoint of checkpoints) {
@@ -179,9 +169,10 @@ export function drawCheckpoints(graphics: Graphics, checkpoints: readonly Checkp
       graphics.fillRect(tile.x, tile.y + 1, 1, tile.height - 2);
       graphics.fillRect(tile.x + tile.width - 1, tile.y + 1, 1, tile.height - 2);
     }
-    const post = { x: tile.x + 3, y: tile.y + 1, width: 4, height: tile.height - 2 };
+    const postTop = tile.y - CHECKPOINT_POST_RISE;
+    const post = { x: tile.x + 3, y: postTop, width: 4, height: tile.y + tile.height - 1 - postTop };
     fillWithOutline(graphics, post, CHECKPOINT_POST_COLOUR);
-    const flag = { x: tile.x + 6, y: tile.y + (checkpoint.active ? 2 : 7), width: 8, height: 6 };
+    const flag = { x: tile.x + 6, y: checkpoint.active ? postTop + 1 : tile.y + 7, width: 8, height: 6 };
     fillWithOutline(graphics, flag, checkpoint.active ? CHECKPOINT_ACTIVE_COLOUR : CHECKPOINT_IDLE_COLOUR);
   }
 }
@@ -293,43 +284,9 @@ function drawArrowsInCrate(graphics: Graphics, body: Rect): void {
 }
 
 /**
- * Draws an arrow in flight as a thin shaft with a head, outlined so that it shows on any ground. Its tip is at the
- * front of the arrow's body, so it touches what it hits; the shaft trails behind.
- */
-export function drawArrow(graphics: Graphics, arrow: ArrowView): void {
-  const step = FACING_STEP[arrow.direction];
-  const tip = {
-    x: px(arrow.position.x + (step.x * arrow.size) / 2),
-    y: px(arrow.position.y + (step.y * arrow.size) / 2),
-  };
-  const part = (behind: number, length: number, width: number, colour: number): void => {
-    const rect = arrowPart(tip, step, behind, length, width);
-    graphics.fillStyle(colour);
-    graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
-  };
-  part(-1, ARROW_SHAFT_LENGTH + 2, ARROW_SHAFT_WIDTH + 2, OUTLINE_COLOUR);
-  part(-1, ARROW_HEAD_LENGTH + 2, ARROW_HEAD_WIDTH + 2, OUTLINE_COLOUR);
-  part(0, ARROW_SHAFT_LENGTH, ARROW_SHAFT_WIDTH, ARROW_SHAFT_COLOUR);
-  part(0, ARROW_HEAD_LENGTH, ARROW_HEAD_WIDTH, ARROW_HEAD_COLOUR);
-}
-
-/**
- * The part of an arrow that starts `behind` pixels back from the tip and runs `length` pixels further back, `width`
- * pixels wide across the line the arrow flies along. A negative `behind` starts ahead of the tip.
- */
-function arrowPart(tip: Point, step: Point, behind: number, length: number, width: number): Rect {
-  const axis = step.x !== 0 ? step.x : step.y;
-  const start = Math.min(-axis * behind, -axis * (behind + length));
-  if (step.x !== 0) {
-    return { x: tip.x + start, y: tip.y - width / 2, width: length, height: width };
-  }
-  return { x: tip.x - width / 2, y: tip.y + start, width, height: length };
-}
-
-/**
  * Draws a monster's projectile in flight as a glowing orb with a faded trail behind it, so that it cannot be taken for
- * one of the hero's arrows, which `drawArrow` draws. The orb is exactly the projectile's body, with the outline around
- * it, so what touches the orb is what it hits.
+ * one of the hero's arrows, which are sprites (hero-sprite.ts). The orb is exactly the projectile's body, with the
+ * outline around it, so what touches the orb is what it hits.
  */
 export function drawProjectile(graphics: Graphics, projectile: ArrowView): void {
   const body = bodyRect(projectile.position, projectile.size);
@@ -350,21 +307,6 @@ export function drawProjectile(graphics: Graphics, projectile: ArrowView): void 
     graphics.fillStyle(PROJECTILE_CORE_COLOUR);
     graphics.fillRect(core.x, core.y, core.width, core.height);
   }
-}
-
-/** Draws the hero as a square with a dark marker on the side it faces, red while it flashes from a hit. */
-export function drawHero(graphics: Graphics, hero: HeroView, flashing: boolean): void {
-  const body = bodyRect(hero.position, hero.size);
-  fillWithOutline(graphics, body, flashing ? HERO_HURT_COLOUR : HERO_COLOUR);
-  const step = FACING_STEP[hero.facing];
-  const inset = body.width / 2 - FACING_MARKER_SIZE / 2 - 2;
-  graphics.fillStyle(OUTLINE_COLOUR);
-  graphics.fillRect(
-    Math.round(body.x + body.width / 2 + step.x * inset - FACING_MARKER_SIZE / 2),
-    Math.round(body.y + body.height / 2 + step.y * inset - FACING_MARKER_SIZE / 2),
-    FACING_MARKER_SIZE,
-    FACING_MARKER_SIZE,
-  );
 }
 
 /**
@@ -421,13 +363,6 @@ function drawDashTrail(graphics: Graphics, body: Rect, direction: Direction, col
     graphics.fillStyle(colour, alpha);
     graphics.fillRect(body.x - step.x * behind, body.y - step.y * behind, body.width, body.height);
   });
-}
-
-/** Shows where a strike landed: the area the Game core says the swing covered. */
-export function drawSwing(graphics: Graphics, zone: Box): void {
-  const rect = zoneRect(zone);
-  graphics.fillStyle(SWING_COLOUR, 0.5);
-  graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
 }
 
 /**
