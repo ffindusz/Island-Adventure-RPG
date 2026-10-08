@@ -4,7 +4,7 @@
 
 **Blocked by:** 15: The woods
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 9-11, 50, 52, 69
 
@@ -19,6 +19,8 @@
 - [ ] Reviewer play check (manual, in a browser): climb from the woods, beat the raiders and the tougher variant, collect the armor, and leave through the forward exit.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 7386a20
 
 ### What was built
 
