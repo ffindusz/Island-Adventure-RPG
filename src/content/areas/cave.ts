@@ -13,6 +13,14 @@ import type { AreaDefinition } from '../../core';
 // 16, rows 26 to 30), east along the long passage under the rock to the south-east chamber (columns 32 to 43, rows 23 to
 // 30), and north up the narrow shaft (two tiles wide, columns 40 and 41) to the chamber at the north-east, where the way
 // on is.
+//
+// The creatures meet the hero along the route: bats in the passage and the north chamber, a lizard that charges in the
+// middle chamber, an eye that shoots in the south-west chamber and, ahead of the way on, the bear, the tough one. The
+// shaft is the milestone, which no way on goes round. Arrows and Healing Potions lie a step off the route. Two side paths
+// lead off it, on grass. The grotto is a room at the end of a passage of its own under the way-in chamber, with the
+// second lizard in it and three Healing Potions and a big cache of arrows. The vault is a pocket in the north wall of
+// the middle chamber with a Katana in a chest, shut by a gate that a lever in a niche of the east wall of the same
+// chamber opens; a sign by the gate says where to look. The vault is a dead end, so the way on never needs the lever.
 export const cave: AreaDefinition = {
   id: 'cave',
   name: 'The Cave',
