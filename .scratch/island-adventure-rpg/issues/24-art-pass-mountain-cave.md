@@ -4,7 +4,7 @@
 
 **Blocked by:** 17: The cave; 23: Art pass: the coast and the woods
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 94, 95, 102
 
@@ -16,6 +16,8 @@
 - [ ] Reviewer play check (manual, in a browser): play through the mountain and the cave and confirm they look like what they are called, match the first two areas in style, and keep telegraphs readable.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at c5e0192
 
 Built on `ticket/24-art-pass-mountain-cave`, from the integration tip 7191520. The tip moved while I worked (ticket 18, the castle, merged: b4c75c3). I merged it as e1a9457 with no conflict and read the merge both ways (`git diff` of each parent against the result): `README.md`, `docs\assets\licences.md`, `art.ts` and `artwork.ts` hold each side's lines and nothing else, and the castle stays as 18 left it (flat colours, not in `FINAL_ART_AREAS`). The Status is untouched. Criteria 1 to 5 are ticked on what I verified (below); criterion 6, the manual play check, is left unticked.
 
