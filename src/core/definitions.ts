@@ -402,8 +402,9 @@ export interface DoorDefinition {
 
 /**
  * A gate filling a tile. It is solid while it is shut, and it starts shut. It has no key and Interact does nothing on
- * it: a lever opens it, and shuts it again. Where a gate is open or shut is kept like where a door is: defeat does not
- * change it.
+ * it: a lever opens it, and shuts it again. The exception is a gate with `opensWhenDefeated`: no lever moves that one,
+ * and it opens for good in the very step the Guardian it names is defeated. Where a gate is open or shut is kept like
+ * where a door is: defeat does not change it.
  */
 export interface GateDefinition {
   readonly kind: 'gate';
@@ -411,6 +412,12 @@ export interface GateDefinition {
   readonly id: string;
   /** The tile it fills. It must not be solid, nor where the hero or a monster starts. */
   readonly tile: Tile;
+  /**
+   * The id of a monster of the Guardian kind that this Adventure Area places. The gate opens for good in the very step
+   * that monster's Health reaches 0, and stays open however the hero is defeated or the game is saved and continued.
+   * No lever may name such a gate.
+   */
+  readonly opensWhenDefeated?: string;
 }
 
 /**

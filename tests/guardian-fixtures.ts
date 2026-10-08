@@ -6,6 +6,7 @@ import type {
   GuardianPatternDefinition,
   GuardianSmiteDefinition,
   GuardianSweepDefinition,
+  InteractableDefinition,
   MonsterPlacement,
 } from '../src/core';
 import { arena, FIELD_LAYOUT, newGame } from './fixtures';
@@ -72,6 +73,11 @@ export function guardianInOrder(...kinds: GuardianPatternDefinition['kind'][]): 
 
 export function guardianAt(id: string, col: number, row: number): MonsterPlacement {
   return { id, type: 'guardian', tile: { col, row } };
+}
+
+/** A gate on the tile (col, row) that opens for good when the Guardian with this id is defeated. */
+export function guardianGateAt(id: string, col: number, row: number, guardian: string): InteractableDefinition {
+  return { kind: 'gate', id, tile: { col, row }, opensWhenDefeated: guardian };
 }
 
 /** The content of a wide field with the Guardian of this file known, where the hero begins at (6.5, 3.5). */

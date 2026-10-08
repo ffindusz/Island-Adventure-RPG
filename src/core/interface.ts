@@ -96,6 +96,11 @@ export type GameEvent =
   | { readonly type: 'monster-hit'; readonly monsterId: string; readonly damage: number; readonly health: number }
   /** A monster's Health reached zero. It is gone from the view. */
   | { readonly type: 'monster-defeated'; readonly monsterId: string }
+  /**
+   * The Guardian's Health reached zero: it follows `monster-defeated` of the same monster, in the same step, and the gate
+   * its defeat opens is open already in the view of that step. It is told once; a Guardian that has fallen stays fallen.
+   */
+  | { readonly type: 'guardian-defeated'; readonly monsterId: string }
   /** A monster struck, or a charger launched its dash. `zone` is the area its attack covered, whether or not the hero was in it. */
   | { readonly type: 'monster-attacked'; readonly monsterId: string; readonly zone: Box }
   /** A ranged attacker fired. Its projectile flies on in the view, from the monster's centre, in `direction`. */
