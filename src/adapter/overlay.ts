@@ -9,7 +9,7 @@ import type {
   PlayingView,
   StatPageView,
 } from '../core';
-import { consumableIcon, gearIcon } from './artwork';
+import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { potionLineOf } from './inventory-menu';
 import { CONSUMABLE_NAMES, GEAR_STAT_ABBREVIATIONS, shown, STAT_NAMES } from './labels';
@@ -47,6 +47,9 @@ const INVENTORY_WINDOW = GEAR_COLUMN + COLUMN_SPACING + SUPPLY_COLUMN + 2 * PADD
 /** How many pieces of Gear the inventory page lists at once. A longer list scrolls to keep the cursor in view. */
 const VISIBLE_GEAR = 5;
 
+/** How many keys the inventory page lists at once, so that the window stays on the screen. The rest are counted. */
+const VISIBLE_KEYS = 2;
+
 /** A line with a picture is as high as the picture, which is 16 pixels, and a pixel of air above and below it. */
 const ITEM_HEIGHT = 18;
 const ICON_ROOM = 16;
@@ -82,6 +85,8 @@ type Row =
       readonly count: string;
       readonly highlighted: boolean;
     }
+  /** A key the hero holds: its picture and name. The cursor never rests on it. */
+  | { readonly kind: 'key'; readonly icon: string; readonly name: string }
   /** A bar across the window, filled by `share` from 0 to 1. */
   | { readonly kind: 'bar'; readonly share: number }
   /** A little more room. */
@@ -209,8 +214,15 @@ function inventoryPagePanel(page: InventoryPageView, hero: HeroView, cursor: num
   if (gear.length === 0) {
     gearRows.push({ kind: 'text', text: 'NO GEAR YET', colour: INK.hint });
   }
+  const keyRows: Row[] = page.keys
+    .slice(0, VISIBLE_KEYS)
+    .map((key): Row => ({ kind: 'key', icon: KEY_ICON, name: key.name }));
+  if (page.keys.length > VISIBLE_KEYS) {
+    keyRows.push({ kind: 'text', text: `+${page.keys.length - VISIBLE_KEYS} MORE`, colour: INK.hint });
+  }
   const supplyRows: Row[] = [
     ...CONSUMABLE_IDS.map((id): Row => consumableRow(id, page, cursor)),
+    ...keyRows,
     { kind: 'space', height: 0 },
     // Health is rounded up, as on the HUD, so a hero that is still standing never reads as 0.
     {
@@ -278,6 +290,7 @@ function heightOf(row: Row): number {
       return TEXT_HEIGHT;
     case 'gear':
     case 'consumable':
+    case 'key':
       return ITEM_HEIGHT;
     case 'bar':
       return BAR_HEIGHT;
@@ -289,7 +302,7 @@ function heightOf(row: Row): number {
 }
 
 function isItem(row: Row): boolean {
-  return row.kind === 'gear' || row.kind === 'consumable';
+  return row.kind === 'gear' || row.kind === 'consumable' || row.kind === 'key';
 }
 
 /** The space between two rows one under the other: none between lines with a picture, which have their own air. */
@@ -382,6 +395,12 @@ function drawRow(layer: UiLayer, row: Row, space: RowSpace, gainColumn: number):
       const textTop = top + Math.floor((ITEM_HEIGHT - TEXT_HEIGHT) / 2);
       layer.text(row.label, left + TEXT_INDENT, textTop, ink);
       layer.text(row.count, right - TEXT_OUTDENT - textWidthOf(row.count), textTop, ink);
+      return;
+    }
+    case 'key': {
+      drawItemBase(layer, row.icon, false, space);
+      const textTop = top + Math.floor((ITEM_HEIGHT - TEXT_HEIGHT) / 2);
+      layer.text(fitted(row.name, right - TEXT_OUTDENT - (left + TEXT_INDENT)), left + TEXT_INDENT, textTop, INK.text);
       return;
     }
     case 'bar':
