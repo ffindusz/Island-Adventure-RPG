@@ -67,5 +67,20 @@ export const castle: AreaDefinition = {
     '################################################################',
     '################################################################',
   ],
-  monsters: [],
+  // The undead of the castle, in the order of the route. The optional ones come last: the wraith of the watch tower and
+  // the ghoul of the crypt guard the side paths, where the hero who keeps to the route does not go.
+  monsters: [
+    { id: 'yard-skeleton-1', type: 'castle-skeleton', tile: { col: 10, row: 8 } },
+    { id: 'yard-skeleton-2', type: 'castle-skeleton', tile: { col: 12, row: 11 } },
+    { id: 'hall-skeleton', type: 'castle-skeleton', tile: { col: 15, row: 16 } },
+    { id: 'hall-wraith', type: 'castle-wraith', tile: { col: 25, row: 18 } },
+    { id: 'court-skeleton', type: 'castle-skeleton', tile: { col: 31, row: 12 } },
+    { id: 'court-ghoul', type: 'castle-ghoul', tile: { col: 38, row: 12 } },
+    { id: 'court-wraith', type: 'castle-wraith', tile: { col: 40, row: 6 } },
+    { id: 'great-knight', type: 'castle-knight', tile: { col: 50, row: 8 } },
+    { id: 'tower-wraith', type: 'castle-wraith', tile: { col: 22, row: 6 } },
+    { id: 'crypt-ghoul', type: 'castle-ghoul', tile: { col: 36, row: 24 } },
+  ],
+  // The great gateway: the passage from the great hall into the last hall, two tiles wide, which every way on takes.
+  milestones: [{ id: 'great-gateway', zone: { col: 57, row: 11, width: 1, height: 2 }, reward: { experience: 3 } }],
 };
