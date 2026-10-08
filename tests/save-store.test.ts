@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createSaveStore } from '../src/adapter/save-store';
 import type { SaveStorage } from '../src/adapter/save-store';
+import { SNAPSHOT_VERSION } from '../src/core';
 import type { ContentDefinition } from '../src/core';
 import { adventureAfter, adventureContent } from './saved-adventure';
 
@@ -61,7 +62,7 @@ describe('the save store', () => {
 
     expect([...storage.items.keys()]).toEqual([KEY]);
     expect(JSON.parse(storage.items.get(KEY) ?? '')).toEqual(snapshot);
-    expect(JSON.parse(storage.items.get(KEY) ?? '')).toHaveProperty('version', 1);
+    expect(JSON.parse(storage.items.get(KEY) ?? '')).toHaveProperty('version', SNAPSHOT_VERSION);
   });
 
   it('finds the game a store of an earlier visit wrote', () => {
@@ -87,7 +88,7 @@ describe('the save store', () => {
   describe('when what the storage holds is not a game it can continue', () => {
     it.each([
       ['damaged', 'the island at dusk', 'damaged'],
-      ['of another version', JSON.stringify({ version: 2, state: {} }), 'incompatible'],
+      ['of another version', JSON.stringify({ version: SNAPSHOT_VERSION + 1, state: {} }), 'incompatible'],
     ])('says so when the save is %s', (_, text, problem) => {
       const storage = new MemoryStorage();
       storage.items.set(KEY, text);

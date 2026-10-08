@@ -43,6 +43,15 @@ export class Feedback {
         case 'checkpoint-activated':
           this.told = { content: { kind: 'checkpoint' }, msLeft: NOTICE_MS };
           break;
+        case 'door-locked':
+          this.told = { content: { kind: 'door-locked', keyName: event.keyName }, msLeft: NOTICE_MS };
+          break;
+        case 'door-opened':
+          this.told = { content: { kind: 'door-opened', keyName: event.keyName }, msLeft: NOTICE_MS };
+          break;
+        case 'lever-toggled':
+          this.told = { content: { kind: 'lever-toggled', pulled: event.pulled }, msLeft: NOTICE_MS };
+          break;
         case 'area-changed':
           // After a defeat the return to another area is shown only when the fall is over: see endFall.
           if (!this.falling) {
@@ -97,7 +106,7 @@ export class Feedback {
     return this.flashes.has(monsterId);
   }
 
-  /** What the player is being told about: the latest of what the hero found, a Checkpoint touched, or the empty bow. */
+  /** What the player is being told about: the latest of what the hero found, a Checkpoint touched, the empty bow, or a door. */
   notice(): NoticeContent | null {
     return this.told === null ? null : this.told.content;
   }

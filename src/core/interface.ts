@@ -117,6 +117,24 @@ export type GameEvent =
   | { readonly type: 'area-text'; readonly areaId: string; readonly text: string }
   /** The hero opened this chest. What was inside follows as a pickup. A chest opens once. */
   | { readonly type: 'chest-opened'; readonly chestId: string }
+  /**
+   * The hero used Interact on a door that is shut, while it holds no key that fits: nothing happened. `keyName` is the
+   * name of the key the door needs, which the player is told so that it knows what to look for.
+   */
+  | { readonly type: 'door-locked'; readonly doorId: string; readonly keyName: string }
+  /** The hero opened this door with the key `keyName`, which the door took. The door stays open for good. */
+  | { readonly type: 'door-opened'; readonly doorId: string; readonly keyName: string }
+  /**
+   * The hero used Interact on a lever. `pulled` is where the lever is now: true when the hero pulled it, false when it put
+   * it back. Every door and gate the lever names was moved the other way: one that was shut is open, and one that was
+   * open is shut.
+   */
+  | { readonly type: 'lever-toggled'; readonly leverId: string; readonly pulled: boolean }
+  /**
+   * The hero read this sign: `text` is the clue, which now shows as the text of an Adventure Area does, in place of any
+   * that was showing. The game does not pause. Reading the sign again shows it again.
+   */
+  | { readonly type: 'sign-read'; readonly signId: string; readonly text: string }
   /** The hero took an item and now has it. */
   | { readonly type: 'pickup'; readonly item: PickedUpItem }
   /** The hero equipped this Gear in its slot, in place of the piece there. */
@@ -143,7 +161,7 @@ export type GameEvent =
   | { readonly type: 'hero-defeated' };
 
 /** What the hero took, as the player is told about it: one member for each kind of item. */
-export type PickedUpItem = PickedUpGear | PickedUpConsumable;
+export type PickedUpItem = PickedUpGear | PickedUpConsumable | PickedUpKey;
 
 /** A piece of Gear the hero took. It is carried, not equipped: the player equips it in the inventory. */
 export interface PickedUpGear extends GearInfo {
@@ -156,6 +174,11 @@ export interface PickedUpConsumable {
   readonly id: ConsumableId;
   /** How many were added, 1 or more. */
   readonly amount: number;
+}
+
+/** A key the hero took. It is carried until a locked door takes it, and it is no Gear and no consumable. */
+export interface PickedUpKey extends KeyInfo {
+  readonly kind: 'key';
 }
 
 export interface HeroView {
@@ -233,7 +256,7 @@ export interface ChestView {
 }
 
 /** Something placed in the Adventure Area, for the adapter to draw: one member for each kind. */
-export type InteractableView = ChestView | PickupView;
+export type InteractableView = ChestView | PickupView | KeyView | DoorView | GateView | LeverView | SignView;
 
 /** A pickup lying on the ground, for the adapter to draw. One that the hero has taken is not listed any more. */
 export interface PickupView {
@@ -245,6 +268,69 @@ export interface PickupView {
   readonly size: number;
   /** What kind of consumable it is, so that it can be drawn as that. It never says how many. */
   readonly consumable: ConsumableId;
+}
+
+/** A key lying on the ground, for the adapter to draw. One that the hero has taken is not listed any more. */
+export interface KeyView {
+  readonly kind: 'key';
+  readonly id: string;
+  /** The centre of the tile it lies on. */
+  readonly position: Point;
+  /** Width and height of the tile it lies on, in tiles. */
+  readonly size: number;
+}
+
+/** A key as the player reads about it. */
+export interface KeyInfo {
+  readonly id: string;
+  /** What the content calls it, such as "Rusty Key". */
+  readonly name: string;
+}
+
+/** A door, for the adapter to draw. It stays where it is once opened, and the hero walks through it then. */
+export interface DoorView {
+  readonly kind: 'door';
+  readonly id: string;
+  /** The centre of the tile it fills. */
+  readonly position: Point;
+  /** Width and height of the tile it fills, in tiles. */
+  readonly size: number;
+  readonly open: boolean;
+}
+
+/** A gate, for the adapter to draw. It stays where it is once open, and the hero walks through it then. */
+export interface GateView {
+  readonly kind: 'gate';
+  readonly id: string;
+  /** The centre of the tile it fills. */
+  readonly position: Point;
+  /** Width and height of the tile it fills, in tiles. */
+  readonly size: number;
+  readonly open: boolean;
+}
+
+/** A lever, for the adapter to draw. It is solid, whether the hero has pulled it or not. */
+export interface LeverView {
+  readonly kind: 'lever';
+  readonly id: string;
+  /** The centre of the tile it fills. */
+  readonly position: Point;
+  /** Width and height of the tile it fills, in tiles. */
+  readonly size: number;
+  readonly pulled: boolean;
+}
+
+/**
+ * A sign, for the adapter to draw. It says nothing of what is written on it: the text comes with the event when the hero
+ * reads it, and shows as the text of the area does.
+ */
+export interface SignView {
+  readonly kind: 'sign';
+  readonly id: string;
+  /** The centre of the tile it fills. */
+  readonly position: Point;
+  /** Width and height of the tile it fills, in tiles. */
+  readonly size: number;
 }
 
 export interface AreaView {
@@ -319,6 +405,8 @@ export interface InventoryPageView {
   readonly gear: readonly GearView[];
   /** How many of each consumable the hero has. */
   readonly consumables: Readonly<Record<ConsumableId, number>>;
+  /** The keys the hero holds, in the order it took them. A door takes the one it opens with. */
+  readonly keys: readonly KeyInfo[];
   /** The hero's Attack and Defense, with the equipped Gear counted in. The Attack is that of the weapon in hand. */
   readonly attack: number;
   readonly defense: number;
@@ -413,7 +501,7 @@ export type GameView = TitleView | PlayingView;
  * It is not validated when restored: whoever reads one from storage must check it first.
  */
 export interface Snapshot {
-  readonly version: 1;
+  readonly version: 2;
   readonly state: PlayState;
 }
 

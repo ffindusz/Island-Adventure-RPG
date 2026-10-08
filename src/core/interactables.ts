@@ -2,16 +2,20 @@ import { areaOf } from './content';
 import type { Chest, Content, Interactable, Pickup } from './content';
 import { grantConsumable } from './consumables';
 import type { ChestContents } from './definitions';
+import { useDoor, useLever, readSign } from './devices';
+import type { Gate, Key } from './device-content';
 import { grantGear } from './gear';
 import { centerOfBox, overlaps, zoneInFront } from './geometry';
 import type { Box, Point } from './geometry';
 import type { GameEvent } from './interface';
+import { stopsWalkers } from './obstacles';
 import { interactableStateOf } from './state';
 import type { ChestState, InteractableState, PlayState } from './state';
 
 // Interactables: things placed on a tile of an Adventure Area. The content places each with a kind, and the kind is
-// what it is and does. The hero acts on most with Interact, such as a chest. The hero takes a pickup by walking onto
-// it instead, and that is a step of the game (see pickups.ts).
+// what it is and does. The hero acts on most with Interact, such as a chest, a door, a lever or a sign. The hero takes
+// a pickup or a key by walking onto it instead, and that is a step of the game (see pickups.ts and devices.ts). A gate
+// it neither takes nor acts on: a lever moves it.
 //
 // To add a kind:
 //   1. add its definition to InteractableDefinition (definitions.ts), its loaded form to Interactable (content.ts) and
@@ -20,13 +24,14 @@ import type { ChestState, InteractableState, PlayState } from './state';
 //   2. write the rules: a function that takes the interactable, its state, the game state and the content, changes the
 //      state, and returns the events that happened. Interact calls it through INTERACTIONS below; a kind that
 //      happens by walking is a step in game.ts instead. Add the case that shows it to interactableView (view.ts);
-//   3. decide in blocksWalkers whether the hero and the monsters walk through it, and in isInteractedWith whether
-//      Interact reaches it. If Interact does not, leave the kind out of InteractedWith, as the pickup is; if it does,
-//      add it to INTERACTIONS. The compiler refuses a kind that is missing from any of these;
+//   3. decide in stopsWalkers (obstacles.ts) whether the hero and the monsters walk through it (a door's and a gate's
+//      depends on whether it is shut, which the caller says), and in isInteractedWith whether Interact reaches it. If
+//      Interact does not, leave the kind out of InteractedWith, as the pickup is; if it does, add it to INTERACTIONS.
+//      The compiler refuses a kind that is missing from any of these;
 //   4. if it gives consumables, say in consumable-rollback.ts whether defeat takes it back and what taking it is.
 
-/** The interactables that Interact acts on: all but those the hero takes by walking onto them. */
-type InteractedWith = Exclude<Interactable, Pickup>;
+/** The interactables that Interact acts on: all but those the hero takes by walking onto them, and the gate. */
+type InteractedWith = Exclude<Interactable, Pickup | Key | Gate>;
 
 /** What one kind of interactable does when the hero interacts with it. Returns what happened, in order. */
 export type Interaction<T extends Interactable> = (
@@ -38,31 +43,36 @@ export type Interaction<T extends Interactable> = (
 
 const INTERACTIONS: { readonly [K in InteractedWith['kind']]: Interaction<Extract<InteractedWith, { kind: K }>> } = {
   chest: openChest,
+  door: useDoor,
+  lever: useLever,
+  sign: readSign,
 };
 
-/** Whether Interact reaches an interactable. A pickup it does not reach: it is taken by walking onto it. */
+/**
+ * Whether Interact reaches an interactable. A pickup and a key it does not reach: they are taken by walking onto them.
+ * Nor a gate: it opens for a lever alone.
+ */
 function isInteractedWith(interactable: Interactable): interactable is InteractedWith {
   switch (interactable.kind) {
     case 'chest':
+    case 'door':
+    case 'lever':
+    case 'sign':
       return true;
     case 'pickup':
-      return false;
-  }
-}
-
-/** Whether the hero and the monsters are stopped by an interactable. A chest is solid, opened or not; a pickup not. */
-function blocksWalkers(interactable: Interactable): boolean {
-  switch (interactable.kind) {
-    case 'chest':
-      return true;
-    case 'pickup':
+    case 'key':
+    case 'gate':
       return false;
   }
 }
 
 /** The bodies in the current Adventure Area that the hero and the monsters cannot walk through. */
 export function interactableObstacles(state: PlayState, content: Content): Box[] {
-  return areaOf(content, state.areaId).interactables.filter(blocksWalkers).map((interactable) => interactable.body);
+  return areaOf(content, state.areaId)
+    .interactables.filter((interactable) =>
+      stopsWalkers(interactable, (device) => !interactableStateOf(state, device).open),
+    )
+    .map((interactable) => interactable.body);
 }
 
 /** The hero interacts with the interactable in front of it, if there is one. Returns what happened, in order. */

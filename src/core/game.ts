@@ -5,6 +5,7 @@ import { stepMonsters } from './behaviors';
 import { coolDownHero } from './combat';
 import { activateCheckpoints, touchedCheckpoints } from './checkpoints';
 import { loadContent } from './content';
+import { collectKeys } from './devices';
 import { equipGear } from './gear';
 import type { Direction } from './geometry';
 import { heroInteracts } from './interactables';
@@ -95,7 +96,7 @@ export function createGame(options: GameOptions): Game {
       // pickups come first, so that a Checkpoint is activated with them taken. Then the arrows fly, a hero that
       // walked into an exit goes through it, and otherwise the monsters act.
       const milestoneEvents = reachMilestones(state, content);
-      const pickupEvents = collectPickups(state, content);
+      const pickupEvents = [...collectPickups(state, content), ...collectKeys(state, content)];
       const checkpointEvents = activateCheckpoints(state, content, touchedBefore);
       const arrowEvents = flyArrows(state, content, options.random);
       if (arrowEvents.some((event) => event.type === 'hero-defeated')) {

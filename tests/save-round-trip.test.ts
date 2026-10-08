@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Game, GameEvent, PlayState } from '../src/core';
 import { advance, playingView } from './fixtures';
-import { CHAPTERS, adventureAfter, recorded, restoredFrom } from './saved-adventure';
+import { CHAPTERS, NOTICE_TEXT, adventureAfter, recorded, restoredFrom } from './saved-adventure';
 import type { Frame } from './saved-adventure';
 
 // The round trip of a saved game, at the Game core's interface: a game restored from its snapshot, after the snapshot
@@ -98,7 +98,7 @@ describe('the saved adventure', () => {
     expect(outlived.areas['ruins']?.monsters.find(({ id }) => id === 'shooter')?.health).toBe(0);
   });
 
-  it('has opened and unopened chests, taken and untaken pickups and caches, reached and unreached milestones', () => {
+  it('has opened and unopened chests, taken and untaken pickups, caches and keys, shut and open doors and gates, levers, signs, reached and unreached milestones', () => {
     const arena = stateAfter('crossing').areas['arena'];
     const ruins = stateAfter('crossing').areas['ruins'];
 
@@ -112,12 +112,49 @@ describe('the saved adventure', () => {
       'potion-near': { kind: 'pickup', collected: true },
       'potion-far': { kind: 'pickup', collected: true },
       'potion-spare': { kind: 'pickup', collected: false },
+      'brass-key': { kind: 'key', collected: true },
+      'brass-door': { kind: 'door', open: true },
+      switch: { kind: 'lever', pulled: true },
+      portcullis: { kind: 'gate', open: true },
+      notice: { kind: 'sign' },
     });
     expect(ruins?.interactables).toEqual({
       'ruin-cache': { kind: 'chest', opened: false },
       'ruin-potion': { kind: 'pickup', collected: false },
     });
     expect(arena?.reachedMilestones).toEqual(['lookout']);
+  });
+
+  it('has a key in the hero\u2019s hand once it is taken, and none before it is taken or once a door has taken it', () => {
+    expect(stateAfter('camp').hero.keys).toEqual([]);
+    expect(stateAfter('key').hero.keys).toEqual(['brass-key']);
+    expect(stateAfter('door').hero.keys).toEqual([]);
+    expect(stateAfter('defeat').hero.keys).toEqual([]);
+  });
+
+  it('has a door shut until its key opens it, and open from then on', () => {
+    const door = (chapter: string) => stateAfter(chapter).areas['arena']?.interactables['brass-door'];
+
+    expect(door('key')).toEqual({ kind: 'door', open: false });
+    expect(door('door')).toEqual({ kind: 'door', open: true });
+    expect(door('defeat')).toEqual({ kind: 'door', open: true });
+  });
+
+  it('has a lever put where the hero left it, and the gate it moves with it, defeat included', () => {
+    const interactable = (chapter: string, id: string) => stateAfter(chapter).areas['arena']?.interactables[id];
+
+    expect(interactable('door', 'switch')).toEqual({ kind: 'lever', pulled: false });
+    expect(interactable('door', 'portcullis')).toEqual({ kind: 'gate', open: false });
+    expect(interactable('lever', 'switch')).toEqual({ kind: 'lever', pulled: true });
+    expect(interactable('lever', 'portcullis')).toEqual({ kind: 'gate', open: true });
+    expect(interactable('defeat', 'switch')).toEqual({ kind: 'lever', pulled: true });
+    expect(interactable('defeat', 'portcullis')).toEqual({ kind: 'gate', open: true });
+  });
+
+  it('has the clue of a sign on show once it is read, with the time it has left, and the text of the area before', () => {
+    expect(stateAfter('lever').areaText).toMatchObject({ text: 'The wind drops.' });
+    // The hero read the sign, and walked 8 steps after.
+    expect(stateAfter('sign').areaText).toEqual({ text: NOTICE_TEXT, stepsLeft: 232 });
   });
 
   it('has visited the first area and, from the crossing on, the second, with its text showing', () => {
@@ -278,6 +315,11 @@ describe('a defeat after Continue', () => {
     const { hero, areas } = restored.snapshot().state;
     expect(hero.experience).toBe(16); // the rat and the shooter, and the lookout: nothing is lost
     expect(hero.gear).toHaveLength(5);
+    expect(hero.keys).toEqual([]); // the door took the brass key before the defeat, and defeat does not give it back
+    expect(areas['arena']?.interactables['brass-key']).toEqual({ kind: 'key', collected: true });
+    expect(areas['arena']?.interactables['brass-door']).toEqual({ kind: 'door', open: true }); // opened after the Checkpoint
+    expect(areas['arena']?.interactables['switch']).toEqual({ kind: 'lever', pulled: true }); // pulled after it, too
+    expect(areas['arena']?.interactables['portcullis']).toEqual({ kind: 'gate', open: true });
     expect(areas['arena']?.interactables['potion-far']).toEqual({ kind: 'pickup', collected: false }); // taken after
     expect(areas['arena']?.interactables['potion-near']).toEqual({ kind: 'pickup', collected: true }); // taken before
     expect(areas['arena']?.monsters.map(({ health }) => health)).toEqual([3, 1]); // the dummy and the rat are back

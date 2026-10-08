@@ -4,6 +4,7 @@ import type { Content, Interactable } from './content';
 import { automapPage } from './automap';
 import { isActive } from './checkpoints';
 import { STAT_IDS } from './definitions';
+import { heldKeys } from './devices';
 import { carriedGear } from './gear';
 import { centerOfBox } from './geometry';
 import type { GameView, InteractableView, LevelUpView, MonsterActionView, PageView } from './interface';
@@ -73,7 +74,7 @@ export function buildView(state: GameState, content: Content): GameView {
   };
 }
 
-/** What shows an interactable: nothing for a pickup the hero has taken, since it no longer lies there. */
+/** What shows an interactable: nothing for a pickup or a key the hero has taken, since it no longer lies there. */
 function interactableView(interactable: Interactable, state: PlayState): InteractableView | null {
   switch (interactable.kind) {
     case 'chest':
@@ -95,6 +96,46 @@ function interactableView(interactable: Interactable, state: PlayState): Interac
             size: interactable.body.maxX - interactable.body.minX,
             consumable: interactable.consumable,
           };
+    case 'key':
+      return interactableStateOf(state, interactable).collected
+        ? null
+        : {
+            kind: 'key',
+            id: interactable.id,
+            position: centerOfBox(interactable.body),
+            size: interactable.body.maxX - interactable.body.minX,
+          };
+    case 'door':
+      return {
+        kind: 'door',
+        id: interactable.id,
+        position: centerOfBox(interactable.body),
+        size: interactable.body.maxX - interactable.body.minX,
+        open: interactableStateOf(state, interactable).open,
+      };
+    case 'gate':
+      return {
+        kind: 'gate',
+        id: interactable.id,
+        position: centerOfBox(interactable.body),
+        size: interactable.body.maxX - interactable.body.minX,
+        open: interactableStateOf(state, interactable).open,
+      };
+    case 'lever':
+      return {
+        kind: 'lever',
+        id: interactable.id,
+        position: centerOfBox(interactable.body),
+        size: interactable.body.maxX - interactable.body.minX,
+        pulled: interactableStateOf(state, interactable).pulled,
+      };
+    case 'sign':
+      return {
+        kind: 'sign',
+        id: interactable.id,
+        position: centerOfBox(interactable.body),
+        size: interactable.body.maxX - interactable.body.minX,
+      };
   }
 }
 
@@ -118,6 +159,7 @@ function pageView(state: PlayState, content: Content): PageView | null {
         id: 'inventory',
         gear: carriedGear(state, content),
         consumables: { ...state.hero.consumables },
+        keys: heldKeys(state, content),
         attack: heroAttack(state, content),
         defense: heroDefense(state, content),
       };

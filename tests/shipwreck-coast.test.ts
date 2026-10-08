@@ -150,7 +150,7 @@ describe('what the hero finds on the shipwreck coast', () => {
     const arrows = interactables.filter((item) =>
       item.kind === 'chest'
         ? item.contents.kind === 'consumable' && item.contents.consumable === 'ammunition'
-        : item.consumable === 'ammunition',
+        : item.kind === 'pickup' && item.consumable === 'ammunition',
     );
     const dropped = coast.monsters
       .flatMap((monster) => gameContent.monsterTypes[monster.type]?.drops ?? [])

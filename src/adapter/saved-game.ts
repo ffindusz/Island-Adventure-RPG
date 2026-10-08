@@ -136,29 +136,35 @@ function checkState(value: unknown, content: ContentDefinition): void {
     throw damaged('state.phase', 'should be "playing": the game is saved only while it is played');
   }
   const area = expectKnownArea(state['areaId'], 'state.areaId', content);
-  checkWorlds(state['areas'], 'state.areas', content);
+  const keysTaken = checkWorlds(state['areas'], 'state.areas', content);
   checkCheckpoint(state['checkpoint'], 'state.checkpoint', content);
   checkAreaText(state['areaText'], 'state.areaText');
-  checkHero(state['hero'], 'state.hero', area, content);
+  const keysHeld = checkHero(state['hero'], 'state.hero', area, content);
+  keysHeld.forEach((id, i) => {
+    if (!keysTaken.includes(id)) {
+      throw damaged(atIndex('state.hero.keys', i), `is "${id}", but that key still lies where its area placed it`);
+    }
+  });
   checkArrows(state['arrows'], 'state.arrows', content);
   checkPage(state['page'], 'state.page');
 }
 
-/** The world of every Adventure Area of the game, and of no other. */
-function checkWorlds(value: unknown, path: string, content: ContentDefinition): void {
+/** The world of every Adventure Area of the game, and of no other. Returns the ids of the keys marked taken in them. */
+function checkWorlds(value: unknown, path: string, content: ContentDefinition): string[] {
   const worlds = expectRecord(value, path);
   for (const id of Object.keys(worlds)) {
     if (!content.areas.some((area) => area.id === id)) {
       throw incompatible(at(path, id), 'is the world of an area this game does not have');
     }
   }
-  for (const area of content.areas) {
-    checkWorld(worlds[area.id], at(path, area.id), area, content);
-  }
+  return content.areas.flatMap((area) => checkWorld(worlds[area.id], at(path, area.id), area, content));
 }
 
-/** The world of one Adventure Area as the hero left it: its monsters, milestones, interactables and Automap. */
-function checkWorld(value: unknown, path: string, area: AreaDefinition, content: ContentDefinition): void {
+/**
+ * The world of one Adventure Area as the hero left it: its monsters, milestones, interactables and Automap. Returns the
+ * ids of the keys it marks taken.
+ */
+function checkWorld(value: unknown, path: string, area: AreaDefinition, content: ContentDefinition): string[] {
   if (value === undefined) {
     throw incompatible(path, 'is missing, but this game has the area');
   }
@@ -172,8 +178,9 @@ function checkWorld(value: unknown, path: string, area: AreaDefinition, content:
   checkMonsters(world['monsters'], at(path, 'monsters'), area, content);
   checkMilestones(world['reachedMilestones'], at(path, 'reachedMilestones'), area);
   expectBoolean(world['visited'], at(path, 'visited'));
-  checkInteractables(world['interactables'], at(path, 'interactables'), area);
+  const keysTaken = checkInteractables(world['interactables'], at(path, 'interactables'), area);
   checkRevealed(world['revealed'], at(path, 'revealed'), area);
+  return keysTaken;
 }
 
 /** Every monster the area places, defeated ones too, in the order the area places them. */
@@ -310,10 +317,21 @@ function checkMilestones(value: unknown, path: string, area: AreaDefinition): vo
   );
 }
 
-/** What the hero can change about each interactable of the area: a chest is opened, a pickup is collected. */
-const FLAG_OF: Record<InteractableDefinition['kind'], string> = { chest: 'opened', pickup: 'collected' };
+/**
+ * What the hero can change about each interactable of the area: a chest is opened, a pickup or a key is taken, a door or
+ * a gate is opened, a lever is pulled. Nothing about a sign changes, and its state is its kind alone.
+ */
+const FLAG_OF: Record<InteractableDefinition['kind'], string | null> = {
+  chest: 'opened',
+  pickup: 'collected',
+  key: 'collected',
+  door: 'open',
+  gate: 'open',
+  lever: 'pulled',
+  sign: null,
+};
 
-function checkInteractables(value: unknown, path: string, area: AreaDefinition): void {
+function checkInteractables(value: unknown, path: string, area: AreaDefinition): string[] {
   const states = expectRecord(value, path);
   const placed = area.interactables ?? [];
   for (const id of Object.keys(states)) {
@@ -321,6 +339,7 @@ function checkInteractables(value: unknown, path: string, area: AreaDefinition):
       throw incompatible(at(path, id), 'is not an interactable of the area');
     }
   }
+  const keysTaken: string[] = [];
   for (const interactable of placed) {
     const statePath = at(path, interactable.id);
     if (states[interactable.id] === undefined) {
@@ -332,9 +351,12 @@ function checkInteractables(value: unknown, path: string, area: AreaDefinition):
       throw incompatible(statePath, `is the state of a ${kind}, but the area places a ${interactable.kind}`);
     }
     const flag = FLAG_OF[interactable.kind];
-    expectKeys(state, statePath, ['kind', flag]);
-    expectBoolean(state[flag], at(statePath, flag));
+    expectKeys(state, statePath, flag === null ? ['kind'] : ['kind', flag]);
+    if (flag !== null && expectBoolean(state[flag], at(statePath, flag)) && interactable.kind === 'key') {
+      keysTaken.push(interactable.id);
+    }
   }
+  return keysTaken;
 }
 
 /** The Automap's grid: one yes or no for each tile of the area, indexed [row][col]. */
@@ -389,8 +411,8 @@ function checkPage(value: unknown, path: string): void {
   }
 }
 
-/** The hero: where it is and what it has, in the area it is in. */
-function checkHero(value: unknown, path: string, area: AreaDefinition, content: ContentDefinition): void {
+/** The hero: where it is and what it has, in the area it is in. Returns the ids of the keys it holds. */
+function checkHero(value: unknown, path: string, area: AreaDefinition, content: ContentDefinition): string[] {
   const hero = expectKeys(expectRecord(value, path), path, [
     'position',
     'facing',
@@ -402,6 +424,7 @@ function checkHero(value: unknown, path: string, area: AreaDefinition, content: 
     'equipped',
     'activeWeapon',
     'consumables',
+    'keys',
   ]);
   expectPositionIn(hero['position'], at(path, 'position'), area);
   expectOneOf(hero['facing'], DIRECTIONS, at(path, 'facing'));
@@ -418,6 +441,14 @@ function checkHero(value: unknown, path: string, area: AreaDefinition, content: 
     throw damaged(at(path, 'activeWeapon'), `is the ${weapon}, but the hero has none equipped`);
   }
   expectCounts(hero['consumables'], at(path, 'consumables'), CONSUMABLE_IDS);
+  return checkIds(hero['keys'], at(path, 'keys'), keyIdsOf(content), 'a key of this game');
+}
+
+/** The ids of the keys that the areas of the game place, which are the keys the hero can hold. */
+function keyIdsOf(content: ContentDefinition): string[] {
+  return content.areas.flatMap((area) =>
+    (area.interactables ?? []).filter((interactable) => interactable.kind === 'key').map((key) => key.id),
+  );
 }
 
 /** The Gear the hero has equipped in each slot: a piece it carries, and one made for that slot. */

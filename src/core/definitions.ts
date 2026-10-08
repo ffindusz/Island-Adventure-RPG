@@ -296,11 +296,98 @@ export interface PickupDefinition {
 }
 
 /**
- * Something in an Adventure Area that the hero acts on with Interact, or takes by walking onto it (a pickup). Its
+ * A key lying on a tile: the hero takes it by walking onto it, with no key to press, and carries it until the locked door
+ * it belongs to takes it. It is one-time loot, not a consumable: a key that was taken stays taken and the hero keeps it,
+ * defeat included. It is not solid: the hero, the monsters and the arrows pass over it.
+ */
+export interface KeyDefinition {
+  readonly kind: 'key';
+  /** Unique across all interactables of all Adventure Areas: a door names its key by it, and saves refer to the key by it. */
+  readonly id: string;
+  /** The tile it lies on. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+  /** What the player reads it as, in the notice and in the inventory page, such as "Rusty Key". It must not be blank. */
+  readonly name: string;
+}
+
+/**
+ * A locked door filling a tile. It is solid, like a chest, until the hero opens it with Interact while it holds the key
+ * the door names: the door takes that key and stays open. An opened door is one-time like a key: it stays open, defeat
+ * included.
+ */
+export interface DoorDefinition {
+  readonly kind: 'door';
+  /** Unique across all interactables of all Adventure Areas: saves refer to the door by it. */
+  readonly id: string;
+  /** The tile it fills. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+  /**
+   * The id of the key that opens it, a key that some Adventure Area places: it may lie in another area than the door.
+   * Each key opens one door, and each door has a key.
+   */
+  readonly key: string;
+}
+
+/**
+ * A gate filling a tile. It is solid while it is shut, and it starts shut. It has no key and Interact does nothing on
+ * it: a lever opens it, and shuts it again. Where a gate is open or shut is kept like where a door is: defeat does not
+ * change it.
+ */
+export interface GateDefinition {
+  readonly kind: 'gate';
+  /** Unique across all interactables of all Adventure Areas: a lever names it by it, and saves refer to it. */
+  readonly id: string;
+  /** The tile it fills. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+}
+
+/**
+ * A lever filling a tile. It is always solid. The hero pulls it with Interact and puts it back with the next Interact,
+ * and each time it moves every door and gate it names: one that is shut opens, and one that is open shuts, a locked
+ * door included, which then needs no key. Where the lever stands is kept like where a door is: defeat does not change it.
+ */
+export interface LeverDefinition {
+  readonly kind: 'lever';
+  /** Unique across all interactables of all Adventure Areas: saves refer to the lever by it. */
+  readonly id: string;
+  /** The tile it fills. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+  /**
+   * The ids of the doors and gates it moves, which stand in the same Adventure Area as the lever. There is at least one,
+   * and none is named twice.
+   */
+  readonly targets: readonly string[];
+}
+
+/**
+ * A sign filling a tile, with a clue on it. It is always solid. The hero reads it with Interact, and the text shows across
+ * the top of the screen as the text of an Adventure Area does, for as long: no page opens and the game does not pause.
+ * Reading it again shows the text again. It has nothing that changes, so a saved game holds no more of it than that it
+ * stands there.
+ */
+export interface SignDefinition {
+  readonly kind: 'sign';
+  /** Unique across all interactables of all Adventure Areas: saves refer to the sign by it. */
+  readonly id: string;
+  /** The tile it fills. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+  /** The clue the hero reads. It must not be blank, and the text of an Adventure Area is drawn in the same pixel font. */
+  readonly text: string;
+}
+
+/**
+ * Something in an Adventure Area that the hero acts on with Interact, or takes by walking onto it (a pickup, a key). Its
  * `kind` names the rules it follows (see interactables.ts); the other fields are what that kind needs. Adding a kind
  * means adding a member here and the cases the recipe in interactables.ts lists.
  */
-export type InteractableDefinition = ChestDefinition | PickupDefinition;
+export type InteractableDefinition =
+  | ChestDefinition
+  | PickupDefinition
+  | KeyDefinition
+  | DoorDefinition
+  | GateDefinition
+  | LeverDefinition
+  | SignDefinition;
 
 /** Where the hero stands when it comes into an Adventure Area through an exit of another. */
 export interface EntranceDefinition {

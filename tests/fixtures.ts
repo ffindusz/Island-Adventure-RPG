@@ -15,6 +15,8 @@ import type {
   HealingPotionDefinition,
   HeroDefinition,
   InteractableDefinition,
+  InteractableView,
+  InventoryPageView,
   MilestoneDefinition,
   MonsterPlacement,
   MonsterTypeDefinition,
@@ -268,6 +270,31 @@ export function pickupAt(
   return { kind: 'pickup', id, tile: { col, row }, consumable, amount };
 }
 
+/** A key on the tile (col, row) to walk onto: the hero takes it and carries it under its name until a door takes it. */
+export function keyAt(id: string, col: number, row: number, name = 'Rusty Key'): InteractableDefinition {
+  return { kind: 'key', id, tile: { col, row }, name };
+}
+
+/** A locked door on the tile (col, row) that the key with the id `key` opens. The key lies in some Adventure Area. */
+export function doorAt(id: string, col: number, row: number, key: string): InteractableDefinition {
+  return { kind: 'door', id, tile: { col, row }, key };
+}
+
+/** A gate on the tile (col, row), shut until a lever moves it. */
+export function gateAt(id: string, col: number, row: number): InteractableDefinition {
+  return { kind: 'gate', id, tile: { col, row } };
+}
+
+/** A lever on the tile (col, row) that moves the doors and gates of the same Adventure Area with the given ids. */
+export function leverAt(id: string, col: number, row: number, targets: readonly string[]): InteractableDefinition {
+  return { kind: 'lever', id, tile: { col, row }, targets };
+}
+
+/** A sign on the tile (col, row) that shows the given text when the hero reads it. */
+export function signAt(id: string, col: number, row: number, text: string): InteractableDefinition {
+  return { kind: 'sign', id, tile: { col, row }, text };
+}
+
 /** A milestone that gives the given Experience when the hero's body first overlaps the block of tiles `zone`. */
 export function milestone(id: string, zone: TileRect, experience: number): MilestoneDefinition {
   return { id, zone, reward: { experience } };
@@ -428,6 +455,27 @@ export function playingView(game: Game): PlayingView {
 /** The chests the view shows, opened ones included, in the order the content places them. */
 export function chestViews(game: Game): ChestView[] {
   return playingView(game).interactables.filter((item): item is ChestView => item.kind === 'chest');
+}
+
+/** The interactables of one kind that the view shows, in the order the content places them. */
+export function interactableViews<K extends InteractableView['kind']>(
+  game: Game,
+  kind: K,
+): Extract<InteractableView, { kind: K }>[] {
+  return playingView(game).interactables.filter(
+    (item): item is Extract<InteractableView, { kind: K }> => item.kind === kind,
+  );
+}
+
+/** The inventory page as the player reads it: the page is opened and closed again. */
+export function inventoryOf(game: Game): InventoryPageView {
+  game.send({ type: 'open-page', page: 'inventory' });
+  const page = playingView(game).page;
+  game.send({ type: 'close-page', page: 'inventory' });
+  if (page?.id !== 'inventory') {
+    throw new Error('Expected the inventory page to open');
+  }
+  return page;
 }
 
 /** A monster as the view shows it. */

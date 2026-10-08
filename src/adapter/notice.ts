@@ -1,24 +1,28 @@
 import type Phaser from 'phaser';
 import type { PickedUpItem } from '../core';
-import { consumableIcon, gearIcon } from './artwork';
+import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { CONSUMABLE_NAMES, shown, STAT_NAMES } from './labels';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import { pageKeyLabel, switchWeaponKeyLabel } from './player-input';
 import { INK, UiLayer } from './ui-layer';
 
-// The notice of what the hero just found, that the bow has nothing to shoot, that it touched a Checkpoint, or that the
-// game could not be saved, low on the screen where it covers neither the hero nor the HUD. It is drawn from what the
-// Game core reported and nothing else.
+// The notice of what the hero just found, that the bow has nothing to shoot, that it touched a Checkpoint, that a door
+// is locked or has opened, that a lever moved, or that the game could not be saved, low on the screen where it covers
+// neither the hero nor the HUD. It is drawn from what the Game core reported and nothing else.
 
 /**
  * What the notice tells the player: the item the hero picked up, that an arrow was asked for and there is none, that
- * the hero touched a Checkpoint, or that the browser refused to keep the saved game.
+ * the hero touched a Checkpoint, that a door is locked and which key it needs or that a key opened it, that a lever was
+ * pulled or put back, or that the browser refused to keep the saved game.
  */
 export type NoticeContent =
   | { readonly kind: 'pickup'; readonly item: PickedUpItem }
   | { readonly kind: 'out-of-ammunition' }
   | { readonly kind: 'checkpoint' }
+  | { readonly kind: 'door-locked'; readonly keyName: string }
+  | { readonly kind: 'door-opened'; readonly keyName: string }
+  | { readonly kind: 'lever-toggled'; readonly pulled: boolean }
   | { readonly kind: 'save-failed' };
 
 /** Above the HUD, below the overlay: a page that opens covers the notice. */
@@ -43,8 +47,8 @@ interface Line {
 }
 
 /**
- * Tells the player what the hero picked up, that the bow is out of Ammunition, that a Checkpoint is touched, or that
- * the game could not be saved.
+ * Tells the player what the hero picked up, that the bow is out of Ammunition, that a Checkpoint is touched, that a door
+ * is locked or has opened, that a lever moved, or that the game could not be saved.
  */
 export class Notice {
   private readonly layer: UiLayer;
@@ -72,13 +76,28 @@ export class Notice {
 function iconFor(content: NoticeContent): string | null {
   switch (content.kind) {
     case 'pickup':
-      return content.item.kind === 'gear' ? gearIcon(content.item.id) : consumableIcon(content.item.id);
+      return pickupIcon(content.item);
     case 'out-of-ammunition':
       return consumableIcon('ammunition');
     case 'checkpoint':
       return 'ui-heart';
+    case 'door-locked':
+    case 'door-opened':
+      return KEY_ICON;
+    case 'lever-toggled':
     case 'save-failed':
       return null;
+  }
+}
+
+function pickupIcon(item: PickedUpItem): string {
+  switch (item.kind) {
+    case 'gear':
+      return gearIcon(item.id);
+    case 'consumable':
+      return consumableIcon(item.id);
+    case 'key':
+      return KEY_ICON;
   }
 }
 
@@ -95,6 +114,21 @@ function linesFor(content: NoticeContent): Line[] {
       return [
         { text: 'CHECKPOINT', colour: TITLE_COLOUR },
         { text: 'HEALTH FULL', colour: GAIN_COLOUR },
+      ];
+    case 'door-locked':
+      return [
+        { text: 'LOCKED', colour: WARNING_COLOUR },
+        { text: `NEEDS ${content.keyName}`, colour: HINT_COLOUR },
+      ];
+    case 'door-opened':
+      return [
+        { text: 'DOOR OPENED', colour: TITLE_COLOUR },
+        { text: `USED ${content.keyName}`, colour: HINT_COLOUR },
+      ];
+    case 'lever-toggled':
+      return [
+        { text: content.pulled ? 'LEVER PULLED' : 'LEVER PUT BACK', colour: TITLE_COLOUR },
+        { text: 'SOMETHING MOVED', colour: HINT_COLOUR },
       ];
     case 'save-failed':
       return [{ text: 'COULD NOT SAVE THE GAME', colour: WARNING_COLOUR }];
@@ -113,6 +147,11 @@ function pickupLines(item: PickedUpItem): Line[] {
       return [
         { text: `FOUND ${CONSUMABLE_NAMES[item.id]}`, colour: TITLE_COLOUR },
         { text: `+${item.amount}`, colour: GAIN_COLOUR },
+      ];
+    case 'key':
+      return [
+        { text: `FOUND ${item.name}`, colour: TITLE_COLOUR },
+        { text: 'IT OPENS A DOOR', colour: HINT_COLOUR },
       ];
   }
 }

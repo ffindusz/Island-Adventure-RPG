@@ -8,13 +8,13 @@ How it is used:
 - The credits screen draws from the "Credits text" lines of entries that are "In use".
 - Rule from the spec: every graphics and audio asset must permit public and commercial use.
 
-Last updated: 2026-10-07. The user approved the Ninja Adventure pack as the art base that day (ADR 0004). Ticket 22 copied the first asset files into the repository (the hero, its weapons, the item icons and the pieces of the HUD and the windows; see A1 "Used so far"). Nothing else is in use yet.
+Last updated: 2026-10-07. The user approved the Ninja Adventure pack as the art base that day (ADR 0004). Ticket 22 copied the first asset files into the repository (the hero, its weapons, the item icons and the pieces of the HUD and the windows; see A1 "Used so far"). Ticket 13 added the icon of the key. Nothing else is in use yet.
 
 ## Summary
 
 | ID | Source | Licence | Checked | Status |
 | --- | --- | --- | --- | --- |
-| A1 | Ninja Adventure Asset Pack: art, audio, and the other files | CC0 1.0 Universal | 2026-10-06, re-read 2026-10-07 | Approved base on 2026-10-07 (ADR 0004); in use: the hero, its weapons, the item icons and the interface pieces (ticket 22) |
+| A1 | Ninja Adventure Asset Pack: art, audio, and the other files | CC0 1.0 Universal | 2026-10-06, re-read 2026-10-07 | Approved base on 2026-10-07 (ADR 0004); in use: the hero, its weapons, the item icons and the interface pieces (ticket 22), and the key icon (ticket 13) |
 | A2 | Ninja Adventure `Ui\Font\NormalFont.ttf` | FontStruct Non-Commercial License (embedded in the font file), conflicting with the pack's CC0 claim | 2026-10-07 | Do not use; replaced by the project's own bitmap font, which is no file (ticket 22) |
 | A3 | Ninja Adventure `Ui\Input` and `Ui\Skill Icon` | Covered only by the pack's blanket CC0 claim; no separate provenance | 2026-10-07 | Not needed; avoid |
 | S1 | Kenney Pirate Pack (shipwreck supplement candidate) | CC0 | 2026-10-06 | Candidate, poor style match |
@@ -50,6 +50,7 @@ Last updated: 2026-10-07. The user approved the Ninja Adventure pack as the art 
   - `Items\Weapons\BigSword\Sprite.png` as `gear-steel-sword.png`: the icon of the Steel Sword.
   - `Items\Projectile\Arrow.png` as `consumable-ammunition.png`: the icon of Ammunition.
   - `Items\Potion\LifePot.png` as `consumable-healing-potion.png`: the icon of the Healing Potion.
+  - `Items\Treasure\GoldKey.png` as `key.png`: the icon of a key, in the notice of finding one and in the inventory page (ticket 13).
   - `Ui\Theme\Theme Wood\nine_path_bg_2.png` as `ui-panel.png`: the dark panel of the HUD, the notices and the banner, and the inside of the windows.
   - `Ui\Theme\Theme Wood\nine_path_panel.png` as `ui-window.png`: the orange frame of the windows.
   - `Ui\Theme\Theme Wood\button_normal.png` as `ui-button.png`: the button behind the line the cursor is on.

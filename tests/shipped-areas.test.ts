@@ -78,13 +78,18 @@ function tilesOf(zone: TileRect): { col: number; row: number }[] {
   return tiles;
 }
 
-/** The tiles the hero can stand on, as "col,row", that no path of such tiles leads to from the first entrance. A chest is solid like rock. */
+/**
+ * The tiles the hero can stand on, as "col,row", that no path of such tiles leads to from the first entrance. A chest is
+ * solid like rock, and so are a lever and a sign; the doors and gates are counted open, because the rooms behind them
+ * are meant to be reached by a hero who has solved the puzzle (that no way the hero needs is shut by one is a rule the
+ * content check enforces, tested in device-routes.test.ts).
+ */
 function unreachableTiles(area: AreaDefinition): string[] {
   const first = area.entrances?.[0];
   if (first === undefined) {
     throw new Error(`The Adventure Area "${area.id}" has no entrance`);
   }
-  const isOpen = openTilesOf(gameContent, area);
+  const isOpen = openTilesOf(gameContent, area, true);
   const reached = new Set([keyOf(first.tile)]);
   const frontier = [first.tile];
   for (const tile of frontier) {
@@ -208,7 +213,7 @@ describe('the Adventure Areas the game ships with', () => {
   });
 
   it.each(gameContent.areas.map((area) => area.id))(
-    'lets the hero walk from the first entrance of %s to every tile in it that is not solid, a chest being solid like rock',
+    'lets the hero walk from the first entrance of %s to every tile in it that is not solid, a chest being solid like rock and every door and gate open',
     (id) => {
       expect(unreachableTiles(areaNamed(id))).toEqual([]);
     },
