@@ -143,7 +143,7 @@ describe('the way through the castle', () => {
     expect(castle.checkpoints).toEqual([expect.objectContaining({ id: 'castle-checkpoint', tile: wayInTile })]);
   });
 
-  it('has one way back, to the entrance of the cave for the hero who comes from the castle, and keeps it and the way in out of the bottom rows', () => {
+  it('has one way back, to the entrance of the cave that the hero who comes from the castle uses, and keeps it and the way in out of the bottom rows', () => {
     const lowest = castle.layout.length - 1 - BOTTOM_ROWS;
 
     expect(wayBack?.to.entrance).toBe('from-castle');
@@ -183,15 +183,14 @@ describe('the way through the castle', () => {
 // The end of the route is a plain wall for now: the ticket that adds the Guardian's arena replaces the wall with the way
 // to it, and changes the tests of this part.
 describe('the end of the route', () => {
-  const lastHall = tilesAround(END_OF_ROUTE, LAST_HALL_REACH).filter(isOpen);
+  const lastHall = tilesAround(END_OF_ROUTE, LAST_HALL_REACH).filter((tile) => !isSolidAt(tile));
   /** Whether a block of open ground four tiles square has its corner on a tile: room for the hero to stand and step aside. */
   const hasBlockAt = ({ col, row }: Tile): boolean =>
     [0, 1, 2, 3].every((across) => [0, 1, 2, 3].every((down) => isOpen({ col: col + across, row: row + down })));
 
-  it('is a plain wall: the tile past it is solid, and so is the whole last column of the map', () => {
+  it('is a plain wall: the end of the route lies against the east edge of the map, which is solid along its whole length', () => {
     const lastCol = (castle.layout[0]?.length ?? 0) - 1;
 
-    expect(isSolidAt({ col: END_OF_ROUTE.col + 1, row: END_OF_ROUTE.row })).toBe(true);
     expect(END_OF_ROUTE.col + 1).toBe(lastCol);
     expect(castle.layout.map((_, row) => isSolidAt({ col: lastCol, row })).every(Boolean)).toBe(true);
   });
