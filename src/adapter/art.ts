@@ -38,6 +38,11 @@ const MONSTER_COLOURS: Readonly<Record<string, number>> = {
   'cave-lizard': 0x178270,
   'cave-eye': 0xb5d92b,
   'cave-bear': 0x523e52,
+  // The undead of the castle, in what the rest leave free: bone white, pale violet, a dark crimson and a royal purple.
+  'castle-skeleton': 0xe6edf5,
+  'castle-wraith': 0xc9b8ff,
+  'castle-ghoul': 0x8c1c3c,
+  'castle-knight': 0x7e22ce,
 };
 
 /** Anything the art has no colour for is drawn in this colour, so a missing one cannot be overlooked. */
