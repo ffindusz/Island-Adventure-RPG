@@ -4,7 +4,7 @@
 
 **Blocked by:** 15: The woods; 22: Hero and HUD art
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 94, 95, 101, 102
 
@@ -17,6 +17,8 @@
 - [ ] Reviewer play check (manual, in a browser): play through the coast and the woods and confirm a consistent look, readable telegraphs, and nothing that looks like a wall but is not, or the reverse.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 3023710
 
 Built on `ticket/23-art-pass-coast-woods`, from the integration tip 82c0d7f. That is still the tip: the merge of step 9 said "Already up to date", and ticket 16 had not merged. The Status is untouched. Criteria 1 to 6 are ticked on what I verified (below); criterion 7, the manual play check, is left unticked.
 
