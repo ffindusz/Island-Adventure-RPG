@@ -82,6 +82,11 @@ export function monsterArt(type: string): string {
  */
 export const FINAL_ART_AREAS: readonly string[] = ['shipwreck-coast', 'woods'];
 
+/** Whether the terrain and the monsters of the area with this id are drawn with their final art, and not in colours. */
+export function hasFinalArt(areaId: string): boolean {
+  return FINAL_ART_AREAS.includes(areaId);
+}
+
 /**
  * The names of the pictures the content needs, each once: an icon for each Gear and for each consumable, and the picture
  * of every kind of terrain laid out in, and every type of monster placed in, the areas whose art is final. Throws if one

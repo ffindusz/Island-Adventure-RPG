@@ -11,7 +11,7 @@ import {
   drawTelegraph,
   drawTerrain,
 } from './art';
-import { ARTWORK } from './artwork';
+import { ARTWORK, hasFinalArt } from './artwork';
 import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import { AutomapPage } from './automap-page';
 import { callsForSave } from './autosave';
@@ -31,6 +31,7 @@ import { byShooter } from './projectiles';
 import type { SaveStore } from './save-store';
 import { SCENE_KEYS } from './scene-keys';
 import type { PlayStart } from './scene-keys';
+import { bakeGround } from './terrain-baker';
 
 /** How long the screen takes to fade in after the hero is defeated and returned, in milliseconds. */
 const DEFEAT_FADE_MS = 500;
@@ -72,6 +73,9 @@ export class PlayScene extends Phaser.Scene {
   private overlay!: Overlay;
   private automapPage!: AutomapPage;
   private terrainLayer!: Phaser.GameObjects.Graphics;
+  /** The ground of an area whose art is final, painted once (terrain-baker.ts); hidden for any other area. */
+  private groundImage!: Phaser.GameObjects.Image;
+  private exitLayer!: Phaser.GameObjects.Graphics;
   private telegraphLayer!: Phaser.GameObjects.Graphics;
   private entityLayer!: Phaser.GameObjects.Graphics;
   private effectLayer!: Phaser.GameObjects.Graphics;
@@ -107,12 +111,15 @@ export class PlayScene extends Phaser.Scene {
     buildDrawnArt(this.textures, ARTWORK);
     requireLoadedArt(this.textures, ARTWORK);
     checkHudFootprint();
-    // Added in drawing order: ground, then the telegraphs of monster attacks, then Checkpoints, chests, monsters and
+    // Added in drawing order: ground (in colours, or the picture of it where the art is final), the exits over it, then
+    // the telegraphs of monster attacks, then Checkpoints, chests, monsters and
     // their projectiles, which share the lowest depth. The hero and its arrows are sprites above them (see depths.ts),
     // and the strikes of the monsters above those. The HUD draws above them all, then the text of the area, the notice
     // above that, and the overlay above that, which shares its place with the Automap page. The world scrolls with the
     // camera; the HUD, the text, the notice, the overlay and the Automap page do not.
     this.terrainLayer = this.add.graphics();
+    this.groundImage = this.add.image(0, 0, '__WHITE').setOrigin(0, 0).setVisible(false);
+    this.exitLayer = this.add.graphics();
     this.drawnAreaId = null;
     this.lastPlaying = null;
     this.fall = null;
@@ -261,13 +268,28 @@ export class PlayScene extends Phaser.Scene {
     this.cameras.main.fadeIn(DEFEAT_FADE_MS, 0, 0, 0);
   }
 
+  /**
+   * The ground and the exits of the area the hero is in, drawn once: the picture of the ground where the art of the area
+   * is final, flat colours where it is not.
+   */
+  private drawGround(view: PlayingView): void {
+    this.terrainLayer.clear();
+    if (hasFinalArt(view.area.id)) {
+      this.groundImage.setTexture(bakeGround(this.textures, view.area)).setVisible(true);
+    } else {
+      this.groundImage.setVisible(false);
+      drawTerrain(this.terrainLayer, view.area);
+    }
+    this.exitLayer.clear();
+    drawExits(this.exitLayer, view.exits);
+  }
+
   private draw(view: GameView, watching: boolean, time: number): void {
     if (view.phase !== 'playing') {
       return;
     }
     if (this.drawnAreaId !== view.area.id) {
-      drawTerrain(this.terrainLayer, view.area);
-      drawExits(this.terrainLayer, view.exits);
+      this.drawGround(view);
       this.drawnAreaId = view.area.id;
     }
     // The camera follows the hero, and shows a small area in the middle of the screen.

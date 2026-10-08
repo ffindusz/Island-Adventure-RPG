@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ARTWORK, FINAL_ART_AREAS, neededArt } from '../src/adapter/artwork';
+import { ARTWORK, FINAL_ART_AREAS, hasFinalArt, neededArt } from '../src/adapter/artwork';
 import { manifestLookup, missingArt, requireArt } from '../src/adapter/asset-manifest';
 import type { ArtManifest } from '../src/adapter/asset-manifest';
 import { gameContent } from '../src/content';
@@ -99,5 +99,11 @@ describe('the art of the areas whose art is final', () => {
 
   it('is refused for a listed area that the content does not have', () => {
     expect(() => neededArt(gameContent, ['shipwreck-coast', 'nowhere'])).toThrow('"nowhere"');
+  });
+
+  it('is what the scene draws for the coast and the woods, while any other area keeps its colours', () => {
+    expect(hasFinalArt('shipwreck-coast')).toBe(true);
+    expect(hasFinalArt('woods')).toBe(true);
+    expect(hasFinalArt('unfinished-area')).toBe(false);
   });
 });
