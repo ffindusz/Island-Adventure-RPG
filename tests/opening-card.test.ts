@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { VIEW_HEIGHT, VIEW_WIDTH } from '../src/adapter/config';
 import { layoutCard, OPENING_HINT } from '../src/adapter/opening-card';
-import { drawText, textWidthOf } from '../src/adapter/pixel-font';
+import { drawText, TEXT_HEIGHT, textWidthOf } from '../src/adapter/pixel-font';
 import type { Graphics } from '../src/adapter/pixel-font';
 import { gameContent } from '../src/content';
 
@@ -55,14 +55,23 @@ describe('the card of the opening', () => {
     expect(new Set(tops).size).toBe(tops.length);
   });
 
-  it('has a hint under the lines, and the card holds both', () => {
+  it('has a hint under the lines, and the card holds both with as much air below the hint as above the lines', () => {
     const { window, rows, hint } = layoutCard(SHIPPED);
 
     expect(hint.text).toBe(OPENING_HINT);
     expect(hint.top).toBeGreaterThan(Math.max(...rows.map((row) => row.top)));
-    expect(hint.top).toBeLessThan(window.top + window.height);
     expect(hint.left).toBeGreaterThanOrEqual(window.left);
     expect(hint.left + textWidthOf(hint.text)).toBeLessThanOrEqual(window.left + window.width);
+    const airAbove = Math.min(...rows.map((row) => row.top)) - window.top;
+    const airBelow = window.top + window.height - (hint.top + TEXT_HEIGHT);
+    expect(airBelow).toBe(airAbove);
+  });
+
+  it('sets the hint apart from the lines at least as far as two lines of the opening are apart', () => {
+    const { rows, hint } = layoutCard(['A storm.', 'The sea.']);
+
+    const [first = 0, second = 0] = rows.map((row) => row.top);
+    expect(hint.top - second).toBeGreaterThanOrEqual(second - first);
   });
 
   it('holds the hint even when the lines are shorter than it', () => {
@@ -74,6 +83,16 @@ describe('the card of the opening', () => {
 
   it('puts more air between two lines of the opening than between the two rows of one line that was broken', () => {
     expect(stepOfTwoRows(['A storm.', 'The sea.'])).toBeGreaterThan(stepOfTwoRows([WIDE_LINE]));
+  });
+
+  it('does not let the two rows of a broken line touch', () => {
+    expect(stepOfTwoRows([WIDE_LINE])).toBeGreaterThan(TEXT_HEIGHT);
+  });
+
+  it('keeps clear of the sides of the screen when the lines are as wide as they can be', () => {
+    const { window } = layoutCard(FOUR_LONG_LINES);
+
+    expect(window.left).toBeGreaterThanOrEqual(8);
   });
 
   it('centres each row in the card', () => {
