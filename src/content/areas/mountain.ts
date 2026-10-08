@@ -1,44 +1,64 @@
 import type { AreaDefinition } from '../../core';
 
-// The mountain, only a stub for now so that the route from the woods leads somewhere: one screen of rock and grass
-// with a way in from the woods, the Checkpoint beside it and the way back. It has nothing else to find yet. The ticket
-// that builds the mountain replaces the map and fills it, keeping the way in and the way back where the woods expect
-// them (entrance from-woods, exit to-woods). Rows 0 to 2 are rock, so that the top-left corner, which the HUD covers
-// (core/covered-corner.ts), is solid.
+// The mountain, the third area of the adventure, between the woods and the cave: 44 by 30 tiles, larger than the
+// screen both ways (20 by 12), so that the view follows the hero. Rock (solid, #) is the cliffs and the boulders; the
+// ledges between them are grass, and the trail, a path of sand, climbs from the way in from the woods at the south-west
+// to the way on to the cave at the east, which the text of the area tells the hero to follow. It needs no key, no lever
+// and no door, and no other way goes round the high gap at the neck of the summit, which is the milestone. Rows 0 to 2
+// are rock, so that the top-left corner, which the HUD covers (core/covered-corner.ts), is solid.
 export const mountain: AreaDefinition = {
   id: 'mountain',
   name: 'The Mountain',
-  text: 'A cold wind blows down from the peaks.',
+  text: 'Follow the sand path up. Raiders watch the pass.',
   entrances: [
-    { id: 'from-woods', tile: { col: 1, row: 6 } },
-    { id: 'from-cave', tile: { col: 18, row: 6 } },
+    { id: 'from-woods', tile: { col: 1, row: 24 } },
+    { id: 'from-cave', tile: { col: 42, row: 6 } },
   ],
-  checkpoints: [{ id: 'mountain-checkpoint', tile: { col: 1, row: 6 } }],
+  checkpoints: [{ id: 'mountain-checkpoint', tile: { col: 1, row: 24 } }],
   exits: [
     {
       id: 'to-woods',
-      zone: { col: 0, row: 6, width: 1, height: 2 },
+      zone: { col: 0, row: 24, width: 1, height: 2 },
       to: { area: 'woods', entrance: 'from-mountain' },
     },
     {
       id: 'to-cave',
-      zone: { col: 19, row: 6, width: 1, height: 2 },
+      zone: { col: 43, row: 6, width: 1, height: 2 },
       to: { area: 'cave', entrance: 'from-mountain' },
     },
   ],
   layout: [
-    '####################',
-    '####################',
-    '####################',
-    '#,,,,,,,,,,,,,,,,,,#',
-    '#,,,,,,##,,,,,##,,,#',
-    '#,,,,,,,,,,,,,,,,,,#',
-    ',,,,,,,,,,,,,,,,,,,,',
-    ',,,,,,,,,,,,,,,,,,,,',
-    '#,,,,,,,,,,,##,,,,,#',
-    '#,,,,,,,,,,,,,,,,,,#',
-    '#,,,,,,,,,,,,,,,,,,#',
-    '####################',
+    '############################################',
+    '############################################',
+    '############################################',
+    '############################################',
+    '########,,,,,,##,,,,,,,,#,,,#####,,##,,,####',
+    '######,,,,,,,,,,,,,,,,,##,,,,,,,,,,,,,,,,,,#',
+    '######,,,.............,,,,,.................',
+    '######,,,.,,,,,,,,,,,.......,,,,,,,,,,,,,,,,',
+    '########,.,,,,,,,,##,,,,,##,#####,,###,,####',
+    '#########.,#################################',
+    '#########.,#################################',
+    '#########.,#################################',
+    '#########.,#################################',
+    '#########.,,,,,,,,,,,,#####,,,,,,,,#########',
+    '########,.,,##,,,,,,,,,####,,,,,,,##,#######',
+    '########,.,,,,,,,,,,,,,,,,,,,,,,,,,,,#######',
+    '########,........................,,,,#######',
+    '########,,,,,,,,,,,,,,,,,,,,,,,,.,,,,#######',
+    '##########,,,,,,##,,,,#######,,,.##,,#######',
+    '##############,####,###########,.,##########',
+    '##############,####,###########,.,##########',
+    '###############################,.,#####,,,##',
+    '###,,,,,,,#####,,,,,,##,,,,,,##,.,####,,,,,#',
+    '#,,,,##,,,,###,,,,,,,,,,,,,,,,,,.,,,,,,,,,,#',
+    '.................,,,,,,,.........,,,,,,,,,,#',
+    ',,,,,,,,,,,,,,,,.........,,,,,,,,,,,,,,,,,,#',
+    '#,,,,,,,##,###,,,##,,,,,,##,,,#,,,,,,,###,,#',
+    '####,,,,,#,#####,,#,,,,,,,#,,###############',
+    '############################################',
+    '############################################',
   ],
   monsters: [],
+  milestones: [{ id: 'high-gap', zone: { col: 29, row: 5, width: 3, height: 3 }, reward: { experience: 3 } }],
 };
