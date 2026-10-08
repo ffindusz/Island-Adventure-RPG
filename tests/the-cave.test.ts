@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { monsterColour, terrainColour } from '../src/adapter/art';
 import { gameContent } from '../src/content';
 import { GEAR_SLOTS, createGame } from '../src/core';
-import type { AreaDefinition, ChestDefinition, Game, GameEvent, MonsterTypeDefinition, Tile, TileRect } from '../src/core';
+import type {
+  AreaDefinition,
+  ChestDefinition,
+  Game,
+  GameEvent,
+  InteractableDefinition,
+  MonsterTypeDefinition,
+  Tile,
+  TileRect,
+} from '../src/core';
 import { STEPS_PER_TILE, face, fixedRandom, interactableViews, newGame, playingView, walk } from './fixtures';
 import {
   directionBetween,
@@ -47,6 +56,12 @@ const IN_SIGHT = 5;
 
 /** A sign is by the gate it speaks of when it stands this many tiles from it, at most. */
 const BY_THE_GATE = 2;
+
+/** A chest or a pickup is near the trail when the walk to it from the trail is this many tiles at most: a step aside, not a trip. */
+const MOST_NEARBY = 4;
+
+/** A side path is a walk, not a step aside: this many tiles from the trail to the spot beside what lies at its end, at least. */
+const LEAST_DETOUR = 6;
 
 function definitionOf(id: string): AreaDefinition {
   const area = gameContent.areas.find((candidate) => candidate.id === id);
@@ -103,6 +118,25 @@ const chests = interactables.flatMap((item) => (item.kind === 'chest' ? [item] :
 const gates = interactables.flatMap((item) => (item.kind === 'gate' ? [item] : []));
 const levers = interactables.flatMap((item) => (item.kind === 'lever' ? [item] : []));
 const signs = interactables.flatMap((item) => (item.kind === 'sign' ? [item] : []));
+const pickups = interactables.flatMap((item) => (item.kind === 'pickup' ? [item] : []));
+const onTrail = new Set((trail ?? []).map(keyOf));
+
+function holdsAmmunition(item: InteractableDefinition): boolean {
+  return item.kind === 'chest'
+    ? item.contents.kind === 'consumable' && item.contents.consumable === 'ammunition'
+    : item.kind === 'pickup' && item.consumable === 'ammunition';
+}
+
+/** How many tiles of walking lie between the trail and a spot, with every gate shut, or null when the spot cannot be walked to. */
+function detourFromTrail(spot: Tile): number | null {
+  const walkBack = routeBetween(isOpen, spot, (tile) => onTrail.has(keyOf(tile)));
+  return walkBack === null ? null : walkBack.length - 2;
+}
+
+const isNearTheTrail = ({ tile }: { readonly tile: Tile }): boolean =>
+  (detourFromTrail(tile) ?? Number.POSITIVE_INFINITY) <= MOST_NEARBY;
+/** The chests that the hero can reach with every gate shut and that lie a good walk from the trail: not the ones in the pocket behind the gate. */
+const isOnASidePath = ({ tile }: { readonly tile: Tile }): boolean => (detourFromTrail(tile) ?? 0) >= LEAST_DETOUR;
 
 /** The one thing of its kind that the cave has, found when a test needs it, so that a cave without it fails that test and no other. */
 function theOnly<T>(what: string, things: readonly T[]): T {
@@ -461,6 +495,105 @@ describe('the weapon behind the gate', () => {
     expect(events).toContainEqual({ type: 'chest-opened', chestId: chest.id });
     expect(events).toContainEqual(pickupFrom(chest));
     expect(attack() - before).toBe((upgrade()?.bonus ?? 0) - (wielded?.bonus ?? 0));
+  });
+});
+
+describe('what the hero finds in the cave', () => {
+  it('has Ammunition caches near the trail: two at least, each a few steps aside', () => {
+    const caches = interactables.filter(holdsAmmunition).filter(isNearTheTrail);
+
+    expect(caches.length, 'Ammunition caches a few steps off the trail').toBeGreaterThanOrEqual(2);
+  });
+
+  it('lets the hero walk to each cache near the trail and open it', () => {
+    const caches = chests.filter(holdsAmmunition).filter(isNearTheTrail);
+
+    expect(caches.length, 'chests of Ammunition near the trail').toBeGreaterThan(0);
+    for (const cache of caches) {
+      const events = interactWith(quietGameAt(CAVE, wayInTile), cache.tile);
+
+      expect(events).toContainEqual({ type: 'chest-opened', chestId: cache.id });
+      expect(events).toContainEqual(pickupFrom(cache));
+    }
+  });
+
+  it('has Healing Potions on the ground near the trail: two at least, which the hero takes by walking over them', () => {
+    const potions = pickups.filter(({ consumable }) => consumable === 'healing-potion').filter(isNearTheTrail);
+
+    expect(potions.length, 'Healing Potions a few steps off the trail').toBeGreaterThanOrEqual(2);
+    for (const potion of potions) {
+      const route = routeBetween(isOpen, wayInTile, (tile) => keyOf(tile) === keyOf(potion.tile));
+      expect(route, `a walk to the potion ${potion.id}`).not.toBeNull();
+
+      const events = walkRoute(quietGameAt(CAVE, wayInTile), route ?? []);
+
+      expect(events).toContainEqual({
+        type: 'pickup',
+        item: { kind: 'consumable', id: 'healing-potion', amount: potion.amount },
+      });
+    }
+  });
+
+  it('has a side path of its own, apart from the gate: chests a good walk from the trail, which the hero walks to and opens with every gate shut', () => {
+    const rewards = chests.filter(isOnASidePath);
+
+    expect(rewards.length, 'chests a good walk from the trail').toBeGreaterThan(0);
+    for (const reward of rewards) {
+      const events = interactWith(quietGameAt(CAVE, wayInTile), reward.tile);
+
+      expect(events).toContainEqual({ type: 'chest-opened', chestId: reward.id });
+      expect(events).toContainEqual(pickupFrom(reward));
+    }
+  });
+
+  it('guards the end of the side path with a creature that the hero who keeps to the trail does not meet', () => {
+    const metOnTrail = new Set(metOn(gameContent, cave, trail).map(({ id }) => id));
+    const rewards = chests.filter(isOnASidePath);
+
+    expect(rewards.length, 'chests a good walk from the trail').toBeGreaterThan(0);
+    for (const reward of rewards) {
+      const guards = cave.monsters.filter((monster) =>
+        neighboursOf(reward.tile).some(
+          (spot) => isOpen(spot) && distanceBetween(spot, monster.tile) <= noticingOf(gameContent, monster),
+        ),
+      );
+
+      expect(guards.length, `creatures that notice a hero beside the chest ${reward.id}`).toBeGreaterThan(0);
+      expect(guards.filter(({ id }) => metOnTrail.has(id))).toEqual([]);
+    }
+  });
+
+  it('keeps every chest, pickup, sign, lever and gate out of the bottom rows, where the notice is drawn over the hero', () => {
+    const lowest = cave.layout.length - 1 - BOTTOM_ROWS;
+
+    expect(interactables.filter(({ tile }) => tile.row > lowest).map(({ id }) => id)).toEqual([]);
+  });
+});
+
+describe('the milestone of the cave', () => {
+  it('is one: the cave has a single milestone', () => {
+    expect(cave.milestones).toHaveLength(1);
+  });
+
+  it('is one that no way on goes round', () => {
+    const [milestone] = cave.milestones ?? [];
+
+    const goingRound = routeBetween(
+      (tile) => isOpen(tile) && !(milestone !== undefined && isInZone(milestone.zone, tile)),
+      wayInTile,
+      isWayForward,
+    );
+
+    expect(milestone, 'a milestone in the cave').toBeDefined();
+    expect(goingRound).toBeNull();
+  });
+
+  it('is given to a hero who walks the trail', () => {
+    const [milestone] = cave.milestones ?? [];
+
+    const events = walkRoute(quietGameAt(CAVE, wayInTile), trail ?? []);
+
+    expect(events).toContainEqual({ type: 'milestone-reached', milestoneId: milestone?.id });
   });
 });
 

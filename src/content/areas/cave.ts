@@ -80,6 +80,8 @@ export const cave: AreaDefinition = {
     { id: 'cave-bear-1', type: 'cave-bear', tile: { col: 39, row: 11 } },
     { id: 'cave-lizard-2', type: 'cave-lizard', tile: { col: 6, row: 15 } },
   ],
+  // The deep shaft: the narrow climb from the south-east chamber to the bear, two tiles wide, which every way on takes.
+  milestones: [{ id: 'deep-shaft', zone: { col: 40, row: 18, width: 2, height: 2 }, reward: { experience: 3 } }],
   interactables: [
     // The side path that a lever opens: a pocket of grass in the north wall of the middle chamber, shut by a gate that
     // the hero sees from the trail, with the Katana in a chest in it. The lever is set in a niche in the east wall of
@@ -94,5 +96,44 @@ export const cave: AreaDefinition = {
       text: 'The gate is shut. A lever is set in the east wall.',
     },
     { kind: 'chest', id: 'cave-weapon-chest', tile: { col: 17, row: 14 }, contents: { kind: 'gear', gear: 'katana' } },
+    // Three caches of arrows in corners and niches a few steps off the trail: one above the north chamber, one in the
+    // north-west corner of the south-west chamber and one at the east end of the south-east chamber.
+    {
+      kind: 'chest',
+      id: 'cave-arrow-cache-1',
+      tile: { col: 20, row: 4 },
+      contents: { kind: 'consumable', consumable: 'ammunition', amount: 6 },
+    },
+    {
+      kind: 'chest',
+      id: 'cave-arrow-cache-2',
+      tile: { col: 4, row: 26 },
+      contents: { kind: 'consumable', consumable: 'ammunition', amount: 6 },
+    },
+    {
+      kind: 'chest',
+      id: 'cave-arrow-cache-3',
+      tile: { col: 44, row: 26 },
+      contents: { kind: 'consumable', consumable: 'ammunition', amount: 6 },
+    },
+    // Healing Potions on the ground a step off the trail: one in the south-east corner of the north chamber, one in
+    // the south-east chamber before the climb up the shaft to the bear.
+    { kind: 'pickup', id: 'cave-potion-1', tile: { col: 27, row: 11 }, consumable: 'healing-potion', amount: 1 },
+    { kind: 'pickup', id: 'cave-potion-2', tile: { col: 35, row: 29 }, consumable: 'healing-potion', amount: 1 },
+    // A side path: the grass room under the way in, at the end of a passage of its own a good walk from the trail,
+    // which the second lizard guards. It keeps three Healing Potions and a big cache of arrows. Both chests stand in
+    // row 17, well above the bottom three rows: a hero in front of a chest in them would stand under the notice.
+    {
+      kind: 'chest',
+      id: 'cave-grotto-potions',
+      tile: { col: 9, row: 17 },
+      contents: { kind: 'consumable', consumable: 'healing-potion', amount: 3 },
+    },
+    {
+      kind: 'chest',
+      id: 'cave-grotto-cache',
+      tile: { col: 3, row: 17 },
+      contents: { kind: 'consumable', consumable: 'ammunition', amount: 8 },
+    },
   ],
 };
