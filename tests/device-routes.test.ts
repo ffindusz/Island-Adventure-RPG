@@ -220,7 +220,7 @@ describe('content in which a door or a gate shuts off nothing the route needs is
         interactables: [
           keyAt('rusty-key', 3, 1),
           doorAt('side-door', 4, 2, 'rusty-key'),
-          chestAt('chest-1', 4, 3, 'iron-sword'),
+          chestAt('chest-1', 3, 3, 'iron-sword'),
         ],
         checkpoints: [camp(6)],
       }),
@@ -232,7 +232,7 @@ describe('content in which a door or a gate shuts off nothing the route needs is
         interactables: [
           leverAt('lever-1', 2, 2, ['gate-1']),
           gateAt('gate-1', 4, 2),
-          chestAt('chest-1', 4, 3, 'iron-sword'),
+          chestAt('chest-1', 3, 3, 'iron-sword'),
         ],
         checkpoints: [camp(6)],
       }),
