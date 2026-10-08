@@ -227,4 +227,77 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
     windUpMs: 800,
     recoveryMs: 1200,
   },
+  // The undead of the old castle are the castle's own, the hardest creatures of the game short of its Guardian, and they
+  // are tuned together with the Experience of the castle (tests/the-castle.test.ts). The skeleton is the basic one: a
+  // chaser a little quicker than a raider, though still far slower than the hero. It notices the hero from four tiles
+  // away, winds up for 0.45 s, hits for 6 (5 after the hero's Defense) and rests for 0.8 s before the next. It takes four
+  // hits from the hero's basic sword and two from the Steel Sword, and is worth 2 Experience: there are many of them and
+  // each is a short fight. It leaves nothing behind.
+  'castle-skeleton': {
+    behavior: 'chaser',
+    health: 4,
+    size: 0.75,
+    experience: 2,
+    damage: 6,
+    speedTilesPerSecond: 2.8,
+    noticingDistance: 4,
+    reach: 0.5,
+    windUpMs: 450,
+    recoveryMs: 800,
+  },
+  // The ghoul charges, like the boar and the lizard of the cave: it notices the hero from five tiles away and walks,
+  // slower than the hero, to where its lane takes in the hero. It then winds up for 0.7 s while the lane lights up,
+  // dashes down the lane at fourteen tiles a second, for eight tiles at most, and rests for 1.3 s before it looks for the
+  // hero again. It hits for 9 (8 after the hero's Defense) only a hero who is still in the lane. It takes eight hits from
+  // the hero's basic sword and four from the Steel Sword, and is worth 5 Experience.
+  'castle-ghoul': {
+    behavior: 'charger',
+    health: 8,
+    size: 0.85,
+    experience: 5,
+    damage: 9,
+    speedTilesPerSecond: 2.1,
+    noticingDistance: 5,
+    windUpMs: 700,
+    dashSpeedTilesPerSecond: 14,
+    dashRange: 8,
+    recoveryMs: 1300,
+  },
+  // The wraith shoots, like the spitter, the archer and the eye of the cave: it notices the hero from six tiles away and
+  // walks to five tiles from it, backing away when the hero comes nearer, until a wall is at its back. It winds up for
+  // 0.85 s with a flash on its body, then fires along the row or column that the hero stood in a projectile slower than
+  // the hero's walk that hits for 6 (5 after Defense) and falls nine tiles on. It rests for 1.5 s. It is frail: four hits
+  // from the basic sword, two from the Steel Sword or two arrows of the short bow, and worth 3 Experience. Now and then
+  // it leaves three arrows behind when it is defeated: it carries what it shoots.
+  'castle-wraith': {
+    behavior: 'ranged',
+    health: 4,
+    size: 0.7,
+    experience: 3,
+    drops: [{ consumable: 'ammunition', chance: 0.25, amount: 3 }],
+    noticingDistance: 6,
+    windUpMs: 850,
+    recoveryMs: 1500,
+    projectile: { damage: 6, speedTilesPerSecond: 3.6, range: 9, size: 0.35 },
+    keepsDistance: { preferredDistance: 5, speedTilesPerSecond: 2.4 },
+  },
+  // The knight that holds the castle is the tougher undead of it: a chaser slower even than the bear of the cave, with
+  // the heaviest hand of the game. It notices the hero from four tiles away, winds up for 0.9 s, hits for 10 (9 after the
+  // hero's Defense, which leaves a rested hero at the edge of its Health) and rests for 1.3 s. It takes twenty hits from
+  // the hero's basic sword and ten from the Steel Sword, more than twice as many as any other undead and more than any
+  // creature of the earlier areas, and is worth 7 Experience. Now and then it leaves a Healing Potion behind when it is
+  // defeated.
+  'castle-knight': {
+    behavior: 'chaser',
+    health: 20,
+    size: 0.9,
+    experience: 7,
+    drops: [{ consumable: 'healing-potion', chance: 0.5, amount: 1 }],
+    damage: 10,
+    speedTilesPerSecond: 1.7,
+    noticingDistance: 4,
+    reach: 0.5,
+    windUpMs: 900,
+    recoveryMs: 1300,
+  },
 };
