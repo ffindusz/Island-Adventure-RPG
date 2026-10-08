@@ -22,6 +22,13 @@ import type { AreaDefinition } from '../../core';
 // the north side of the long hall. The crypt is a room (sand, columns 29 to 41, rows 22 to 26) with two tombs, down the
 // stair (columns 34 and 35, rows 20 and 21) that falls from the south side of the inner courtyard. A small armory, an
 // alcove of the long hall (columns 17 to 21, rows 12 to 14), is a step aside from the route.
+//
+// The undead are variants of the behaviors the earlier areas taught, in the order of the route: skeletons chase in the
+// yard, the long hall and the courtyard, a wraith shoots from the long hall and another from the courtyard, a ghoul
+// charges across the courtyard, and the knight, the tougher variant, holds the great hall, where every way through meets
+// it. Nothing notices the hero in the last hall. The Knight's Armor lies in the armory, found long before the knight;
+// three caches of arrows and three Healing Potions lie a step or two off the route, the last of each in the great hall
+// past the knight, and a larger stock waits at the end of each side path, where a wraith and a ghoul keep watch.
 export const castle: AreaDefinition = {
   id: 'castle',
   name: 'The Old Castle',
