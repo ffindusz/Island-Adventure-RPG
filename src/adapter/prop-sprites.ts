@@ -5,16 +5,18 @@ import { TILE_SIZE } from './config';
 import { DEPTH } from './depths';
 
 // What every area shares, as sprites: chests and caches, what lies on the ground, Checkpoints, the marks of the way out,
-// doors and signs. Each is a picture of one tile (the Checkpoint's is taller) that stands with its foot on the bottom of
-// the tile the Game core says it is on, so none of this knows which area it is in. The sheets are made by
-// docs/assets/compose-art.py. The gates and the levers of the light puzzles have no picture yet: art.ts draws them. All
-// of it is cosmetic: it runs on frame time from the Game core's view, and nothing the Game core decides depends on it.
+// doors, gates, levers and signs. Each is a picture of one tile (the Checkpoint's is taller, and a gate's is taller and
+// wider, its arch standing over the way) that stands with its foot on the bottom of the tile the Game core says it is on,
+// so none of this knows which area it is in. The sheets are made by docs/assets/compose-art.py. All of it is cosmetic: it
+// runs on frame time from the Game core's view, and nothing the Game core decides depends on it.
 
 const CHEST = 'prop-chest' satisfies ArtName;
 const PICKUP = 'prop-pickup' satisfies ArtName;
 const CHECKPOINT = 'prop-checkpoint' satisfies ArtName;
 const EXIT = 'prop-exit' satisfies ArtName;
 const DOOR = 'prop-door' satisfies ArtName;
+const GATE = 'prop-gate' satisfies ArtName;
+const LEVER = 'prop-lever' satisfies ArtName;
 const SIGN = 'prop-sign' satisfies ArtName;
 
 /** The frame of each chest while it is shut, in the sheet of chests: the frame after it is the same chest open. */
@@ -51,6 +53,14 @@ const EXIT_ALPHA = 0.85;
 
 const DOOR_SHUT_FRAME = 0;
 const DOOR_OPEN_FRAME = 1;
+
+const GATE_SHUT_FRAME = 0;
+const GATE_OPEN_FRAME = 1;
+/** The arch of a gate stands on the rock on each side of the way: its picture reaches this many pixels past its tile on the left, and as many on the right. */
+const GATE_REACH = 4;
+
+const LEVER_REST_FRAME = 0;
+const LEVER_PULLED_FRAME = 1;
 
 /** Where a prop stands: the left edge and the bottom edge of its tile, in canvas pixels. */
 interface Foot {
@@ -141,7 +151,15 @@ export class PropSprites {
         this.place(SIGN, DEPTH.prop, foot, null);
         return;
       case 'gate':
+        this.place(
+          GATE,
+          DEPTH.prop,
+          { left: foot.left - GATE_REACH, bottom: foot.bottom },
+          interactable.open ? GATE_OPEN_FRAME : GATE_SHUT_FRAME,
+        );
+        return;
       case 'lever':
+        this.place(LEVER, DEPTH.prop, foot, interactable.pulled ? LEVER_PULLED_FRAME : LEVER_REST_FRAME);
         return;
     }
   }

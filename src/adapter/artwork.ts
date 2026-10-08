@@ -38,6 +38,14 @@ export const ARTWORK = {
   'terrain-rock': sheet('terrain-rock.png', 16),
   'terrain-tree': sheet('terrain-tree.png', 16),
   'terrain-wreckage': sheet('terrain-wreckage.png', 16),
+  // The mountain and the cave dress sand, grass and rock in sheets of their own, in the frames of the standard ones (the
+  // looks of terrain-plan.ts): the slate cliffs and the boulders of the mountain, the dark cliffs and the dim sand and
+  // grass of the cave. They are not named by a kind of terrain, so neededArt does not list them; the loader checks them.
+  'mountain-cliff': sheet('mountain-cliff.png', 16),
+  'mountain-boulders': sheet('mountain-boulders.png', 16),
+  'cave-cliff': sheet('cave-cliff.png', 16),
+  'cave-sand': sheet('cave-sand.png', 16),
+  'cave-grass': sheet('cave-grass.png', 16),
   // Monsters, a sheet for each type: four columns (down, up, left, right), the frames of its walk, then a white frame
   // for a hit and a red one for a wind-up; see monster-sprites.ts.
   'monster-crab': sheet('monster-crab.png', 16),
@@ -45,18 +53,30 @@ export const ARTWORK = {
   'monster-spitter': sheet('monster-spitter.png', 16),
   'monster-wolf': sheet('monster-wolf.png', 18, 17),
   'monster-boar': sheet('monster-boar.png', 17, 16),
+  // The raiders of the mountain and the creatures of the cave, in sheets of the same make.
+  'monster-raider': sheet('monster-raider.png', 16),
+  'monster-raider-charger': sheet('monster-raider-charger.png', 16),
+  'monster-raider-archer': sheet('monster-raider-archer.png', 16),
+  'monster-raider-veteran': sheet('monster-raider-veteran.png', 16),
+  'monster-cave-bat': sheet('monster-cave-bat.png', 16),
+  'monster-cave-lizard': sheet('monster-cave-lizard.png', 16),
+  'monster-cave-eye': sheet('monster-cave-eye.png', 16),
+  'monster-cave-bear': sheet('monster-cave-bear.png', 16),
   // What monsters share: the orb that a ranged monster shoots (four frames of 16 pixels), and the puff left where one
   // fell (six frames of 32 pixels).
   'projectile-orb': sheet('projectile-orb.png', 16),
   'fx-puff': sheet('fx-puff.png', 32),
   // What every area shares, see prop-sprites.ts for which frame is which: chests and caches (closed and open), what lies
   // on the ground (plain and with a glint), the Checkpoint's flags (16 by 26 pixels), the marks of an exit (one way each),
-  // the door (shut and open) and the sign.
+  // the door (shut and open), the gate (shut and open; 24 by 25 pixels, for its arch stands over the way), the lever (at
+  // rest and pulled) and the sign.
   'prop-chest': sheet('prop-chest.png', 16),
   'prop-pickup': sheet('prop-pickup.png', 16),
   'prop-checkpoint': sheet('prop-checkpoint.png', 16, 26),
   'prop-exit': sheet('prop-exit.png', 16),
   'prop-door': sheet('prop-door.png', 16),
+  'prop-gate': sheet('prop-gate.png', 24, 25),
+  'prop-lever': sheet('prop-lever.png', 16),
   'prop-sign': image('prop-sign.png'),
   // The pieces the HUD and the pages are built from, see ui-layer.ts: a dark panel, the orange frame of a window, the
   // orange button behind the line the cursor is on, and the heart of Health.
@@ -94,9 +114,10 @@ export function monsterArt(type: string): string {
 
 /**
  * The ids of the Adventure Areas whose terrain and monsters have their final art. Tickets that draw a new area add its id
- * here once its kinds and types have their pictures; until then it is drawn in colours, and the game still starts.
+ * here once its kinds and types have their pictures; until then it is drawn in colours, and the game still starts. The
+ * castle is not in it: it stays in flat colours until its own art pass.
  */
-export const FINAL_ART_AREAS: readonly string[] = ['shipwreck-coast', 'woods'];
+export const FINAL_ART_AREAS: readonly string[] = ['shipwreck-coast', 'woods', 'mountain', 'cave'];
 
 /** Whether the terrain and the monsters of the area with this id are drawn with their final art, and not in colours. */
 export function hasFinalArt(areaId: string): boolean {
