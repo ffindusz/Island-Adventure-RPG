@@ -4,7 +4,7 @@
 
 **Blocked by:** 12: Charger and ranged enemies; 13: Light puzzles and clues; 14: The shipwreck coast and the opening
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 9-11, 50, 68, 69, 71
 
@@ -19,6 +19,8 @@
 - [ ] Reviewer play check (manual, in a browser): arrive from the coast, find the bow, use it on a beast, take the side path, and leave through the forward exit.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 5fdf5f2
 
 ### What was built
 
