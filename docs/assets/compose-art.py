@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Composes pictures from pieces of the Ninja Adventure pack: the ground and the monsters of the shipwreck coast and the
-woods, the props every area shares, and the icons of the two bows.
+woods, the ground of the mountain and of the cave, the props every area shares, and the icons of the two bows.
 
 The pack (CC0, Pixel-Boy and AAA) is not in the repository. Pass the folder that holds `Backgrounds`, `Actor`, `Items`
 and `FX` as --pack; the pictures are written under public/art/ and are committed with it. Run it again to remake them:
@@ -277,6 +277,44 @@ def terrain_wreckage(pack):
     return sheet
 
 
+# The mountain and the cave. Their cliffs are the grey face of the pack's relief (the same nine pieces as terrain-rock, in
+# the order of its rows and columns) with its colours swapped: slate for the mountain, and for the cave a darker, bluer
+# stone. The boulders are the pack's small rocks in the slate. The cave's sand and grass are the sheets of the coast and
+# the woods with every colour darkened, so the cave is dim in the ground itself, with nothing laid over what stands on it.
+# src/adapter/terrain-plan.ts has the looks that name these sheets.
+GREY_STONE = ('#5f7160', '#56634d', '#46402e', '#8d977f', '#f2eaf1', '#b6beb0')
+SLATE = ('#6c7a8e', '#586579', '#3c4256', '#a3afc0', '#e4e9f1', '#c4ccd8')
+CAVE_STONE = ('#454a63', '#383c53', '#262a3f', '#6b7191', '#8a90b0', '#7f86a6')
+CAVE_FLOOR = {
+    '#ffcb8d': '#a58459', '#fce2ca': '#c4a688', '#ffbc75': '#8f6f47',  # the sand, its light pebbles, its darker twigs
+    '#adbc3a': '#5e7a38', '#a8a129': '#566e32',  # the grass
+}
+
+
+def stone(names):
+    return {hexrgb(old): hexrgb(new) for old, new in zip(GREY_STONE, names)}
+
+
+def stone_cliff(pack, names):
+    """The face of a cliff in grey stone recoloured, three rows (the lip, the middle, the foot) by three columns (left,
+    middle, right), as terrain-rock has them."""
+    relief = pack.tileset('TilesetRelief')
+    return frames_sheet([recolour(cut(relief, c, r), stone(names)) for r in (0, 1, 2) for c in (4, 5, 6)], 3)
+
+
+def mountain_boulders(pack):
+    """Four boulders, each on a tile of its own: the three small rocks of the nature set, and the round one of the relief's
+    details."""
+    nature, detail = pack.tileset('TilesetNature'), pack.tileset('TilesetReliefDetail')
+    rocks = [cut(nature, col, 17) for col in (17, 18, 19)] + [cut(detail, 4, 0)]
+    return frames_sheet([recolour(rock, stone(SLATE)) for rock in rocks], len(rocks))
+
+
+def cave_floor(pack, make):
+    """The ground of the coast or of the woods, in the dim colours of the cave: every colour of the sheet is in CAVE_FLOOR."""
+    return recolour(make(pack), {hexrgb(old): hexrgb(new) for old, new in CAVE_FLOOR.items()})
+
+
 def paint(img, pixels, colour):
     surface = img.load()
     for x, y in pixels:
@@ -528,6 +566,11 @@ BUILDERS = {
     'terrain-rock': terrain_rock,
     'terrain-tree': terrain_tree,
     'terrain-wreckage': terrain_wreckage,
+    'mountain-cliff': lambda pack: stone_cliff(pack, SLATE),
+    'mountain-boulders': mountain_boulders,
+    'cave-cliff': lambda pack: stone_cliff(pack, CAVE_STONE),
+    'cave-sand': lambda pack: cave_floor(pack, terrain_sand),
+    'cave-grass': lambda pack: cave_floor(pack, terrain_grass),
     'monster-crab': lambda pack: monster_four_ways(pack, 'Mollusc', 'Mollusc.png'),
     'monster-slime': lambda pack: monster_four_ways(pack, 'Slime', 'Slime.png'),
     'monster-spitter': lambda pack: monster_four_ways(pack, 'Mushroom', 'mushroom.png', SPITTER_CAP),

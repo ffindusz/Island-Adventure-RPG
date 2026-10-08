@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import type { AreaView } from '../core';
 import { terrainColour } from './art';
 import { TILE_SIZE } from './config';
-import { planTerrain } from './terrain-plan';
+import { lookOf, planTerrain } from './terrain-plan';
 import type { Quarter, Stamp } from './terrain-plan';
 
 // The ground of an Adventure Area as one picture, painted once from the plan of terrain-plan.ts and kept: terrain never
@@ -63,7 +63,7 @@ export function bakeGround(textures: Phaser.Textures.TextureManager, area: AreaV
       context.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     });
   });
-  for (const stamp of planTerrain(area.terrain)) {
+  for (const stamp of planTerrain(area.terrain, lookOf(area.id))) {
     paint(context, textures, stamp);
   }
   texture.refresh();

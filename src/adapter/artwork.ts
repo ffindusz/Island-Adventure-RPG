@@ -37,6 +37,14 @@ export const ARTWORK = {
   'terrain-rock': sheet('terrain-rock.png', 16),
   'terrain-tree': sheet('terrain-tree.png', 16),
   'terrain-wreckage': sheet('terrain-wreckage.png', 16),
+  // The mountain and the cave dress sand, grass and rock in sheets of their own, in the frames of the standard ones (the
+  // looks of terrain-plan.ts): the slate cliffs and the boulders of the mountain, the dark cliffs and the dim sand and
+  // grass of the cave. They are not named by a kind of terrain, so neededArt does not list them; the loader checks them.
+  'mountain-cliff': sheet('mountain-cliff.png', 16),
+  'mountain-boulders': sheet('mountain-boulders.png', 16),
+  'cave-cliff': sheet('cave-cliff.png', 16),
+  'cave-sand': sheet('cave-sand.png', 16),
+  'cave-grass': sheet('cave-grass.png', 16),
   // Monsters, a sheet for each type: four columns (down, up, left, right), the frames of its walk, then a white frame
   // for a hit and a red one for a wind-up; see monster-sprites.ts.
   'monster-crab': sheet('monster-crab.png', 16),
