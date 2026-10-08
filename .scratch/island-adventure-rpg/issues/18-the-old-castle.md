@@ -4,7 +4,7 @@
 
 **Blocked by:** 17: The cave
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 9-11, 15, 50, 69
 
@@ -19,6 +19,8 @@
 - [ ] Reviewer play check (manual, in a browser): arrive from the cave, clear the castle, collect the upgrade, and reach the end of the route.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at c658103
 
 ### What was built
 
