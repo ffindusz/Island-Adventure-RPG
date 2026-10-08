@@ -200,6 +200,22 @@ describe('a Guardian with the hero in the lane of its charge', () => {
     expect(monsterAction(game, GUARDIAN)).toEqual({ type: 'recovering' });
   });
 
+  it('fixes the direction of the dash when the wind-up begins, even when the hero has gone where another side is nearer', () => {
+    const game = guardianField([guardianAt(GUARDIAN, 2, 3)], { start: { area: 'arena', tile: { col: 4, row: 3 } } });
+    game.step();
+    expect(monsterAction(game, GUARDIAN)).toEqual({ type: 'winding-up', progress: 0, zone: CHARGE_LANE });
+    walk(game, 'up', 18); // to (4.5, 1.25): further above the Guardian than beside it
+    advance(game, CHARGE_WIND_UP_STEPS - 19);
+
+    const launched = game.step();
+    const events = advance(game, 24);
+
+    expect(launched).toEqual([{ type: 'monster-attacked', monsterId: GUARDIAN, zone: CHARGE_LANE }]);
+    expect(events).toEqual([]);
+    expect(monsterNamed(game, GUARDIAN).position).toEqual({ x: 8.5, y: 3.5 });
+    expect(heroHealth(game)).toBe(10);
+  });
+
   it('rests for the recovery of the charge after its dash, and can be hit freely meanwhile', () => {
     const game = charger();
     advance(game, CHARGE_WIND_UP_STEPS + 14); // the dash meets the hero in step 50
