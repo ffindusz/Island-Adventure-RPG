@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Composes pictures from pieces of the Ninja Adventure pack: the ground and the monsters of the shipwreck coast and the
-woods, the ground of the mountain and of the cave, the props every area shares, and the icons of the two bows.
+woods, the ground and the monsters of the mountain and of the cave, the props every area shares, and the icons of the
+two bows.
 
 The pack (CC0, Pixel-Boy and AAA) is not in the repository. Pass the folder that holds `Backgrounds`, `Actor`, `Items`
 and `FX` as --pack; the pictures are written under public/art/ and are committed with it. Run it again to remake them:
@@ -410,8 +411,9 @@ def monster_sheet(walk):
     return frames_sheet([f for row in rows for f in row], 4, cell)
 
 
-def monster_four_ways(pack, folder, name, colours=None):
-    sprite = pack.image('Actor', 'Monster', folder, name)
+def monster_four_ways(pack, folder, name, colours=None, kind='Monster'):
+    """A creature of the pack's `Actor/<kind>/<folder>`: four ways, four frames of a walk (a character's first four rows)."""
+    sprite = pack.image('Actor', kind, folder, name)
     if colours:
         sprite = recolour(sprite, {hexrgb(old): hexrgb(new) for old, new in colours.items()})
     return monster_sheet([[cut(sprite, d, f) for d in range(4)] for f in range(4)])
@@ -420,6 +422,12 @@ def monster_four_ways(pack, folder, name, colours=None):
 # The pack's mushroom has a red cap, as red as the crab and as the flash of a wind-up, so its cap is made purple: the red
 # flash then shows on it, and the spitter has the colour its orbs have.
 SPITTER_CAP = {'#e0394c': '#a15fd8', '#8f3e56': '#5e3a8c'}
+
+# The raiders of the mountain are the pack's ninjas and its knight, drawn four ways like its monsters. The knight, the
+# veteran, is the grey-green of the dark ninja, the raider, so its steel is made a navy blue to tell the two apart. The
+# pack's bear is red too, so the cave's bear is made brown.
+VETERAN_STEEL = {'#8d977f': '#8aa0d0', '#5f7160': '#4c62a4', '#4e484a': '#3c4478', '#3b3643': '#2a2e5a'}
+CAVE_BEAR = {'#d14b34': '#8a6246', '#8f3e56': '#523a2c'}
 
 
 def projectile_orb(pack):
@@ -578,6 +586,14 @@ BUILDERS = {
     'fx-puff': lambda pack: pack.image('FX', 'Smoke', 'Smoke', 'SpriteSheet.png'),
     'monster-wolf': lambda pack: monster_side(pack, 'DogBlack', 'SpriteSheet.png'),
     'monster-boar': lambda pack: monster_side(pack, 'WildBoar', 'SpriteSheet.png'),
+    'monster-raider': lambda pack: monster_four_ways(pack, 'NinjaDark', 'SpriteSheet.png', kind='Character'),
+    'monster-raider-charger': lambda pack: monster_four_ways(pack, 'NinjaYellow', 'SpriteSheet.png', kind='Character'),
+    'monster-raider-archer': lambda pack: monster_four_ways(pack, 'NinjaBlue', 'SpriteSheet.png', kind='Character'),
+    'monster-raider-veteran': lambda pack: monster_four_ways(pack, 'Knight', 'SpriteSheet.png', VETERAN_STEEL, 'Character'),
+    'monster-cave-bat': lambda pack: monster_four_ways(pack, 'BlueBat', 'SpriteSheet.png'),
+    'monster-cave-lizard': lambda pack: monster_four_ways(pack, 'Lizard', 'Lizard.png'),
+    'monster-cave-eye': lambda pack: monster_four_ways(pack, 'Eye', 'Eye.png'),
+    'monster-cave-bear': lambda pack: monster_four_ways(pack, 'Bear', 'SpriteSheet.png', CAVE_BEAR),
     'prop-chest': chest_sheet,
     'prop-pickup': pickup_sheet,
     'prop-checkpoint': checkpoint_sheet,
