@@ -78,5 +78,38 @@ export const mountain: AreaDefinition = {
       tile: { col: 14, row: 20 },
       contents: { kind: 'gear', gear: 'plate-armor' },
     },
+    // Two caches of arrows in nooks of the cliff a few steps off the trail: the first beside the foot of the long ledge,
+    // the second in the alcove next to the one of the armor.
+    {
+      kind: 'chest',
+      id: 'mountain-arrow-cache-1',
+      tile: { col: 36, row: 18 },
+      contents: { kind: 'consumable', consumable: 'ammunition', amount: 6 },
+    },
+    {
+      kind: 'chest',
+      id: 'mountain-arrow-cache-2',
+      tile: { col: 19, row: 20 },
+      contents: { kind: 'consumable', consumable: 'ammunition', amount: 6 },
+    },
+    // Healing Potions on the ground a step off the trail: one on the lower ledge, one at the foot of the shaft that
+    // climbs to the veteran.
+    { kind: 'pickup', id: 'mountain-potion-1', tile: { col: 22, row: 23 }, consumable: 'healing-potion', amount: 1 },
+    { kind: 'pickup', id: 'mountain-potion-2', tile: { col: 12, row: 17 }, consumable: 'healing-potion', amount: 1 },
+    // A side path: the overlook at the east end of the lower ledge, a long walk past the foot of the climb, which a
+    // raider guards. It keeps three Healing Potions and a big cache of arrows. Both chests stand above row 27: the view
+    // stops at the bottom of the area, so a hero in front of a chest in its last rows would stand under the notice.
+    {
+      kind: 'chest',
+      id: 'mountain-overlook-potions',
+      tile: { col: 42, row: 22 },
+      contents: { kind: 'consumable', consumable: 'healing-potion', amount: 3 },
+    },
+    {
+      kind: 'chest',
+      id: 'mountain-overlook-cache',
+      tile: { col: 42, row: 25 },
+      contents: { kind: 'consumable', consumable: 'ammunition', amount: 8 },
+    },
   ],
 };

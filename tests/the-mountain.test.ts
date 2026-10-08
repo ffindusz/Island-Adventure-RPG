@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
 import { GEAR_SLOTS, createGame } from '../src/core';
-import type { AreaDefinition, ChestDefinition, Game, GameEvent, MonsterTypeDefinition, Tile } from '../src/core';
+import type {
+  AreaDefinition,
+  ChestDefinition,
+  Game,
+  GameEvent,
+  InteractableDefinition,
+  MonsterTypeDefinition,
+  Tile,
+} from '../src/core';
 import { face, fixedRandom, newGame, playingView } from './fixtures';
 import {
   directionBetween,
@@ -41,6 +49,9 @@ const PASS_LENGTH = 3;
 /** A chest is near the trail when the walk to it from the trail is this many tiles at most: a step aside, not a trip. */
 const MOST_NEARBY = 4;
 
+/** A side path is a walk, not a step aside: this many tiles from the trail to the spot beside what lies at its end. */
+const LEAST_DETOUR = 6;
+
 function definitionOf(id: string): AreaDefinition {
   const area = gameContent.areas.find((candidate) => candidate.id === id);
   if (area === undefined) {
@@ -68,6 +79,7 @@ const onTrail = new Set((trail ?? []).map(keyOf));
 
 const interactables = mountain.interactables ?? [];
 const chests = interactables.flatMap((item) => (item.kind === 'chest' ? [item] : []));
+const pickups = interactables.flatMap((item) => (item.kind === 'pickup' ? [item] : []));
 
 /** The types of monster in the mountain, with their ids, and the tougher one among them: the one that takes most to defeat. */
 const raiders = [...new Set(mountain.monsters.map(({ type }) => type))].flatMap((id) => {
@@ -86,6 +98,12 @@ function gearInChestsOf(area: AreaDefinition): string[] {
   return (area.interactables ?? []).flatMap((item) =>
     item.kind === 'chest' && item.contents.kind === 'gear' ? [item.contents.gear] : [],
   );
+}
+
+function holdsAmmunition(item: InteractableDefinition): boolean {
+  return item.kind === 'chest'
+    ? item.contents.kind === 'consumable' && item.contents.consumable === 'ammunition'
+    : item.kind === 'pickup' && item.consumable === 'ammunition';
 }
 
 function chestThat(what: string, matches: (chest: ChestDefinition) => boolean): ChestDefinition {
@@ -379,6 +397,75 @@ describe('the armor of the mountain', () => {
     expect(events).toContainEqual({ type: 'chest-opened', chestId: chest.id });
     expect(events).toContainEqual(pickupFrom(chest));
     expect(defense() - before).toBe(gameContent.gear[gearOf(chest)]?.bonus);
+  });
+});
+
+describe('what the hero finds on the mountain', () => {
+  const nearTheTrail = ({ tile }: { readonly tile: Tile }): boolean =>
+    (detourFromTrail(tile) ?? Number.POSITIVE_INFINITY) <= MOST_NEARBY;
+  /** A chest at the end of a side path: a good walk from the trail. */
+  const sidePathChest = (): ChestDefinition =>
+    chestThat('chest a good walk from the trail', ({ tile }) => (detourFromTrail(tile) ?? 0) >= LEAST_DETOUR);
+
+  it('has Ammunition caches near the trail: two at least, each a few steps aside', () => {
+    const caches = interactables.filter(holdsAmmunition).filter(nearTheTrail);
+
+    expect(caches.length, 'Ammunition caches a few steps off the trail').toBeGreaterThanOrEqual(2);
+  });
+
+  it('lets the hero walk to a cache near the trail and open it', () => {
+    const cache = chestThat('Ammunition cache near the trail', (chest) => holdsAmmunition(chest) && nearTheTrail(chest));
+
+    const events = openChest(quietGameAt(MOUNTAIN, wayInTile), cache);
+
+    expect(events).toContainEqual({ type: 'chest-opened', chestId: cache.id });
+    expect(events).toContainEqual(pickupFrom(cache));
+  });
+
+  it('has Healing Potions on the ground near the trail: two at least, which the hero takes by walking over them', () => {
+    const potions = pickups.filter(({ consumable }) => consumable === 'healing-potion').filter(nearTheTrail);
+
+    expect(potions.length, 'Healing Potions a few steps off the trail').toBeGreaterThanOrEqual(2);
+    for (const potion of potions) {
+      const route = routeBetween(isOpen, wayInTile, (tile) => keyOf(tile) === keyOf(potion.tile));
+      expect(route, `a walk to the potion ${potion.id}`).not.toBeNull();
+
+      const events = walkRoute(quietGameAt(MOUNTAIN, wayInTile), route ?? []);
+
+      expect(events).toContainEqual({
+        type: 'pickup',
+        item: { kind: 'consumable', id: 'healing-potion', amount: potion.amount },
+      });
+    }
+  });
+
+  it('has a side path: a chest a good walk from the trail, which the hero walks to and opens with every door shut', () => {
+    const reward = sidePathChest();
+
+    const events = openChest(quietGameAt(MOUNTAIN, wayInTile), reward);
+
+    expect(events).toContainEqual({ type: 'chest-opened', chestId: reward.id });
+    expect(events).toContainEqual(pickupFrom(reward));
+  });
+
+  it('guards the end of the side path with a raider that the hero who keeps to the trail does not meet', () => {
+    const reward = sidePathChest();
+    const metOnTrail = new Set(metOn(gameContent, mountain, trail).map(({ id }) => id));
+
+    const guards = mountain.monsters.filter((monster) =>
+      neighboursOf(reward.tile).some(
+        (spot) => isOpen(spot) && distanceBetween(spot, monster.tile) <= noticingOf(gameContent, monster),
+      ),
+    );
+
+    expect(guards.length, 'raiders that notice a hero beside the reward').toBeGreaterThan(0);
+    expect(guards.filter(({ id }) => metOnTrail.has(id))).toEqual([]);
+  });
+
+  it('keeps every chest and pickup out of the bottom rows, where the notice is drawn over the hero', () => {
+    const lowest = mountain.layout.length - 1 - BOTTOM_ROWS;
+
+    expect(interactables.filter(({ tile }) => tile.row > lowest).map(({ id }) => id)).toEqual([]);
   });
 });
 
