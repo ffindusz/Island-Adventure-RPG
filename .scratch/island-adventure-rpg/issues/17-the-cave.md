@@ -4,7 +4,7 @@
 
 **Blocked by:** 16: The mountain
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 9-11, 50, 69
 
@@ -19,6 +19,8 @@
 - [ ] Reviewer play check (manual, in a browser): cross the cave using the Automap, pull the lever, claim the upgrade, and leave through the forward exit.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 2655339
 
 ### What was built
 
