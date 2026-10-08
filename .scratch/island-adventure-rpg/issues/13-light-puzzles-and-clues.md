@@ -4,7 +4,7 @@
 
 **Blocked by:** 11: Title screen, autosave, and Continue
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 12, 28, 29
 
@@ -18,6 +18,8 @@
 - [ ] Reviewer play check (manual, in a browser): find a key and open its door, pull a lever, read a sign, then die, continue, and confirm the states remain.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 11b31c8
 
 ### What was built
 
