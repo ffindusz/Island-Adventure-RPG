@@ -14,7 +14,7 @@ export const ARTWORK = {
   // The hero is the Hunter: a 4 by 7 sheet of 16 pixel cells, see hero-sprite.ts for which cell is which.
   hero: sheet('hero.png', 16),
   'sword-held': image('sword-held.png'),
-  'bow-held': image('gear-short-bow.png'),
+  'bow-held': image('bow-held.png'),
   arrow: image('arrow.png'),
   // The four frames of the sword's slash, 32 pixels square.
   slash: sheet('slash.png', 32),

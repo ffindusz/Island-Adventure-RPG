@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Composes the pictures of the shipwreck coast and the woods from pieces of the Ninja Adventure pack.
+"""Composes pictures from pieces of the Ninja Adventure pack: the ground and the monsters of the shipwreck coast and the
+woods, the props every area shares, and the icons of the two bows.
 
 The pack (CC0, Pixel-Boy and AAA) is not in the repository. Pass the folder that holds `Backgrounds`, `Actor`, `Items`
 and `FX` as --pack; the pictures are written under public/art/ and are committed with it. Run it again to remake them:
@@ -506,7 +507,21 @@ def door_sheet(pack):
     return frames_sheet([shut, cut(house, 9, 3)], 2)
 
 
+def bow_icon(pack, folder, shorter_by=0):
+    """A bow of the pack turned a quarter, to stand upright like the icons of the swords: its string on the left, its belly
+    on the right. Lying down, as the hero holds it, it reads as a bowl in the HUD and the inventory. A shorter bow has that
+    many rows cut out of its middle, where the belly is straight, so that its tips and its curve stay whole."""
+    bow = pack.image('Items', 'Weapons', folder, 'Sprite.png').transpose(Image.ROTATE_90)
+    first = (bow.height - shorter_by) // 2
+    out = Image.new('RGBA', (bow.width, bow.height - shorter_by), (0, 0, 0, 0))
+    out.paste(bow.crop((0, 0, bow.width, first)), (0, 0))
+    out.paste(bow.crop((0, first + shorter_by, bow.width, bow.height)), (0, first))
+    return out
+
+
 BUILDERS = {
+    'gear-short-bow': lambda pack: bow_icon(pack, 'Bow', shorter_by=2),
+    'gear-long-bow': lambda pack: bow_icon(pack, 'Bow2'),
     'terrain-water': terrain_water,
     'terrain-sand': terrain_sand,
     'terrain-grass': terrain_grass,

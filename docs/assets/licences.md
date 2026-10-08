@@ -8,13 +8,13 @@ How it is used:
 - The credits screen draws from the "Credits text" lines of entries that are "In use".
 - Rule from the spec: every graphics and audio asset must permit public and commercial use.
 
-Last updated: 2026-10-08. The user approved the Ninja Adventure pack as the art base on 2026-10-07 (ADR 0004). Ticket 22 copied the first asset files into the repository (the hero, its weapons, the item icons and the pieces of the HUD and the windows; see A1 "Used so far"). Ticket 13 added the icon of the key, and ticket 15 the icon of the Long Bow. Ticket 23 added the final art of the shipwreck coast and the woods, and the pictures every area shares (chests and caches, pickups, Checkpoints, exits, signs and doors), composed from pieces of the pack by `docs\assets\compose-art.py`. Nothing else is in use yet.
+Last updated: 2026-10-08. The user approved the Ninja Adventure pack as the art base on 2026-10-07 (ADR 0004). Ticket 22 copied the first asset files into the repository (the hero, its weapons, the item icons and the pieces of the HUD and the windows; see A1 "Used so far"). Ticket 13 added the icon of the key, and ticket 15 the icon of the Long Bow. Ticket 23 added the final art of the shipwreck coast and the woods, the pictures every area shares (chests and caches, pickups, Checkpoints, exits, signs and doors), and the icons of the two bows, turned upright; all are composed from pieces of the pack by `docs\assets\compose-art.py`. Nothing else is in use yet.
 
 ## Summary
 
 | ID | Source | Licence | Checked | Status |
 | --- | --- | --- | --- | --- |
-| A1 | Ninja Adventure Asset Pack: art, audio, and the other files | CC0 1.0 Universal | 2026-10-06, re-read 2026-10-07 | Approved base on 2026-10-07 (ADR 0004); in use: the hero, its weapons, the item icons and the interface pieces (ticket 22), the key icon (ticket 13), the Long Bow icon (ticket 15), and the terrain and the monsters of the shipwreck coast and the woods, and the chests, pickups, Checkpoints, exits, signs and doors of every area, composed from pack pieces (ticket 23) |
+| A1 | Ninja Adventure Asset Pack: art, audio, and the other files | CC0 1.0 Universal | 2026-10-06, re-read 2026-10-07 | Approved base on 2026-10-07 (ADR 0004); in use: the hero, its weapons, the item icons and the interface pieces (ticket 22), the key icon (ticket 13), the Long Bow icon (ticket 15), and the terrain and the monsters of the shipwreck coast and the woods, the upright icons of the two bows, and the chests, pickups, Checkpoints, exits, signs and doors of every area, composed from pack pieces (ticket 23) |
 | A2 | Ninja Adventure `Ui\Font\NormalFont.ttf` | FontStruct Non-Commercial License (embedded in the font file), conflicting with the pack's CC0 claim | 2026-10-07 | Do not use; replaced by the project's own bitmap font, which is no file (ticket 22) |
 | A3 | Ninja Adventure `Ui\Input` and `Ui\Skill Icon` | Covered only by the pack's blanket CC0 claim; no separate provenance | 2026-10-07 | Not needed; avoid |
 | S1 | Kenney Pirate Pack (shipwreck supplement candidate) | CC0 | 2026-10-06 | Candidate, poor style match |
@@ -43,9 +43,8 @@ Last updated: 2026-10-08. The user approved the Ninja Adventure pack as the art 
 - **Used so far (ticket 22):** the files below, copied unchanged from the pack into `public\art\` under the name shown. A file listed for two uses is one file.
   - `Actor\Character\Hunter\SpriteSheet.png` as `hero.png`: the hero.
   - `Items\Weapons\Sword2\SpriteInHand.png` as `sword-held.png`: the sword in the hero's hand.
-  - `Items\Weapons\Bow\Sprite.png` as `gear-short-bow.png`: the bow in the hero's hand, and the icon of the Short Bow.
+  - `Items\Weapons\Bow\Sprite.png` as `bow-held.png`: the bow in the hero's hand (ticket 22 named it `gear-short-bow.png` and used it for the icon of the Short Bow too; ticket 23 gave the icons their own upright pictures, below).
   - `Items\Weapons\Bow\Arrow.png` as `arrow.png`: the hero's arrow in flight.
-  - `Items\Weapons\Bow2\Sprite.png` as `gear-long-bow.png`: the icon of the Long Bow (ticket 15).
   - `FX\Attack\SlashCurved\SpriteSheet.png` as `slash.png`: the slash of the sword.
   - `Items\Weapons\Sword2\Sprite.png` as `gear-basic-sword.png`: the icon of the Basic Sword.
   - `Items\Weapons\BigSword\Sprite.png` as `gear-steel-sword.png`: the icon of the Steel Sword.
@@ -70,6 +69,7 @@ Last updated: 2026-10-08. The user approved the Ninja Adventure pack as the art 
   - `projectile-orb.png`: the four frames of `FX\Projectile\EnergyBall.png`, the orb a spitter shoots, with its two colours `#8feff1` and `#79b8ce` changed to the purple `#e3a6ff` and `#a15fd8` of the spitter's cap, and the pack's dark outline `#141b1b` drawn round them by the recipe.
   - `fx-puff.png`: `FX\Smoke\Smoke\SpriteSheet.png` unchanged, the puff of smoke a monster leaves when it is defeated.
   - Not from the pack: in each monster sheet the white frame shown when the monster is hit is the shape of its first frame filled with white, and the red frame shown while it winds up is the same shape with its colours shifted to red (the dark outline kept). The recipe makes both.
+  - `gear-short-bow.png`, `gear-long-bow.png`: the icons of the Short Bow and the Long Bow (ticket 15 added the Long Bow's), from `Items\Weapons\Bow\Sprite.png` and `Items\Weapons\Bow2\Sprite.png` (these two are not under `Backgrounds\Tilesets\`), each turned a quarter turn so that the bow stands upright with its string on the left, like the icons of the swords: lying down, as the hero holds it, it read as a bowl in the HUD and the inventory. The Short Bow's has the two rows of its middle cut out, so it is 13 pixels tall against the Long Bow's 15 and fits the HUD. The colours are the pack's.
   - The pieces every area shares (`src\adapter\prop-sprites.ts`); these are in use in every area, not only the coast and the woods:
   - `prop-chest.png`: six frames, the chest of Gear, the cache of ammunition and the cache of Healing Potions, each shut and then open. The chest is the two frames of `Items\Treasure\BigTreasureChest.png`. A cache is the pack's `Items\Object\CrateEmpty.png` with what it holds standing in it, and the open cache is the same crate empty: three arrows cut short from `Items\Weapons\Bow\Arrow.png` and stood upright, or two bottles of `Items\Potion\LifePot.png`.
   - `prop-pickup.png`: six frames of what lies on the ground, each plain and then with a glint: the bottle of `Items\Potion\LifePot.png`, the two arrows of `Items\Projectile\Arrow.png` crossed (one of them mirrored), and `Items\Treasure\GoldKey.png`. Not from the pack: the glint, a plus of five white pixels set by the recipe.
