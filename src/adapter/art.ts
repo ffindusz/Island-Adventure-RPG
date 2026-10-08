@@ -29,11 +29,14 @@ const TERRAIN_COLOURS: Readonly<Record<string, number>> = {
   sand: 0xdcc58a,
   grass: 0x5a9e45,
   wreckage: 0x7b5a3a,
+  tree: 0x2f5d2a,
 };
 
 /** Monster colours, by monster type. */
 const MONSTER_COLOURS: Readonly<Record<string, number>> = {
   crab: 0xd9534f,
+  wolf: 0x9aa3b8,
+  slime: 0x40e0d0,
   boar: 0x7d4e2d,
   spitter: 0xa86fd6,
 };
@@ -108,6 +111,11 @@ function fillWithOutline(graphics: Graphics, rect: Rect, fill: number, outline: 
 /** The colour of a kind of terrain. The maps of the Automap are coloured the same way as the ground. */
 export function terrainColour(kind: string): number {
   return TERRAIN_COLOURS[kind] ?? UNKNOWN_COLOUR;
+}
+
+/** The colour of a type of monster. */
+export function monsterColour(type: string): number {
+  return MONSTER_COLOURS[type] ?? UNKNOWN_COLOUR;
 }
 
 /** Draws the ground of the whole area. Call it once per area: terrain never changes. */
@@ -333,7 +341,7 @@ export function drawProjectile(graphics: Graphics, projectile: ArrowView): void 
  */
 export function drawMonster(graphics: Graphics, monster: MonsterView, flashing: boolean): void {
   const body = bodyRect(monster.position, monster.size);
-  const colour = MONSTER_COLOURS[monster.type] ?? UNKNOWN_COLOUR;
+  const colour = monsterColour(monster.type);
   const resting = monster.action.type === 'recovering';
   const warning = flashesToWarn(monster) && !flashing;
   if (monster.action.type === 'dashing') {

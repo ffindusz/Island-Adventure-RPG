@@ -1,6 +1,7 @@
 import type { ContentDefinition } from '../core';
-import { overgrownTrail } from './areas/overgrown-trail';
+import { mountain } from './areas/mountain';
 import { shipwreckCoast } from './areas/shipwreck-coast';
+import { woods } from './areas/woods';
 import { gear } from './gear';
 import { healingPotion } from './healing-potion';
 import { hero } from './hero';
@@ -22,7 +23,7 @@ export const gameContent: ContentDefinition = {
   healingPotion,
   gear,
   monsterTypes,
-  areas: [shipwreckCoast, overgrownTrail],
+  areas: [shipwreckCoast, woods, mountain],
   opening,
   checkCoveredCorner: true,
   start: { area: shipwreckCoast.id, tile: { col: 5, row: 9 } },
