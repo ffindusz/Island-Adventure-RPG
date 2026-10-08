@@ -1,10 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { monsterColour, terrainColour } from '../src/adapter/art';
 import { gameContent } from '../src/content';
-import { createGame } from '../src/core';
-import type { AreaDefinition, Game, MonsterTypeDefinition, Tile } from '../src/core';
-import { fixedRandom, newGame, playingView } from './fixtures';
-import { distanceBetween, isInZone, metOn, noticingOf, openTilesOf, routeBetween, walkRoute } from './routes';
+import { GEAR_SLOTS, createGame } from '../src/core';
+import type { AreaDefinition, ChestDefinition, Game, GameEvent, MonsterTypeDefinition, Tile, TileRect } from '../src/core';
+import { STEPS_PER_TILE, face, fixedRandom, interactableViews, newGame, playingView, walk } from './fixtures';
+import {
+  directionBetween,
+  distanceBetween,
+  isInZone,
+  keyOf,
+  metOn,
+  neighboursOf,
+  noticingOf,
+  openTilesOf,
+  routeBetween,
+  walkRoute,
+} from './routes';
 
 // The cave, the fourth area on the route of the adventure, between the mountain and the old castle: what it has to be to
 // be a dark network of winding passages of its own, with creatures that are not the mountain's, a side path closed by
@@ -30,6 +41,12 @@ const LEAST_WINDING = 1.5;
 
 /** Two colours are set apart when they lie this far from each other, at least, in the cube of red, green and blue (0 to 255 each). */
 const LEAST_COLOUR_GAP = 50;
+
+/** A gate is in sight of the hero who follows the trail when it lies this many tiles from it, at most: the view is twelve tiles high. */
+const IN_SIGHT = 5;
+
+/** A sign is by the gate it speaks of when it stands this many tiles from it, at most. */
+const BY_THE_GATE = 2;
 
 function definitionOf(id: string): AreaDefinition {
   const area = gameContent.areas.find((candidate) => candidate.id === id);
@@ -62,11 +79,16 @@ function straightLine(from: Tile, to: Tile): number {
   return Math.abs(from.col - to.col) + Math.abs(from.row - to.row);
 }
 
+/** The tiles of a rectangle of the map. */
+function tilesOf({ col, row, width, height }: TileRect): Tile[] {
+  return Array.from({ length: width * height }, (_, place) => ({
+    col: col + (place % width),
+    row: row + Math.floor(place / width),
+  }));
+}
+
 /** The tiles of the exit forward. */
-const forwardTiles: Tile[] = Array.from({ length: (wayForward?.zone.width ?? 0) * (wayForward?.zone.height ?? 0) }, (_, place) => ({
-  col: (wayForward?.zone.col ?? 0) + (place % (wayForward?.zone.width ?? 1)),
-  row: (wayForward?.zone.row ?? 0) + Math.floor(place / (wayForward?.zone.width ?? 1)),
-}));
+const forwardTiles = wayForward === undefined ? [] : tilesOf(wayForward.zone);
 
 /** The types of monster in the cave, with their ids, and the tougher one among them: the one that takes most to defeat. */
 const creatures = [...new Set(cave.monsters.map(({ type }) => type))].flatMap((id) => {
@@ -75,6 +97,28 @@ const creatures = [...new Set(cave.monsters.map(({ type }) => type))].flatMap((i
 });
 const tougher = [...creatures].sort((one, other) => other.type.health - one.type.health)[0];
 const toughCreatures = cave.monsters.filter(({ type }) => type === tougher?.id);
+
+const interactables = cave.interactables ?? [];
+const chests = interactables.flatMap((item) => (item.kind === 'chest' ? [item] : []));
+const gates = interactables.flatMap((item) => (item.kind === 'gate' ? [item] : []));
+const levers = interactables.flatMap((item) => (item.kind === 'lever' ? [item] : []));
+const signs = interactables.flatMap((item) => (item.kind === 'sign' ? [item] : []));
+
+/** The one thing of its kind that the cave has, found when a test needs it, so that a cave without it fails that test and no other. */
+function theOnly<T>(what: string, things: readonly T[]): T {
+  const [thing] = things;
+  if (things.length !== 1 || thing === undefined) {
+    throw new Error(`The cave has ${things.length} ${what}, where the tests expect one`);
+  }
+  return thing;
+}
+
+const theGate = () => theOnly('gates', gates);
+const theLever = () => theOnly('levers', levers);
+const theSign = () => theOnly('signs', signs);
+/** The chest in the pocket behind the gate: the only one that holds a piece of Gear. */
+const weaponChest = (): ChestDefinition => theOnly('chests of Gear', chests.filter(({ contents }) => contents.kind === 'gear'));
+const gearIn = ({ contents }: ChestDefinition): string => (contents.kind === 'gear' ? contents.gear : '');
 
 /** The type of a monster of the cave, which the loader sees to exist; none here only for content it refuses. */
 function typeOf(monster: { readonly type: string }): MonsterTypeDefinition | undefined {
@@ -101,6 +145,56 @@ function inOpenBlock({ col, row }: Tile): boolean {
 /** How far apart two colours, given as 0xRRGGBB, lie in the cube of red, green and blue. */
 function colourGap(one: number, other: number): number {
   return Math.hypot(...[16, 8, 0].map((shift) => ((one >> shift) & 0xff) - ((other >> shift) & 0xff)));
+}
+
+/** The ids of the Gear that the chests of an area hold. */
+function gearInChestsOf(area: AreaDefinition): string[] {
+  return (area.interactables ?? []).flatMap((item) =>
+    item.kind === 'chest' && item.contents.kind === 'gear' ? [item.contents.gear] : [],
+  );
+}
+
+/** Every tile that the hero can walk to from a tile over open ground, as their keys. */
+function reachableFrom(isWalkable: (tile: Tile) => boolean, from: Tile): Set<string> {
+  const reached = new Set([keyOf(from)]);
+  const frontier = [from];
+  for (const tile of frontier) {
+    for (const next of neighboursOf(tile)) {
+      if (!reached.has(keyOf(next)) && isWalkable(next)) {
+        reached.add(keyOf(next));
+        frontier.push(next);
+      }
+    }
+  }
+  return reached;
+}
+
+/**
+ * The hero walks from where it stands to a spot beside a tile over open ground, turns to the tile and uses Interact. It
+ * walks over the ground that `isWalkable` says is open: with the gate shut unless a test says it stands open. Returns
+ * what Interact did.
+ */
+function interactWith(game: Game, target: Tile, isWalkable: (tile: Tile) => boolean = isOpen): readonly GameEvent[] {
+  const { x, y } = playingView(game).hero.position;
+  const from = { col: Math.floor(x), row: Math.floor(y) };
+  const route = routeBetween(isWalkable, from, (tile) => neighboursOf(tile).some((next) => keyOf(next) === keyOf(target)));
+  if (route === null) {
+    throw new Error(`The hero cannot walk to a spot beside the tile ${keyOf(target)}`);
+  }
+  walkRoute(game, route);
+  face(game, directionBetween(route.at(-1) ?? from, target));
+  return game.send({ type: 'interact' });
+}
+
+/** The event that says the hero took what a chest holds. */
+function pickupFrom({ contents }: ChestDefinition): unknown {
+  return expect.objectContaining({
+    type: 'pickup',
+    item:
+      contents.kind === 'gear'
+        ? expect.objectContaining({ kind: 'gear', id: contents.gear })
+        : { kind: 'consumable', id: contents.consumable, amount: contents.amount },
+  });
 }
 
 describe('the way through the cave', () => {
@@ -244,6 +338,129 @@ describe('the creatures of the cave', () => {
 
     expect(creatures.length).toBeGreaterThan(0);
     expect(tooClose).toEqual([]);
+  });
+});
+
+describe('the side path behind the gate', () => {
+  const besideTheChest = (tile: Tile): boolean => neighboursOf(tile).some((next) => keyOf(next) === keyOf(weaponChest().tile));
+  const besideTheLever = (tile: Tile): boolean => neighboursOf(tile).some((next) => keyOf(next) === keyOf(theLever().tile));
+  const tileOfHero = (game: Game): Tile => {
+    const { x, y } = playingView(game).hero.position;
+    return { col: Math.floor(x), row: Math.floor(y) };
+  };
+
+  it('keeps the chest of the weapon in a pocket behind the gate: the hero cannot walk to it while the gate is shut, and can when it stands open', () => {
+    expect(routeBetween(isOpen, wayInTile, besideTheChest)).toBeNull();
+    expect(routeBetween(openTilesOf(gameContent, cave, true), wayInTile, besideTheChest)).not.toBeNull();
+  });
+
+  it('shuts away a dead end and nothing more: what the gate keeps from the hero holds no way in, no way out and no Checkpoint', () => {
+    const shut = reachableFrom(isOpen, wayInTile);
+    const kept = [...reachableFrom(openTilesOf(gameContent, cave, true), wayInTile)].filter((place) => !shut.has(place));
+    const ways = new Set(
+      [
+        ...(cave.entrances ?? []).map(({ tile }) => tile),
+        ...(cave.checkpoints ?? []).map(({ tile }) => tile),
+        ...(cave.exits ?? []).flatMap(({ zone }) => tilesOf(zone)),
+      ].map(keyOf),
+    );
+
+    expect(kept.length).toBeGreaterThan(0);
+    expect(kept.filter((place) => ways.has(place))).toEqual([]);
+  });
+
+  it('keeps the gate in sight of the trail: within a few tiles of the sand that the hero follows', () => {
+    const nearest = Math.min(...(trail ?? []).map((tile) => distanceBetween(tile, theGate().tile)));
+
+    expect(trail).not.toBeNull();
+    expect(nearest).toBeLessThanOrEqual(IN_SIGHT);
+  });
+
+  it('has a lever that names the gate and that the hero can walk up to with the gate shut and no key held', () => {
+    expect(theLever().targets).toEqual([theGate().id]);
+    expect(routeBetween(isOpen, wayInTile, besideTheLever)).not.toBeNull();
+  });
+
+  it('has a sign by the gate that the hero can read with the gate shut', () => {
+    const sign = theSign();
+
+    const events = interactWith(quietGameAt(CAVE, wayInTile), sign.tile);
+
+    expect(distanceBetween(sign.tile, theGate().tile)).toBeLessThanOrEqual(BY_THE_GATE);
+    expect(events).toEqual([{ type: 'sign-read', signId: sign.id, text: sign.text }]);
+  });
+
+  it('stops the hero at the gate while it is shut: a hero who walks into it stays where it stood', () => {
+    const game = quietGameAt(CAVE, wayInTile);
+    const gate = theGate();
+    interactWith(game, gate.tile);
+    const stood = tileOfHero(game);
+
+    walk(game, directionBetween(stood, gate.tile), 4 * STEPS_PER_TILE);
+
+    expect(tileOfHero(game)).toEqual(stood);
+    expect(interactableViews(game, 'gate')).toEqual([expect.objectContaining({ id: gate.id, open: false })]);
+  });
+
+  it('does not open for Interact: a hero who uses it on the gate does nothing to it', () => {
+    const game = quietGameAt(CAVE, wayInTile);
+    const gate = theGate();
+
+    const events = interactWith(game, gate.tile);
+
+    expect(events).toEqual([]);
+    expect(interactableViews(game, 'gate')).toEqual([expect.objectContaining({ id: gate.id, open: false })]);
+  });
+
+  it('opens by a pull of the lever, made by walking up to it and using Interact: the lever is pulled and the gate stands open', () => {
+    const game = quietGameAt(CAVE, wayInTile);
+    const lever = theLever();
+
+    const events = interactWith(game, lever.tile);
+
+    expect(events).toEqual([{ type: 'lever-toggled', leverId: lever.id, pulled: true }]);
+    expect(interactableViews(game, 'lever')).toEqual([expect.objectContaining({ id: lever.id, pulled: true })]);
+    expect(interactableViews(game, 'gate')).toEqual([expect.objectContaining({ id: theGate().id, open: true })]);
+  });
+});
+
+describe('the weapon behind the gate', () => {
+  const upgrade = () => gameContent.gear[gearIn(weaponChest())];
+
+  it('is a melee weapon that adds more than any Gear of that slot that the hero begins with or finds on the coast, in the woods and on the mountain', () => {
+    const earlier = [
+      ...GEAR_SLOTS.flatMap((slot) => gameContent.hero.startingGear[slot] ?? []),
+      ...[COAST, WOODS, MOUNTAIN].flatMap((id) => gearInChestsOf(definitionOf(id))),
+    ].flatMap((id) => gameContent.gear[id] ?? []);
+
+    const best = Math.max(0, ...earlier.filter((gear) => gear.slot === 'melee-weapon').map((gear) => gear.bonus));
+
+    expect(upgrade(), 'the Gear in the chest behind the gate').toBeDefined();
+    expect(upgrade()?.slot).toBe('melee-weapon');
+    expect(upgrade()?.bonus ?? 0).toBeGreaterThan(best);
+  });
+
+  it('is taken by a hero who pulls the lever, walks into the pocket and opens the chest, and wielded: Attack rises by what it adds', () => {
+    const game = quietGameAt(CAVE, wayInTile);
+    const chest = weaponChest();
+    const wielded = gameContent.gear[gameContent.hero.startingGear['melee-weapon'] ?? ''];
+    const attack = (): number => {
+      const { page } = playingView(game);
+      if (page?.id !== 'inventory') {
+        throw new Error('The inventory page is not open');
+      }
+      return page.attack;
+    };
+
+    interactWith(game, theLever().tile);
+    const events = interactWith(game, chest.tile, openTilesOf(gameContent, cave, true));
+    game.send({ type: 'open-page', page: 'inventory' });
+    const before = attack();
+    game.send({ type: 'equip', gearId: gearIn(chest) });
+
+    expect(events).toContainEqual({ type: 'chest-opened', chestId: chest.id });
+    expect(events).toContainEqual(pickupFrom(chest));
+    expect(attack() - before).toBe((upgrade()?.bonus ?? 0) - (wielded?.bonus ?? 0));
   });
 });
 

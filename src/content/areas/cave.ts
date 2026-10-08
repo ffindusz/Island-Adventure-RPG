@@ -80,4 +80,19 @@ export const cave: AreaDefinition = {
     { id: 'cave-bear-1', type: 'cave-bear', tile: { col: 39, row: 11 } },
     { id: 'cave-lizard-2', type: 'cave-lizard', tile: { col: 6, row: 15 } },
   ],
+  interactables: [
+    // The side path that a lever opens: a pocket of grass in the north wall of the middle chamber, shut by a gate that
+    // the hero sees from the trail, with the Katana in a chest in it. The lever is set in a niche in the east wall of
+    // the same chamber, and a sign by the gate says where to look. The pocket is a dead end, so the way on needs
+    // neither the lever nor the gate.
+    { kind: 'gate', id: 'cave-gate', tile: { col: 17, row: 17 } },
+    { kind: 'lever', id: 'cave-lever', tile: { col: 28, row: 21 }, targets: ['cave-gate'] },
+    {
+      kind: 'sign',
+      id: 'cave-sign',
+      tile: { col: 18, row: 18 },
+      text: 'The gate is shut. A lever is set in the east wall.',
+    },
+    { kind: 'chest', id: 'cave-weapon-chest', tile: { col: 17, row: 14 }, contents: { kind: 'gear', gear: 'katana' } },
+  ],
 };
