@@ -1,4 +1,5 @@
 import type { ContentDefinition } from '../core';
+import { castle } from './areas/castle';
 import { cave } from './areas/cave';
 import { mountain } from './areas/mountain';
 import { shipwreckCoast } from './areas/shipwreck-coast';
@@ -24,7 +25,7 @@ export const gameContent: ContentDefinition = {
   healingPotion,
   gear,
   monsterTypes,
-  areas: [shipwreckCoast, woods, mountain, cave],
+  areas: [shipwreckCoast, woods, mountain, cave, castle],
   opening,
   checkCoveredCorner: true,
   start: { area: shipwreckCoast.id, tile: { col: 5, row: 9 } },

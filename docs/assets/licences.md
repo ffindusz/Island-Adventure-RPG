@@ -8,13 +8,13 @@ How it is used:
 - The credits screen draws from the "Credits text" lines of entries that are "In use".
 - Rule from the spec: every graphics and audio asset must permit public and commercial use.
 
-Last updated: 2026-10-08. The user approved the Ninja Adventure pack as the art base on 2026-10-07 (ADR 0004). Ticket 22 copied the first asset files into the repository (the hero, its weapons, the item icons and the pieces of the HUD and the windows; see A1 "Used so far"). Ticket 13 added the icon of the key, and ticket 15 the icon of the Long Bow. Ticket 23 added the final art of the shipwreck coast and the woods, the pictures every area shares (chests and caches, pickups, Checkpoints, exits, signs and doors), and the icons of the two bows, turned upright; all are composed from pieces of the pack by `docs\assets\compose-art.py`. Nothing else is in use yet.
+Last updated: 2026-10-08. The user approved the Ninja Adventure pack as the art base on 2026-10-07 (ADR 0004). Ticket 22 copied the first asset files into the repository (the hero, its weapons, the item icons and the pieces of the HUD and the windows; see A1 "Used so far"). Ticket 13 added the icon of the key, ticket 15 the icon of the Long Bow, and ticket 17 the icon of the Katana. Ticket 23 added the final art of the shipwreck coast and the woods, the pictures every area shares (chests and caches, pickups, Checkpoints, exits, signs and doors), and the icons of the two bows, turned upright; all are composed from pieces of the pack by `docs\assets\compose-art.py`. Nothing else is in use yet.
 
 ## Summary
 
 | ID | Source | Licence | Checked | Status |
 | --- | --- | --- | --- | --- |
-| A1 | Ninja Adventure Asset Pack: art, audio, and the other files | CC0 1.0 Universal | 2026-10-06, re-read 2026-10-07 | Approved base on 2026-10-07 (ADR 0004); in use: the hero, its weapons, the item icons and the interface pieces (ticket 22), the key icon (ticket 13), the Long Bow icon (ticket 15), and the terrain and the monsters of the shipwreck coast and the woods, the upright icons of the two bows, and the chests, pickups, Checkpoints, exits, signs and doors of every area, composed from pack pieces (ticket 23) |
+| A1 | Ninja Adventure Asset Pack: art, audio, and the other files | CC0 1.0 Universal | 2026-10-06, re-read 2026-10-07 | Approved base on 2026-10-07 (ADR 0004); in use: the hero, its weapons, the item icons and the interface pieces (ticket 22), the key icon (ticket 13), the Long Bow icon (ticket 15), the Katana icon (ticket 17), and the terrain and the monsters of the shipwreck coast and the woods, the upright icons of the two bows, and the chests, pickups, Checkpoints, exits, signs and doors of every area, composed from pack pieces (ticket 23) |
 | A2 | Ninja Adventure `Ui\Font\NormalFont.ttf` | FontStruct Non-Commercial License (embedded in the font file), conflicting with the pack's CC0 claim | 2026-10-07 | Do not use; replaced by the project's own bitmap font, which is no file (ticket 22) |
 | A3 | Ninja Adventure `Ui\Input` and `Ui\Skill Icon` | Covered only by the pack's blanket CC0 claim; no separate provenance | 2026-10-07 | Not needed; avoid |
 | S1 | Kenney Pirate Pack (shipwreck supplement candidate) | CC0 | 2026-10-06 | Candidate, poor style match |
@@ -48,6 +48,7 @@ Last updated: 2026-10-08. The user approved the Ninja Adventure pack as the art 
   - `FX\Attack\SlashCurved\SpriteSheet.png` as `slash.png`: the slash of the sword.
   - `Items\Weapons\Sword2\Sprite.png` as `gear-basic-sword.png`: the icon of the Basic Sword.
   - `Items\Weapons\BigSword\Sprite.png` as `gear-steel-sword.png`: the icon of the Steel Sword.
+  - `Items\Weapons\Katana\Sprite.png` as `gear-katana.png`: the icon of the Katana (ticket 17).
   - `Items\Projectile\Arrow.png` as `consumable-ammunition.png`: the icon of Ammunition.
   - `Items\Potion\LifePot.png` as `consumable-healing-potion.png`: the icon of the Healing Potion.
   - `Items\Treasure\GoldKey.png` as `key.png`: the icon of a key, in the notice of finding one and in the inventory page (ticket 13).

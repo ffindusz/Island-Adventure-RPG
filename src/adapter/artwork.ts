@@ -20,6 +20,7 @@ export const ARTWORK = {
   slash: sheet('slash.png', 32),
   'gear-basic-sword': image('gear-basic-sword.png'),
   'gear-steel-sword': image('gear-steel-sword.png'),
+  'gear-katana': image('gear-katana.png'),
   'gear-short-bow': image('gear-short-bow.png'),
   'gear-long-bow': image('gear-long-bow.png'),
   'gear-basic-armor': drawn(TUNIC_ROWS, PACK_PALETTE),

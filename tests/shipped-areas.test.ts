@@ -12,6 +12,7 @@ const COAST = 'shipwreck-coast';
 const WOODS = 'woods';
 const MOUNTAIN = 'mountain';
 const CAVE = 'cave';
+const CASTLE = 'castle';
 
 /** The canvas shows this many tiles (VIEW_TILES_WIDE and VIEW_TILES_HIGH in the adapter). */
 const SCREEN_TILES = { wide: 20, high: 12 };
@@ -185,6 +186,28 @@ describe('the Adventure Areas the game ships with', () => {
     expect(view.hero.position).toEqual(centreOf(MOUNTAIN, 'from-cave'));
   });
 
+  it('leads east from the cave into the fifth area, the old castle, where the hero arrives at the entrance the exit names', () => {
+    const game = gameComingInBy(CAVE, 'from-castle');
+
+    const events = walkThroughExit(game, 'right');
+
+    expect(events).toContainEqual({ type: 'area-changed', areaId: CASTLE });
+    const view = playingView(game);
+    expect(view.area.id).toBe(CASTLE);
+    expect(view.hero.position).toEqual(centreOf(CASTLE, 'from-cave'));
+  });
+
+  it('leads west from the fifth area back to the cave, where the hero arrives at the entrance there', () => {
+    const game = gameComingInBy(CASTLE, 'from-cave');
+
+    const events = walkThroughExit(game, 'left');
+
+    expect(events).toContainEqual({ type: 'area-changed', areaId: CAVE });
+    const view = playingView(game);
+    expect(view.area.id).toBe(CAVE);
+    expect(view.hero.position).toEqual(centreOf(CAVE, 'from-castle'));
+  });
+
   it('begins a new game by showing the text of the first area', () => {
     const game = createGame({ content: gameContent, random: fixedRandom });
     game.send({ type: 'new-game' });
@@ -223,7 +246,7 @@ describe('the Adventure Areas the game ships with', () => {
     },
   );
 
-  it('puts a Checkpoint at the entrance of each area: the start of the adventure on the coast, the way in from it in the woods, the way in from the woods in the mountain, the way in from the mountain in the cave', () => {
+  it('puts a Checkpoint at the entrance of each area: the start of the adventure on the coast, the way in from it in the woods, the way in from the woods in the mountain, the way in from the mountain in the cave, the way in from the cave in the castle', () => {
     const checkpointTiles = (id: string) => (areaNamed(id).checkpoints ?? []).map(({ tile }) => tile);
 
     expect(gameContent.start.area).toBe(COAST);
@@ -231,6 +254,7 @@ describe('the Adventure Areas the game ships with', () => {
     expect(checkpointTiles(WOODS)).toContainEqual(entranceOf(WOODS, 'from-coast').tile);
     expect(checkpointTiles(MOUNTAIN)).toContainEqual(entranceOf(MOUNTAIN, 'from-woods').tile);
     expect(checkpointTiles(CAVE)).toContainEqual(entranceOf(CAVE, 'from-mountain').tile);
+    expect(checkpointTiles(CASTLE)).toContainEqual(entranceOf(CASTLE, 'from-cave').tile);
   });
 
   it('begins a new game with the Checkpoint of the coast active, as the start of the adventure counts as the first', () => {
@@ -267,6 +291,15 @@ describe('the Adventure Areas the game ships with', () => {
 
     expect(events).toContainEqual({ type: 'checkpoint-activated', checkpointId: 'cave-checkpoint' });
     expect(playingView(game).checkpoints).toEqual([expect.objectContaining({ id: 'cave-checkpoint', active: true })]);
+  });
+
+  it('touches the Checkpoint of the castle when the hero comes in from the cave', () => {
+    const game = gameComingInBy(CAVE, 'from-castle');
+
+    const events = walkThroughExit(game, 'right');
+
+    expect(events).toContainEqual({ type: 'checkpoint-activated', checkpointId: 'castle-checkpoint' });
+    expect(playingView(game).checkpoints).toEqual([expect.objectContaining({ id: 'castle-checkpoint', active: true })]);
   });
 
   it('puts every exit and milestone on tiles the hero can stand on, so that each can be reached', () => {
