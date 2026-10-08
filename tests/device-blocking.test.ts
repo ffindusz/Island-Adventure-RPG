@@ -15,6 +15,7 @@ import {
   doorAt,
   face,
   gameAtTitle,
+  gateAt,
   keyAt,
   monsterAction,
   monsterNamed,
@@ -37,7 +38,10 @@ import { chargerAt, enemyContent, shooterAt, untilFired } from './enemy-fixtures
 const BLOCKERS: readonly {
   readonly what: string;
   readonly placedAt: (col: number, row: number) => InteractableDefinition[];
-}[] = [{ what: 'a door', placedAt: (col, row) => [doorAt('blocker', col, row, 'key-1'), keyAt('key-1', 5, 1)] }];
+}[] = [
+  { what: 'a door', placedAt: (col, row) => [doorAt('blocker', col, row, 'key-1'), keyAt('key-1', 5, 1)] },
+  { what: 'a gate', placedAt: (col, row) => [gateAt('blocker', col, row)] },
+];
 
 /** The game of `content` as it would be had the blocker been opened: it continues a saved game that has it open. */
 function gameWithBlockerOpen(content: ContentDefinition): Game {

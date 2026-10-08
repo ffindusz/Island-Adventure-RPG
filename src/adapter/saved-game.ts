@@ -318,14 +318,16 @@ function checkMilestones(value: unknown, path: string, area: AreaDefinition): vo
 }
 
 /**
- * What the hero can change about each interactable of the area: a chest is opened, a pickup or a key is taken, a door
- * is opened.
+ * What the hero can change about each interactable of the area: a chest is opened, a pickup or a key is taken, a door or
+ * a gate is opened, a lever is pulled.
  */
 const FLAG_OF: Record<InteractableDefinition['kind'], string> = {
   chest: 'opened',
   pickup: 'collected',
   key: 'collected',
   door: 'open',
+  gate: 'open',
+  lever: 'pulled',
 };
 
 function checkInteractables(value: unknown, path: string, area: AreaDefinition): string[] {

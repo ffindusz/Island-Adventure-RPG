@@ -117,6 +117,12 @@ export type GameEvent =
   | { readonly type: 'door-locked'; readonly doorId: string; readonly keyName: string }
   /** The hero opened this door with the key `keyName`, which the door took. The door stays open for good. */
   | { readonly type: 'door-opened'; readonly doorId: string; readonly keyName: string }
+  /**
+   * The hero used Interact on a lever. `pulled` is where the lever is now: true when the hero pulled it, false when it put
+   * it back. Every door and gate the lever names was moved the other way: one that was shut is open, and one that was
+   * open is shut.
+   */
+  | { readonly type: 'lever-toggled'; readonly leverId: string; readonly pulled: boolean }
   /** The hero took an item and now has it. */
   | { readonly type: 'pickup'; readonly item: PickedUpItem }
   /** The hero equipped this Gear in its slot, in place of the piece there. */
@@ -238,7 +244,7 @@ export interface ChestView {
 }
 
 /** Something placed in the Adventure Area, for the adapter to draw: one member for each kind. */
-export type InteractableView = ChestView | PickupView | KeyView | DoorView;
+export type InteractableView = ChestView | PickupView | KeyView | DoorView | GateView | LeverView;
 
 /** A pickup lying on the ground, for the adapter to draw. One that the hero has taken is not listed any more. */
 export interface PickupView {
@@ -278,6 +284,28 @@ export interface DoorView {
   /** Width and height of the tile it fills, in tiles. */
   readonly size: number;
   readonly open: boolean;
+}
+
+/** A gate, for the adapter to draw. It stays where it is once open, and the hero walks through it then. */
+export interface GateView {
+  readonly kind: 'gate';
+  readonly id: string;
+  /** The centre of the tile it fills. */
+  readonly position: Point;
+  /** Width and height of the tile it fills, in tiles. */
+  readonly size: number;
+  readonly open: boolean;
+}
+
+/** A lever, for the adapter to draw. It is solid, whether the hero has pulled it or not. */
+export interface LeverView {
+  readonly kind: 'lever';
+  readonly id: string;
+  /** The centre of the tile it fills. */
+  readonly position: Point;
+  /** Width and height of the tile it fills, in tiles. */
+  readonly size: number;
+  readonly pulled: boolean;
 }
 
 export interface AreaView {

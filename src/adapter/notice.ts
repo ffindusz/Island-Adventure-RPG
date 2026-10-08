@@ -8,13 +8,13 @@ import { pageKeyLabel, switchWeaponKeyLabel } from './player-input';
 import { INK, UiLayer } from './ui-layer';
 
 // The notice of what the hero just found, that the bow has nothing to shoot, that it touched a Checkpoint, that a door
-// is locked or has opened, or that the game could not be saved, low on the screen where it covers neither the hero nor
-// the HUD. It is drawn from what the Game core reported and nothing else.
+// is locked or has opened, that a lever moved, or that the game could not be saved, low on the screen where it covers
+// neither the hero nor the HUD. It is drawn from what the Game core reported and nothing else.
 
 /**
  * What the notice tells the player: the item the hero picked up, that an arrow was asked for and there is none, that
- * the hero touched a Checkpoint, that a door is locked and which key it needs or that a key opened it, or that the
- * browser refused to keep the saved game.
+ * the hero touched a Checkpoint, that a door is locked and which key it needs or that a key opened it, that a lever was
+ * pulled or put back, or that the browser refused to keep the saved game.
  */
 export type NoticeContent =
   | { readonly kind: 'pickup'; readonly item: PickedUpItem }
@@ -22,6 +22,7 @@ export type NoticeContent =
   | { readonly kind: 'checkpoint' }
   | { readonly kind: 'door-locked'; readonly keyName: string }
   | { readonly kind: 'door-opened'; readonly keyName: string }
+  | { readonly kind: 'lever-toggled'; readonly pulled: boolean }
   | { readonly kind: 'save-failed' };
 
 /** Above the HUD, below the overlay: a page that opens covers the notice. */
@@ -47,7 +48,7 @@ interface Line {
 
 /**
  * Tells the player what the hero picked up, that the bow is out of Ammunition, that a Checkpoint is touched, that a door
- * is locked or has opened, or that the game could not be saved.
+ * is locked or has opened, that a lever moved, or that the game could not be saved.
  */
 export class Notice {
   private readonly layer: UiLayer;
@@ -83,6 +84,7 @@ function iconFor(content: NoticeContent): string | null {
     case 'door-locked':
     case 'door-opened':
       return KEY_ICON;
+    case 'lever-toggled':
     case 'save-failed':
       return null;
   }
@@ -122,6 +124,11 @@ function linesFor(content: NoticeContent): Line[] {
       return [
         { text: 'DOOR OPENED', colour: TITLE_COLOUR },
         { text: `USED ${content.keyName}`, colour: HINT_COLOUR },
+      ];
+    case 'lever-toggled':
+      return [
+        { text: content.pulled ? 'LEVER PULLED' : 'LEVER PUT BACK', colour: TITLE_COLOUR },
+        { text: 'SOMETHING MOVED', colour: HINT_COLOUR },
       ];
     case 'save-failed':
       return [{ text: 'COULD NOT SAVE THE GAME', colour: WARNING_COLOUR }];

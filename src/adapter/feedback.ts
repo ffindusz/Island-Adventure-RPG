@@ -49,6 +49,9 @@ export class Feedback {
         case 'door-opened':
           this.told = { content: { kind: 'door-opened', keyName: event.keyName }, msLeft: NOTICE_MS };
           break;
+        case 'lever-toggled':
+          this.told = { content: { kind: 'lever-toggled', pulled: event.pulled }, msLeft: NOTICE_MS };
+          break;
         case 'area-changed':
           // After a defeat the return to another area is shown only when the fall is over: see endFall.
           if (!this.falling) {

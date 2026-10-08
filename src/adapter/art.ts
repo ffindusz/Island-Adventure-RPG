@@ -14,7 +14,7 @@ import type {
   Point,
 } from '../core';
 import { TILE_SIZE } from './config';
-import { drawDoor, drawKey } from './device-art';
+import { drawDoor, drawGate, drawKey, drawLever } from './device-art';
 
 // The placeholder look of what is not yet real art: flat shapes drawn from the state view. The ground, the Checkpoints,
 // the chests, the pickups, the monsters and their projectiles are still drawn here. The hero and its arrows are sprites
@@ -192,6 +192,12 @@ export function drawInteractable(graphics: Graphics, interactable: InteractableV
       return;
     case 'door':
       drawDoor(graphics, interactable);
+      return;
+    case 'gate':
+      drawGate(graphics, interactable);
+      return;
+    case 'lever':
+      drawLever(graphics, interactable);
       return;
   }
 }

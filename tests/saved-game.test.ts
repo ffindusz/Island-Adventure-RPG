@@ -283,6 +283,24 @@ describe('a save that does not fit the interactables, milestones and Automap of 
       names: 'state.areas.arena.interactables.brass-door.open',
     },
     {
+      fault: 'a gate is neither open nor not open',
+      damage: (saved) => (saved.state.areas['arena'].interactables['portcullis'].open = 'ajar'),
+      problem: 'damaged',
+      names: 'state.areas.arena.interactables.portcullis.open',
+    },
+    {
+      fault: 'a lever is neither pulled nor not pulled',
+      damage: (saved) => delete saved.state.areas['arena'].interactables['switch'].pulled,
+      problem: 'damaged',
+      names: 'state.areas.arena.interactables.switch.pulled',
+    },
+    {
+      fault: 'a lever is kept as if it were a gate',
+      damage: (saved) => (saved.state.areas['arena'].interactables['switch'] = { kind: 'gate', open: false }),
+      problem: 'incompatible',
+      names: 'state.areas.arena.interactables.switch',
+    },
+    {
       fault: 'an interactable is of a kind the game does not know',
       damage: (saved) => (saved.state.areas['arena'].interactables['armor-chest'] = { kind: 'portal', open: false }),
       problem: 'damaged',

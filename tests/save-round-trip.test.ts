@@ -98,7 +98,7 @@ describe('the saved adventure', () => {
     expect(outlived.areas['ruins']?.monsters.find(({ id }) => id === 'shooter')?.health).toBe(0);
   });
 
-  it('has opened and unopened chests, taken and untaken pickups, caches and keys, shut and open doors, reached and unreached milestones', () => {
+  it('has opened and unopened chests, taken and untaken pickups, caches and keys, shut and open doors and gates, levers, reached and unreached milestones', () => {
     const arena = stateAfter('crossing').areas['arena'];
     const ruins = stateAfter('crossing').areas['ruins'];
 
@@ -114,6 +114,8 @@ describe('the saved adventure', () => {
       'potion-spare': { kind: 'pickup', collected: false },
       'brass-key': { kind: 'key', collected: true },
       'brass-door': { kind: 'door', open: true },
+      switch: { kind: 'lever', pulled: true },
+      portcullis: { kind: 'gate', open: true },
     });
     expect(ruins?.interactables).toEqual({
       'ruin-cache': { kind: 'chest', opened: false },
@@ -135,6 +137,17 @@ describe('the saved adventure', () => {
     expect(door('key')).toEqual({ kind: 'door', open: false });
     expect(door('door')).toEqual({ kind: 'door', open: true });
     expect(door('defeat')).toEqual({ kind: 'door', open: true });
+  });
+
+  it('has a lever put where the hero left it, and the gate it moves with it, defeat included', () => {
+    const interactable = (chapter: string, id: string) => stateAfter(chapter).areas['arena']?.interactables[id];
+
+    expect(interactable('door', 'switch')).toEqual({ kind: 'lever', pulled: false });
+    expect(interactable('door', 'portcullis')).toEqual({ kind: 'gate', open: false });
+    expect(interactable('lever', 'switch')).toEqual({ kind: 'lever', pulled: true });
+    expect(interactable('lever', 'portcullis')).toEqual({ kind: 'gate', open: true });
+    expect(interactable('defeat', 'switch')).toEqual({ kind: 'lever', pulled: true });
+    expect(interactable('defeat', 'portcullis')).toEqual({ kind: 'gate', open: true });
   });
 
   it('has visited the first area and, from the crossing on, the second, with its text showing', () => {
@@ -298,6 +311,8 @@ describe('a defeat after Continue', () => {
     expect(hero.keys).toEqual([]); // the door took the brass key before the defeat, and defeat does not give it back
     expect(areas['arena']?.interactables['brass-key']).toEqual({ kind: 'key', collected: true });
     expect(areas['arena']?.interactables['brass-door']).toEqual({ kind: 'door', open: true }); // opened after the Checkpoint
+    expect(areas['arena']?.interactables['switch']).toEqual({ kind: 'lever', pulled: true }); // pulled after it, too
+    expect(areas['arena']?.interactables['portcullis']).toEqual({ kind: 'gate', open: true });
     expect(areas['arena']?.interactables['potion-far']).toEqual({ kind: 'pickup', collected: false }); // taken after
     expect(areas['arena']?.interactables['potion-near']).toEqual({ kind: 'pickup', collected: true }); // taken before
     expect(areas['arena']?.monsters.map(({ health }) => health)).toEqual([3, 1]); // the dummy and the rat are back

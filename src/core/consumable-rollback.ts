@@ -42,7 +42,7 @@ export function rollBackConsumables(state: PlayState, content: Content): void {
 
 /**
  * Whether an interactable gives consumables, which defeat takes back: a pickup, and a chest that holds some. A key is
- * one-time loot, not a consumable, and stays taken; a door stays open.
+ * one-time loot, not a consumable, and stays taken; a door stays open; a gate and a lever stay where the hero left them.
  */
 function givesConsumables(interactable: Interactable): boolean {
   switch (interactable.kind) {
@@ -50,6 +50,8 @@ function givesConsumables(interactable: Interactable): boolean {
       return true;
     case 'key':
     case 'door':
+    case 'gate':
+    case 'lever':
       return false;
     case 'chest':
       switch (interactable.contents.kind) {
@@ -71,6 +73,8 @@ function isTaken(state: PlayState, areaId: string, interactable: Interactable): 
       return found.opened;
     case 'key':
     case 'door':
+    case 'gate':
+    case 'lever':
       return false;
   }
 }
@@ -86,6 +90,8 @@ function setTaken(state: PlayState, areaId: string, interactable: Interactable, 
       break;
     case 'key':
     case 'door':
+    case 'gate':
+    case 'lever':
       break;
   }
 }

@@ -264,7 +264,7 @@ describe('Gear and interactables that do not make sense are refused when the gam
   // Content read from a file could say these, and the compiler would not notice.
   const headGear = { name: 'Cap', slot: 'head', bonus: 1 } as unknown as GearDefinition;
   const headStart = { head: 'basic-armor' } as unknown as HeroDefinition['startingGear'];
-  const lever = { kind: 'lever', id: 'lever-1', tile: { col: 1, row: 1 } } as unknown as InteractableDefinition;
+  const portal = { kind: 'portal', id: 'portal-1', tile: { col: 1, row: 1 } } as unknown as InteractableDefinition;
   const potionChest = {
     kind: 'chest',
     id: 'chest-1',
@@ -320,8 +320,8 @@ describe('Gear and interactables that do not make sense are refused when the gam
     },
     {
       what: 'an interactable of a kind that does not exist',
-      content: arena({ interactables: [lever] }),
-      message: 'Area "arena": interactable "lever-1" has unknown kind "lever"',
+      content: arena({ interactables: [portal] }),
+      message: 'Area "arena": interactable "portal-1" has unknown kind "portal"',
     },
     {
       what: 'a chest on solid terrain',

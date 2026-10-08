@@ -329,11 +329,48 @@ export interface DoorDefinition {
 }
 
 /**
+ * A gate filling a tile. It is solid while it is shut, and it starts shut. It has no key and Interact does nothing on
+ * it: a lever opens it, and shuts it again. Where a gate is open or shut is kept like where a door is: defeat does not
+ * change it.
+ */
+export interface GateDefinition {
+  readonly kind: 'gate';
+  /** Unique across all interactables of all Adventure Areas: a lever names it by it, and saves refer to it. */
+  readonly id: string;
+  /** The tile it fills. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+}
+
+/**
+ * A lever filling a tile. It is always solid. The hero pulls it with Interact and puts it back with the next Interact,
+ * and each time it moves every door and gate it names: one that is shut opens, and one that is open shuts, a locked
+ * door included, which then needs no key. Where the lever stands is kept like where a door is: defeat does not change it.
+ */
+export interface LeverDefinition {
+  readonly kind: 'lever';
+  /** Unique across all interactables of all Adventure Areas: saves refer to the lever by it. */
+  readonly id: string;
+  /** The tile it fills. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+  /**
+   * The ids of the doors and gates it moves, which stand in the same Adventure Area as the lever. There is at least one,
+   * and none is named twice.
+   */
+  readonly targets: readonly string[];
+}
+
+/**
  * Something in an Adventure Area that the hero acts on with Interact, or takes by walking onto it (a pickup, a key). Its
  * `kind` names the rules it follows (see interactables.ts); the other fields are what that kind needs. Adding a kind
  * means adding a member here and the cases the recipe in interactables.ts lists.
  */
-export type InteractableDefinition = ChestDefinition | PickupDefinition | KeyDefinition | DoorDefinition;
+export type InteractableDefinition =
+  | ChestDefinition
+  | PickupDefinition
+  | KeyDefinition
+  | DoorDefinition
+  | GateDefinition
+  | LeverDefinition;
 
 /** Where the hero stands when it comes into an Adventure Area through an exit of another. */
 export interface EntranceDefinition {

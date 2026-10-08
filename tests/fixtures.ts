@@ -276,6 +276,16 @@ export function doorAt(id: string, col: number, row: number, key: string): Inter
   return { kind: 'door', id, tile: { col, row }, key };
 }
 
+/** A gate on the tile (col, row), shut until a lever moves it. */
+export function gateAt(id: string, col: number, row: number): InteractableDefinition {
+  return { kind: 'gate', id, tile: { col, row } };
+}
+
+/** A lever on the tile (col, row) that moves the doors and gates of the same Adventure Area with the given ids. */
+export function leverAt(id: string, col: number, row: number, targets: readonly string[]): InteractableDefinition {
+  return { kind: 'lever', id, tile: { col, row }, targets };
+}
+
 /** A milestone that gives the given Experience when the hero's body first overlaps the block of tiles `zone`. */
 export function milestone(id: string, zone: TileRect, experience: number): MilestoneDefinition {
   return { id, zone, reward: { experience } };

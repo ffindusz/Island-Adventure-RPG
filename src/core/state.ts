@@ -79,8 +79,26 @@ export interface DoorState {
   open: boolean;
 }
 
+/**
+ * What changes about a gate: whether it is open. A gate starts shut, and a lever moves it. Where it stands stays, defeat
+ * included (see consumable-rollback.ts).
+ */
+export interface GateState {
+  readonly kind: 'gate';
+  open: boolean;
+}
+
+/**
+ * What changes about a lever: whether the hero has pulled it. Where it stands stays, defeat included (see
+ * consumable-rollback.ts), and it is where the gates and doors it moves were left, which the saved game keeps with them.
+ */
+export interface LeverState {
+  readonly kind: 'lever';
+  pulled: boolean;
+}
+
 /** What changes about an interactable during the game, one member for each kind. */
-export type InteractableState = ChestState | PickupState | KeyState | DoorState;
+export type InteractableState = ChestState | PickupState | KeyState | DoorState | GateState | LeverState;
 
 export interface AreaState {
   /** Every monster placed in the Adventure Area, defeated ones included (at 0 Health), so that they stay defeated. */
@@ -273,6 +291,10 @@ function freshInteractable(interactable: Interactable): InteractableState {
       return { kind: 'key', collected: false };
     case 'door':
       return { kind: 'door', open: false };
+    case 'gate':
+      return { kind: 'gate', open: false };
+    case 'lever':
+      return { kind: 'lever', pulled: false };
   }
 }
 

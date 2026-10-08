@@ -1,10 +1,10 @@
 import { areaOf } from './content';
 import type { Content } from './content';
-import type { Door, Key } from './device-content';
+import type { Door, Key, Lever } from './device-content';
 import { overlaps } from './geometry';
 import type { GameEvent, KeyInfo } from './interface';
 import { heroBody, interactableStateOf } from './state';
-import type { DoorState, PlayState } from './state';
+import type { DoorState, LeverState, PlayState } from './state';
 
 // The devices: the keys, and the doors, gates, levers and signs that go with them, which make up the light puzzles and
 // clues of the Adventure Areas. Loading them is in device-content.ts. That the hero meets them as interactables is
@@ -48,6 +48,22 @@ export function useDoor(door: Door, doorState: DoorState, state: PlayState, cont
   state.hero.keys.splice(held, 1);
   doorState.open = true;
   return [{ type: 'door-opened', doorId: door.id, keyName }];
+}
+
+/**
+ * Interact on a lever. The hero pulls it, or puts it back if it was pulled, and every door and gate it names is moved
+ * the other way: one that is shut opens, and one that is open shuts. A door that a lever opens takes no key, and a door
+ * that it shuts after a key opened it opens again with the lever, and needs no second key.
+ */
+export function useLever(lever: Lever, leverState: LeverState, state: PlayState, content: Content): GameEvent[] {
+  leverState.pulled = !leverState.pulled;
+  for (const interactable of areaOf(content, state.areaId).interactables) {
+    if ((interactable.kind === 'door' || interactable.kind === 'gate') && lever.targets.includes(interactable.id)) {
+      const targetState = interactableStateOf(state, interactable);
+      targetState.open = !targetState.open;
+    }
+  }
+  return [{ type: 'lever-toggled', leverId: lever.id, pulled: leverState.pulled }];
 }
 
 /** The keys the hero holds, in the order it took them, as the player reads about them. */

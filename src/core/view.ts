@@ -113,6 +113,22 @@ function interactableView(interactable: Interactable, state: PlayState): Interac
         size: interactable.body.maxX - interactable.body.minX,
         open: interactableStateOf(state, interactable).open,
       };
+    case 'gate':
+      return {
+        kind: 'gate',
+        id: interactable.id,
+        position: centerOfBox(interactable.body),
+        size: interactable.body.maxX - interactable.body.minX,
+        open: interactableStateOf(state, interactable).open,
+      };
+    case 'lever':
+      return {
+        kind: 'lever',
+        id: interactable.id,
+        position: centerOfBox(interactable.body),
+        size: interactable.body.maxX - interactable.body.minX,
+        pulled: interactableStateOf(state, interactable).pulled,
+      };
   }
 }
 
