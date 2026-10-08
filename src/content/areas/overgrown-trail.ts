@@ -1,4 +1,5 @@
 import type { AreaDefinition } from '../../core';
+import { trailPuzzles } from './trail-puzzles';
 
 // A placeholder that grows into the woods in a later ticket, and the first area larger than the screen (30 by 20 tiles
 // where the screen shows 20 by 12), so that the view has to follow the hero. A sand trail leads from the way back to
@@ -37,9 +38,9 @@ export const overgrownTrail: AreaDefinition = {
     '#,,,,,,,#,,,,,,,,,,,,,,,,,,,,#',
     '#,,##,,,#,,,,,,,,,,,##,,,,,,,#',
     '#,,##,,,,,,,,##,,,,,,#,,,##,,#',
-    '#,,,,,,,,,,,,#,,,,,,,,,,,,#,,#',
-    '#,,,,,,,,,,,,,,,,,,,,,,,,,,,,#',
-    '#,,,,,,,,,,,,,,,,,,,,,,,,,,,,#',
+    '##,##,,,,,,,,#,,,,,,,,,,,,#,,#',
+    '#,,,#,,,,,,,,,,,,,,,,,,,,,,,,#',
+    '#,,,#,,,,,,,,,,,,,,,,,,,,,,,,#',
     '##############################',
   ],
   monsters: [
@@ -50,4 +51,5 @@ export const overgrownTrail: AreaDefinition = {
     { id: 'trail-spitter-1', type: 'spitter', tile: { col: 20, row: 2 } },
   ],
   milestones: [{ id: 'far-clearing', zone: { col: 27, row: 8, width: 2, height: 4 }, reward: { experience: 5 } }],
+  interactables: trailPuzzles,
 };
