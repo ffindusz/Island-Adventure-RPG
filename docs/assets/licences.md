@@ -8,13 +8,13 @@ How it is used:
 - The credits screen draws from the "Credits text" lines of entries that are "In use".
 - Rule from the spec: every graphics and audio asset must permit public and commercial use.
 
-Last updated: 2026-10-08. The user approved the Ninja Adventure pack as the art base on 2026-10-07 (ADR 0004). Ticket 22 copied the first asset files into the repository (the hero, its weapons, the item icons and the pieces of the HUD and the windows; see A1 "Used so far"). Ticket 13 added the icon of the key, and ticket 15 the icon of the Long Bow. Nothing else is in use yet.
+Last updated: 2026-10-08. The user approved the Ninja Adventure pack as the art base on 2026-10-07 (ADR 0004). Ticket 22 copied the first asset files into the repository (the hero, its weapons, the item icons and the pieces of the HUD and the windows; see A1 "Used so far"). Ticket 13 added the icon of the key, and ticket 15 the icon of the Long Bow. Ticket 23 added the final art of the shipwreck coast and the woods, composed from pieces of the pack by `docs\assets\compose-art.py`. Nothing else is in use yet.
 
 ## Summary
 
 | ID | Source | Licence | Checked | Status |
 | --- | --- | --- | --- | --- |
-| A1 | Ninja Adventure Asset Pack: art, audio, and the other files | CC0 1.0 Universal | 2026-10-06, re-read 2026-10-07 | Approved base on 2026-10-07 (ADR 0004); in use: the hero, its weapons, the item icons and the interface pieces (ticket 22), the key icon (ticket 13), and the Long Bow icon (ticket 15) |
+| A1 | Ninja Adventure Asset Pack: art, audio, and the other files | CC0 1.0 Universal | 2026-10-06, re-read 2026-10-07 | Approved base on 2026-10-07 (ADR 0004); in use: the hero, its weapons, the item icons and the interface pieces (ticket 22), the key icon (ticket 13), the Long Bow icon (ticket 15), and the terrain and the monsters of the shipwreck coast and the woods, composed from pack pieces (ticket 23) |
 | A2 | Ninja Adventure `Ui\Font\NormalFont.ttf` | FontStruct Non-Commercial License (embedded in the font file), conflicting with the pack's CC0 claim | 2026-10-07 | Do not use; replaced by the project's own bitmap font, which is no file (ticket 22) |
 | A3 | Ninja Adventure `Ui\Input` and `Ui\Skill Icon` | Covered only by the pack's blanket CC0 claim; no separate provenance | 2026-10-07 | Not needed; avoid |
 | S1 | Kenney Pirate Pack (shipwreck supplement candidate) | CC0 | 2026-10-06 | Candidate, poor style match |
@@ -58,7 +58,17 @@ Last updated: 2026-10-08. The user approved the Ninja Adventure pack as the art 
   - `Ui\Receptacle\IconHeart.png` as `ui-heart.png`: the heart of Health.
   - Not from the pack: the colours of the bars are the pack's palette, drawn with rectangles; no file was copied for them.
   - Not from the pack: the icons of the Basic Armor and the Chain Mail are drawn in code (`src\adapter\drawn-icons.ts`), in the pack's own colours, because the pack has no armor icon. They are this project's own work, not a copy or a recolour of a pack file.
-  - Later art tickets add what they copy in to this list, in the same commit as the files.
+- **Used so far (ticket 23, composed pictures):** the pictures below are not copies. `docs\assets\compose-art.py` cuts the named pieces out of the pack, puts them together, and writes the files in `public\art\`; run it again with the pack's path to remake them. Pack paths are under `Backgrounds\Tilesets\` unless they say otherwise. Every piece is cut from the pack and kept in the pack's own colours except where a line says it was changed.
+  - `terrain-water.png`: the shore of water against sand and against grass (the thirteen pieces of each autotile set of `TilesetWater.png`, which holds the water with its shore and foam) and two plain water tiles.
+  - `terrain-sand.png`: plain sand, a twig and a pebble from `TilesetFloor.png`, and the thirteen pieces of the sand's edge against grass. Those pieces are the pack's dirt-over-grass pieces of `TilesetFloor.png` with the two dirt colours `#d3865f` and `#bd7959` changed to the pack's own sand colour `#ffcb8d`.
+  - `terrain-grass.png`: seven grass tiles of `TilesetFloor.png`.
+  - `terrain-rock.png`: the face of a cliff (lip, middle, foot; left, middle, right) from `TilesetRelief.png`.
+  - `terrain-tree.png`: four two-by-two trees of `TilesetNature.png`, a one-tile tree made from the canopy and the trunk of its thin tree, and the same tree with its greens shifted one step darker, all in the pack's colours. Not from the pack: the two forest floor tiles are a flat fill in the pack's dark green `#345a52` with a few flecks of the pack's `#2a4a44` and `#4a7f4b`, drawn by the recipe.
+  - `terrain-wreckage.png`: pieces of `Backgrounds\Vehicles\Boat.png`.
+  - `monster-crab.png`, `monster-slime.png`, `monster-spitter.png`: the frames of `Actor\Monster\Mollusc\Mollusc.png`, `Actor\Monster\Slime\Slime.png` and `Actor\Monster\Mushroom\mushroom.png`, rearranged. The crab is the pack's red mollusc used as a stand-in, since the pack has no crab.
+  - `monster-wolf.png`, `monster-boar.png`: the two frames of `Actor\Animal\DogBlack\SpriteSheet.png` and `Actor\Animal\WildBoar\SpriteSheet.png`, with the left-facing frames mirrored from the right-facing ones. The wolf is the pack's black dog used as a stand-in, since the pack has no wolf.
+  - Not from the pack: in each monster sheet the white frame shown when the monster is hit is the shape of its first frame filled with white, and the red frame shown while it winds up is the same shape with its colours shifted to red (the dark outline kept). The recipe makes both.
+- Later art tickets add what they copy in or compose to these lists, in the same commit as the files.
 
 ### A2. Ninja Adventure font `Ui\Font\NormalFont.ttf`: do not use
 

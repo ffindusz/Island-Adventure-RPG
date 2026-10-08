@@ -1,7 +1,9 @@
 // Every picture the adapter can show, by name: one line each. The files are under public/art/, and
 // docs/assets/licences.md says where each one comes from. Content asks for art by id only, so the names it needs follow
-// one rule: `gear-<id>` for each Gear and `consumable-<id>` for each consumable. `neededArt` lists them, and the
-// game refuses to start while one is missing here.
+// one rule: `gear-<id>` for each Gear and `consumable-<id>` for each consumable, and for the Adventure Areas whose art
+// is final (FINAL_ART_AREAS) `terrain-<kind>` for each kind of terrain laid out in them and `monster-<type>` for each
+// type of monster placed in them. `neededArt` lists them, and the game refuses to start while one is missing here. A
+// kind or a type of an area that is not listed has no picture of its own yet: it is drawn in its colour (art.ts).
 import { CONSUMABLE_IDS } from '../core';
 import type { ConsumableId, ContentDefinition } from '../core';
 import { drawn, image, sheet } from './asset-manifest';
@@ -26,6 +28,20 @@ export const ARTWORK = {
   'consumable-healing-potion': image('consumable-healing-potion.png'),
   // The icon of every key, in the notice of finding one and in the inventory page.
   key: image('key.png'),
+  // Terrain, a sheet of 16 pixel frames for each kind: what the frames are, and who draws them, is in terrain-baker.ts.
+  'terrain-water': sheet('terrain-water.png', 16),
+  'terrain-sand': sheet('terrain-sand.png', 16),
+  'terrain-grass': sheet('terrain-grass.png', 16),
+  'terrain-rock': sheet('terrain-rock.png', 16),
+  'terrain-tree': sheet('terrain-tree.png', 16),
+  'terrain-wreckage': sheet('terrain-wreckage.png', 16),
+  // Monsters, a sheet for each type: four columns (down, up, left, right), the frames of its walk, then a white frame
+  // for a hit and a red one for a wind-up; see monster-sprites.ts.
+  'monster-crab': sheet('monster-crab.png', 16),
+  'monster-slime': sheet('monster-slime.png', 16),
+  'monster-spitter': sheet('monster-spitter.png', 16),
+  'monster-wolf': sheet('monster-wolf.png', 18, 17),
+  'monster-boar': sheet('monster-boar.png', 17, 16),
   // The pieces the HUD and the pages are built from, see ui-layer.ts: a dark panel, the orange frame of a window, the
   // orange button behind the line the cursor is on, and the heart of Health.
   'ui-panel': image('ui-panel.png'),
@@ -50,7 +66,39 @@ export function consumableIcon(id: ConsumableId): string {
 /** The name of the icon of a key. Every key has the same one: the keys differ in their names. */
 export const KEY_ICON = 'key' satisfies ArtName;
 
-/** The names of the pictures the content needs: an icon for each Gear and for each consumable. */
-export function neededArt(content: ContentDefinition): string[] {
-  return [...Object.keys(content.gear).map(gearIcon), ...CONSUMABLE_IDS.map(consumableIcon)];
+/** The name of the picture that terrain of this kind is drawn with. */
+export function terrainArt(kind: string): string {
+  return `terrain-${kind}`;
+}
+
+/** The name of the picture that monsters of this type are drawn with. */
+export function monsterArt(type: string): string {
+  return `monster-${type}`;
+}
+
+/**
+ * The ids of the Adventure Areas whose terrain and monsters have their final art. Tickets that draw a new area add its id
+ * here once its kinds and types have their pictures; until then it is drawn in colours, and the game still starts.
+ */
+export const FINAL_ART_AREAS: readonly string[] = ['shipwreck-coast', 'woods'];
+
+/**
+ * The names of the pictures the content needs, each once: an icon for each Gear and for each consumable, and the picture
+ * of every kind of terrain laid out in, and every type of monster placed in, the areas whose art is final. Throws if one
+ * of those areas is not in the content.
+ */
+export function neededArt(content: ContentDefinition, finalAreas: readonly string[] = FINAL_ART_AREAS): string[] {
+  const names = [...Object.keys(content.gear).map(gearIcon), ...CONSUMABLE_IDS.map(consumableIcon)];
+  for (const id of finalAreas) {
+    const area = content.areas.find((candidate) => candidate.id === id);
+    if (!area) throw new Error(`The art of the area "${id}" is final, but the content has no such area`);
+    for (const row of area.layout) {
+      for (const symbol of row) {
+        const terrain = content.terrain[symbol];
+        if (terrain) names.push(terrainArt(terrain.kind));
+      }
+    }
+    names.push(...area.monsters.map((monster) => monsterArt(monster.type)));
+  }
+  return [...new Set(names)];
 }
