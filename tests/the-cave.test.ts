@@ -16,9 +16,11 @@ import { STEPS_PER_TILE, face, fixedRandom, interactableViews, newGame, playingV
 import {
   directionBetween,
   distanceBetween,
+  experienceOfAll,
   isInZone,
   keyOf,
   metOn,
+  milestonesOf,
   neighboursOf,
   noticingOf,
   openTilesOf,
@@ -594,6 +596,52 @@ describe('the milestone of the cave', () => {
     const events = walkRoute(quietGameAt(CAVE, wayInTile), trail ?? []);
 
     expect(events).toContainEqual({ type: 'milestone-reached', milestoneId: milestone?.id });
+  });
+});
+
+describe('the Experience on the way through the cave', () => {
+  const [, , , levelFive = 0, levelSix = 0] = gameContent.progression.levelThresholds;
+  const coast = definitionOf(COAST);
+  const woods = definitionOf(WOODS);
+  const mountain = definitionOf(MOUNTAIN);
+
+  /** The trail of an area: the path of sand from its way in to its exit to the next area, over open ground, every door and gate shut. */
+  function trailOf(area: AreaDefinition, next: string): Tile[] | null {
+    const isOpenIn = openTilesOf(gameContent, area);
+    const forward = (area.exits ?? []).find(({ to }) => to.area === next);
+    return routeBetween(
+      (tile) => isOpenIn(tile) && gameContent.terrain[area.layout[tile.row]?.[tile.col] ?? '']?.kind === 'sand',
+      (area.entrances ?? [])[0]?.tile ?? { col: 0, row: 0 },
+      (tile) => forward !== undefined && isInZone(forward.zone, tile),
+    );
+  }
+
+  /** The way from where the adventure begins to the exit of the coast, over open ground. */
+  const coastRoute = routeBetween(openTilesOf(gameContent, coast), gameContent.start.tile, (tile) =>
+    (coast.exits ?? []).some(({ zone }) => isInZone(zone, tile)),
+  );
+
+  it('gives a hero who fights what it meets from the start to the exit of the cave, and passes the milestones, the Experience of Level 5', () => {
+    const earned =
+      experienceOfAll(gameContent, metOn(gameContent, coast, coastRoute)) +
+      milestonesOf(coast) +
+      experienceOfAll(gameContent, metOn(gameContent, woods, trailOf(woods, MOUNTAIN))) +
+      milestonesOf(woods) +
+      experienceOfAll(gameContent, metOn(gameContent, mountain, trailOf(mountain, CAVE))) +
+      milestonesOf(mountain) +
+      experienceOfAll(gameContent, metOn(gameContent, cave, trail)) +
+      milestonesOf(cave);
+
+    expect(earned).toBeGreaterThanOrEqual(levelFive);
+  });
+
+  it('does not give a hero who clears the coast, the woods, the mountain and the cave the Experience of Level 6: nobody has to grind', () => {
+    const everything = [coast, woods, mountain, cave].reduce(
+      (sum, area) => sum + experienceOfAll(gameContent, area.monsters) + milestonesOf(area),
+      0,
+    );
+
+    expect(everything).toBeLessThan(levelSix);
   });
 });
 
