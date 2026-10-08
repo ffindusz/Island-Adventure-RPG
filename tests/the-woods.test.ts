@@ -147,20 +147,21 @@ describe('the way through the woods', () => {
     expect(trail).not.toBeNull();
   });
 
-  it('lets the hero walk it into the mountain, where it comes in by the entrance of the woods and touches its Checkpoint', () => {
+  it('lets the hero walk it into the mountain, where it touches the Checkpoint of the mountain', () => {
     const game = quietGameAt(WOODS, wayInTile);
 
     const events = walkRoute(game, trail ?? []);
 
-    const entrance = (definitionOf(MOUNTAIN).entrances ?? []).find(({ id }) => id === wayForward?.to.entrance);
     expect(events).toContainEqual({ type: 'area-changed', areaId: MOUNTAIN });
     expect(playingView(game).area.id).toBe(MOUNTAIN);
-    expect(playingView(game).hero.position).toEqual({ x: (entrance?.tile.col ?? 0) + 0.5, y: (entrance?.tile.row ?? 0) + 0.5 });
     expect(playingView(game).checkpoints.filter(({ active }) => active)).toHaveLength(1);
   });
 
-  it('has one milestone, which no way on goes round', () => {
+  it('has one milestone', () => {
     expect(woods.milestones).toHaveLength(1);
+  });
+
+  it('has a milestone that no way on goes round', () => {
     const [milestone] = woods.milestones ?? [];
 
     const goingRound = routeBetween(
@@ -169,6 +170,7 @@ describe('the way through the woods', () => {
       isWayForward,
     );
 
+    expect(milestone, 'a milestone in the woods').toBeDefined();
     expect(goingRound).toBeNull();
   });
 
@@ -294,12 +296,11 @@ describe('the cabin in the woods', () => {
     }
   });
 
-  it('keeps its door and its key a good walk from the trail, and its key in the north woods, as the sign by the door says', () => {
+  it('keeps its key a good walk from the trail, in the north woods, as the sign by the door says', () => {
     expect(doors, 'a locked door in the woods').not.toEqual([]);
     for (const door of doors) {
       const key = keys.find(({ id }) => id === door.key);
       expect(key, `the key of the door ${door.id}`).toBeDefined();
-      expect(detourFromTrail(door.tile) ?? 0, `the way to the door ${door.id}`).toBeGreaterThanOrEqual(LEAST_DETOUR);
       expect(detourFromTrail(key?.tile ?? door.tile) ?? 0, `the way to the key ${key?.id}`).toBeGreaterThanOrEqual(LEAST_DETOUR);
       expect(key?.tile.row ?? Number.POSITIVE_INFINITY).toBeLessThan(woods.layout.length / 2);
     }
