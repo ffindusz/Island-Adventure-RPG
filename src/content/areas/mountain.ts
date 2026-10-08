@@ -68,4 +68,15 @@ export const mountain: AreaDefinition = {
     { id: 'mountain-raider-3', type: 'raider', tile: { col: 40, row: 23 } },
   ],
   milestones: [{ id: 'high-gap', zone: { col: 29, row: 5, width: 3, height: 3 }, reward: { experience: 3 } }],
+  interactables: [
+    // The Plate Armor, in an alcove of the cliff a few steps off the trail, where the hero passes it before the veteran
+    // higher up notices it. The chest stands in row 20 and not lower: the view stops at the bottom of the area, so a hero
+    // in front of a chest in its last rows would stand under the notice of what it found, which is drawn low.
+    {
+      kind: 'chest',
+      id: 'mountain-armor-chest',
+      tile: { col: 14, row: 20 },
+      contents: { kind: 'gear', gear: 'plate-armor' },
+    },
+  ],
 };

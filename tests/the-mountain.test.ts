@@ -1,9 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
-import { createGame } from '../src/core';
-import type { AreaDefinition, Game, MonsterTypeDefinition, Tile } from '../src/core';
-import { fixedRandom, newGame, playingView } from './fixtures';
-import { distanceBetween, isInZone, metOn, noticingOf, openTilesOf, routeBetween, walkRoute } from './routes';
+import { GEAR_SLOTS, createGame } from '../src/core';
+import type { AreaDefinition, ChestDefinition, Game, GameEvent, MonsterTypeDefinition, Tile } from '../src/core';
+import { face, fixedRandom, newGame, playingView } from './fixtures';
+import {
+  directionBetween,
+  distanceBetween,
+  isInZone,
+  keyOf,
+  metOn,
+  neighboursOf,
+  noticingOf,
+  openTilesOf,
+  routeBetween,
+  walkRoute,
+} from './routes';
 
 // The mountain, the third area on the route of the adventure, between the woods and the cave: what it has to be to be
 // a climb of its own, with narrow passes and ledges, raiders to fight, an armor upgrade to find and a side path. Like
@@ -26,6 +37,9 @@ const BOTTOM_ROWS = 3;
 /** A pass is narrow when the way is this many tiles wide or fewer, and it is a pass for this many tiles in a row. */
 const NARROW = 2;
 const PASS_LENGTH = 3;
+
+/** A chest is near the trail when the walk to it from the trail is this many tiles at most: a step aside, not a trip. */
+const MOST_NEARBY = 4;
 
 function definitionOf(id: string): AreaDefinition {
   const area = gameContent.areas.find((candidate) => candidate.id === id);
@@ -50,6 +64,78 @@ const isWayForward = (tile: Tile): boolean => wayForward !== undefined && isInZo
 const kindAt = ({ col, row }: Tile): string | undefined => gameContent.terrain[mountain.layout[row]?.[col] ?? '']?.kind;
 /** The trail: the path of sand from the way in to the exit forward, over open ground, every door shut and no key held. */
 const trail = routeBetween((tile) => isOpen(tile) && kindAt(tile) === 'sand', wayInTile, isWayForward);
+const onTrail = new Set((trail ?? []).map(keyOf));
+
+const interactables = mountain.interactables ?? [];
+const chests = interactables.flatMap((item) => (item.kind === 'chest' ? [item] : []));
+
+/** The types of monster in the mountain, with their ids, and the tougher one among them: the one that takes most to defeat. */
+const raiders = [...new Set(mountain.monsters.map(({ type }) => type))].flatMap((id) => {
+  const type = gameContent.monsterTypes[id];
+  return type === undefined ? [] : [{ id, type }];
+});
+const tougher = [...raiders].sort((one, other) => other.type.health - one.type.health)[0];
+const toughRaiders = mountain.monsters.filter(({ type }) => type === tougher?.id);
+
+function gearSlotOf({ contents }: ChestDefinition): string | undefined {
+  return contents.kind === 'gear' ? gameContent.gear[contents.gear]?.slot : undefined;
+}
+
+/** The ids of the Gear that the chests of an area hold. */
+function gearInChestsOf(area: AreaDefinition): string[] {
+  return (area.interactables ?? []).flatMap((item) =>
+    item.kind === 'chest' && item.contents.kind === 'gear' ? [item.contents.gear] : [],
+  );
+}
+
+function chestThat(what: string, matches: (chest: ChestDefinition) => boolean): ChestDefinition {
+  const found = chests.find(matches);
+  if (found === undefined) {
+    throw new Error(`The mountain has no ${what}`);
+  }
+  return found;
+}
+
+/** The shortest walk over open ground from a spot to the trail, or null when there is none. */
+function walkToTrail(spot: Tile): Tile[] | null {
+  return routeBetween(isOpen, spot, (tile) => onTrail.has(keyOf(tile)));
+}
+
+/** How far along the trail a spot lies: the place of the trail tile that is the shortest walk from it, or null when it cannot be walked to. */
+function placeOnTrail(spot: Tile): number | null {
+  const reached = walkToTrail(spot)?.at(-1);
+  return reached === undefined ? null : (trail ?? []).findIndex((tile) => keyOf(tile) === keyOf(reached));
+}
+
+/** How many tiles of walking lie between the trail and a spot, or null when the spot cannot be walked to. */
+function detourFromTrail(spot: Tile): number | null {
+  const walkBack = walkToTrail(spot);
+  return walkBack === null ? null : walkBack.length - 2;
+}
+
+/** The hero walks from where it stands to a spot beside a chest over open ground, faces the chest and uses Interact. */
+function openChest(game: Game, chest: ChestDefinition): readonly GameEvent[] {
+  const { x, y } = playingView(game).hero.position;
+  const from = { col: Math.floor(x), row: Math.floor(y) };
+  const route = routeBetween(isOpen, from, (tile) => neighboursOf(tile).some((next) => keyOf(next) === keyOf(chest.tile)));
+  if (route === null) {
+    throw new Error(`The hero cannot walk to a spot beside the chest "${chest.id}"`);
+  }
+  walkRoute(game, route);
+  face(game, directionBetween(route.at(-1) ?? from, chest.tile));
+  return game.send({ type: 'interact' });
+}
+
+/** The event that says the hero took what a chest holds. */
+function pickupFrom({ contents }: ChestDefinition): unknown {
+  return expect.objectContaining({
+    type: 'pickup',
+    item:
+      contents.kind === 'gear'
+        ? expect.objectContaining({ kind: 'gear', id: contents.gear })
+        : { kind: 'consumable', id: contents.consumable, amount: contents.amount },
+  });
+}
 
 /** How wide the way is at a tile: the shorter of the runs of open tiles through it, across and up and down. */
 function widthAt(tile: Tile): number {
@@ -179,13 +265,6 @@ describe('the way through the mountain', () => {
 });
 
 describe('the raiders of the mountain', () => {
-  const raiders = [...new Set(mountain.monsters.map(({ type }) => type))].flatMap((id) => {
-    const type = gameContent.monsterTypes[id];
-    return type === undefined ? [] : [{ id, type }];
-  });
-  const tougher = [...raiders].sort((one, other) => other.type.health - one.type.health)[0];
-  const toughRaiders = mountain.monsters.filter(({ type }) => type === tougher?.id);
-
   it('holds the mountain with raiders and nothing else: every monster in it is of a raider type', () => {
     expect(mountain.monsters.length).toBeGreaterThan(0);
     expect(mountain.monsters.filter(({ type }) => !type.startsWith('raider'))).toEqual([]);
@@ -241,6 +320,65 @@ describe('the raiders of the mountain', () => {
 
     expect(chargers.length).toBeGreaterThan(0);
     expect(cramped).toEqual([]);
+  });
+});
+
+describe('the armor of the mountain', () => {
+  /** The chest of armor that the hero can walk to with every door shut. */
+  const armorChest = (): ChestDefinition =>
+    chestThat('chest of armor that the hero can reach', (chest) => gearSlotOf(chest) === 'armor' && placeOnTrail(chest.tile) !== null);
+
+  const gearOf = ({ contents }: ChestDefinition): string => (contents.kind === 'gear' ? contents.gear : '');
+
+  it('keeps an armor upgrade in a chest near the trail: a step aside of a few tiles, not a trip', () => {
+    const detour = detourFromTrail(armorChest().tile);
+
+    expect(detour).not.toBeNull();
+    expect(detour ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(MOST_NEARBY);
+  });
+
+  it('is an upgrade: it adds more than any armor the hero begins with or finds on the coast and in the woods', () => {
+    const upgrade = gameContent.gear[gearOf(armorChest())];
+    const others = [
+      ...GEAR_SLOTS.flatMap((slot) => gameContent.hero.startingGear[slot] ?? []),
+      ...gearInChestsOf(definitionOf(COAST)),
+      ...gearInChestsOf(definitionOf(WOODS)),
+    ].flatMap((id) => gameContent.gear[id] ?? []);
+
+    const best = Math.max(0, ...others.filter((gear) => gear.slot === 'armor').map((gear) => gear.bonus));
+
+    expect(upgrade, 'the Gear in the chest of armor').toBeDefined();
+    expect(upgrade?.bonus ?? 0).toBeGreaterThan(best);
+  });
+
+  it('is found before the tougher raider is met: the chest lies on the way before the first place where that raider notices the hero', () => {
+    const firstMet = (trail ?? []).findIndex((tile) =>
+      toughRaiders.some((raider) => distanceBetween(tile, raider.tile) <= noticingOf(gameContent, raider)),
+    );
+
+    expect(firstMet, 'a place on the trail where the tougher raider notices the hero').toBeGreaterThan(-1);
+    expect(placeOnTrail(armorChest().tile) ?? Number.POSITIVE_INFINITY).toBeLessThan(firstMet);
+  });
+
+  it('lets the hero walk to the chest, open it and wear the armor, which raises Defense by what it adds', () => {
+    const game = quietGameAt(MOUNTAIN, wayInTile);
+    const chest = armorChest();
+    const defense = (): number => {
+      const { page } = playingView(game);
+      if (page?.id !== 'inventory') {
+        throw new Error('The inventory page is not open');
+      }
+      return page.defense;
+    };
+
+    const events = openChest(game, chest);
+    game.send({ type: 'open-page', page: 'inventory' });
+    const before = defense();
+    game.send({ type: 'equip', gearId: gearOf(chest) });
+
+    expect(events).toContainEqual({ type: 'chest-opened', chestId: chest.id });
+    expect(events).toContainEqual(pickupFrom(chest));
+    expect(defense() - before).toBe(gameContent.gear[gearOf(chest)]?.bonus);
   });
 });
 
