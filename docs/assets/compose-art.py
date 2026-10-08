@@ -146,9 +146,195 @@ def terrain_tree(pack):
     return out
 
 
+# The wreck. The sheet is 13 columns by 5 rows of 16 by 16 frames and src/adapter/terrain-plan.ts knows which is which:
+#   row 0      the deck in the thirteen pieces of an edge (the order of KEY_PIECES)
+#   row 1      frame 13 and 14 plain deck, 15 a hole in the deck, 16 to 20 the cargo (barrel, sack, rope, bones, planks)
+#   rows 2-4   the mast, three by three frames at columns 0-2 (frame 26 + 13 * row + column)
+#   row 2      frame 30 and 31, the two halves of a broken mast lying on the sand (a picture of 32 by 16)
+LIGHT, PLANK, SEAM, WALL, DARK, OUTLINE = (hexrgb(text) for text in ('#ffad5d', '#f38c4c', '#e66a3a', '#965746', '#7d3e24', '#141b1b'))
+DECK_PIECES = [name for name, _, _ in KEY_PIECES]
+PIECE_OUTSIDE = {
+    'C': set(), 'T': {'n'}, 'B': {'s'}, 'L': {'w'}, 'R': {'e'},
+    'TL': {'n', 'w'}, 'TR': {'n', 'e'}, 'BL': {'s', 'w'}, 'BR': {'s', 'e'},
+    'INW': {'nw'}, 'INE': {'ne'}, 'ISW': {'sw'}, 'ISE': {'se'},
+}
+# The pack's dock turned on its side has seams on rows 3, 9 and 14, so a deck tile is three bands of planks.
+SEAM_ROWS = (3, 9, 14)
+BAND_ROWS = ((15, 0, 1, 2, 3), (4, 5, 6, 7, 8, 9), (10, 11, 12, 13, 14))
+BAND_OF = {row: band for band, rows in enumerate(BAND_ROWS) for row in rows}
+# Where the hull is broken off at the west and the east end, each band of planks reaches this far in.
+BREAK_WEST = (1, 3, 0)
+BREAK_EAST = (2, 0, 3)
+JOINTS = {'a': {1: 4}, 'b': {0: 11, 2: 2}}
+GRAIN = {'a': [(2, 1), (3, 1), (12, 6), (13, 6), (6, 12), (7, 12)], 'b': [(10, 0), (11, 0), (2, 7), (3, 7), (13, 11), (12, 11)]}
+
+
+def weathered_deck(pack, variant):
+    """The dock planks of the pack, on their side, weathered: darker seams, the joints of the planks and some grain."""
+    deck = recolour(cut(pack.tileset('TilesetWater'), 1, 13).rotate(90), {LIGHT: PLANK, SEAM: WALL})
+    pixels = deck.load()
+    for y in range(TILE):
+        if y not in SEAM_ROWS and BAND_OF[y] in JOINTS[variant]:
+            pixels[JOINTS[variant][BAND_OF[y]], y] = (*WALL, 255)
+    for x, y in GRAIN[variant]:
+        pixels[x, y] = (*SEAM, 255)
+    return deck
+
+
+def deck_frame(deck, outside):
+    """One piece of the deck. `outside` names the neighbours (n, e, s, w, nw, ne, se, sw) that are not wreck.
+
+    Every quarter of the frame is made from the three neighbours that touch it, as the plan takes its quarters, so quarters
+    of different frames fit together: the north side is the far bulwark, the south side the hull with its portholes, the west
+    and east sides the broken ends of the planks."""
+    base = deck.load()
+    colour = {(x, y): base[x, y][:3] for x in range(TILE) for y in range(TILE)}
+    inside = {(x, y): True for x in range(TILE) for y in range(TILE)}
+    quarter = {}
+    for y in range(TILE):
+        for x in range(TILE):
+            top, left = y < TILE // 2, x < TILE // 2
+            vertical, horizontal = 'n' if top else 's', 'w' if left else 'e'
+            v, h, d = vertical in outside, horizontal in outside, vertical + horizontal in outside
+            quarter[x, y] = (v, h)
+            dx, dy = (x if left else TILE - 1 - x), (y if top else TILE - 1 - y)
+            if h and dx < (BREAK_WEST if left else BREAK_EAST)[BAND_OF[y]]:
+                inside[x, y] = False
+            if v and h and dx + dy < 3:
+                inside[x, y] = False
+            if v and top:
+                colour[x, y] = {1: LIGHT, 2: WALL, 3: WALL, 4: DARK}.get(y, colour[x, y])
+                if y in (2, 3) and x % 4 == 0:
+                    colour[x, y] = DARK
+            if v and not top:
+                colour[x, y] = {9: DARK, 10: LIGHT, 11: PLANK, 12: PLANK, 13: SEAM, 14: WALL}.get(y, colour[x, y])
+                if y in (11, 12) and x % 8 in (2, 3, 4):
+                    colour[x, y] = OUTLINE
+            if d and not v and not h and dx + dy == 0:
+                colour[x, y] = OUTLINE
+            if d and not v and not h and dx + dy == 1:
+                colour[x, y] = WALL
+    out = Image.new('RGBA', (TILE, TILE), (0, 0, 0, 0))
+    pixels = out.load()
+    for (x, y), here in inside.items():
+        if not here:
+            continue
+        v, h = quarter[x, y]
+        beyond = [(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+        edge = any(
+            (not (0 <= nx < TILE and 0 <= ny < TILE) and ((h if nx != x else v)))
+            or ((0 <= nx < TILE and 0 <= ny < TILE) and not inside[nx, ny])
+            for nx, ny in beyond
+        )
+        pixels[x, y] = (*(OUTLINE if edge else colour[x, y]), 255)
+    return out
+
+
+def deck_hole(deck):
+    """Planks with a ragged hole in them; the ground shows through."""
+    tile = deck.copy()
+    pixels = tile.load()
+    rows = {4: (5, 10), 5: (4, 11), 6: (3, 12), 7: (3, 12), 8: (4, 11), 9: (6, 10)}
+    hole = {(x, y) for y, (a, b) in rows.items() for x in range(a, b + 1)}
+    for x, y in hole:
+        pixels[x, y] = (0, 0, 0, 0)
+    for x in range(TILE):
+        for y in range(TILE):
+            if (x, y) not in hole and any((x + dx, y + dy) in hole for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                pixels[x, y] = (*OUTLINE, 255)
+    for x, y in ((6, 3), (9, 3), (2, 6), (13, 7), (7, 10)):
+        pixels[x, y] = (*DARK, 255)
+    return tile
+
+
+def on_deck(deck, *pieces):
+    """Pieces of the pack laid on a plain deck tile: (image, x, y)."""
+    tile = deck.copy()
+    for piece, x, y in pieces:
+        tile.alpha_composite(piece, (x, y))
+    return tile
+
+
 def terrain_wreckage(pack):
-    boat = pack.image('Backgrounds', 'Vehicles', 'Boat.png')
-    return frames_sheet([cut(boat, c, r) for r in (0, 1) for c in range(5)], 5)
+    deck_a, deck_b = weathered_deck(pack, 'a'), weathered_deck(pack, 'b')
+    camp = pack.tileset('tileset_camp')
+    detail = pack.tileset('TilesetFloorDetail')
+    sheet = Image.new('RGBA', (KEY_COUNT * TILE, 5 * TILE), (0, 0, 0, 0))
+    row0 = [deck_frame(deck_a, PIECE_OUTSIDE[name]) for name in DECK_PIECES]
+    row1 = [
+        row0[0], deck_frame(deck_b, set()), deck_hole(deck_a),
+        on_deck(deck_a, (cut(camp, 9, 7), 0, 0)),
+        on_deck(deck_a, (cut(camp, 5, 5), 0, 0)),
+        on_deck(deck_a, (cut(camp, 11, 8), 0, 1)),
+        on_deck(deck_a, (cut(detail, 13, 0), 2, 2), (cut(detail, 14, 0), 3, 9)),
+        on_deck(deck_a, (cut(camp, 12, 8), 1, 3)),
+    ]
+    for index, frame in enumerate(row0 + row1):
+        sheet.paste(frame, ((index % KEY_COUNT) * TILE, (index // KEY_COUNT) * TILE))
+    sheet.paste(mast_picture(pack), (0, 2 * TILE))
+    sheet.paste(broken_mast_picture(pack), (4 * TILE, 2 * TILE))
+    return sheet
+
+
+def paint(img, pixels, colour):
+    surface = img.load()
+    for x, y in pixels:
+        if 0 <= x < img.width and 0 <= y < img.height:
+            surface[x, y] = (*colour, 255)
+
+
+def outlined(img):
+    """The picture with a dark outline drawn one pixel out around its shape."""
+    out = img.copy()
+    src, dst = img.load(), out.load()
+    for y in range(img.height):
+        for x in range(img.width):
+            near = [(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+            if src[x, y][3] == 0 and any(0 <= nx < img.width and 0 <= ny < img.height and src[nx, ny][3] > 0 for nx, ny in near):
+                dst[x, y] = (*OUTLINE, 255)
+    return out
+
+
+def torn_sail(img, x0, top, heights):
+    """A rag of sail hanging from `top`: white, a little cream at its foot, a ragged lower edge (one height per column)."""
+    for index, height in enumerate(heights):
+        for row in range(height):
+            colour = hexrgb('#eecf9b') if row >= height - 2 or index == len(heights) - 1 else (255, 255, 255)
+            paint(img, [(x0 + index, top + row)], colour)
+
+
+def mast_picture(pack):
+    """A mast with a yard and a torn sail, three tiles by three. The foot is at the bottom of the middle tile; the top, the
+    yard and the sail are over the tiles above and beside it. The pole is a small touch; the colours are the pack's."""
+    art = Image.new('RGBA', (3 * TILE, 3 * TILE), (0, 0, 0, 0))
+    for x, (first, colour) in {22: (3, LIGHT), 23: (5, PLANK), 24: (4, PLANK), 25: (6, WALL)}.items():
+        paint(art, [(x, y) for y in range(first, 3 * TILE)], colour)
+    for x in range(20, 28):
+        colour = WALL if x in (20, 27) else LIGHT if x == 21 else PLANK
+        paint(art, [(x, y) for y in range(41, 46)], colour)
+    for x in range(9, 40):
+        y = 9 + (x - 24) // 8
+        paint(art, [(x, y)], LIGHT)
+        paint(art, [(x, y + 1)], PLANK)
+        paint(art, [(x, y + 2)], WALL)
+    torn_sail(art, 27, 13, [17, 18, 16, 19, 17, 15, 16, 13, 14, 11, 12, 9, 10])
+    torn_sail(art, 10, 11, [5, 6, 4, 7, 6, 8, 7, 9, 8, 10, 9])
+    surface = art.load()
+    for x in (33, 34, 35):
+        for y in (21, 22):
+            surface[x, y] = (0, 0, 0, 0)
+    return outlined(art)
+
+
+def broken_mast_picture(pack):
+    """The two halves of a mast lying on the sand with its yard across it and a rag of its sail: 32 by 16."""
+    art = Image.new('RGBA', (2 * TILE, TILE), (0, 0, 0, 0))
+    for y, (first, colour) in {5: (3, LIGHT), 6: (2, PLANK), 7: (4, PLANK), 8: (2, WALL)}.items():
+        paint(art, [(x, y) for x in range(first, 31)], colour)
+    for x, colour in {18: LIGHT, 19: PLANK, 20: PLANK, 21: WALL}.items():
+        paint(art, [(x, y) for y in range(1, 14)], colour)
+    torn_sail(art, 22, 9, [5, 6, 4, 5, 6, 3, 4, 5, 2])
+    return outlined(art)
 
 
 # ---------------------------------------------------------------------------------------------------------------------

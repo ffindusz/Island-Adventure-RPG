@@ -43,6 +43,24 @@ const SAND_ART = terrainArt('sand');
 const GRASS_ART = terrainArt('grass');
 const ROCK_ART = terrainArt('rock');
 const TREE_ART = terrainArt('tree');
+const WRECK_ART = terrainArt('wreckage');
+
+/**
+ * The sheet of the wreck is rows of thirteen: the deck as an edge on the first row; on the second its plain planks, a
+ * hole and its cargo; then the mast, three columns by three rows from the frame named, and the two halves of the debris.
+ */
+const WRECK_CARGO = ['barrel', 'sack', 'rope', 'bones', 'planks'] as const;
+const WRECK = {
+  deck: 0,
+  plain: [PIECE_COUNT, PIECE_COUNT + 1],
+  hole: PIECE_COUNT + 2,
+  cargo: PIECE_COUNT + 3,
+  mast: 2 * PIECE_COUNT,
+  debris: [2 * PIECE_COUNT + 4, 2 * PIECE_COUNT + 5],
+} as const;
+const MAST_SIDE = 3;
+/** A wreck of fewer tiles than this is a few boards on the shore, not a hull with a deck. */
+const DECK_MIN_TILES = 6;
 
 interface Corner {
   readonly quarter: Quarter;
@@ -197,18 +215,121 @@ function treeTile(x: number, y: number, kindAt: KindAt, part: TreePart | undefin
   return [ground, whole(TREE_ART, small, x, y)];
 }
 
+/** One wreck: a group of wreckage tiles that touch, and whether it lies in the water or on the shore. */
+interface Wreck {
+  readonly tiles: readonly (readonly [number, number])[];
+  readonly inWater: boolean;
+  readonly hasDeck: boolean;
+  /** The tile the mast stands on, when there is a deck to stand it on. */
+  readonly mastBase?: readonly [number, number];
+}
+
+const AROUND = [-1, 0, 1].flatMap((dy) => [-1, 0, 1].map((dx) => [dx, dy] as const)).filter(([dx, dy]) => dx !== 0 || dy !== 0);
+
+/** The wrecks of a map, found by walking from each wreckage tile to the ones that touch it, left to right and top down. */
+function findWrecks(terrain: readonly (readonly string[])[], kindAt: KindAt): Map<string, Wreck> {
+  const wrecks = new Map<string, Wreck>();
+  const key = (x: number, y: number): string => `${x},${y}`;
+  terrain.forEach((row, y) => {
+    row.forEach((kind, x) => {
+      if (kind !== 'wreckage' || wrecks.has(key(x, y))) return;
+      const tiles: [number, number][] = [];
+      const pending: [number, number][] = [[x, y]];
+      const seen = new Set<string>([key(x, y)]);
+      let inWater = false;
+      for (let next = pending.pop(); next; next = pending.pop()) {
+        const [tx, ty] = next;
+        tiles.push(next);
+        for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]] as const) {
+          const kindThere = kindAt(tx + dx, ty + dy);
+          inWater ||= kindThere === 'water';
+          if (kindThere === 'wreckage' && !seen.has(key(tx + dx, ty + dy))) {
+            seen.add(key(tx + dx, ty + dy));
+            pending.push([tx + dx, ty + dy]);
+          }
+        }
+      }
+      const hasDeck = tiles.length >= DECK_MIN_TILES;
+      const wreck: Wreck = { tiles, inWater, hasDeck, mastBase: hasDeck ? mastBaseOf(tiles, kindAt) : undefined };
+      for (const [tx, ty] of tiles) wrecks.set(key(tx, ty), wreck);
+    });
+  });
+  return wrecks;
+}
+
+/** The mast stands on the last tile, on the top row of the tiles that have the wreck all around them, that has any. */
+function mastBaseOf(tiles: readonly (readonly [number, number])[], kindAt: KindAt): readonly [number, number] | undefined {
+  const deep = tiles.filter(([x, y]) => AROUND.every(([dx, dy]) => [undefined, 'wreckage'].includes(kindAt(x + dx, y + dy))));
+  const top = Math.min(...deep.map(([, y]) => y));
+  const base = deep.filter(([, y]) => y === top).sort((a, b) => b[0] - a[0])[0];
+  return base;
+}
+
+/** A tile with no edge: plain planks, but a hole or a piece of cargo now and then, by where it is. */
+function deckFrame(x: number, y: number, underMast: boolean): number {
+  const roll = scatter(x, y, 8) % 12;
+  if (underMast || roll >= 8) return WRECK.plain[0];
+  if (roll >= 6) return WRECK.plain[1];
+  return roll === 0 ? WRECK.hole : WRECK.cargo + roll - 1;
+}
+
+/**
+ * A tile of a wreck. Under it is what the wreck lies on, water or the sand of the shore; on that, for a hull, the deck
+ * drawn as an edge of the wreck, and for a few boards on the shore, one of the two halves of a picture.
+ */
+function wreckTile(x: number, y: number, kindAt: KindAt, wreck: Wreck): Stamp[] {
+  const ground = wreck.inWater ? waterTile(x, y, kindAt) : sandTile(x, y, kindAt);
+  if (!wreck.hasDeck) {
+    return [...ground, whole(WRECK_ART, WRECK.debris[kindAt(x - 1, y) === 'wreckage' ? 1 : 0] ?? WRECK.debris[0], x, y)];
+  }
+  const pieces = piecesFor(x, y, (nx, ny) => {
+    const kind = kindAt(nx, ny);
+    return kind !== undefined && kind !== 'wreckage';
+  });
+  if (pieces.some((piece) => piece !== 'C')) {
+    return [
+      ...ground,
+      ...CORNERS.map((corner, index) => quarterOf(WRECK_ART, WRECK.deck + PIECES.indexOf(pieces[index] ?? 'C'), x, y, corner.quarter)),
+    ];
+  }
+  const [bx, by] = wreck.mastBase ?? [Number.NaN, Number.NaN];
+  const underMast = by === y && Math.abs(bx - x) <= 1;
+  return [...ground, whole(WRECK_ART, deckFrame(x, y, underMast), x, y)];
+}
+
+/** The mast: three tiles by three, its foot on the deck and its top and its sail over the water, never over ground to walk on. */
+function mastStamps(wreck: Wreck, kindAt: KindAt): Stamp[] {
+  if (!wreck.mastBase) return [];
+  const [bx, by] = wreck.mastBase;
+  const stamps: Stamp[] = [];
+  for (let row = 0; row < MAST_SIDE; row += 1) {
+    for (let column = 0; column < MAST_SIDE; column += 1) {
+      const x = bx - 1 + column;
+      const y = by - (MAST_SIDE - 1) + row;
+      const kind = kindAt(x, y);
+      if (kind !== undefined && !isLand(kind)) stamps.push(whole(WRECK_ART, WRECK.mast + row * PIECE_COUNT + column, x, y));
+    }
+  }
+  return stamps;
+}
+
 /** The stamps for the ground of a whole map: `terrain[row][column]` holds the kind of terrain of each tile. */
 export function planTerrain(terrain: readonly (readonly string[])[]): Stamp[] {
   const kindAt: KindAt = (x, y) => terrain[y]?.[x];
   const treeParts = findTreeBlocks(terrain);
+  const wrecks = findWrecks(terrain, kindAt);
   const stamps: Stamp[] = [];
   terrain.forEach((row, y) => {
     row.forEach((kind, x) => {
       switch (kind) {
         case 'water':
-        case 'wreckage':
           stamps.push(...waterTile(x, y, kindAt));
           break;
+        case 'wreckage': {
+          const wreck = wrecks.get(`${x},${y}`);
+          if (wreck) stamps.push(...wreckTile(x, y, kindAt, wreck));
+          break;
+        }
         case 'sand':
           stamps.push(...sandTile(x, y, kindAt));
           break;
@@ -224,6 +345,7 @@ export function planTerrain(terrain: readonly (readonly string[])[]): Stamp[] {
       }
     });
   });
+  for (const wreck of new Set(wrecks.values())) stamps.push(...mastStamps(wreck, kindAt));
   return stamps;
 }
 
@@ -255,6 +377,16 @@ export function describeStamp(stamp: Stamp): string {
       const row = Math.floor(frame / TREE_COLUMNS) - 1;
       const column = frame % TREE_COLUMNS;
       return `tree.${Math.floor(column / 2)}.${row === 0 ? 'n' : 's'}${column % 2 === 0 ? 'w' : 'e'}${at}`;
+    }
+    case WRECK_ART: {
+      if (frame < WRECK.plain[0]) return `wreck.deck.${edgeName(frame)}${at}`;
+      if ((WRECK.plain as readonly number[]).includes(frame)) return `wreck.deck.plain${at}`;
+      if (frame === WRECK.hole) return `wreck.hole${at}`;
+      if (frame >= WRECK.cargo && frame < WRECK.cargo + WRECK_CARGO.length) return `wreck.cargo.${WRECK_CARGO[frame - WRECK.cargo]}${at}`;
+      if (frame === WRECK.debris[0]) return `wreck.debris.left${at}`;
+      if (frame === WRECK.debris[1]) return `wreck.debris.right${at}`;
+      const offset = frame - WRECK.mast;
+      return `wreck.mast.${offset % PIECE_COUNT}.${Math.floor(offset / PIECE_COUNT)}${at}`;
     }
     default:
       return `${art}.${frame}${at}`;

@@ -1,7 +1,9 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ARTWORK, FINAL_ART_AREAS, hasFinalArt, neededArt } from '../src/adapter/artwork';
 import { manifestLookup, missingArt, requireArt } from '../src/adapter/asset-manifest';
 import type { ArtManifest } from '../src/adapter/asset-manifest';
+import { describeStamp, planTerrain } from '../src/adapter/terrain-plan';
 import { gameContent } from '../src/content';
 import type { AreaDefinition, ContentDefinition } from '../src/core';
 
@@ -105,5 +107,31 @@ describe('the art of the areas whose art is final', () => {
     expect(hasFinalArt('shipwreck-coast')).toBe(true);
     expect(hasFinalArt('woods')).toBe(true);
     expect(hasFinalArt('unfinished-area')).toBe(false);
+  });
+});
+
+/** How many frames the picture on disk (public/art) holds, by the size in its header and the frame size of the manifest. */
+function framesOnDisk(art: string): number {
+  const entry = (ARTWORK as ArtManifest)[art];
+  if (entry?.kind !== 'sheet') throw new Error(`"${art}" is not a sheet of the manifest`);
+  const png = readFileSync(new URL(`../public/art/${entry.file}`, import.meta.url));
+  const width = png.readUInt32BE(16);
+  const height = png.readUInt32BE(20);
+  expect(width % entry.frameWidth, `the width of ${entry.file}`).toBe(0);
+  expect(height % entry.frameHeight, `the height of ${entry.file}`).toBe(0);
+  return (width / entry.frameWidth) * (height / entry.frameHeight);
+}
+
+describe('the sheets of the terrain on disk', () => {
+  it.each(FINAL_ART_AREAS)('hold a frame for every stamp planned for %s', (areaId) => {
+    const area = shippedArea(areaId);
+    const kinds = area.layout.map((row) => [...row].map((symbol) => gameContent.terrain[symbol]?.kind ?? '?'));
+    const stamps = planTerrain(kinds);
+    const frames = new Map<string, number>();
+    for (const stamp of stamps) if (!frames.has(stamp.art)) frames.set(stamp.art, framesOnDisk(stamp.art));
+
+    expect(stamps.length).toBeGreaterThan(0);
+    const beyond = stamps.filter((stamp) => stamp.frame >= (frames.get(stamp.art) ?? 0));
+    expect([...new Set(beyond.map((stamp) => `${stamp.art} ${describeStamp(stamp)}`))]).toEqual([]);
   });
 });

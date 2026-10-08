@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { describeStamp, planTerrain } from '../src/adapter/terrain-plan';
 import type { Stamp } from '../src/adapter/terrain-plan';
+import { gameContent } from '../src/content';
 
 const KINDS: Readonly<Record<string, string>> = {
   '~': 'water',
@@ -195,11 +196,158 @@ describe('the ground of woodland', () => {
   });
 });
 
+/** What is stamped from the sheet of the wreck on one tile, in the order it is painted. */
+function wreckOn(stamps: readonly Stamp[], x: number, y: number): string[] {
+  return onTile(stamps, x, y).filter((name) => name.startsWith('wreck.'));
+}
+
+/** The same without the mast, which stands over several tiles of the deck. */
+function deckOn(stamps: readonly Stamp[], x: number, y: number): string[] {
+  return wreckOn(stamps, x, y).filter((name) => !name.startsWith('wreck.mast.'));
+}
+
 describe('the ground of a wreck', () => {
-  it('is water under the wreck, with the shore of the sand around it', () => {
-    const stamps = plan('....', '.WW.', '.WW.', '....');
-    expect(onTile(stamps, 1, 1)[0]).toBe('water.sand.TL@nw');
-    expect(onTile(stamps, 2, 2)).toContain('water.sand.BR@se');
+  // A hull in the sea, 8 or 9 tiles wide and 4 high. Its tiles with all eight neighbours in the wreck are 4 to 7 on the
+  // row 3 and 3 to 8 on the row 4; the sand starts under it.
+  const SEA = [
+    '~~~~~~~~~~~~',
+    '~~~~~~~~~~~~',
+    '~~~WWWWWW~~~',
+    '~~WWWWWWWW~~',
+    '~~WWWWWWWWW~',
+    '~~WWWWWWWW~~',
+    '............',
+  ];
+  const stamps = plan(...SEA);
+
+  it('is water under it, with the shore of the sand where the hull meets it', () => {
+    expect(onTile(stamps, 3, 2)[0]).toMatch(/^water\.(plain|glint)$/);
+    expect(onTile(stamps, 3, 5)[0]).toMatch(/^water\./);
+    expect(onTile(stamps, 3, 5).some((name) => name.startsWith('water.sand.B'))).toBe(true);
+  });
+
+  it('has a piece of the deck on every tile of it, and none anywhere else on the ground', () => {
+    for (const [y, row] of SEA.entries()) {
+      for (const [x, letter] of [...row].entries()) {
+        const deck = wreckOn(stamps, x, y).filter((name) => name.startsWith('wreck.deck.') || name.startsWith('wreck.hole') || name.startsWith('wreck.cargo.'));
+        if (letter === 'W') expect(deck.length, `the tile ${x},${y}`).toBeGreaterThan(0);
+        else expect(deck, `the tile ${x},${y}`).toEqual([]);
+      }
+    }
+  });
+
+  it('is drawn with the thirteen pieces of an edge, quarter by quarter, outside being anything that is not the wreck', () => {
+    expect(deckOn(stamps, 3, 2)).toEqual(['wreck.deck.TL@nw', 'wreck.deck.T@ne', 'wreck.deck.L@sw', 'wreck.deck.C@se']);
+    expect(deckOn(stamps, 8, 2)).toEqual(['wreck.deck.T@nw', 'wreck.deck.TR@ne', 'wreck.deck.C@sw', 'wreck.deck.R@se']);
+    expect(deckOn(stamps, 2, 5)).toEqual(['wreck.deck.L@nw', 'wreck.deck.C@ne', 'wreck.deck.BL@sw', 'wreck.deck.B@se']);
+    expect(deckOn(stamps, 3, 3)).toEqual(['wreck.deck.INW@nw', 'wreck.deck.C@ne', 'wreck.deck.C@sw', 'wreck.deck.C@se']);
+    expect(deckOn(stamps, 8, 3)).toEqual(['wreck.deck.C@nw', 'wreck.deck.INE@ne', 'wreck.deck.C@sw', 'wreck.deck.C@se']);
+    expect(deckOn(stamps, 9, 4)).toEqual(['wreck.deck.C@nw', 'wreck.deck.INE@ne', 'wreck.deck.C@sw', 'wreck.deck.ISE@se']);
+    expect(deckOn(stamps, 10, 4)).toEqual(['wreck.deck.T@nw', 'wreck.deck.TR@ne', 'wreck.deck.B@sw', 'wreck.deck.BR@se']);
+  });
+
+  it('is plain planks, a hole or a piece of cargo on a tile with no edge, one picture for the tile', () => {
+    for (const [x, y] of [[5, 4], [6, 4], [4, 3]] as const) {
+      expect(wreckOn(stamps, x, y), `the tile ${x},${y}`).toEqual([expect.stringMatching(/^wreck\.(deck\.plain|hole|cargo\.[a-z]+)$/)]);
+    }
+  });
+
+  it('has a different tile for the cargo here and there, the same each time', () => {
+    const names = new Set<string>();
+    const field = ['WWWWWWWWWWWWWWWWWWWW', 'WWWWWWWWWWWWWWWWWWWW', 'WWWWWWWWWWWWWWWWWWWW', 'WWWWWWWWWWWWWWWWWWWW', 'WWWWWWWWWWWWWWWWWWWW'];
+    const big = plan('~'.repeat(20), ...field, '~'.repeat(20));
+    for (let x = 1; x < 19; x += 1) names.add(wreckOn(big, x, 3)[0] ?? '');
+    expect(names.has('wreck.deck.plain')).toBe(true);
+    expect([...names].some((name) => name.startsWith('wreck.cargo.'))).toBe(true);
+    expect(plan(...SEA)).toEqual(plan(...SEA));
+  });
+
+  it('has one mast, three tiles by three, standing on the last tile of the top row that has no edge', () => {
+    const mast = stamps.filter((stamp) => describeStamp(stamp).startsWith('wreck.mast.'));
+    expect(mast).toHaveLength(9);
+    // The base is the tile 7,3: the pieces stand from the tile 6,1 to the tile 8,3.
+    expect(onTile(stamps, 7, 3)).toContain('wreck.mast.1.2');
+    expect(onTile(stamps, 6, 1)).toEqual([expect.stringMatching(/^water\./), 'wreck.mast.0.0']);
+    expect(onTile(stamps, 8, 3)).toContain('wreck.mast.2.2');
+    expect(wreckOn(stamps, 7, 3)).toEqual([expect.stringMatching(/^wreck\.(deck\.plain|hole|cargo\.[a-z]+)$/), 'wreck.mast.1.2']);
+  });
+
+  it('never has the top of the mast over ground to walk on, only over the water', () => {
+    const land = plan('.........', '.........', '..WWWWW..', '.WWWWWWW.', '.WWWWWWW.', '.WWWWWWW.', '.........');
+    const mast = land.filter((stamp) => describeStamp(stamp).startsWith('wreck.mast.'));
+    expect(mast).toHaveLength(6);
+    for (const stamp of mast) expect(stamp.y).toBeGreaterThanOrEqual(2);
+  });
+
+  it('has no piece of the mast above the top of the map', () => {
+    const top = plan('~WWWWW~', '~WWWWW~', '~WWWWW~', '~WWWWW~', '~~~~~~~');
+    const mast = top.filter((stamp) => describeStamp(stamp).startsWith('wreck.mast.'));
+    expect(mast).toHaveLength(3);
+    for (const stamp of mast) expect(stamp.y).toBe(0);
+  });
+
+  it('has plain planks under the foot of the mast, wherever the wreck lies, so that no cargo stands under the pole', () => {
+    for (let shift = 0; shift < 14; shift += 1) {
+      const moved = plan(...SEA.map((row) => '~'.repeat(shift) + row));
+      expect(deckOn(moved, 6 + shift, 3), `moved by ${shift}`).toEqual(['wreck.deck.plain']);
+      expect(deckOn(moved, 7 + shift, 3), `moved by ${shift}`).toEqual(['wreck.deck.plain']);
+    }
+  });
+
+  it('has no mast on a wreck with no tile without an edge, as a hull a tile or two thick has no deck to stand it on', () => {
+    expect(plan('~~~~~', '~WWW~', '~~~~~').some((stamp) => describeStamp(stamp).startsWith('wreck.mast.'))).toBe(false);
+    expect(plan('~~~~~~~', '~WWWWW~', '~WWWWW~', '~~~~~~~').some((stamp) => describeStamp(stamp).startsWith('wreck.mast.'))).toBe(false);
+  });
+});
+
+describe('the ground of a little wreckage', () => {
+  it('is in two halves, a tile each, on the water where it is beside water', () => {
+    const stamps = plan('~~~~', '~WW~', '~~~~');
+    expect(onTile(stamps, 1, 1)).toEqual([expect.stringMatching(/^water\./), 'wreck.debris.left']);
+    expect(onTile(stamps, 2, 1)).toEqual([expect.stringMatching(/^water\./), 'wreck.debris.right']);
+  });
+
+  it('lies on the sand where there is no water beside it', () => {
+    const stamps = plan('#####', '.WW##', '.....');
+    expect(onTile(stamps, 1, 1)).toEqual([expect.stringMatching(/^sand\./), 'wreck.debris.left']);
+    expect(onTile(stamps, 2, 1)).toEqual([expect.stringMatching(/^sand\./), 'wreck.debris.right']);
+    expect(stamps.some((stamp) => describeStamp(stamp).startsWith('water.'))).toBe(false);
+  });
+
+  it('has no deck and no mast, however it is laid out', () => {
+    const stamps = plan('.....', '.WWW.', '.WW..', '.....');
+    expect(stamps.some((stamp) => /^wreck\.(deck|mast|cargo|hole)/.test(describeStamp(stamp)))).toBe(false);
+  });
+});
+
+describe('the ground of the shipwreck coast, which has a wreck and a little wreckage', () => {
+  const coast = gameContent.areas.find((area) => area.id === 'shipwreck-coast');
+  if (!coast) throw new Error('the shipped content has no shipwreck coast');
+  const kinds = coast.layout.map((row) => [...row].map((symbol) => gameContent.terrain[symbol]?.kind ?? '?'));
+  const stamps = planTerrain(kinds);
+
+  it('has the deck on every tile of the wreck in the north-west and the debris on the pair by the mast in the east', () => {
+    for (const [y, row] of kinds.entries()) {
+      for (const [x, kind] of row.entries()) {
+        const names = wreckOn(stamps, x, y).filter((name) => !name.startsWith('wreck.mast.'));
+        if (kind !== 'wreckage') expect(names, `the tile ${x},${y}`).toEqual([]);
+        else if (x >= 29) expect(names, `the tile ${x},${y}`).toEqual([x === 29 ? 'wreck.debris.left' : 'wreck.debris.right']);
+        else expect(names.length, `the tile ${x},${y}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('has the mast only over the water and the wreck, never over the sand', () => {
+    const mast = stamps.filter((stamp) => describeStamp(stamp).startsWith('wreck.mast.'));
+    expect(mast).toHaveLength(9);
+    for (const stamp of mast) expect(['water', 'wreckage']).toContain(kinds[stamp.y]?.[stamp.x]);
+  });
+
+  it('puts nothing from the sheet of the wreck on a tile that can be walked on', () => {
+    for (const stamp of stamps.filter((candidate) => describeStamp(candidate).startsWith('wreck.'))) {
+      const walkable = gameContent.terrain[coast.layout[stamp.y]?.[stamp.x] ?? '']?.solid === false;
+      expect(walkable, `the tile ${stamp.x},${stamp.y}`).toBe(false);
+    }
   });
 });
 
