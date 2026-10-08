@@ -11,6 +11,7 @@ import {
   loadSign,
 } from './device-content';
 import type { Door, Gate, Key, Lever, Sign } from './device-content';
+import { checkRoutesStayOpen } from './device-routes';
 import { CONSUMABLE_IDS, GEAR_SLOTS, STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
@@ -289,6 +290,7 @@ export function loadContent(definition: ContentDefinition): Content {
   checkCoveredCorners(areas);
   checkKeysAndDoors(Object.values(areas));
   checkLeverTargets(Object.values(areas));
+  checkRoutesStayOpen(Object.values(areas), { areaId: startArea.id, tile: definition.start.tile });
   return {
     hero: {
       size: definition.hero.size,
