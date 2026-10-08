@@ -5,5 +5,5 @@
 export const opening: readonly string[] = [
   'A storm broke the ship in the night.',
   'The sea carried you to a remote island.',
-  'You wake on the sand, alive, with your sword and armor.',
+  'You wake on the sand, with sword and armor.',
 ];
