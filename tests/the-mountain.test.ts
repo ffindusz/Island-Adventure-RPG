@@ -14,9 +14,11 @@ import { face, fixedRandom, newGame, playingView } from './fixtures';
 import {
   directionBetween,
   distanceBetween,
+  experienceOfAll,
   isInZone,
   keyOf,
   metOn,
+  milestonesOf,
   neighboursOf,
   noticingOf,
   openTilesOf,
@@ -466,6 +468,48 @@ describe('what the hero finds on the mountain', () => {
     const lowest = mountain.layout.length - 1 - BOTTOM_ROWS;
 
     expect(interactables.filter(({ tile }) => tile.row > lowest).map(({ id }) => id)).toEqual([]);
+  });
+});
+
+describe('the Experience on the way through the mountain', () => {
+  const [, , levelFour = 0, levelFive = 0] = gameContent.progression.levelThresholds;
+  const coast = definitionOf(COAST);
+  const woods = definitionOf(WOODS);
+  const woodsOpen = openTilesOf(gameContent, woods);
+  const woodsForward = (woods.exits ?? []).find(({ to }) => to.area === MOUNTAIN);
+  /** The way from where the adventure begins to the exit of the coast, over open ground. */
+  const coastRoute = routeBetween(openTilesOf(gameContent, coast), gameContent.start.tile, (tile) =>
+    (coast.exits ?? []).some(({ zone }) => isInZone(zone, tile)),
+  );
+  /** The trail of the woods, the path of sand from the way in to the exit to the mountain. */
+  const woodsTrail = routeBetween(
+    (tile) => woodsOpen(tile) && gameContent.terrain[woods.layout[tile.row]?.[tile.col] ?? '']?.kind === 'sand',
+    (woods.entrances ?? [])[0]?.tile ?? { col: 0, row: 0 },
+    (tile) => woodsForward !== undefined && isInZone(woodsForward.zone, tile),
+  );
+
+  it('gives a hero who fights what it meets from the start to the exit of the mountain, and passes the milestones, the Experience of Level 4', () => {
+    const earned =
+      experienceOfAll(gameContent, metOn(gameContent, coast, coastRoute)) +
+      milestonesOf(coast) +
+      experienceOfAll(gameContent, metOn(gameContent, woods, woodsTrail)) +
+      milestonesOf(woods) +
+      experienceOfAll(gameContent, metOn(gameContent, mountain, trail)) +
+      milestonesOf(mountain);
+
+    expect(earned).toBeGreaterThanOrEqual(levelFour);
+  });
+
+  it('does not give a hero who clears the coast, the woods and the mountain the Experience of Level 5: nobody has to grind', () => {
+    const everything =
+      experienceOfAll(gameContent, coast.monsters) +
+      milestonesOf(coast) +
+      experienceOfAll(gameContent, woods.monsters) +
+      milestonesOf(woods) +
+      experienceOfAll(gameContent, mountain.monsters) +
+      milestonesOf(mountain);
+
+    expect(everything).toBeLessThan(levelFive);
   });
 });
 
