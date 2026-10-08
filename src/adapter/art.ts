@@ -44,6 +44,11 @@ const MONSTER_COLOURS: Readonly<Record<string, number>> = {
   'raider-charger': 0xd4a017,
   'raider-archer': 0x7fb2f0,
   'raider-veteran': 0x1f2f73,
+  // The creatures of the cave, in what the mountain and the telegraphs leave free: pink, teal, lime and a dark mauve.
+  'cave-bat': 0xd63fa5,
+  'cave-lizard': 0x178270,
+  'cave-eye': 0xb5d92b,
+  'cave-bear': 0x523e52,
 };
 
 /** Anything the art has no colour for is drawn in this colour, so a missing one cannot be overlooked. */

@@ -70,5 +70,14 @@ export const cave: AreaDefinition = {
     '################################################',
     '################################################',
   ],
-  monsters: [],
+  // The creatures of the cave. The optional ones come last: the second lizard guards the grass room of the side path,
+  // where the hero who keeps to the sand does not go.
+  monsters: [
+    { id: 'cave-bat-1', type: 'cave-bat', tile: { col: 14, row: 7 } },
+    { id: 'cave-bat-2', type: 'cave-bat', tile: { col: 26, row: 9 } },
+    { id: 'cave-lizard-1', type: 'cave-lizard', tile: { col: 16, row: 23 } },
+    { id: 'cave-eye-1', type: 'cave-eye', tile: { col: 15, row: 30 } },
+    { id: 'cave-bear-1', type: 'cave-bear', tile: { col: 39, row: 11 } },
+    { id: 'cave-lizard-2', type: 'cave-lizard', tile: { col: 6, row: 15 } },
+  ],
 };

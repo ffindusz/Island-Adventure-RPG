@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { monsterColour, terrainColour } from '../src/adapter/art';
 import { gameContent } from '../src/content';
 import { createGame } from '../src/core';
-import type { AreaDefinition, Game, Tile } from '../src/core';
+import type { AreaDefinition, Game, MonsterTypeDefinition, Tile } from '../src/core';
 import { fixedRandom, newGame, playingView } from './fixtures';
-import { isInZone, openTilesOf, routeBetween, walkRoute } from './routes';
+import { distanceBetween, isInZone, metOn, noticingOf, openTilesOf, routeBetween, walkRoute } from './routes';
 
 // The cave, the fourth area on the route of the adventure, between the mountain and the old castle: what it has to be to
 // be a dark network of winding passages of its own, with creatures that are not the mountain's, a side path closed by
@@ -26,6 +27,9 @@ const BOTTOM_ROWS = 3;
 
 /** A way winds when it is this many times as long as the straight line from its start to its end, at least. */
 const LEAST_WINDING = 1.5;
+
+/** Two colours are set apart when they lie this far from each other, at least, in the cube of red, green and blue (0 to 255 each). */
+const LEAST_COLOUR_GAP = 50;
 
 function definitionOf(id: string): AreaDefinition {
   const area = gameContent.areas.find((candidate) => candidate.id === id);
@@ -63,6 +67,41 @@ const forwardTiles: Tile[] = Array.from({ length: (wayForward?.zone.width ?? 0) 
   col: (wayForward?.zone.col ?? 0) + (place % (wayForward?.zone.width ?? 1)),
   row: (wayForward?.zone.row ?? 0) + Math.floor(place / (wayForward?.zone.width ?? 1)),
 }));
+
+/** The types of monster in the cave, with their ids, and the tougher one among them: the one that takes most to defeat. */
+const creatures = [...new Set(cave.monsters.map(({ type }) => type))].flatMap((id) => {
+  const type = gameContent.monsterTypes[id];
+  return type === undefined ? [] : [{ id, type }];
+});
+const tougher = [...creatures].sort((one, other) => other.type.health - one.type.health)[0];
+const toughCreatures = cave.monsters.filter(({ type }) => type === tougher?.id);
+
+/** The type of a monster of the cave, which the loader sees to exist; none here only for content it refuses. */
+function typeOf(monster: { readonly type: string }): MonsterTypeDefinition | undefined {
+  return gameContent.monsterTypes[monster.type];
+}
+
+/** The damage of one hit of a monster type, before the Defense of the hero: of the blow, or of the shot. */
+function hitOf(type: MonsterTypeDefinition): number {
+  if ('damage' in type) {
+    return type.damage;
+  }
+  return 'projectile' in type ? type.projectile.damage : 0;
+}
+
+/** Whether a tile lies in a block of open ground two tiles wide and two high: a place to step aside in either way. */
+function inOpenBlock({ col, row }: Tile): boolean {
+  return [-1, 0].some((fromCol) =>
+    [-1, 0].some((fromRow) =>
+      [0, 1].every((across) => [0, 1].every((down) => isOpen({ col: col + fromCol + across, row: row + fromRow + down }))),
+    ),
+  );
+}
+
+/** How far apart two colours, given as 0xRRGGBB, lie in the cube of red, green and blue. */
+function colourGap(one: number, other: number): number {
+  return Math.hypot(...[16, 8, 0].map((shift) => ((one >> shift) & 0xff) - ((other >> shift) & 0xff)));
+}
 
 describe('the way through the cave', () => {
   it('comes fourth on the route of the adventure: after the coast, the woods and the mountain, before the castle', () => {
@@ -129,6 +168,82 @@ describe('the way through the cave', () => {
     const rock = [...tiles].filter((symbol) => rockSymbols.has(symbol));
 
     expect(rock.length / tiles.length).toBeGreaterThanOrEqual(1 / 2);
+  });
+});
+
+describe('the creatures of the cave', () => {
+  it('holds the cave with creatures of its own and nothing else: every monster in it is of a cave type', () => {
+    expect(cave.monsters.length).toBeGreaterThan(0);
+    expect(cave.monsters.filter(({ type }) => !type.startsWith('cave-'))).toEqual([]);
+  });
+
+  it('meets a hero who walks the trail with creatures that chase, that charge and that shoot', () => {
+    const behaviors = metOn(gameContent, cave, trail).map((monster) => typeOf(monster)?.behavior);
+
+    expect(behaviors).toContain('chaser');
+    expect(behaviors).toContain('charger');
+    expect(behaviors).toContain('ranged');
+  });
+
+  it('has a tougher creature than the rest: at least twice the health of any other cave creature, and a harder hit', () => {
+    if (tougher === undefined) {
+      throw new Error('The cave has no monsters');
+    }
+    const others = creatures.filter(({ id }) => id !== tougher.id);
+
+    expect(others.length).toBeGreaterThan(0);
+    for (const other of others) {
+      expect(tougher.type.health, `the health of ${tougher.id} against ${other.id}`).toBeGreaterThanOrEqual(
+        2 * other.type.health,
+      );
+      expect(hitOf(tougher.type), `the hit of ${tougher.id} against ${other.id}`).toBeGreaterThan(hitOf(other.type));
+    }
+  });
+
+  it('puts the tougher creature on every way through: none keeps out of the reach of its notice', () => {
+    const keepingOut = routeBetween(
+      (tile) =>
+        isOpen(tile) && toughCreatures.every((creature) => distanceBetween(tile, creature.tile) > noticingOf(gameContent, creature)),
+      wayInTile,
+      isWayForward,
+    );
+
+    expect(toughCreatures.length).toBeGreaterThan(0);
+    expect(keepingOut).toBeNull();
+  });
+
+  it('leaves room to step aside wherever a charger can notice the hero: no ground there is narrower than two tiles', () => {
+    const chargers = cave.monsters.filter((monster) => typeOf(monster)?.behavior === 'charger');
+
+    const cramped = chargers.flatMap((charger) =>
+      cave.layout.flatMap((symbols, row) =>
+        [...symbols].flatMap((_, col) => {
+          const tile = { col, row };
+          const near = distanceBetween(tile, charger.tile) <= noticingOf(gameContent, charger);
+          return near && isOpen(tile) && !inOpenBlock(tile) ? [`${charger.id} at ${col},${row}`] : [];
+        }),
+      ),
+    );
+
+    expect(chargers.length).toBeGreaterThan(0);
+    expect(cramped).toEqual([]);
+  });
+
+  it('draws each kind of creature in a colour of its own: set well apart from every other monster and from the ground of the cave', () => {
+    const ground = [...new Set(cave.layout.join(''))].flatMap((symbol) => {
+      const kind = gameContent.terrain[symbol]?.kind;
+      return kind === undefined ? [] : [{ name: kind, colour: terrainColour(kind) }];
+    });
+    const monsters = Object.keys(gameContent.monsterTypes).map((id) => ({ name: id, colour: monsterColour(id) }));
+
+    const tooClose = creatures.flatMap(({ id }) =>
+      [...monsters, ...ground]
+        .filter(({ name, colour }) => name !== id && colourGap(monsterColour(id), colour) < LEAST_COLOUR_GAP)
+        .map(({ name }) => `${id} and ${name}`),
+    );
+
+    expect(creatures.length).toBeGreaterThan(0);
+    expect(tooClose).toEqual([]);
   });
 });
 
