@@ -29,6 +29,11 @@ const MONSTER_COLOURS: Readonly<Record<string, number>> = {
   slime: 0x40e0d0,
   boar: 0x7d4e2d,
   spitter: 0xa86fd6,
+  // The raiders of the mountain, in blues and gold: the red and the orange are kept for the telegraphs.
+  raider: 0x3f66c4,
+  'raider-charger': 0xd4a017,
+  'raider-archer': 0x7fb2f0,
+  'raider-veteran': 0x1f2f73,
 };
 
 /** Anything the art has no colour for is drawn in this colour, so a missing one cannot be overlooked. */

@@ -1,4 +1,13 @@
-import type { AreaDefinition, ContentDefinition, Direction, Game, GameEvent, Tile, TileRect } from '../src/core';
+import type {
+  AreaDefinition,
+  ContentDefinition,
+  Direction,
+  Game,
+  GameEvent,
+  MonsterPlacement,
+  Tile,
+  TileRect,
+} from '../src/core';
 import { newGame, playingView, walk } from './fixtures';
 
 // Walking the hero from place to place with the core's own movement, for the tests of the content the game ships
@@ -134,4 +143,47 @@ export function walkRoute(game: Game, route: readonly Tile[], keepGoing: () => b
     }
   }
   return events;
+}
+
+// What a hero earns on a route, for the tests of the Experience that the shipped areas give: it fights the monsters it
+// meets on the way and passes the milestones, and never grinds.
+
+/** What a monster is worth when it is defeated, by its type. */
+export function experienceOf(content: ContentDefinition, monster: { readonly type: string }): number {
+  return content.monsterTypes[monster.type]?.experience ?? 0;
+}
+
+/** How far from its body a monster notices a hero, in tiles: none for a type that never notices one. */
+export function noticingOf(content: ContentDefinition, monster: { readonly type: string }): number {
+  const type = content.monsterTypes[monster.type];
+  return type !== undefined && 'noticingDistance' in type ? type.noticingDistance : 0;
+}
+
+/** How far apart two tiles are: the farther of the columns and the rows between them, so a diagonal step is one. */
+export function distanceBetween(one: Tile, other: Tile): number {
+  return Math.max(Math.abs(one.col - other.col), Math.abs(one.row - other.row));
+}
+
+/**
+ * The monsters of an area that a hero meets on a route. A monster notices a hero in the square round its body that its
+ * noticing distance makes, so a hero on a route meets it when a tile of the route lies in that square. A route that
+ * is not there meets nothing.
+ */
+export function metOn(
+  content: ContentDefinition,
+  area: AreaDefinition,
+  route: readonly Tile[] | null,
+): MonsterPlacement[] {
+  return area.monsters.filter((monster) =>
+    (route ?? []).some((tile) => distanceBetween(tile, monster.tile) <= noticingOf(content, monster)),
+  );
+}
+
+export function experienceOfAll(content: ContentDefinition, monsters: readonly { readonly type: string }[]): number {
+  return monsters.reduce((total, monster) => total + experienceOf(content, monster), 0);
+}
+
+/** What the milestones of an area give together, in Experience. */
+export function milestonesOf(area: AreaDefinition): number {
+  return (area.milestones ?? []).reduce((total, { reward }) => total + reward.experience, 0);
 }

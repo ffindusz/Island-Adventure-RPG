@@ -1,5 +1,6 @@
-// Pictures drawn in code, because the Ninja Adventure pack has no armor icons: a leather tunic for the Basic Armor and
-// a shirt of mail for the Chain Mail, in the pack's own colours. Each letter is one pixel, `.` is clear.
+// Pictures drawn in code, because the Ninja Adventure pack has no armor icons: a leather tunic for the Basic Armor, a
+// shirt of mail for the Chain Mail and a steel cuirass for the Plate Armor, in the pack's own colours. Each letter is
+// one pixel, `.` is clear.
 
 /** The pack's palette, as it is used in its item icons; the letters are only a shorthand for the rows below. */
 export const PACK_PALETTE: Readonly<Record<string, number>> = {
@@ -48,6 +49,26 @@ export const MAIL_ROWS: readonly string[] = [
   '...ABCBCBCBDA...',
   '...ACBCBCBCDA...',
   '...ADDDDDDDDA...',
+  '...AAAAAAAAAA...',
+  '................',
+];
+
+/** A cuirass of smooth steel plates with a ridge down the middle, a gold belt with a red stone and hanging plates. */
+export const PLATE_ROWS: readonly string[] = [
+  '................',
+  '....AAA..AAA....',
+  '..AABBCAACCDAA..',
+  '.ABBCCCBDCCCCDA.',
+  'ABBCCCCBDCCCCCDA',
+  'ABCCCCCBDCCCCCDA',
+  'ADDDCCCBDCCCDDDA',
+  '.AAADCCBDCCDAAA.',
+  '...ACCCBDCCDA...',
+  '...ACCCBDCCDA...',
+  '...AIIIEEIIIA...',
+  '...ACCCBDCCDA...',
+  '...ADDDDDDDDA...',
+  '...ACCCBDCCDA...',
   '...AAAAAAAAAA...',
   '................',
 ];
