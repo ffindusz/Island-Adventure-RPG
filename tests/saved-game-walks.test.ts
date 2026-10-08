@@ -145,6 +145,10 @@ describe('a hero among every kind of monster, doing anything at all', () => {
 });
 
 describe('the game as shipped', () => {
+  // The walk saves and checks the whole state 500 times, with what the hero has explored of every area in it, so it
+  // takes longer with every area the game ships, and longer still when the other test files run beside it.
+  const WALK_TIMEOUT_MS = 30_000;
+
   it.each(gameContent.areas)('is saved in a state the checks accept when the hero begins in "$id"', (area) => {
     const [entrance] = area.entrances ?? [];
     if (entrance === undefined) {
@@ -160,11 +164,15 @@ describe('the game as shipped', () => {
     expect(parseSave(JSON.stringify(saved), gameContent)).toEqual({ status: 'usable', snapshot: saved });
   });
 
-  it.each([11, 12])('is saved in a state the checks accept, whatever the player does (seed %i)', (seed) => {
-    const walk = newWalk();
+  it.each([11, 12])(
+    'is saved in a state the checks accept, whatever the player does (seed %i)',
+    (seed) => {
+      const walk = newWalk();
 
-    walkAtRandom(gameContent, seed, 500, walk);
+      walkAtRandom(gameContent, seed, 500, walk);
 
-    expect(walk.refused).toEqual([]);
-  });
+      expect(walk.refused).toEqual([]);
+    },
+    WALK_TIMEOUT_MS,
+  );
 });

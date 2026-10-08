@@ -87,4 +87,73 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
     projectile: { damage: 4, speedTilesPerSecond: 4, range: 6, size: 0.3 },
     keepsDistance: { preferredDistance: 3, speedTilesPerSecond: 2 },
   },
+  // The raiders of the mountain are stronger than the beasts of the coast and the woods, and they are tuned together
+  // with the Experience of the mountain (tests/the-mountain.test.ts). The basic raider is a chaser about as quick as a
+  // wolf: it notices the hero from four tiles away, winds up for half a second, hits for 5 (4 after the hero's Defense)
+  // and rests for 0.8 s before the next. It takes five hits from the hero's basic sword and three from the Steel Sword,
+  // is worth 3 Experience and leaves nothing behind.
+  raider: {
+    behavior: 'chaser',
+    health: 5,
+    size: 0.75,
+    experience: 3,
+    damage: 5,
+    speedTilesPerSecond: 2.5,
+    noticingDistance: 4,
+    reach: 0.5,
+    windUpMs: 500,
+    recoveryMs: 800,
+  },
+  // The raider that charges, like the boar: it notices the hero from four tiles away, walks to where its lane takes in
+  // the hero, winds up for 0.7 s while the lane lights up, dashes six tiles at most at twelve tiles a second and rests
+  // for a second. It hits for 7 (6 after the hero's Defense) only a hero who is still in the lane. It takes five hits
+  // from the hero's basic sword and three from the Steel Sword, and is worth 4 Experience.
+  'raider-charger': {
+    behavior: 'charger',
+    health: 5,
+    size: 0.85,
+    experience: 4,
+    damage: 7,
+    speedTilesPerSecond: 2.2,
+    noticingDistance: 4,
+    windUpMs: 700,
+    dashSpeedTilesPerSecond: 12,
+    dashRange: 6,
+    recoveryMs: 1000,
+  },
+  // The raider with a bow, like the spitter: it notices the hero from five tiles away and walks to four tiles from it,
+  // backing away when the hero comes nearer, until a wall is at its back. It winds up for 0.8 s with a flash on its
+  // body, then fires along the row or column that the hero stood in a projectile slower than the hero's walk that hits
+  // for 5 (4 after Defense) and falls seven tiles on. It rests for 1.5 s. It is frail: three hits from the basic sword,
+  // two from the Steel Sword or two arrows of the short bow, and worth 3 Experience. Now and then it leaves three arrows
+  // behind when it is defeated: it carries what it shoots.
+  'raider-archer': {
+    behavior: 'ranged',
+    health: 3,
+    size: 0.7,
+    experience: 3,
+    drops: [{ consumable: 'ammunition', chance: 0.25, amount: 3 }],
+    noticingDistance: 5,
+    windUpMs: 800,
+    recoveryMs: 1500,
+    projectile: { damage: 5, speedTilesPerSecond: 4, range: 7, size: 0.3 },
+    keepsDistance: { preferredDistance: 4, speedTilesPerSecond: 2 },
+  },
+  // The tougher raider that holds the pass, a chaser of the same pace as the others and a heavier hand: it notices the
+  // hero from five tiles away, winds up for 0.6 s, hits for 8 (7 after the hero's Defense) and rests for 0.9 s. It takes
+  // twelve hits from the hero's basic sword and six from the Steel Sword, more than twice as many as any other raider,
+  // and is worth 6 Experience. Now and then it leaves a Healing Potion behind when it is defeated.
+  'raider-veteran': {
+    behavior: 'chaser',
+    health: 12,
+    size: 0.85,
+    experience: 6,
+    drops: [{ consumable: 'healing-potion', chance: 0.5, amount: 1 }],
+    damage: 8,
+    speedTilesPerSecond: 2.6,
+    noticingDistance: 5,
+    reach: 0.5,
+    windUpMs: 600,
+    recoveryMs: 900,
+  },
 };

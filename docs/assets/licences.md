@@ -57,7 +57,7 @@ Last updated: 2026-10-08. The user approved the Ninja Adventure pack as the art 
   - `Ui\Theme\Theme Wood\button_normal.png` as `ui-button.png`: the button behind the line the cursor is on.
   - `Ui\Receptacle\IconHeart.png` as `ui-heart.png`: the heart of Health.
   - Not from the pack: the colours of the bars are the pack's palette, drawn with rectangles; no file was copied for them.
-  - Not from the pack: the icons of the Basic Armor and the Chain Mail are drawn in code (`src\adapter\drawn-icons.ts`), in the pack's own colours, because the pack has no armor icon. They are this project's own work, not a copy or a recolour of a pack file.
+  - Not from the pack: the icons of the Basic Armor, the Chain Mail and the Plate Armor (ticket 16) are drawn in code (`src\adapter\drawn-icons.ts`), in the pack's own colours, because the pack has no armor icon. They are this project's own work, not a copy or a recolour of a pack file.
   - Later art tickets add what they copy in to this list, in the same commit as the files.
 
 ### A2. Ninja Adventure font `Ui\Font\NormalFont.ttf`: do not use
