@@ -24,6 +24,7 @@ import { HeroSprite } from './hero-sprite';
 import { checkHudFootprint, Hud } from './hud';
 import { InventoryMenu } from './inventory-menu';
 import { Notice } from './notice';
+import { OpeningCard } from './opening-card';
 import { Overlay } from './overlay';
 import { PlayerInput } from './player-input';
 import { byShooter } from './projectiles';
@@ -36,6 +37,9 @@ const DEFEAT_FADE_MS = 500;
 
 /** How long the screen takes to fade in after the hero comes into another Adventure Area, in milliseconds. */
 const AREA_FADE_MS = 250;
+
+/** How long the screen takes to fade in after the opening, as the hero wakes on the coast, in milliseconds. */
+const OPENING_FADE_MS = 600;
 
 /** Whether the player can be looking at the game: its tab is showing and its window has the keyboard focus. */
 function playerIsWatching(): boolean {
@@ -51,7 +55,8 @@ function gameIsWaiting(view: GameView): boolean {
  * The play screen. Every frame it turns the keyboard into commands, runs the Game core's fixed steps, and draws
  * what the core's view says. It decides nothing about the game, except that no step runs while nobody is watching.
  * It also saves the game when the hero touches a Checkpoint or comes into another area (autosave.ts), and takes the
- * player back to the title when the core has gone back to it.
+ * player back to the title when the core has gone back to it. A New Game starts with the card of the opening: until the
+ * player presses Enter, the game is held and nothing but the card is on the screen (opening-card.ts).
  */
 export class PlayScene extends Phaser.Scene {
   private readonly core: Game;
@@ -78,6 +83,10 @@ export class PlayScene extends Phaser.Scene {
   private fadingOut = false;
   /** Whether the first frame saves the game: a New Game counts as a Checkpoint, so that it replaces the old save. */
   private saveAtOnce = false;
+  /** The lines of the opening this start brings, if any. */
+  private openingLines: readonly string[] = [];
+  /** The card of the opening while it shows: no step runs and no key but Enter counts until the player ends it. */
+  private card: OpeningCard | null = null;
 
   constructor(core: Game, saves: SaveStore) {
     super(SCENE_KEYS.play);
@@ -87,6 +96,7 @@ export class PlayScene extends Phaser.Scene {
 
   init(start: PlayStart): void {
     this.saveAtOnce = start.saveAtOnce === true;
+    this.openingLines = start.opening ?? [];
   }
 
   preload(): void {
@@ -120,9 +130,14 @@ export class PlayScene extends Phaser.Scene {
       throw new Error('The keyboard plugin is not available, so nothing could control the hero.');
     }
     this.playerInput = new PlayerInput(keyboard);
+    this.card = this.openingLines.length > 0 ? new OpeningCard(this, this.openingLines) : null;
   }
 
   override update(time: number, frameMs: number): void {
+    if (this.card !== null) {
+      this.holdForOpening(this.card);
+      return;
+    }
     const watching = playerIsWatching();
     if (this.fall !== null) {
       this.fall.age(frameMs);
@@ -188,6 +203,22 @@ export class PlayScene extends Phaser.Scene {
     this.draw(view, watching, time);
     if (view.phase === 'playing') {
       this.lastPlaying = view;
+    }
+  }
+
+  /**
+   * One frame of the opening. The game is held: no step runs, and nothing the player presses reaches it. Enter ends the
+   * opening, and the screen fades in on the hero. The walk keys are read again from the next frame, and a New Game is
+   * saved even now, so that a tab closed at the card brings back this game and not the old one.
+   */
+  private holdForOpening(card: OpeningCard): void {
+    this.autosave([]);
+    const { confirm } = this.playerInput.pollMenu();
+    this.playerInput.pollActions();
+    if (confirm) {
+      card.hide();
+      this.card = null;
+      this.cameras.main.fadeIn(OPENING_FADE_MS, 0, 0, 0);
     }
   }
 

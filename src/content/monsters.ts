@@ -5,16 +5,14 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // A placeholder chaser: slow enough to outrun, it takes three hits from the hero's basic sword. It notices the hero
   // from four tiles away, winds up for half a second, hits for 4 (3 after the hero's Defense) and rests before the next.
   // It is worth 5 Experience, a placeholder like the rest of the numbers until the tuning pass. Now and then it leaves
-  // two arrows behind when it is defeated, and more rarely a Healing Potion.
+  // a Healing Potion behind when it is defeated. It leaves no arrows: the crabs of the shipwreck coast meet a hero who
+  // has no bow yet, and a spitter, which shoots them, carries them instead.
   crab: {
     behavior: 'chaser',
     health: 3,
     size: 0.75,
     experience: 5,
-    drops: [
-      { consumable: 'ammunition', chance: 0.25, amount: 2 },
-      { consumable: 'healing-potion', chance: 0.15, amount: 1 },
-    ],
+    drops: [{ consumable: 'healing-potion', chance: 0.15, amount: 1 }],
     damage: 4,
     speedTilesPerSecond: 1.5,
     noticingDistance: 4,
@@ -44,12 +42,14 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // away when the hero comes nearer, until a wall is at its back. It winds up for 0.8 s with a flash on its body, then
   // fires along the row or column that the hero stood in, a projectile slower than the hero's walk that hits for 4 (3
   // after Defense) and falls six tiles on. It rests for 1.5 s. It is frail: two hits from the sword, one arrow of the
-  // short bow, and worth 6 Experience. Leave out `keepsDistance` and it stands still where it is placed.
+  // short bow, and worth 6 Experience. Now and then it leaves two arrows behind when it is defeated: it carries what it
+  // shoots. Leave out `keepsDistance` and it stands still where it is placed.
   spitter: {
     behavior: 'ranged',
     health: 2,
     size: 0.6,
     experience: 6,
+    drops: [{ consumable: 'ammunition', chance: 0.25, amount: 2 }],
     noticingDistance: 5,
     windUpMs: 800,
     recoveryMs: 1500,

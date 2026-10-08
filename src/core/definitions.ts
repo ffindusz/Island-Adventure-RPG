@@ -394,6 +394,12 @@ export interface ContentDefinition {
   /** How long the text of an Adventure Area stays on screen, in milliseconds. Leave it out for the default of 4000. */
   readonly areaTextMs?: number;
   /**
+   * The opening: a short card the player reads once, as a new game begins and before the hero can move. Its lines, from
+   * 1 to 4, none of them blank; the caller wraps each to fit its screen. A game that is continued does not show it.
+   * Leave it out for none.
+   */
+  readonly opening?: readonly string[];
+  /**
    * How far from the hero's tile the Automap reveals terrain, in tiles: every tile whose middle is no farther than this
    * from the middle of the hero's tile. It is 0 or more: 0 reveals only the hero's own tile. Leave it out for the
    * default of 4. An exit is marked on the Automap once any tile of it is revealed, so under 1 an exit can be crossed
@@ -401,6 +407,12 @@ export interface ContentDefinition {
    */
   readonly automapRevealDistance?: number;
   readonly areas: readonly AreaDefinition[];
+  /**
+   * Whether loading insists that every Adventure Area, whatever its size, keeps the corner of the screen that the HUD
+   * covers (COVERED_CORNER) solid, so that a hero never stands where it is hidden. The game's own content says yes.
+   * Leave it out for no: the small maps of a test are not made for the HUD.
+   */
+  readonly checkCoveredCorner?: boolean;
   /** Where a new game begins: the hero stands at the centre of this tile, which must not be solid. */
   readonly start: { readonly area: string; readonly tile: Tile };
 }

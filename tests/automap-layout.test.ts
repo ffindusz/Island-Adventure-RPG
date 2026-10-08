@@ -68,7 +68,7 @@ function wide(row: number, left: number, midY: number): Place {
 
 describe('laying out the route of the Automap', () => {
   it('draws the maps as large as whole pixels per tile allow, side by side, with the names above them', () => {
-    // The coast and the trail of the game, with a name 118 pixels wide for the first and 91 for the second. At 5
+    // A map of 20 by 12 tiles and one of 30 by 20, with a name 118 pixels wide for the first and 91 for the second. At 5
     // pixels per tile the cards are 118 and 150 wide and need 288 with the gap, and under each other they are 200
     // high: neither fits, so the scale is 4.
     const layout = layoutRoute([area(20, 12, 118), area(30, 20, 91)], PAGE_SPACE, PAGE_METRICS);
@@ -292,7 +292,7 @@ describe('the pixels of a map', () => {
   });
 
   it('puts an exit where its zone is in the map, as large as the zone', () => {
-    // The coast's exit to the trail: the 1 x 2 tiles at column 19 and row 5.
+    // An exit on the east edge of a 20 by 12 map: the 1 x 2 tiles at column 19 and row 5.
     const zone = { minX: 19, minY: 5, maxX: 20, maxY: 7 };
 
     expect(exitRect(zone, { left: 50, top: 79, width: 80, height: 48 }, 4, 3)).toEqual({

@@ -8,7 +8,7 @@ import { loadContent } from './content';
 import { equipGear } from './gear';
 import type { Direction } from './geometry';
 import { heroInteracts } from './interactables';
-import type { Game, GameOptions } from './interface';
+import type { Game, GameEvent, GameOptions } from './interface';
 import { reachMilestones } from './milestones';
 import { walkHero } from './movement';
 import { closePage, openPage } from './pages';
@@ -30,11 +30,13 @@ export function createGame(options: GameOptions): Game {
   return {
     send(command) {
       switch (command.type) {
-        case 'new-game':
+        case 'new-game': {
           state = newPlayState(content);
           held = [];
           revealAroundHero(state, content);
-          return enterArea(state, content);
+          const opening: GameEvent[] = content.opening === null ? [] : [{ type: 'opening', lines: content.opening }];
+          return [...opening, ...enterArea(state, content)];
+        }
         case 'continue':
           state = copyState(command.snapshot.state);
           held = [];

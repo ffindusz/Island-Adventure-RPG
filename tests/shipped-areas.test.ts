@@ -3,6 +3,7 @@ import { gameContent } from '../src/content';
 import { STEPS_PER_SECOND, createGame } from '../src/core';
 import type { AreaDefinition, Direction, EntranceDefinition, Game, GameEvent, TileRect } from '../src/core';
 import { advance, fixedRandom, playingView } from './fixtures';
+import { keyOf, neighboursOf, openTilesOf } from './routes';
 
 // What must hold for the Adventure Areas the game ships with and the ways between them. The rules of moving between
 // areas are tested on purpose-built content (area-connections.test.ts), so that changing what ships never breaks them.
@@ -77,26 +78,25 @@ function tilesOf(zone: TileRect): { col: number; row: number }[] {
   return tiles;
 }
 
-/** The walkable tiles, as "col,row", that no path of walkable tiles leads to from the first entrance. */
+/** The tiles the hero can stand on, as "col,row", that no path of such tiles leads to from the first entrance. A chest is solid like rock. */
 function unreachableTiles(area: AreaDefinition): string[] {
   const first = area.entrances?.[0];
   if (first === undefined) {
     throw new Error(`The Adventure Area "${area.id}" has no entrance`);
   }
-  const key = (col: number, row: number): string => `${col},${row}`;
-  const reached = new Set([key(first.tile.col, first.tile.row)]);
+  const isOpen = openTilesOf(gameContent, area);
+  const reached = new Set([keyOf(first.tile)]);
   const frontier = [first.tile];
-  for (const { col, row } of frontier) {
-    for (const [stepCol, stepRow] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-      const next = { col: col + stepCol, row: row + stepRow };
-      if (isWalkable(area, next.col, next.row) && !reached.has(key(next.col, next.row))) {
-        reached.add(key(next.col, next.row));
+  for (const tile of frontier) {
+    for (const next of neighboursOf(tile)) {
+      if (isOpen(next) && !reached.has(keyOf(next))) {
+        reached.add(keyOf(next));
         frontier.push(next);
       }
     }
   }
   return area.layout.flatMap((line, row) =>
-    [...line].flatMap((_, col) => (isWalkable(area, col, row) && !reached.has(key(col, row)) ? [key(col, row)] : [])),
+    [...line].flatMap((_, col) => (isOpen({ col, row }) && !reached.has(keyOf({ col, row })) ? [keyOf({ col, row })] : [])),
   );
 }
 
@@ -113,7 +113,7 @@ describe('the Adventure Areas the game ships with', () => {
   });
 
   it('leads east from the coast into the second area, where the hero arrives at the entrance the exit names', () => {
-    const game = gameBeginningAt(COAST, 17, 5);
+    const game = gameComingInBy(COAST, 'from-trail');
 
     const events = walkThroughExit(game, 'right');
 
@@ -145,7 +145,7 @@ describe('the Adventure Areas the game ships with', () => {
   });
 
   it('shows the text of an area the first time the hero comes in, and not on a later visit', () => {
-    const game = gameBeginningAt(COAST, 17, 5);
+    const game = gameComingInBy(COAST, 'from-trail');
     const trailText = areaNamed(TRAIL).text;
 
     walkThroughExit(game, 'right');
@@ -188,7 +188,7 @@ describe('the Adventure Areas the game ships with', () => {
   });
 
   it('touches the Checkpoint of the trail when the hero comes in from the coast', () => {
-    const game = gameBeginningAt(COAST, 17, 5);
+    const game = gameComingInBy(COAST, 'from-trail');
 
     const events = walkThroughExit(game, 'right');
 
@@ -208,9 +208,37 @@ describe('the Adventure Areas the game ships with', () => {
   });
 
   it.each(gameContent.areas.map((area) => area.id))(
-    'lets the hero walk from the first entrance of %s to every walkable tile in it',
+    'lets the hero walk from the first entrance of %s to every tile in it that is not solid, a chest being solid like rock',
     (id) => {
       expect(unreachableTiles(areaNamed(id))).toEqual([]);
     },
   );
+
+  it.each(gameContent.areas.map((area) => area.id))('leaves room to stand next to every chest of %s', (id) => {
+    const area = areaNamed(id);
+    const isOpen = openTilesOf(gameContent, area);
+
+    const walledIn = (area.interactables ?? []).filter(
+      (item) => item.kind === 'chest' && !neighboursOf(item.tile).some(isOpen),
+    );
+
+    expect(walledIn.map((chest) => chest.id)).toEqual([]);
+  });
+
+  it.each(gameContent.areas.map((area) => area.id))(
+    'keeps every chest and pickup of %s off its entrances, where the hero comes in',
+    (id) => {
+      const area = areaNamed(id);
+      const entrances = new Set((area.entrances ?? []).map(({ tile }) => keyOf(tile)));
+
+      const onEntrance = (area.interactables ?? []).filter((item) => entrances.has(keyOf(item.tile)));
+
+      expect(onEntrance.map((item) => item.id)).toEqual([]);
+    },
+  );
+
+  it('asks for the top-left corner of every area, which the HUD covers, to be solid: the areas it ships with are', () => {
+    expect(gameContent.checkCoveredCorner).toBe(true);
+    expect(() => createGame({ content: gameContent, random: fixedRandom })).not.toThrow();
+  });
 });

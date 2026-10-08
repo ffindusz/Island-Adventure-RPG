@@ -19,9 +19,9 @@ const PADDING = 4;
 
 /**
  * How much of the screen the HUD covers, in canvas pixels: a deliberate pair of numbers, so that growing the HUD is a
- * decision. An area bigger than the screen keeps the corner under the HUD solid (COVERED_CORNER in the Game core), so
- * that nothing walkable hides there, and `checkHudFootprint` refuses to start the game while the HUD is bigger than
- * that corner.
+ * decision. Every area keeps the corner under the HUD solid (COVERED_CORNER in the Game core, which the game's content
+ * asks the loader to check), so that nothing walkable hides there, and `checkHudFootprint` refuses to start the game
+ * while the HUD is bigger than that corner.
  */
 export const HUD_WIDTH = 88;
 export const HUD_HEIGHT = 46;
