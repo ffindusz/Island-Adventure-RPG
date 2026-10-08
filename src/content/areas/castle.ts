@@ -83,4 +83,14 @@ export const castle: AreaDefinition = {
   ],
   // The great gateway: the passage from the great hall into the last hall, two tiles wide, which every way on takes.
   milestones: [{ id: 'great-gateway', zone: { col: 57, row: 11, width: 1, height: 2 }, reward: { experience: 3 } }],
+  interactables: [
+    // The Knight's Armor, in a chest at the back of the small armory off the long hall, a few steps from the route,
+    // where the hero passes it long before the knight of the great hall notices it.
+    {
+      kind: 'chest',
+      id: 'castle-armor-chest',
+      tile: { col: 19, row: 12 },
+      contents: { kind: 'gear', gear: 'knight-armor' },
+    },
+  ],
 };

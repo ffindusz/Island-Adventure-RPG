@@ -1,16 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import { monsterColour, terrainColour } from '../src/adapter/art';
 import { gameContent } from '../src/content';
-import { createGame } from '../src/core';
-import type { AreaDefinition, Game, MonsterTypeDefinition, Tile, TileRect } from '../src/core';
-import { fixedRandom, newGame, playingView } from './fixtures';
+import { GEAR_SLOTS, createGame } from '../src/core';
+import type {
+  AreaDefinition,
+  ChestDefinition,
+  Game,
+  GameEvent,
+  MonsterTypeDefinition,
+  Tile,
+  TileRect,
+} from '../src/core';
+import { face, fixedRandom, newGame, playingView } from './fixtures';
 import {
+  directionBetween,
   distanceBetween,
   experienceOfAll,
   isInZone,
   keyOf,
   metOn,
   milestonesOf,
+  neighboursOf,
   noticingOf,
   openTilesOf,
   routeBetween,
@@ -55,6 +65,9 @@ const LAST_HALL_REACH = 4;
 
 /** Two colours are set apart when they lie this far from each other, at least, in the cube of red, green and blue (0 to 255 each). */
 const LEAST_COLOUR_GAP = 50;
+
+/** A chest is near the route when the walk to it from the route is this many tiles at most: a step aside, not a trip. */
+const MOST_NEARBY = 4;
 
 function definitionOf(id: string): AreaDefinition {
   const area = gameContent.areas.find((candidate) => candidate.id === id);
@@ -155,6 +168,69 @@ function inOpenBlock({ col, row }: Tile): boolean {
 /** How far apart two colours, given as 0xRRGGBB, lie in the cube of red, green and blue. */
 function colourGap(one: number, other: number): number {
   return Math.hypot(...[16, 8, 0].map((shift) => ((one >> shift) & 0xff) - ((other >> shift) & 0xff)));
+}
+
+const chests = (castle.interactables ?? []).flatMap((item) => (item.kind === 'chest' ? [item] : []));
+const onRoute = new Set((route ?? []).map(keyOf));
+
+function gearSlotOf({ contents }: ChestDefinition): string | undefined {
+  return contents.kind === 'gear' ? gameContent.gear[contents.gear]?.slot : undefined;
+}
+
+/** The ids of the Gear that the chests of an area hold. */
+function gearInChestsOf(area: AreaDefinition): string[] {
+  return (area.interactables ?? []).flatMap((item) =>
+    item.kind === 'chest' && item.contents.kind === 'gear' ? [item.contents.gear] : [],
+  );
+}
+
+function chestThat(what: string, matches: (chest: ChestDefinition) => boolean): ChestDefinition {
+  const found = chests.find(matches);
+  if (found === undefined) {
+    throw new Error(`The castle has no ${what}`);
+  }
+  return found;
+}
+
+/** The shortest walk over open ground from a spot to the route, or null when there is none. */
+function walkToRoute(spot: Tile): Tile[] | null {
+  return routeBetween(isOpen, spot, (tile) => onRoute.has(keyOf(tile)));
+}
+
+/** How far along the route a spot lies: the place of the route tile that is the shortest walk from it, or null when it cannot be walked to. */
+function placeOnRoute(spot: Tile): number | null {
+  const reached = walkToRoute(spot)?.at(-1);
+  return reached === undefined ? null : (route ?? []).findIndex((tile) => keyOf(tile) === keyOf(reached));
+}
+
+/** How many tiles of walking lie between the route and a spot, or null when the spot cannot be walked to. */
+function detourFromRoute(spot: Tile): number | null {
+  const walkBack = walkToRoute(spot);
+  return walkBack === null ? null : walkBack.length - 2;
+}
+
+/** The hero walks from where it stands to a spot beside a chest over open ground, faces the chest and uses Interact. */
+function openChest(game: Game, chest: ChestDefinition): readonly GameEvent[] {
+  const { x, y } = playingView(game).hero.position;
+  const from = { col: Math.floor(x), row: Math.floor(y) };
+  const walk = routeBetween(isOpen, from, (tile) => neighboursOf(tile).some((next) => keyOf(next) === keyOf(chest.tile)));
+  if (walk === null) {
+    throw new Error(`The hero cannot walk to a spot beside the chest "${chest.id}"`);
+  }
+  walkRoute(game, walk);
+  face(game, directionBetween(walk.at(-1) ?? from, chest.tile));
+  return game.send({ type: 'interact' });
+}
+
+/** The event that says the hero took what a chest holds. */
+function pickupFrom({ contents }: ChestDefinition): unknown {
+  return expect.objectContaining({
+    type: 'pickup',
+    item:
+      contents.kind === 'gear'
+        ? expect.objectContaining({ kind: 'gear', id: contents.gear })
+        : { kind: 'consumable', id: contents.consumable, amount: contents.amount },
+  });
 }
 
 describe('the five Adventure Areas', () => {
@@ -358,6 +434,64 @@ describe('the undead of the castle', () => {
 
     expect(undead.length).toBeGreaterThan(0);
     expect(killing).toEqual([]);
+  });
+});
+
+describe('the armor of the castle', () => {
+  /** The chest of armor that the hero can walk to with every door shut. */
+  const armorChest = (): ChestDefinition =>
+    chestThat('chest of armor that the hero can reach', (chest) => gearSlotOf(chest) === 'armor' && placeOnRoute(chest.tile) !== null);
+
+  const gearOf = ({ contents }: ChestDefinition): string => (contents.kind === 'gear' ? contents.gear : '');
+
+  it('keeps an armor upgrade in a chest near the route: a step aside of a few tiles, not a trip', () => {
+    const detour = detourFromRoute(armorChest().tile);
+
+    expect(detour).not.toBeNull();
+    expect(detour ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(MOST_NEARBY);
+  });
+
+  it('is an upgrade: it adds more than any armor the hero begins with or finds on the coast, in the woods, on the mountain and in the cave', () => {
+    const upgrade = gameContent.gear[gearOf(armorChest())];
+    const others = [
+      ...GEAR_SLOTS.flatMap((slot) => gameContent.hero.startingGear[slot] ?? []),
+      ...[COAST, WOODS, MOUNTAIN, CAVE].flatMap((id) => gearInChestsOf(definitionOf(id))),
+    ].flatMap((id) => gameContent.gear[id] ?? []);
+
+    const best = Math.max(0, ...others.filter((gear) => gear.slot === 'armor').map((gear) => gear.bonus));
+
+    expect(upgrade, 'the Gear in the chest of armor').toBeDefined();
+    expect(upgrade?.bonus ?? 0).toBeGreaterThan(best);
+  });
+
+  it('is found before the tougher undead is met: the chest lies on the way before the first place where that undead notices the hero', () => {
+    const firstMet = (route ?? []).findIndex((tile) =>
+      toughUndead.some((one) => distanceBetween(tile, one.tile) <= noticingOf(gameContent, one)),
+    );
+
+    expect(firstMet, 'a place on the route where the tougher undead notices the hero').toBeGreaterThan(-1);
+    expect(placeOnRoute(armorChest().tile) ?? Number.POSITIVE_INFINITY).toBeLessThan(firstMet);
+  });
+
+  it('lets the hero walk to the chest, open it and wear the armor, which raises Defense by what it adds', () => {
+    const game = quietGameAt(CASTLE, wayInTile);
+    const chest = armorChest();
+    const defense = (): number => {
+      const { page } = playingView(game);
+      if (page?.id !== 'inventory') {
+        throw new Error('The inventory page is not open');
+      }
+      return page.defense;
+    };
+
+    const events = openChest(game, chest);
+    game.send({ type: 'open-page', page: 'inventory' });
+    const before = defense();
+    game.send({ type: 'equip', gearId: gearOf(chest) });
+
+    expect(events).toContainEqual({ type: 'chest-opened', chestId: chest.id });
+    expect(events).toContainEqual(pickupFrom(chest));
+    expect(defense() - before).toBe(gameContent.gear[gearOf(chest)]?.bonus);
   });
 });
 

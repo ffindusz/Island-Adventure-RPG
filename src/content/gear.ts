@@ -6,8 +6,9 @@ import type { GearDefinition } from '../core';
  * adds to the Attack of its arrows, and may find the long bow, which adds more, behind the locked door of the cabin in
  * the woods. It may find the Chain Mail in the woods too, and the Plate Armor, which adds one more Defense than the
  * Chain Mail, in an alcove of the mountain a few steps off the trail. In the cave it may find the Katana, which adds
- * one more Attack than the Steel Sword, in the pocket behind the gate that a lever opens. The upgrades are placeholders
- * until the tuning pass.
+ * one more Attack than the Steel Sword, in the pocket behind the gate that a lever opens. In the old castle it may find
+ * the Knight's Armor, which adds one more Defense than the Plate Armor, in the armory beside the long hall, a few steps
+ * off the route. The upgrades are placeholders until the tuning pass.
  */
 export const gear: Readonly<Record<string, GearDefinition>> = {
   'basic-sword': { name: 'Basic Sword', slot: 'melee-weapon', bonus: 0 },
@@ -16,6 +17,7 @@ export const gear: Readonly<Record<string, GearDefinition>> = {
   katana: { name: 'Katana', slot: 'melee-weapon', bonus: 2 },
   'chain-mail': { name: 'Chain Mail', slot: 'armor', bonus: 1 },
   'plate-armor': { name: 'Plate Armor', slot: 'armor', bonus: 2 },
+  'knight-armor': { name: "Knight's Armor", slot: 'armor', bonus: 3 },
   'short-bow': { name: 'Short Bow', slot: 'ranged-weapon', bonus: 1 },
   'long-bow': { name: 'Long Bow', slot: 'ranged-weapon', bonus: 2 },
 };

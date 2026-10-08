@@ -8,7 +8,7 @@ import { CONSUMABLE_IDS } from '../core';
 import type { ConsumableId, ContentDefinition } from '../core';
 import { drawn, image, sheet } from './asset-manifest';
 import type { ArtManifest } from './asset-manifest';
-import { MAIL_ROWS, PACK_PALETTE, PLATE_ROWS, TUNIC_ROWS } from './drawn-icons';
+import { KNIGHT_ROWS, MAIL_ROWS, PACK_PALETTE, PLATE_ROWS, TUNIC_ROWS } from './drawn-icons';
 
 export const ARTWORK = {
   // The hero is the Hunter: a 4 by 7 sheet of 16 pixel cells, see hero-sprite.ts for which cell is which.
@@ -26,6 +26,7 @@ export const ARTWORK = {
   'gear-basic-armor': drawn(TUNIC_ROWS, PACK_PALETTE),
   'gear-chain-mail': drawn(MAIL_ROWS, PACK_PALETTE),
   'gear-plate-armor': drawn(PLATE_ROWS, PACK_PALETTE),
+  'gear-knight-armor': drawn(KNIGHT_ROWS, PACK_PALETTE),
   'consumable-ammunition': image('consumable-ammunition.png'),
   'consumable-healing-potion': image('consumable-healing-potion.png'),
   // The icon of every key, in the notice of finding one and in the inventory page.
