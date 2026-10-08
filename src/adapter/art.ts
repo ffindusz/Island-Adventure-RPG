@@ -1,23 +1,14 @@
 import type Phaser from 'phaser';
-import type {
-  AreaView,
-  Box,
-  CheckpointView,
-  ChestView,
-  ConsumableId,
-  Direction,
-  ExitView,
-  InteractableView,
-  MonsterView,
-  PickupView,
-  Point,
-} from '../core';
+import type { AreaView, Box, Direction, InteractableView, MonsterView, Point } from '../core';
 import { TILE_SIZE } from './config';
-import { drawDoor, drawGate, drawKey, drawLever, drawSign } from './device-art';
+import { drawGate, drawLever } from './device-art';
 
-// The placeholder look of what is not yet real art: flat shapes drawn from the state view. The ground, the Checkpoints,
-// the chests, the pickups, the monsters and their projectiles are still drawn here. The hero and its arrows are sprites
-// (hero-sprite.ts). The rest of the adapter only calls the draw functions below.
+// The flat shapes of what has no picture yet, and the colours of every kind of terrain and type of monster. Drawn here
+// from the state view: the ground and the monsters of an area whose art is not final, the gates and the levers of the
+// light puzzles, and the telegraphs and the strikes of the monster attacks, which stay flat shapes. The pictures are
+// elsewhere: the baked ground (terrain-baker.ts), the monsters of final art and what they shoot (monster-sprites.ts,
+// projectile-sprites.ts), the props every area shares (prop-sprites.ts), and the hero and its arrows (hero-sprite.ts).
+// The rest of the adapter only calls the draw functions below.
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -48,19 +39,7 @@ const HIT_FLASH_COLOUR = 0xffffff;
 const HEALTH_COLOUR = 0x7bd35f;
 const TELEGRAPH_COLOUR = 0xe0392e;
 const STRIKE_COLOUR = 0xff8a3d;
-const CHEST_COLOUR = 0xa0692b;
-const CHEST_OPENED_COLOUR = 0x5a3a1a;
-const CHEST_INSIDE_COLOUR = 0x1a0f06;
-const CHEST_LATCH_COLOUR = 0xf2c94c;
-const CACHE_COLOUR = 0x6b7a3a;
-const CACHE_ARROW_COLOUR = 0xe8d8a8;
-const CACHE_ARROW_HEAD_COLOUR = 0xffffff;
-const POTION_CRATE_COLOUR = 0x7b5b8c;
-const FLASK_GLASS_COLOUR = 0xcfe8f0;
-const FLASK_LIQUID_COLOUR = 0xe0455f;
-const FLASK_SHINE_COLOUR = 0xffffff;
 const WIND_UP_COLOUR = 0xff6b5b;
-const EXIT_COLOUR = 0xbfeaff;
 
 /** A monster that warns by flashing alternates on and off over this many equal parts of its wind-up, ending on. */
 const WIND_UP_FLASH_PARTS = 7;
@@ -130,71 +109,17 @@ export function drawTerrain(graphics: Graphics, area: AreaView): void {
 }
 
 /**
- * Marks where the hero can leave the area: a pale, see-through patch with a bright edge, over the ground. Draw it
- * once per area, after the terrain, because exits do not change.
+ * Draws what the hero can interact with that has no picture yet: the gates and the levers of the light puzzles, as flat
+ * shapes. The rest has its picture (prop-sprites.ts), so a kind drawn there is listed here to say that it is not forgotten:
+ * a new kind of interactable does not compile until it is listed in both.
  */
-export function drawExits(graphics: Graphics, exits: readonly ExitView[]): void {
-  for (const exit of exits) {
-    const rect = zoneRect(exit.zone);
-    graphics.fillStyle(EXIT_COLOUR, 0.3);
-    graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
-    graphics.fillStyle(EXIT_COLOUR, 0.9);
-    graphics.fillRect(rect.x, rect.y, rect.width, 1);
-    graphics.fillRect(rect.x, rect.y + rect.height - 1, rect.width, 1);
-    graphics.fillRect(rect.x, rect.y + 1, 1, rect.height - 2);
-    graphics.fillRect(rect.x + rect.width - 1, rect.y + 1, 1, rect.height - 2);
-  }
-}
-
-/** The post and flag of a Checkpoint, the pale glow under the one that is active, and the grey flag of the others. */
-const CHECKPOINT_POST_COLOUR = 0x5a3a1a;
-const CHECKPOINT_ACTIVE_COLOUR = 0xffd34d;
-const CHECKPOINT_IDLE_COLOUR = 0x8a8a9a;
-const CHECKPOINT_GLOW_COLOUR = 0xfff3a0;
-/** How far the post stands above its tile, so that the flag of the active one shows over a hero standing on it. */
-const CHECKPOINT_POST_RISE = 10;
-
-/**
- * Draws the Checkpoints of the area: a post with a flag. The one defeat sends the hero back to has its flag up in gold
- * at the top of the post, which rises above its tile so that the hero, who stands on it after a defeat and at the start,
- * does not hide it, on a pale glow; the others hang a grey flag half way down, so that they can be told apart without
- * the colours. Draw them every frame, before the hero and the monsters that walk over them, because which one is active
- * changes.
- */
-export function drawCheckpoints(graphics: Graphics, checkpoints: readonly CheckpointView[]): void {
-  for (const checkpoint of checkpoints) {
-    const tile = bodyRect(checkpoint.position, checkpoint.size);
-    if (checkpoint.active) {
-      graphics.fillStyle(CHECKPOINT_GLOW_COLOUR, 0.3);
-      graphics.fillRect(tile.x, tile.y, tile.width, tile.height);
-      graphics.fillStyle(CHECKPOINT_GLOW_COLOUR, 0.9);
-      graphics.fillRect(tile.x, tile.y, tile.width, 1);
-      graphics.fillRect(tile.x, tile.y + tile.height - 1, tile.width, 1);
-      graphics.fillRect(tile.x, tile.y + 1, 1, tile.height - 2);
-      graphics.fillRect(tile.x + tile.width - 1, tile.y + 1, 1, tile.height - 2);
-    }
-    const postTop = tile.y - CHECKPOINT_POST_RISE;
-    const post = { x: tile.x + 3, y: postTop, width: 4, height: tile.y + tile.height - 1 - postTop };
-    fillWithOutline(graphics, post, CHECKPOINT_POST_COLOUR);
-    const flag = { x: tile.x + 6, y: checkpoint.active ? postTop + 1 : tile.y + 7, width: 8, height: 6 };
-    fillWithOutline(graphics, flag, checkpoint.active ? CHECKPOINT_ACTIVE_COLOUR : CHECKPOINT_IDLE_COLOUR);
-  }
-}
-
-/** Draws what the hero can interact with or walk onto. Real art replaces this, one kind at a time. */
 export function drawInteractable(graphics: Graphics, interactable: InteractableView): void {
   switch (interactable.kind) {
     case 'chest':
-      drawChest(graphics, interactable);
-      return;
     case 'pickup':
-      drawPickup(graphics, interactable);
-      return;
     case 'key':
-      drawKey(graphics, interactable);
-      return;
     case 'door':
-      drawDoor(graphics, interactable);
+    case 'sign':
       return;
     case 'gate':
       drawGate(graphics, interactable);
@@ -202,103 +127,6 @@ export function drawInteractable(graphics: Graphics, interactable: InteractableV
     case 'lever':
       drawLever(graphics, interactable);
       return;
-    case 'sign':
-      drawSign(graphics, interactable);
-      return;
-  }
-}
-
-/** The colour of a closed crate, by the consumable it holds. */
-const CRATE_COLOURS: Readonly<Record<ConsumableId, number>> = {
-  ammunition: CACHE_COLOUR,
-  'healing-potion': POTION_CRATE_COLOUR,
-};
-
-/** What a closed crate shows of the consumable in it, drawn on its body. A new consumable needs a look here. */
-const CRATE_MARKS: Readonly<Record<ConsumableId, (graphics: Graphics, body: Rect) => void>> = {
-  ammunition: drawArrowsInCrate,
-  'healing-potion': (graphics, body) =>
-    drawFlask(graphics, shrunk(body, Math.round(body.width / 4), Math.round(body.height / 6)), false),
-};
-
-/**
- * A closed chest is a brown box with a gold latch on its lid. A cache is a crate with what it holds on it: arrows
- * standing in a green one, a flask in a purple one. Once opened any of them is dark, with an empty inside.
- */
-function drawChest(graphics: Graphics, chest: ChestView): void {
-  const body = bodyRect(chest.position, chest.size);
-  const lidY = body.y + Math.floor(body.height * 0.4);
-  const closedColour = chest.holds === 'gear' ? CHEST_COLOUR : CRATE_COLOURS[chest.holds];
-  fillWithOutline(graphics, body, chest.opened ? CHEST_OPENED_COLOUR : closedColour);
-  if (chest.opened) {
-    graphics.fillStyle(CHEST_INSIDE_COLOUR);
-    graphics.fillRect(body.x + 2, body.y + 2, body.width - 4, lidY - body.y - 2);
-    return;
-  }
-  if (chest.holds !== 'gear') {
-    CRATE_MARKS[chest.holds](graphics, body);
-    return;
-  }
-  graphics.fillStyle(OUTLINE_COLOUR);
-  graphics.fillRect(body.x + 1, lidY, body.width - 2, 1);
-  graphics.fillStyle(CHEST_LATCH_COLOUR);
-  graphics.fillRect(body.x + Math.floor(body.width / 2) - 2, lidY - 1, 4, 4);
-}
-
-/** What a loose pickup looks like on its tile, by the consumable it is. A new consumable needs a look here. */
-const PICKUP_LOOKS: Readonly<Record<ConsumableId, (graphics: Graphics, tile: Rect) => void>> = {
-  ammunition: (graphics, tile) => {
-    const crate = shrunk(tile, 3, 3);
-    fillWithOutline(graphics, crate, CACHE_COLOUR);
-    drawArrowsInCrate(graphics, crate);
-  },
-  'healing-potion': (graphics, tile) => drawFlask(graphics, shrunk(tile, 3, 2), true),
-};
-
-/** A loose pickup is the consumable itself, lying on its tile: a flask, or a small crate of arrows. */
-function drawPickup(graphics: Graphics, pickup: PickupView): void {
-  PICKUP_LOOKS[pickup.consumable](graphics, bodyRect(pickup.position, pickup.size));
-}
-
-/** The rectangle with `across` pixels taken off each side and `down` off the top and the bottom. A negative amount adds. */
-function shrunk(rect: Rect, across: number, down: number): Rect {
-  return { x: rect.x + across, y: rect.y + down, width: rect.width - 2 * across, height: rect.height - 2 * down };
-}
-
-/** A flask of red liquid with a cork, a narrow neck over a wide belly, filling the rectangle; outlined on request. */
-function drawFlask(graphics: Graphics, area: Rect, outlined: boolean): void {
-  const neckWidth = Math.max(2, Math.round(area.width * 0.4));
-  const bellyTop = area.y + Math.round(area.height * 0.4);
-  const neck = {
-    x: area.x + Math.floor((area.width - neckWidth) / 2),
-    y: area.y,
-    width: neckWidth,
-    height: bellyTop - area.y,
-  };
-  const belly = { x: area.x, y: bellyTop, width: area.width, height: area.y + area.height - bellyTop };
-  if (outlined) {
-    graphics.fillStyle(OUTLINE_COLOUR);
-    graphics.fillRect(neck.x - 1, neck.y - 1, neck.width + 2, neck.height + 2);
-    graphics.fillRect(belly.x - 1, belly.y - 1, belly.width + 2, belly.height + 2);
-  }
-  graphics.fillStyle(FLASK_GLASS_COLOUR);
-  graphics.fillRect(neck.x, neck.y, neck.width, neck.height);
-  graphics.fillStyle(CHEST_COLOUR);
-  graphics.fillRect(neck.x, neck.y, neck.width, Math.min(2, neck.height));
-  graphics.fillStyle(FLASK_LIQUID_COLOUR);
-  graphics.fillRect(belly.x, belly.y, belly.width, belly.height);
-  graphics.fillStyle(FLASK_SHINE_COLOUR);
-  graphics.fillRect(belly.x + 1, belly.y + 1, 1, Math.max(1, belly.height - 3));
-}
-
-/** Three arrows standing in a crate, their heads up. */
-function drawArrowsInCrate(graphics: Graphics, body: Rect): void {
-  for (const share of [1, 2, 3]) {
-    const x = body.x + Math.round((body.width * share) / 4) - 1;
-    graphics.fillStyle(CACHE_ARROW_COLOUR);
-    graphics.fillRect(x, body.y + 3, 2, body.height - 6);
-    graphics.fillStyle(CACHE_ARROW_HEAD_COLOUR);
-    graphics.fillRect(x, body.y + 3, 2, 2);
   }
 }
 

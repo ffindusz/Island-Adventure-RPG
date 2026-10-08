@@ -46,6 +46,15 @@ export const ARTWORK = {
   // fell (six frames of 32 pixels).
   'projectile-orb': sheet('projectile-orb.png', 16),
   'fx-puff': sheet('fx-puff.png', 32),
+  // What every area shares, see prop-sprites.ts for which frame is which: chests and caches (closed and open), what lies
+  // on the ground (plain and with a glint), the Checkpoint's flags (16 by 26 pixels), the marks of an exit (one way each),
+  // the door (shut and open) and the sign.
+  'prop-chest': sheet('prop-chest.png', 16),
+  'prop-pickup': sheet('prop-pickup.png', 16),
+  'prop-checkpoint': sheet('prop-checkpoint.png', 16, 26),
+  'prop-exit': sheet('prop-exit.png', 16),
+  'prop-door': sheet('prop-door.png', 16),
+  'prop-sign': image('prop-sign.png'),
   // The pieces the HUD and the pages are built from, see ui-layer.ts: a dark panel, the orange frame of a window, the
   // orange button behind the line the cursor is on, and the heart of Health.
   'ui-panel': image('ui-panel.png'),

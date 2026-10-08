@@ -8,13 +8,13 @@ How it is used:
 - The credits screen draws from the "Credits text" lines of entries that are "In use".
 - Rule from the spec: every graphics and audio asset must permit public and commercial use.
 
-Last updated: 2026-10-08. The user approved the Ninja Adventure pack as the art base on 2026-10-07 (ADR 0004). Ticket 22 copied the first asset files into the repository (the hero, its weapons, the item icons and the pieces of the HUD and the windows; see A1 "Used so far"). Ticket 13 added the icon of the key, and ticket 15 the icon of the Long Bow. Ticket 23 added the final art of the shipwreck coast and the woods, composed from pieces of the pack by `docs\assets\compose-art.py`. Nothing else is in use yet.
+Last updated: 2026-10-08. The user approved the Ninja Adventure pack as the art base on 2026-10-07 (ADR 0004). Ticket 22 copied the first asset files into the repository (the hero, its weapons, the item icons and the pieces of the HUD and the windows; see A1 "Used so far"). Ticket 13 added the icon of the key, and ticket 15 the icon of the Long Bow. Ticket 23 added the final art of the shipwreck coast and the woods, and the pictures every area shares (chests and caches, pickups, Checkpoints, exits, signs and doors), composed from pieces of the pack by `docs\assets\compose-art.py`. Nothing else is in use yet.
 
 ## Summary
 
 | ID | Source | Licence | Checked | Status |
 | --- | --- | --- | --- | --- |
-| A1 | Ninja Adventure Asset Pack: art, audio, and the other files | CC0 1.0 Universal | 2026-10-06, re-read 2026-10-07 | Approved base on 2026-10-07 (ADR 0004); in use: the hero, its weapons, the item icons and the interface pieces (ticket 22), the key icon (ticket 13), the Long Bow icon (ticket 15), and the terrain and the monsters of the shipwreck coast and the woods, composed from pack pieces (ticket 23) |
+| A1 | Ninja Adventure Asset Pack: art, audio, and the other files | CC0 1.0 Universal | 2026-10-06, re-read 2026-10-07 | Approved base on 2026-10-07 (ADR 0004); in use: the hero, its weapons, the item icons and the interface pieces (ticket 22), the key icon (ticket 13), the Long Bow icon (ticket 15), and the terrain and the monsters of the shipwreck coast and the woods, and the chests, pickups, Checkpoints, exits, signs and doors of every area, composed from pack pieces (ticket 23) |
 | A2 | Ninja Adventure `Ui\Font\NormalFont.ttf` | FontStruct Non-Commercial License (embedded in the font file), conflicting with the pack's CC0 claim | 2026-10-07 | Do not use; replaced by the project's own bitmap font, which is no file (ticket 22) |
 | A3 | Ninja Adventure `Ui\Input` and `Ui\Skill Icon` | Covered only by the pack's blanket CC0 claim; no separate provenance | 2026-10-07 | Not needed; avoid |
 | S1 | Kenney Pirate Pack (shipwreck supplement candidate) | CC0 | 2026-10-06 | Candidate, poor style match |
@@ -70,6 +70,13 @@ Last updated: 2026-10-08. The user approved the Ninja Adventure pack as the art 
   - `projectile-orb.png`: the four frames of `FX\Projectile\EnergyBall.png`, the orb a spitter shoots, with its two colours `#8feff1` and `#79b8ce` changed to the purple `#e3a6ff` and `#a15fd8` of the spitter's cap, and the pack's dark outline `#141b1b` drawn round them by the recipe.
   - `fx-puff.png`: `FX\Smoke\Smoke\SpriteSheet.png` unchanged, the puff of smoke a monster leaves when it is defeated.
   - Not from the pack: in each monster sheet the white frame shown when the monster is hit is the shape of its first frame filled with white, and the red frame shown while it winds up is the same shape with its colours shifted to red (the dark outline kept). The recipe makes both.
+  - The pieces every area shares (`src\adapter\prop-sprites.ts`); these are in use in every area, not only the coast and the woods:
+  - `prop-chest.png`: six frames, the chest of Gear, the cache of ammunition and the cache of Healing Potions, each shut and then open. The chest is the two frames of `Items\Treasure\BigTreasureChest.png`. A cache is the pack's `Items\Object\CrateEmpty.png` with what it holds standing in it, and the open cache is the same crate empty: three arrows cut short from `Items\Weapons\Bow\Arrow.png` and stood upright, or two bottles of `Items\Potion\LifePot.png`.
+  - `prop-pickup.png`: six frames of what lies on the ground, each plain and then with a glint: the bottle of `Items\Potion\LifePot.png`, the two arrows of `Items\Projectile\Arrow.png` crossed (one of them mirrored), and `Items\Treasure\GoldKey.png`. Not from the pack: the glint, a plus of five white pixels set by the recipe.
+  - `prop-checkpoint.png`: five frames of a Checkpoint. The flag of the Checkpoint the hero has not touched is the first frame of `Backgrounds\Animated\Flag\FlagGray16x16.png`, hung half way down the pole; the four frames of the active Checkpoint are those of `Backgrounds\Animated\Flag\FlagRed16x16.png`, waving at the top. Not from the pack: the pole, four columns of the pack's own `#8f3e56` and `#141b1b`, drawn by the recipe.
+  - `prop-exit.png`: four frames of the mark of an exit, two arrowheads pointing up, down, left or right. Not from the pack: drawn entirely by the recipe, in the pack's white `#f2eaf1` with the pack's dark outline `#141b1b`; this project's own work, not a copy of a pack file.
+  - `prop-door.png`: two tiles of `TilesetHouse.png`, the arched door shut (column 8, row 3) and open (column 9, row 3). Not from the pack: the padlock on the shut door, a small picture of seven rows in the pack's `#141b1b`, `#ffad5d` and `#e66a3a`, stamped on by the recipe so that a shut door cannot be taken for a chest.
+  - `prop-sign.png`: the tile of `TilesetElement.png` in column 0, row 2, unchanged.
 - Later art tickets add what they copy in or compose to these lists, in the same commit as the files.
 
 ### A2. Ninja Adventure font `Ui\Font\NormalFont.ttf`: do not use

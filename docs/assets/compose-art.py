@@ -398,6 +398,114 @@ def monster_side(pack, folder, name):
     return monster_sheet([[right[i], right[i], left[i], right[i]] for i in range(2)])
 
 
+# ---------------------------------------------------------------------------------------------------------------------
+# What every area shares (src/adapter/prop-sprites.ts): chests and caches, pickups, Checkpoints, exits, signs and doors.
+# The cell of each is one tile with the picture standing at the foot of it; the Checkpoint's cell is taller.
+
+POLE = hexrgb('#8f3e56')
+CHECKPOINT_HEIGHT = 26
+GOLD_LOCK = {'A': OUTLINE, 'L': LIGHT, 'o': SEAM}
+LOCK_ROWS = ['.AAAA.', '.A..A.', 'AAAAAA', 'ALLLLA', 'ALAALA', 'AoAAoA', 'AAAAAA']
+CHEVRON_ROWS = ['XX.....', '.XX....', '..XX...', '...XX..', '....XX.', '...XX..', '..XX...', '.XX....', 'XX.....']
+
+
+def in_cell(frame, x, y, cell=(TILE, TILE)):
+    out = Image.new('RGBA', cell, (0, 0, 0, 0))
+    out.alpha_composite(frame, (x, y))
+    return out
+
+
+def stamp(img, rows, colours, x, y):
+    """Sets the pixels of a picture of letters, one colour per letter and `.` for none, with its corner at x, y."""
+    surface = img.load()
+    for dy, row in enumerate(rows):
+        for dx, letter in enumerate(row):
+            if letter != '.':
+                surface[x + dx, y + dy] = (*colours[letter], 255)
+
+
+def stocked_crate(crate, things):
+    """The crate with `things`, as (picture, x, y), standing in it: its near wall is drawn over their feet."""
+    out = crate.copy()
+    for picture, x, y in things:
+        out.alpha_composite(picture, (x, y))
+    out.alpha_composite(crate.crop((0, 10, TILE, TILE)), (0, 10))
+    return out
+
+
+def chest_sheet(pack):
+    """Six frames: the chest of Gear, the cache of ammunition and the cache of potions, each closed and then open. A cache
+    is the pack's empty crate with what it holds standing in it; opened, it is empty (G5 of the inventory)."""
+    big = pack.image('Items', 'Treasure', 'BigTreasureChest.png')
+    gear = [in_cell(big.crop((i * TILE, 0, (i + 1) * TILE, 14)), 0, 2) for i in range(2)]
+    empty = in_cell(pack.image('Items', 'Object', 'CrateEmpty.png'), 0, 1)
+    arrow = pack.image('Items', 'Weapons', 'Bow', 'Arrow.png').transpose(Image.ROTATE_90).crop((0, 0, 5, 10))
+    pot = pack.image('Items', 'Potion', 'LifePot.png')
+    arrows = stocked_crate(empty, [(arrow, 1, 2), (arrow, 5, 0), (arrow, 10, 2)])
+    potions = stocked_crate(empty, [(pot, 0, 1), (pot, 7, 0)])
+    return frames_sheet([*gear, arrows, empty, potions, empty], 6)
+
+
+def twinkle(frame, x, y):
+    """The frame with a small glint at x, y: a plus of five white pixels."""
+    out = frame.copy()
+    paint(out, [(x, y), (x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)], (255, 255, 255))
+    return out
+
+
+def pickup_sheet(pack):
+    """Six frames, a Healing Potion, a bundle of arrows and a key, each plain and then with a glint: what lies on the ground."""
+    pot = in_cell(pack.image('Items', 'Potion', 'LifePot.png'), 3, 3)
+    arrow = pack.image('Items', 'Projectile', 'Arrow.png')
+    arrows = in_cell(arrow, 0, 0)
+    arrows.alpha_composite(arrow.transpose(Image.FLIP_LEFT_RIGHT), (0, 0))
+    key = in_cell(pack.image('Items', 'Treasure', 'GoldKey.png'), 2, 4)
+    return frames_sheet([pot, twinkle(pot, 12, 3), arrows, twinkle(arrows, 8, 2), key, twinkle(key, 13, 3)], 6)
+
+
+def flagpole(flag, drop):
+    """A Checkpoint: a pole as tall as the cell (a small touch: four columns of colour and its caps), with the pack's flag
+    hung on it `drop` pixels lower than the pack hung it."""
+    art = Image.new('RGBA', (TILE, CHECKPOINT_HEIGHT), (0, 0, 0, 0))
+    last = CHECKPOINT_HEIGHT - 1
+    paint(art, [(x, y) for y in range(4, last) for x in (3, 6)], OUTLINE)
+    paint(art, [(x, y) for y in range(5, last) for x in (4, 5)], POLE)
+    paint(art, [(x, y) for y in (4, last) for x in range(3, 7)], OUTLINE)
+    art.alpha_composite(flag.crop((0, 0, TILE, 11)), (0, drop))
+    return art
+
+
+def checkpoint_sheet(pack):
+    """Five frames: the grey flag of a Checkpoint the hero has not touched, half way down its pole and still, then the
+    four of the red flag of the active one, waving at the top. Both are the same size."""
+    flags = lambda colour: pack.image('Backgrounds', 'Animated', 'Flag', f'Flag{colour}16x16.png')
+    grey = flags('Gray')
+    red = flags('Red')
+    still = flagpole(grey.crop((0, 0, TILE, TILE)), 10)
+    waving = [flagpole(red.crop((i * TILE, 0, (i + 1) * TILE, TILE)), 0) for i in range(4)]
+    return frames_sheet([still, *waving], 5, (TILE, CHECKPOINT_HEIGHT))
+
+
+def exit_sheet(pack):
+    """Four frames, an exit mark pointing up, down, left and right: two arrowheads painted on the ground, a small touch of
+    code, white with the pack's dark outline. The adapter shows it see-through."""
+    right = Image.new('RGBA', (TILE, TILE), (0, 0, 0, 0))
+    for x in (2, 7):
+        stamp(right, CHEVRON_ROWS, {'X': (242, 234, 241)}, x, 3)
+    right = outlined(right)
+    return frames_sheet([right.transpose(Image.ROTATE_90), right.transpose(Image.ROTATE_270),
+                         right.transpose(Image.FLIP_LEFT_RIGHT), right], 4)
+
+
+def door_sheet(pack):
+    """Two frames: the pack's arched door of planks with a gold padlock on it, the colour of the key, and the same arch
+    with the doorway open and dark."""
+    house = pack.tileset('TilesetHouse')
+    shut = cut(house, 8, 3)
+    stamp(shut, LOCK_ROWS, GOLD_LOCK, 5, 7)
+    return frames_sheet([shut, cut(house, 9, 3)], 2)
+
+
 BUILDERS = {
     'terrain-water': terrain_water,
     'terrain-sand': terrain_sand,
@@ -412,6 +520,12 @@ BUILDERS = {
     'fx-puff': lambda pack: pack.image('FX', 'Smoke', 'Smoke', 'SpriteSheet.png'),
     'monster-wolf': lambda pack: monster_side(pack, 'DogBlack', 'SpriteSheet.png'),
     'monster-boar': lambda pack: monster_side(pack, 'WildBoar', 'SpriteSheet.png'),
+    'prop-chest': chest_sheet,
+    'prop-pickup': pickup_sheet,
+    'prop-checkpoint': checkpoint_sheet,
+    'prop-exit': exit_sheet,
+    'prop-door': door_sheet,
+    'prop-sign': lambda pack: cut(pack.tileset('TilesetElement'), 0, 2),
 }
 
 

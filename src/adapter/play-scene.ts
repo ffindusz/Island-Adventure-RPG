@@ -2,8 +2,6 @@ import Phaser from 'phaser';
 import type { Command, Game, GameEvent, GameView, PlayingView } from '../core';
 import { AreaBanner } from './area-banner';
 import {
-  drawCheckpoints,
-  drawExits,
   drawInteractable,
   drawMonster,
   drawStrike,
@@ -29,6 +27,7 @@ import { Overlay } from './overlay';
 import { PlayerInput } from './player-input';
 import { byShooter } from './projectiles';
 import { ProjectileSprites } from './projectile-sprites';
+import { PropSprites } from './prop-sprites';
 import type { SaveStore } from './save-store';
 import { SCENE_KEYS } from './scene-keys';
 import type { PlayStart } from './scene-keys';
@@ -70,6 +69,7 @@ export class PlayScene extends Phaser.Scene {
   private heroSprite!: HeroSprite;
   private monsterSprites!: MonsterSprites;
   private projectileSprites!: ProjectileSprites;
+  private propSprites!: PropSprites;
   private hud!: Hud;
   private banner!: AreaBanner;
   private notice!: Notice;
@@ -78,8 +78,8 @@ export class PlayScene extends Phaser.Scene {
   private terrainLayer!: Phaser.GameObjects.Graphics;
   /** The ground of an area whose art is final, painted once (terrain-baker.ts); hidden for any other area. */
   private groundImage!: Phaser.GameObjects.Image;
-  private exitLayer!: Phaser.GameObjects.Graphics;
   private telegraphLayer!: Phaser.GameObjects.Graphics;
+  /** The flat shapes of what has no picture yet: the monsters of an area whose art is not final, the gates and the levers. */
   private entityLayer!: Phaser.GameObjects.Graphics;
   private effectLayer!: Phaser.GameObjects.Graphics;
   private drawnAreaId: string | null = null;
@@ -114,20 +114,21 @@ export class PlayScene extends Phaser.Scene {
     buildDrawnArt(this.textures, ARTWORK);
     requireLoadedArt(this.textures, ARTWORK);
     checkHudFootprint();
-    // Added in drawing order: ground (in colours, or the picture of it where the art is final), the exits over it, then
-    // the telegraphs of monster attacks, then Checkpoints, chests and, where the art is not final, monsters, which share
-    // the lowest depth. The monsters of final art, what they shoot, and the hero and its arrows are sprites above them
-    // (see depths.ts), and the strikes of the monsters above those. The HUD draws above them all, then the text of the
-    // area, the notice above that, and the overlay above that, which shares its place with the Automap page. The world
-    // scrolls with the camera; the HUD, the text, the notice, the overlay and the Automap page do not.
+    // The ground is added first, at the lowest depth: in colours, or the picture of it where the art is final. Everything
+    // above it has its depth in depths.ts: the marks of the exits and the props are sprites, then the telegraphs of
+    // monster attacks, then the flat shapes of what has no picture yet, then the monsters of final art, what they shoot,
+    // and the hero and its arrows, which are sprites too, and the strikes of the monsters above those. The HUD draws above
+    // them all, then the text of the area, the notice above that, and the overlay above that, which shares its place
+    // with the Automap page. The world scrolls with the camera; the HUD, the text, the notice, the overlay and the
+    // Automap page do not.
     this.terrainLayer = this.add.graphics();
     this.groundImage = this.add.image(0, 0, '__WHITE').setOrigin(0, 0).setVisible(false);
-    this.exitLayer = this.add.graphics();
     this.drawnAreaId = null;
     this.lastPlaying = null;
     this.fall = null;
-    this.telegraphLayer = this.add.graphics();
-    this.entityLayer = this.add.graphics();
+    this.propSprites = new PropSprites(this);
+    this.telegraphLayer = this.add.graphics().setDepth(DEPTH.telegraph);
+    this.entityLayer = this.add.graphics().setDepth(DEPTH.flatShapes);
     this.monsterSprites = new MonsterSprites(this);
     this.projectileSprites = new ProjectileSprites(this);
     this.heroSprite = new HeroSprite(this);
@@ -189,6 +190,7 @@ export class PlayScene extends Phaser.Scene {
     this.heroSprite.age(frameMs);
     this.monsterSprites.age(frameMs);
     this.projectileSprites.age(frameMs);
+    this.propSprites.age(frameMs);
     this.feedback.show(events);
     this.heroSprite.show(events);
     this.monsterSprites.show(events);
@@ -260,6 +262,7 @@ export class PlayScene extends Phaser.Scene {
     this.heroSprite.age(frameMs);
     this.monsterSprites.age(frameMs);
     this.projectileSprites.age(frameMs);
+    this.propSprites.age(frameMs);
     if (fall.stage === 'fading-out' && !this.fadingOut) {
       this.fadingOut = true;
       this.cameras.main.fadeOut(FALL_FADE_OUT_MS, 0, 0, 0);
@@ -279,8 +282,8 @@ export class PlayScene extends Phaser.Scene {
   }
 
   /**
-   * The ground and the exits of the area the hero is in, drawn once: the picture of the ground where the art of the area
-   * is final, flat colours where it is not.
+   * The ground of the area the hero is in, drawn once: the picture of it where the art of the area is final, flat colours
+   * where it is not.
    */
   private drawGround(view: PlayingView): void {
     // The monsters of the place the hero left are gone, and those of this one start from where they stand.
@@ -292,8 +295,6 @@ export class PlayScene extends Phaser.Scene {
       this.groundImage.setVisible(false);
       drawTerrain(this.terrainLayer, view.area);
     }
-    this.exitLayer.clear();
-    drawExits(this.exitLayer, view.exits);
   }
 
   private draw(view: GameView, watching: boolean, time: number): void {
@@ -309,7 +310,7 @@ export class PlayScene extends Phaser.Scene {
     this.cameras.main.setScroll(scroll.x, scroll.y);
     this.telegraphLayer.clear();
     this.entityLayer.clear();
-    drawCheckpoints(this.entityLayer, view.checkpoints);
+    this.propSprites.draw(view);
     for (const interactable of view.interactables) {
       drawInteractable(this.entityLayer, interactable);
     }

@@ -10,7 +10,8 @@ import type { AreaDefinition, ContentDefinition } from '../src/core';
 // The terrain and the monsters of the areas whose art is final are found by name, `terrain-<kind>` and
 // `monster-<type>`, and the game refuses to start while one is missing. Only the areas that are listed as final count: a
 // kind or a type that has only a colour (the mountain's, until its art is drawn) must not stop the game from starting.
-// This is the manifest check of ADR 0002 and nothing else of the drawing; the look is for the screenshots.
+// This is the manifest check of ADR 0002 and nothing else of the drawing: the names, and that each picture a manifest
+// entry points at is a file of the right shape in public/art. The look is for the screenshots.
 
 const terrainOrMonster = (name: string): boolean => name.startsWith('terrain-') || name.startsWith('monster-');
 
@@ -110,17 +111,40 @@ describe('the art of the areas whose art is final', () => {
   });
 });
 
+/** The size in pixels of a picture on disk (public/art), read from the header of the PNG. */
+function sizeOnDisk(file: string): { width: number; height: number } {
+  const png = readFileSync(new URL(`../public/art/${file}`, import.meta.url));
+  expect(png.subarray(1, 4).toString('latin1'), `the signature of ${file}`).toBe('PNG');
+  return { width: png.readUInt32BE(16), height: png.readUInt32BE(20) };
+}
+
 /** How many frames the picture on disk (public/art) holds, by the size in its header and the frame size of the manifest. */
 function framesOnDisk(art: string): number {
   const entry = (ARTWORK as ArtManifest)[art];
   if (entry?.kind !== 'sheet') throw new Error(`"${art}" is not a sheet of the manifest`);
-  const png = readFileSync(new URL(`../public/art/${entry.file}`, import.meta.url));
-  const width = png.readUInt32BE(16);
-  const height = png.readUInt32BE(20);
+  const { width, height } = sizeOnDisk(entry.file);
   expect(width % entry.frameWidth, `the width of ${entry.file}`).toBe(0);
   expect(height % entry.frameHeight, `the height of ${entry.file}`).toBe(0);
   return (width / entry.frameWidth) * (height / entry.frameHeight);
 }
+
+describe('the pictures of the manifest on disk', () => {
+  const filed = Object.entries(ARTWORK as ArtManifest).flatMap(([art, entry]) => (entry.kind === 'drawn' ? [] : [art]));
+
+  it('are most of the manifest, sheets among them', () => {
+    const kinds = new Set(filed.map((art) => (ARTWORK as ArtManifest)[art]?.kind));
+
+    expect(filed.length).toBeGreaterThan(20);
+    expect(kinds).toEqual(new Set(['image', 'sheet']));
+  });
+
+  it.each(filed)('%s has its file in public/art, and a sheet of it is whole frames', (art) => {
+    const entry = (ARTWORK as ArtManifest)[art];
+    if (entry?.kind === 'sheet') expect(framesOnDisk(art)).toBeGreaterThan(0);
+    else if (entry?.kind === 'image') expect(sizeOnDisk(entry.file).width).toBeGreaterThan(0);
+    else throw new Error(`"${art}" is not a picture of the manifest`);
+  });
+});
 
 describe('the sheets of the terrain on disk', () => {
   it.each(FINAL_ART_AREAS)('hold a frame for every stamp planned for %s', (areaId) => {
