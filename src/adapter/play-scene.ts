@@ -6,7 +6,6 @@ import {
   drawExits,
   drawInteractable,
   drawMonster,
-  drawProjectile,
   drawStrike,
   drawTelegraph,
   drawTerrain,
@@ -23,11 +22,13 @@ import { FixedStepClock } from './fixed-step';
 import { HeroSprite } from './hero-sprite';
 import { checkHudFootprint, Hud } from './hud';
 import { InventoryMenu } from './inventory-menu';
+import { MonsterSprites } from './monster-sprites';
 import { Notice } from './notice';
 import { OpeningCard } from './opening-card';
 import { Overlay } from './overlay';
 import { PlayerInput } from './player-input';
 import { byShooter } from './projectiles';
+import { ProjectileSprites } from './projectile-sprites';
 import type { SaveStore } from './save-store';
 import { SCENE_KEYS } from './scene-keys';
 import type { PlayStart } from './scene-keys';
@@ -67,6 +68,8 @@ export class PlayScene extends Phaser.Scene {
   private readonly inventoryMenu = new InventoryMenu();
   private playerInput!: PlayerInput;
   private heroSprite!: HeroSprite;
+  private monsterSprites!: MonsterSprites;
+  private projectileSprites!: ProjectileSprites;
   private hud!: Hud;
   private banner!: AreaBanner;
   private notice!: Notice;
@@ -112,11 +115,11 @@ export class PlayScene extends Phaser.Scene {
     requireLoadedArt(this.textures, ARTWORK);
     checkHudFootprint();
     // Added in drawing order: ground (in colours, or the picture of it where the art is final), the exits over it, then
-    // the telegraphs of monster attacks, then Checkpoints, chests, monsters and
-    // their projectiles, which share the lowest depth. The hero and its arrows are sprites above them (see depths.ts),
-    // and the strikes of the monsters above those. The HUD draws above them all, then the text of the area, the notice
-    // above that, and the overlay above that, which shares its place with the Automap page. The world scrolls with the
-    // camera; the HUD, the text, the notice, the overlay and the Automap page do not.
+    // the telegraphs of monster attacks, then Checkpoints, chests and, where the art is not final, monsters, which share
+    // the lowest depth. The monsters of final art, what they shoot, and the hero and its arrows are sprites above them
+    // (see depths.ts), and the strikes of the monsters above those. The HUD draws above them all, then the text of the
+    // area, the notice above that, and the overlay above that, which shares its place with the Automap page. The world
+    // scrolls with the camera; the HUD, the text, the notice, the overlay and the Automap page do not.
     this.terrainLayer = this.add.graphics();
     this.groundImage = this.add.image(0, 0, '__WHITE').setOrigin(0, 0).setVisible(false);
     this.exitLayer = this.add.graphics();
@@ -125,6 +128,8 @@ export class PlayScene extends Phaser.Scene {
     this.fall = null;
     this.telegraphLayer = this.add.graphics();
     this.entityLayer = this.add.graphics();
+    this.monsterSprites = new MonsterSprites(this);
+    this.projectileSprites = new ProjectileSprites(this);
     this.heroSprite = new HeroSprite(this);
     this.effectLayer = this.add.graphics().setDepth(DEPTH.effects);
     this.hud = new Hud(this);
@@ -182,8 +187,11 @@ export class PlayScene extends Phaser.Scene {
     }
     this.feedback.age(frameMs);
     this.heroSprite.age(frameMs);
+    this.monsterSprites.age(frameMs);
+    this.projectileSprites.age(frameMs);
     this.feedback.show(events);
     this.heroSprite.show(events);
+    this.monsterSprites.show(events);
     const view = this.core.view();
     if (view.phase === 'title') {
       // The core went back to the title, and the title screen shows it from here.
@@ -250,6 +258,8 @@ export class PlayScene extends Phaser.Scene {
     this.playerInput.pollActions();
     this.feedback.age(frameMs);
     this.heroSprite.age(frameMs);
+    this.monsterSprites.age(frameMs);
+    this.projectileSprites.age(frameMs);
     if (fall.stage === 'fading-out' && !this.fadingOut) {
       this.fadingOut = true;
       this.cameras.main.fadeOut(FALL_FADE_OUT_MS, 0, 0, 0);
@@ -273,6 +283,8 @@ export class PlayScene extends Phaser.Scene {
    * is final, flat colours where it is not.
    */
   private drawGround(view: PlayingView): void {
+    // The monsters of the place the hero left are gone, and those of this one start from where they stand.
+    this.monsterSprites.clear();
     this.terrainLayer.clear();
     if (hasFinalArt(view.area.id)) {
       this.groundImage.setTexture(bakeGround(this.textures, view.area)).setVisible(true);
@@ -301,16 +313,22 @@ export class PlayScene extends Phaser.Scene {
     for (const interactable of view.interactables) {
       drawInteractable(this.entityLayer, interactable);
     }
+    const monstersAreSprites = hasFinalArt(view.area.id);
     for (const monster of view.monsters) {
       if (monster.action.type === 'winding-up') {
         drawTelegraph(this.telegraphLayer, monster.action.zone, monster.action.progress);
       }
-      drawMonster(this.entityLayer, monster, this.feedback.isFlashing(monster.id));
+      if (!monstersAreSprites) {
+        drawMonster(this.entityLayer, monster, this.feedback.isFlashing(monster.id));
+      }
     }
-    // The hero's arrows are sprites of the hero (hero-sprite.ts); a monster's projectile is an orb drawn here.
-    for (const projectile of byShooter(view.arrows).monster) {
-      drawProjectile(this.entityLayer, projectile);
+    if (monstersAreSprites) {
+      this.monsterSprites.draw(view, (monsterId) => this.feedback.isFlashing(monsterId));
+    } else {
+      this.monsterSprites.clear();
     }
+    // The hero's arrows are sprites of the hero (hero-sprite.ts); what a monster shoots is an orb (projectile-sprites.ts).
+    this.projectileSprites.draw(byShooter(view.arrows).monster);
     this.heroSprite.draw(view.hero, view.arrows);
     this.effectLayer.clear();
     for (const zone of this.feedback.strikeZones()) {

@@ -1,7 +1,6 @@
 import type Phaser from 'phaser';
 import type {
   AreaView,
-  ArrowView,
   Box,
   CheckpointView,
   ChestView,
@@ -60,8 +59,6 @@ const POTION_CRATE_COLOUR = 0x7b5b8c;
 const FLASK_GLASS_COLOUR = 0xcfe8f0;
 const FLASK_LIQUID_COLOUR = 0xe0455f;
 const FLASK_SHINE_COLOUR = 0xffffff;
-const PROJECTILE_COLOUR = 0xd28bff;
-const PROJECTILE_CORE_COLOUR = 0xffffff;
 const WIND_UP_COLOUR = 0xff6b5b;
 const EXIT_COLOUR = 0xbfeaff;
 
@@ -73,9 +70,6 @@ const EDGE_TOLERANCE = 1e-6;
 
 /** The faded copies of a dashing monster's body left behind it, nearest first, by how much of its colour shows. */
 const DASH_TRAIL_ALPHAS: readonly number[] = [0.5, 0.3, 0.15];
-
-/** The faded copies of a projectile left behind it, nearest first, by how much of its colour shows. */
-const PROJECTILE_TRAIL_ALPHAS: readonly number[] = [0.5, 0.25];
 
 const FACING_STEP: Readonly<Record<Direction, Point>> = {
   up: { x: 0, y: -1 },
@@ -305,32 +299,6 @@ function drawArrowsInCrate(graphics: Graphics, body: Rect): void {
     graphics.fillRect(x, body.y + 3, 2, body.height - 6);
     graphics.fillStyle(CACHE_ARROW_HEAD_COLOUR);
     graphics.fillRect(x, body.y + 3, 2, 2);
-  }
-}
-
-/**
- * Draws a monster's projectile in flight as a glowing orb with a faded trail behind it, so that it cannot be taken for
- * one of the hero's arrows, which are sprites (hero-sprite.ts). The orb is exactly the projectile's body, with the
- * outline around it, so what touches the orb is what it hits.
- */
-export function drawProjectile(graphics: Graphics, projectile: ArrowView): void {
-  const body = bodyRect(projectile.position, projectile.size);
-  const step = FACING_STEP[projectile.direction];
-  const gap = body.width + 1;
-  PROJECTILE_TRAIL_ALPHAS.forEach((alpha, index) => {
-    const behind = gap * (index + 1);
-    graphics.fillStyle(PROJECTILE_COLOUR, alpha);
-    graphics.fillRect(body.x - step.x * behind, body.y - step.y * behind, body.width, body.height);
-  });
-  const outline = shrunk(body, -1, -1);
-  graphics.fillStyle(OUTLINE_COLOUR);
-  graphics.fillRect(outline.x, outline.y, outline.width, outline.height);
-  graphics.fillStyle(PROJECTILE_COLOUR);
-  graphics.fillRect(body.x, body.y, body.width, body.height);
-  if (body.width > 2 && body.height > 2) {
-    const core = shrunk(body, 1, 1);
-    graphics.fillStyle(PROJECTILE_CORE_COLOUR);
-    graphics.fillRect(core.x, core.y, core.width, core.height);
   }
 }
 

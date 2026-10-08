@@ -42,6 +42,10 @@ export const ARTWORK = {
   'monster-spitter': sheet('monster-spitter.png', 16),
   'monster-wolf': sheet('monster-wolf.png', 18, 17),
   'monster-boar': sheet('monster-boar.png', 17, 16),
+  // What monsters share: the orb that a ranged monster shoots (four frames of 16 pixels), and the puff left where one
+  // fell (six frames of 32 pixels).
+  'projectile-orb': sheet('projectile-orb.png', 16),
+  'fx-puff': sheet('fx-puff.png', 32),
   // The pieces the HUD and the pages are built from, see ui-layer.ts: a dark panel, the orange frame of a window, the
   // orange button behind the line the cursor is on, and the heart of Health.
   'ui-panel': image('ui-panel.png'),

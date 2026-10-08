@@ -371,9 +371,23 @@ def monster_sheet(walk):
     return frames_sheet([f for row in rows for f in row], 4, cell)
 
 
-def monster_four_ways(pack, folder, name):
+def monster_four_ways(pack, folder, name, colours=None):
     sprite = pack.image('Actor', 'Monster', folder, name)
+    if colours:
+        sprite = recolour(sprite, {hexrgb(old): hexrgb(new) for old, new in colours.items()})
     return monster_sheet([[cut(sprite, d, f) for d in range(4)] for f in range(4)])
+
+
+# The pack's mushroom has a red cap, as red as the crab and as the flash of a wind-up, so its cap is made purple: the red
+# flash then shows on it, and the spitter has the colour its orbs have.
+SPITTER_CAP = {'#e0394c': '#a15fd8', '#8f3e56': '#5e3a8c'}
+
+
+def projectile_orb(pack):
+    """The pack's energy ball in the colours of the spitter's cap, with the dark outline of the pack's creatures."""
+    ball = pack.image('FX', 'Projectile', 'EnergyBall.png')
+    ball = recolour(ball, {hexrgb('#8feff1'): hexrgb('#e3a6ff'), hexrgb('#79b8ce'): hexrgb('#a15fd8')})
+    return outlined(ball)
 
 
 def monster_side(pack, folder, name):
@@ -393,7 +407,9 @@ BUILDERS = {
     'terrain-wreckage': terrain_wreckage,
     'monster-crab': lambda pack: monster_four_ways(pack, 'Mollusc', 'Mollusc.png'),
     'monster-slime': lambda pack: monster_four_ways(pack, 'Slime', 'Slime.png'),
-    'monster-spitter': lambda pack: monster_four_ways(pack, 'Mushroom', 'mushroom.png'),
+    'monster-spitter': lambda pack: monster_four_ways(pack, 'Mushroom', 'mushroom.png', SPITTER_CAP),
+    'projectile-orb': projectile_orb,
+    'fx-puff': lambda pack: pack.image('FX', 'Smoke', 'Smoke', 'SpriteSheet.png'),
     'monster-wolf': lambda pack: monster_side(pack, 'DogBlack', 'SpriteSheet.png'),
     'monster-boar': lambda pack: monster_side(pack, 'WildBoar', 'SpriteSheet.png'),
 }
