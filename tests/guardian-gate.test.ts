@@ -10,7 +10,6 @@ import {
   face,
   fixedRandom,
   gateAt,
-  interactableViews,
   leverAt,
   monsterNamed,
   newGame,
@@ -19,7 +18,7 @@ import {
   walk,
 } from './fixtures';
 import type { ArenaOptions } from './fixtures';
-import { GUARDIAN, guardianAt, guardianContent, guardianGateAt } from './guardian-fixtures';
+import { GUARDIAN, gateOf, guardianAt, guardianContent, guardianGateAt } from './guardian-fixtures';
 
 // The gate that the defeat of a Guardian opens, and what the defeat tells, in the wide field of fixtures.ts (walkable in
 // columns 1 to 12 and rows 1 to 5). The Guardian "guardian-1" stands on tile (4, 3): its body spans x 4 to 5 and y 3 to 4,
@@ -44,14 +43,6 @@ function gateField(options: ArenaOptions = {}, others: readonly MonsterPlacement
       ...options,
     }),
   );
-}
-
-function gateOf(game: Game, id = GATE): { readonly open: boolean } {
-  const gate = interactableViews(game, 'gate').find((candidate) => candidate.id === id);
-  if (gate === undefined) {
-    throw new Error(`The view shows no gate "${id}"`);
-  }
-  return gate;
 }
 
 /** The hero opens the cache on the tile below it, takes the bow in hand and shoots. Returns the events of the shot. */
@@ -239,7 +230,7 @@ describe('a lever and the gate that the defeat of a Guardian opens', () => {
     );
   });
 
-  it('may name it with another gate, all the same', () => {
+  it('is refused though the lever names another gate first', () => {
     expect(() => createGame({ content: contentWith(['other-gate', GATE]), random: fixedRandom })).toThrow(
       'no lever may move it',
     );

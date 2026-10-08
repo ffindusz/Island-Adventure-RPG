@@ -9,7 +9,7 @@ import type {
   InteractableDefinition,
   MonsterPlacement,
 } from '../src/core';
-import { arena, FIELD_LAYOUT, newGame } from './fixtures';
+import { arena, FIELD_LAYOUT, interactableViews, newGame } from './fixtures';
 import type { ArenaOptions } from './fixtures';
 
 // The Guardian of the tests, in the wide field of fixtures.ts (14 x 7 tiles, walkable in columns 1 to 12 and rows 1 to
@@ -78,6 +78,15 @@ export function guardianAt(id: string, col: number, row: number): MonsterPlaceme
 /** A gate on the tile (col, row) that opens for good when the Guardian with this id is defeated. */
 export function guardianGateAt(id: string, col: number, row: number, guardian: string): InteractableDefinition {
   return { kind: 'gate', id, tile: { col, row }, opensWhenDefeated: guardian };
+}
+
+/** The view of a gate of the current Adventure Area, the one with the id "gate-1" unless another is named. */
+export function gateOf(game: Game, id = 'gate-1'): { readonly open: boolean } {
+  const gate = interactableViews(game, 'gate').find((candidate) => candidate.id === id);
+  if (gate === undefined) {
+    throw new Error(`The view shows no gate "${id}"`);
+  }
+  return gate;
 }
 
 /** The content of a wide field with the Guardian of this file known, where the hero begins at (6.5, 3.5). */
