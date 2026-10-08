@@ -95,8 +95,10 @@ export const woods: AreaDefinition = {
       tile: { col: 22, row: 5 },
       contents: { kind: 'consumable', consumable: 'healing-potion', amount: 2 },
     },
-    // A side path: the Chain Mail, in a nook to the south a good walk from the trail.
-    { kind: 'chest', id: 'armor-chest', tile: { col: 22, row: 25 }, contents: { kind: 'gear', gear: 'chain-mail' } },
+    // A side path: the Chain Mail, in a nook to the south a good walk from the trail. The two chests in the south, this
+    // one and the one in the cabin, stand in row 24 and not below it: the view stops at the bottom of the area, so a
+    // hero in front of a chest lower down would stand under the notice of what it found, which is drawn low.
+    { kind: 'chest', id: 'armor-chest', tile: { col: 22, row: 24 }, contents: { kind: 'gear', gear: 'chain-mail' } },
     // A side path with a key: the cabin in the south-west is locked, a sign by its door says where the key is, and the
     // brass key lies in the north glade. The chest inside holds a better bow than the one in the first chest.
     { kind: 'key', id: 'brass-key', tile: { col: 41, row: 1 }, name: 'Brass Key' },
@@ -107,6 +109,6 @@ export const woods: AreaDefinition = {
       tile: { col: 6, row: 21 },
       text: 'The cabin is locked. Its key is in the north woods.',
     },
-    { kind: 'chest', id: 'cabin-chest', tile: { col: 7, row: 25 }, contents: { kind: 'gear', gear: 'long-bow' } },
+    { kind: 'chest', id: 'cabin-chest', tile: { col: 7, row: 24 }, contents: { kind: 'gear', gear: 'long-bow' } },
   ],
 };
