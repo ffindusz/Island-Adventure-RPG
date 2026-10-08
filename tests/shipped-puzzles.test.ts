@@ -16,12 +16,12 @@ import type {
 } from '../src/core';
 import { face, fixedRandom, interactableViews, inventoryOf, playingView, throughStorage, walk } from './fixtures';
 
-// The light puzzles the game ships with, both in the woods: a cabin behind a locked door whose key lies in the north
-// woods, and a shed behind a gate that a lever opens. What a key, a door, a lever and a gate do is tested on purpose-built
-// content (keys, doors, levers), and that no route needs one in device-routes.test.ts, so that changing what ships never
-// breaks those. Here the shipped rooms are checked as made: where each thing stands, that every text can be drawn, and
-// that a hero can walk through the steps of each puzzle to its reward. The woods are walked without their monsters. The
-// last part is where the puzzles meet the opening of a new game and the saved game, which other tickets made.
+// The light puzzle the game ships with, in the woods: a cabin behind a locked door whose key lies in the north woods.
+// What a key, a door, a lever and a gate do is tested on purpose-built content (keys, doors, levers), and that no route
+// needs one in device-routes.test.ts, so that changing what ships never breaks those. Here the shipped room is checked as
+// made: where each thing stands, that every text can be drawn, and that a hero can walk through the steps of the puzzle to
+// its reward. The woods are walked without their monsters. The last part is where the puzzle meets the opening of a new
+// game and the saved game, which other tickets made.
 
 const WOODS = 'woods';
 
@@ -237,37 +237,6 @@ describe('the cabin in the woods', () => {
   });
 });
 
-describe('the shed in the woods', () => {
-  it('keeps its lever where the hero can reach it with every door and gate shut, and has it move the gate', () => {
-    const lever = placedNamed('lever', 'shed-lever');
-
-    expect(standsBeside(woodsRoutes(), lever.tile)).toBe(true);
-    expect(lever.targets).toEqual(['shed-gate']);
-  });
-
-  it('keeps its Healing Potion behind the gate: out of reach while the gate is shut, within reach once it is open', () => {
-    const potion = placedNamed('pickup', 'shed-potion');
-
-    expect(woodsRoutes().has(tileKey(potion.tile))).toBe(false);
-    expect(woodsRoutes('shed-gate').has(tileKey(potion.tile))).toBe(true);
-  });
-
-  it('is opened by a hero who pulls its lever, walks through the gate and takes the potion', () => {
-    const game = quietWoods();
-    const lever = placedNamed('lever', 'shed-lever');
-    const potion = placedNamed('pickup', 'shed-potion');
-    expect(interactableViews(game, 'gate')).toMatchObject([{ id: 'shed-gate', open: false }]);
-
-    expect(interactWith(game, lever.tile)).toEqual([{ type: 'lever-toggled', leverId: lever.id, pulled: true }]);
-
-    expect(interactableViews(game, 'gate')).toMatchObject([{ id: 'shed-gate', open: true }]);
-    expect(walkOnto(game, potion.tile)).toContainEqual({
-      type: 'pickup',
-      item: { kind: 'consumable', id: 'healing-potion', amount: 1 },
-    });
-  });
-});
-
 describe('what the game ships with', () => {
   // The content check refuses a chest, a pickup or a device on a Checkpoint or where the hero begins, but not on an
   // entrance or in an exit, where it would stop or surprise a hero who comes in or tries to leave.
@@ -301,9 +270,8 @@ describe('what the game ships with', () => {
   });
 });
 
-function takeTheKeyAndPullTheLever(game: Game): void {
+function takeTheKey(game: Game): void {
   walkOnto(game, placedNamed('key', 'brass-key').tile);
-  interactWith(game, placedNamed('lever', 'shed-lever').tile);
 }
 
 function openTheCabinAndItsChest(game: Game): void {
@@ -313,11 +281,11 @@ function openTheCabinAndItsChest(game: Game): void {
   interactWith(game, placedNamed('chest', 'cabin-chest').tile);
 }
 
-describe('the puzzles with the opening and the saved game', () => {
+describe('the puzzle with the opening and the saved game', () => {
   // A new game builds the world again from the content, and a continued one takes it from the save: the first must not
-  // keep a key, an open door or a pulled lever, and the second must not lose one, nor show the opening again.
+  // keep a key or an open door, and the second must not lose one, nor show the opening again.
   it.each([
-    { after: 'taking the key and pulling the lever', play: takeTheKeyAndPullTheLever },
+    { after: 'taking the key', play: takeTheKey },
     { after: 'opening the cabin and its chest', play: openTheCabinAndItsChest },
   ])('begins a new game with the opening and every device as placed, after $after', ({ play }) => {
     const game = quietWoods();
@@ -329,16 +297,14 @@ describe('the puzzles with the opening and the saved game', () => {
     expect(inventoryOf(game).keys).toEqual([]);
     expect(interactableViews(game, 'key')).toHaveLength(1);
     expect(interactableViews(game, 'door')).toMatchObject([{ open: false }]);
-    expect(interactableViews(game, 'gate')).toMatchObject([{ open: false }]);
-    expect(interactableViews(game, 'lever')).toMatchObject([{ pulled: false }]);
     expect(interactableViews(game, 'chest').filter((chest) => chest.opened)).toEqual([]);
   });
 
-  it('continues a saved game with its key held, its gate open and its lever pulled, and without the opening', () => {
+  it('continues a saved game with its key held, and without the opening', () => {
     const game = quietWoods();
     const door = placedNamed('door', 'cabin-door');
     const key = placedNamed('key', door.key);
-    takeTheKeyAndPullTheLever(game);
+    takeTheKey(game);
     const saved = throughStorage(game.snapshot());
 
     const continued = createGame({ content: quietWoodsContent(), random: fixedRandom });
@@ -347,8 +313,6 @@ describe('the puzzles with the opening and the saved game', () => {
     expect(events).toEqual([]);
     expect(inventoryOf(continued).keys).toEqual([{ id: key.id, name: key.name }]);
     expect(interactableViews(continued, 'key')).toEqual([]);
-    expect(interactableViews(continued, 'gate')).toMatchObject([{ open: true }]);
-    expect(interactableViews(continued, 'lever')).toMatchObject([{ pulled: true }]);
     expect(interactWith(continued, door.tile)).toEqual([{ type: 'door-opened', doorId: door.id, keyName: key.name }]);
   });
 });

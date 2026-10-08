@@ -55,12 +55,12 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // takes in the hero. It then winds up for 0.7 s while the lane lights up, dashes down the lane at more than twice the
   // hero's walking speed, for six tiles at most, and rests for a second before it looks for the hero again. It hits for
   // 6 (5 after the hero's Defense) only a hero who is still in the lane: stepping out during the wind-up avoids it, and
-  // the rest is the time to hit back. It takes four hits from the hero's basic sword and is worth 8 Experience.
+  // the rest is the time to hit back. It takes four hits from the hero's basic sword and is worth 5 Experience.
   boar: {
     behavior: 'charger',
     health: 4,
     size: 0.85,
-    experience: 8,
+    experience: 5,
     damage: 6,
     speedTilesPerSecond: 2,
     noticingDistance: 4,
@@ -73,13 +73,13 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // away when the hero comes nearer, until a wall is at its back. It winds up for 0.8 s with a flash on its body, then
   // fires along the row or column that the hero stood in, a projectile slower than the hero's walk that hits for 4 (3
   // after Defense) and falls six tiles on. It rests for 1.5 s. It is frail: two hits from the sword, one arrow of the
-  // short bow, and worth 6 Experience. Now and then it leaves two arrows behind when it is defeated: it carries what it
+  // short bow, and worth 3 Experience. Now and then it leaves two arrows behind when it is defeated: it carries what it
   // shoots. Leave out `keepsDistance` and it stands still where it is placed.
   spitter: {
     behavior: 'ranged',
     health: 2,
     size: 0.6,
-    experience: 6,
+    experience: 3,
     drops: [{ consumable: 'ammunition', chance: 0.25, amount: 2 }],
     noticingDistance: 5,
     windUpMs: 800,

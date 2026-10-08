@@ -1,68 +1,117 @@
 import type { AreaDefinition } from '../../core';
-import { firstFinds } from './first-finds';
-import { trailPuzzles } from './trail-puzzles';
 
-// The woods, first as the Overgrown Trail placeholder, and the first area larger than the screen (30 by 20 tiles
-// where the screen shows 20 by 12), so that the view has to follow the hero. A sand trail leads from the way back to
-// the coast on the west, round the north of a pond, and down to a clearing at the far east, where the way on to the
-// mountain begins. The rest is grass, with rock for trees. Three crabs, a boar and a spitter, none near the ways in, so
-// that a hero who comes in, or is defeated and returns to the Checkpoint there, is not at once in danger. Reaching the
-// clearing is a milestone. The rock at the north-west corner, down to row 2 and across to column 5, is where the HUD sits
-// when the view is at that corner, so that it never covers the hero. The Checkpoint of the area is at the way in from
-// the coast, where the hero comes in. A cabin behind a locked door in the north-west and a shed behind a gate in the
-// south-east are its light puzzles (trail-puzzles.ts). The chests that moved here from the coast (first-finds.ts) stand
-// in the south-west corner.
+// The woods, the second area of the adventure, between the coast and the mountain: 48 by 28 tiles, larger than the
+// screen both ways (20 by 12), so that the view follows the hero. Trees (solid, T) fill most of it and the glades
+// between them are grass. One path of sand, the trail, runs from the way in from the coast at the west to the way on to
+// the mountain at the east, which the text of the area tells the hero to follow: it needs no key, no lever and no door,
+// and no other way goes round the old oak at the neck where it ends, which is the milestone. Along the trail come the
+// bow in a chest, two caches of arrows for it, a wolf, a Healing Potion lying on the ground, a slime, a spitter and a
+// boar; a chest of Healing Potions stands by the pond to the north. The side paths are the hero's to find and want
+// nothing but a walk and, for the cabin, a key: the Chain Mail in a nook to the south, and a cabin in the south-west
+// behind a locked door, whose key lies in the north glade, guarded by a wolf. Neither the cabin nor the Chain Mail
+// is on any route. No monster stands near either way in, so that a hero who comes in, or is defeated and returns to the
+// Checkpoint there, is not at once in danger. The trees at the north-west corner, down to row 2 and across to column 5,
+// are where the HUD sits when the view is at that corner, so that it never covers the hero.
 export const woods: AreaDefinition = {
   id: 'woods',
   name: 'The Woods',
-  text: 'A tangled trail leads into the woods.',
+  text: 'Tall trees close in. Follow the sand path.',
   entrances: [
-    { id: 'from-coast', tile: { col: 1, row: 9 } },
-    { id: 'from-mountain', tile: { col: 28, row: 9 } },
+    { id: 'from-coast', tile: { col: 1, row: 14 } },
+    { id: 'from-mountain', tile: { col: 46, row: 18 } },
   ],
-  checkpoints: [{ id: 'woods-checkpoint', tile: { col: 1, row: 9 } }],
+  checkpoints: [{ id: 'woods-checkpoint', tile: { col: 1, row: 14 } }],
   exits: [
     {
       id: 'to-coast',
-      zone: { col: 0, row: 9, width: 1, height: 2 },
+      zone: { col: 0, row: 14, width: 1, height: 2 },
       to: { area: 'shipwreck-coast', entrance: 'from-woods' },
     },
     {
       id: 'to-mountain',
-      zone: { col: 29, row: 9, width: 1, height: 2 },
+      zone: { col: 47, row: 18, width: 1, height: 2 },
       to: { area: 'mountain', entrance: 'from-woods' },
     },
   ],
   layout: [
-    '##############################',
-    '######,,,,,,,,,,,,,,,,,,,,,,,#',
-    '######,,,,,,,,##,,,,,,,,,,##,#',
-    '#,,##,,,,,,,,,#,,,,,,,,,,,#,,#',
-    '#,,#,,,,...............,,,,,,#',
-    '##,,,,,,...............,,,,,,#',
-    '#,,,,,,#..,,,~~~~,,,,..,,,,,,#',
-    '#,,,,,,#..,,~~~~~~,,,..,,....#',
-    '#,,,,,,,..,,~~~~~~,,,..,,....#',
-    '..........,,~~~~~~,,,.........',
-    '..........,,~~~~~~,,,.........',
-    '#,,,,,,,,,,,,~~~~,,,,,,,,....#',
-    '#,,,,,,,,,,,,,,,,,,,,,,,,....#',
-    '#,,,,,,,#,,,,,,,,,,,,,,,,,,,,#',
-    '#,,##,,,#,,,,,,,,,,,##,,,,,,,#',
-    '#,,##,,,,,,,,##,,,,,,#,,,##,,#',
-    '#,,,,,,,,,,,,#,,,,,,,,,,,,#,##',
-    '#,,,,,,,,,,,,,,,,,,,,,,,,#,,,#',
-    '#,,,,,,,,,,,,,,,,,,,,,,,,#,,,#',
-    '##############################',
+    'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
+    'TTTTTTTTTTTTTTTTTTTTTTTTTTTT,,,,,,,,,,,,,,TTTTTT',
+    'TTTTTTTTTTTTTTTTTTTTTTTTTTTT,,,,,,,,,,,,,,TTTTTT',
+    'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT,,TTTTTTTTTTTT',
+    'TTTTTTTTTTTTTTTTTTTT,,,,,,,,,,,,,,,,,,,,TTTTTTTT',
+    'TTTTTTTTTTTTTTTTTTT,,,,,,,,,,,,,,,,T,T,,,TTTTTTT',
+    'TTTTTTTTTTTTTTTTTTT,,,,,~~~~~~~~,T,,,,,T,TTTTTTT',
+    'TTTTTTTTTTTTTTTTTTT,,,,,~~~~~~~~,,,,,,,,,TTTTTTT',
+    'TTTTTTTTTTTTTTTTTTT,,T,,~~~~~~~~,,,,,T,T,TTTTTTT',
+    'TT,,,,,,,,,,,,,,,TT,,,,,,,,,,,,,,,,,,,,,,TTTTTTT',
+    'T,,,,,,,,,,,T,T,,,T..................,,,,TTTTTTT',
+    'T,,,T,,,,,,,,,,,,,T..................,,,,TTTTTTT',
+    'T,,,,,T,,,,,,,T,,,T..,,,,,,,,,,,,,,..,,,TTTTTTTT',
+    'T,,,,,,,,,,,,,,,,,T..TTTTTTTTTTTTTT..TTTTTTTTTTT',
+    '.....................TTTTTTTTTTTTTT..TTTTTTTTTTT',
+    '.....................TTTTTTTTT,,,,,..,,,,TTTTTTT',
+    'T,,,,,,,,,,,,,,,,,TTTTTTTTTTT,,,,,,..,,T,,TTTTTT',
+    'T,,,,,,,,,,,,,,,,,TTTTTTTTTTT,,,,,,..,,,,,TTTTTT',
+    'T,,T,,,T,,T,,,,,,,TTTTTTTTTTT,,,,,,.............',
+    'TT,,,,,,,,,,,,,,,TTTTTTTTTTTT,,,,,,.............',
+    'TTTT,,,TTTTTTT,,TTTTTTTTTTTTT,,,,,,,,,,,,,TTTTTT',
+    'TTTT,,,TTTTTTT,,TTTTTTTTTTTTT,,T,,,,,T,,,,TTTTTT',
+    'TT###,###TTT,,,,,,,,,,,,,TTTT,,,,,,,,,,T,,TTTTTT',
+    'TT#,,,,,#TT,,,T,,,,,,,,,,,TTT,,,,,,,,,,,,,TTTTTT',
+    'TT#,,,,,#TT,T,,,,,,,,,,,,,TTTT,,,,,,,,,,,TTTTTTT',
+    'TT#,,,,,#TT,,,T,,,,,,,,,,,TTTTTTTTTTTTTTTTTTTTTT',
+    'TT#######TTT,,,,,,,,,,,,,TTTTTTTTTTTTTTTTTTTTTTT',
+    'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
   ],
   monsters: [
-    { id: 'woods-crab-1', type: 'crab', tile: { col: 15, row: 4 } },
-    { id: 'woods-crab-2', type: 'crab', tile: { col: 17, row: 13 } },
-    { id: 'woods-crab-3', type: 'crab', tile: { col: 23, row: 7 } },
-    { id: 'woods-boar-1', type: 'boar', tile: { col: 10, row: 15 } },
-    { id: 'woods-spitter-1', type: 'spitter', tile: { col: 20, row: 2 } },
+    { id: 'woods-wolf-1', type: 'wolf', tile: { col: 24, row: 12 } },
+    { id: 'woods-slime-1', type: 'slime', tile: { col: 34, row: 9 } },
+    { id: 'woods-spitter-1', type: 'spitter', tile: { col: 31, row: 17 } },
+    { id: 'woods-boar-1', type: 'boar', tile: { col: 34, row: 22 } },
+    { id: 'woods-wolf-2', type: 'wolf', tile: { col: 37, row: 2 } },
+    { id: 'woods-slime-2', type: 'slime', tile: { col: 17, row: 24 } },
   ],
-  milestones: [{ id: 'far-clearing', zone: { col: 27, row: 8, width: 2, height: 4 }, reward: { experience: 5 } }],
-  // The devices of the light puzzles, and the chests of the first finds (first-finds.ts).
-  interactables: [...trailPuzzles, ...firstFinds],
+  milestones: [{ id: 'old-oak', zone: { col: 43, row: 18, width: 3, height: 2 }, reward: { experience: 5 } }],
+  interactables: [
+    // The bow, and soon after it two caches of arrows, in the west glades beside the trail.
+    { kind: 'chest', id: 'bow-chest', tile: { col: 9, row: 12 }, contents: { kind: 'gear', gear: 'short-bow' } },
+    {
+      kind: 'chest',
+      id: 'arrow-cache-1',
+      tile: { col: 14, row: 17 },
+      contents: { kind: 'consumable', consumable: 'ammunition', amount: 6 },
+    },
+    {
+      kind: 'chest',
+      id: 'arrow-cache-2',
+      tile: { col: 17, row: 12 },
+      contents: { kind: 'consumable', consumable: 'ammunition', amount: 6 },
+    },
+    // Healing Potions: one on the trail, two in a chest by the pond a few steps off it.
+    { kind: 'pickup', id: 'woods-potion', tile: { col: 33, row: 12 }, consumable: 'healing-potion', amount: 1 },
+    {
+      kind: 'chest',
+      id: 'woods-potion-chest',
+      tile: { col: 22, row: 5 },
+      contents: { kind: 'consumable', consumable: 'healing-potion', amount: 2 },
+    },
+    // A side path: the Chain Mail, in a nook to the south a good walk from the trail.
+    { kind: 'chest', id: 'armor-chest', tile: { col: 22, row: 25 }, contents: { kind: 'gear', gear: 'chain-mail' } },
+    // A side path with a key: the cabin in the south-west is locked, a sign by its door says where the key is, and the
+    // brass key lies in the north glade. The chest inside holds what the key is worth.
+    { kind: 'key', id: 'brass-key', tile: { col: 41, row: 1 }, name: 'Brass Key' },
+    { kind: 'door', id: 'cabin-door', tile: { col: 5, row: 22 }, key: 'brass-key' },
+    {
+      kind: 'sign',
+      id: 'cabin-sign',
+      tile: { col: 6, row: 21 },
+      text: 'The cabin is locked. Its key is in the north woods.',
+    },
+    {
+      kind: 'chest',
+      id: 'cabin-chest',
+      tile: { col: 7, row: 25 },
+      contents: { kind: 'consumable', consumable: 'healing-potion', amount: 2 },
+    },
+  ],
 };
