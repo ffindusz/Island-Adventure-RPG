@@ -1,4 +1,5 @@
 import type { AreaDefinition } from '../../core';
+import { firstFinds } from './first-finds';
 import { trailPuzzles } from './trail-puzzles';
 
 // A placeholder that grows into the woods in a later ticket, and the first area larger than the screen (30 by 20 tiles
@@ -8,7 +9,8 @@ import { trailPuzzles } from './trail-puzzles';
 // and returns to the Checkpoint there, is not at once in danger. Reaching the clearing is a milestone. The rock at the
 // north-west corner, down to row 2 and across to column 5, is where the HUD sits when the view is at that corner, so
 // that it never covers the hero. The Checkpoint of the area is at the way in from the coast, where the hero comes in.
-// A cabin behind a locked door and a shed behind a gate, in the south corners, are its light puzzles (trail-puzzles.ts).
+// A cabin behind a locked door in the north-west and a shed behind a gate in the south-east are its light puzzles
+// (trail-puzzles.ts). The chests that moved here from the coast (first-finds.ts) stand in the south-west corner.
 export const overgrownTrail: AreaDefinition = {
   id: 'overgrown-trail',
   name: 'Overgrown Trail',
@@ -27,8 +29,8 @@ export const overgrownTrail: AreaDefinition = {
     '######,,,,,,,,,,,,,,,,,,,,,,,#',
     '######,,,,,,,,##,,,,,,,,,,##,#',
     '#,,##,,,,,,,,,#,,,,,,,,,,,#,,#',
-    '#,,,,,,,...............,,,,,,#',
-    '#,,,,,,,...............,,,,,,#',
+    '#,,#,,,,...............,,,,,,#',
+    '##,,,,,,...............,,,,,,#',
     '#,,,,,,#..,,,~~~~,,,,..,,,,,,#',
     '#,,,,,,#..,,~~~~~~,,,..,,....#',
     '#,,,,,,,..,,~~~~~~,,,..,,....#',
@@ -39,9 +41,9 @@ export const overgrownTrail: AreaDefinition = {
     '#,,,,,,,#,,,,,,,,,,,,,,,,,,,,#',
     '#,,##,,,#,,,,,,,,,,,##,,,,,,,#',
     '#,,##,,,,,,,,##,,,,,,#,,,##,,#',
-    '##,##,,,,,,,,#,,,,,,,,,,,,#,##',
-    '#,,,#,,,,,,,,,,,,,,,,,,,,#,,,#',
-    '#,,,#,,,,,,,,,,,,,,,,,,,,#,,,#',
+    '#,,,,,,,,,,,,#,,,,,,,,,,,,#,##',
+    '#,,,,,,,,,,,,,,,,,,,,,,,,#,,,#',
+    '#,,,,,,,,,,,,,,,,,,,,,,,,#,,,#',
     '##############################',
   ],
   monsters: [
@@ -52,5 +54,6 @@ export const overgrownTrail: AreaDefinition = {
     { id: 'trail-spitter-1', type: 'spitter', tile: { col: 20, row: 2 } },
   ],
   milestones: [{ id: 'far-clearing', zone: { col: 27, row: 8, width: 2, height: 4 }, reward: { experience: 5 } }],
-  interactables: trailPuzzles,
+  // The devices of the light puzzles, and the chests of the first finds (first-finds.ts).
+  interactables: [...trailPuzzles, ...firstFinds],
 };

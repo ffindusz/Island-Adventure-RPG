@@ -52,6 +52,9 @@ const DEFAULT_AREA_TEXT_MS = 4000;
 /** Used when the content does not set how far from the hero the Automap reveals terrain, in tiles. */
 const DEFAULT_AUTOMAP_REVEAL_DISTANCE = 4;
 
+/** The most lines an opening may have: it is a card to read at a glance, not a page. */
+const MAX_OPENING_LINES = 4;
+
 /** A milestone as the rules use it: its zone is a box in tile units, like the bodies it is compared with. */
 export interface Milestone {
   readonly id: string;
@@ -234,6 +237,8 @@ export interface Content {
   readonly areaOrder: readonly string[];
   /** How many fixed steps the text of an Adventure Area stays on the screen. */
   readonly areaTextSteps: number;
+  /** The lines of the opening a new game begins with, or null when the content has none. */
+  readonly opening: readonly string[] | null;
   /** How far from the hero's tile the Automap reveals terrain, in tiles. */
   readonly automapRevealDistance: number;
   readonly start: { readonly areaId: string; readonly tile: Tile };
@@ -254,6 +259,7 @@ export function loadContent(definition: ContentDefinition): Content {
     );
   }
   const progression = loadProgression(definition.progression);
+  const opening = loadOpening(definition.opening);
   const automapRevealDistance = definition.automapRevealDistance ?? DEFAULT_AUTOMAP_REVEAL_DISTANCE;
   requireZeroOrMore('The Automap reveal distance', automapRevealDistance);
   requireMoreThanZero('The Health a Healing Potion restores', definition.healingPotion.restores);
@@ -287,7 +293,9 @@ export function loadContent(definition: ContentDefinition): Content {
     );
   }
   checkConnections(areas, definition.hero.size);
-  checkCoveredCorners(areas);
+  if (definition.checkCoveredCorner === true) {
+    checkCoveredCorners(areas);
+  }
   checkKeysAndDoors(Object.values(areas));
   checkLeverTargets(Object.values(areas));
   checkRoutesStayOpen(Object.values(areas), { areaId: startArea.id, tile: definition.start.tile });
@@ -312,6 +320,7 @@ export function loadContent(definition: ContentDefinition): Content {
     areas,
     areaOrder: definition.areas.map((area) => area.id),
     areaTextSteps: msToSteps(areaTextMs),
+    opening,
     automapRevealDistance,
     start: { areaId: definition.start.area, tile: definition.start.tile },
   };
@@ -659,6 +668,25 @@ function loadAreaText(area: AreaDefinition): string | null {
     throw new Error(`Area "${area.id}": the area text is blank`);
   }
   return area.text;
+}
+
+/** The lines of the opening, or null when the content has none. */
+function loadOpening(lines: readonly string[] | undefined): readonly string[] | null {
+  if (lines === undefined) {
+    return null;
+  }
+  if (lines.length === 0) {
+    throw new Error('The opening has no lines: leave it out for none');
+  }
+  if (lines.length > MAX_OPENING_LINES) {
+    throw new Error(`The opening has ${lines.length} lines, but the card holds at most ${MAX_OPENING_LINES}`);
+  }
+  lines.forEach((line, index) => {
+    if (line.trim() === '') {
+      throw new Error(`The opening: line ${index + 1} is blank`);
+    }
+  });
+  return [...lines];
 }
 
 /** `width` and `height` are the size of the map of the Adventure Area, in tiles. */

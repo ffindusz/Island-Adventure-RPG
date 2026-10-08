@@ -7,7 +7,7 @@ import { DEPTH } from './depths';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import { PlayerInput } from './player-input';
 import type { SavedGame, SaveStore } from './save-store';
-import { SCENE_KEYS } from './scene-keys';
+import { SCENE_KEYS, startOfNewGame } from './scene-keys';
 import type { PlayStart } from './scene-keys';
 import { MENU_ENTRIES, openMenu, pressMenu, selectableEntries } from './title-menu';
 import type { MenuEntry, TitleMenu } from './title-menu';
@@ -84,8 +84,8 @@ export class TitleScene extends Phaser.Scene {
     });
     this.menu = menu;
     if (choice === 'new-game') {
-      this.core.send({ type: 'new-game' });
-      this.scene.start(SCENE_KEYS.play, { saveAtOnce: true } satisfies PlayStart);
+      // The opening is among the events of a New Game; the play screen shows it and holds the game until Enter.
+      this.scene.start(SCENE_KEYS.play, startOfNewGame(this.core.send({ type: 'new-game' })));
     } else if (choice === 'continue' && saved.status === 'usable') {
       this.core.send({ type: 'continue', snapshot: saved.snapshot });
       this.scene.start(SCENE_KEYS.play, { saveAtOnce: false } satisfies PlayStart);
