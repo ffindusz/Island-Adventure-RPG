@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { COVERED_CORNER } from '../core';
 import type { PlayingView, WeaponSlot } from '../core';
-import { consumableIcon } from './artwork';
+import { consumableIcon, gearIcon } from './artwork';
 import { TILE_SIZE } from './config';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import { INK, UiLayer } from './ui-layer';
@@ -56,10 +56,14 @@ const POTION_ROOM = 9;
 /** How many digits of a count have room, so that nothing moves as the counts change. */
 const COUNT_ROOM = textWidthOf('00');
 
-/** What shows the weapon in hand, by the slot it is equipped in: the picture the hero holds, a sword point up. */
+/**
+ * What shows the weapon in hand, by the slot it is equipped in: the picture the hero holds for the sword, upside down so
+ * that its point is up, and the icon of the bow for the bow, which stands upright, because the bow the hero holds lies
+ * flat and read as a bowl here.
+ */
 const WEAPON_ICONS: Readonly<Record<WeaponSlot, { readonly texture: string; readonly flipped: boolean }>> = {
   'melee-weapon': { texture: 'sword-held', flipped: true },
-  'ranged-weapon': { texture: 'bow-held', flipped: false },
+  'ranged-weapon': { texture: gearIcon('short-bow'), flipped: false },
 };
 
 const POTION_ICON = consumableIcon('healing-potion');

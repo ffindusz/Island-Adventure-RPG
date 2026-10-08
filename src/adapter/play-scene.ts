@@ -2,16 +2,13 @@ import Phaser from 'phaser';
 import type { Command, Game, GameEvent, GameView, PlayingView } from '../core';
 import { AreaBanner } from './area-banner';
 import {
-  drawCheckpoints,
-  drawExits,
   drawInteractable,
   drawMonster,
-  drawProjectile,
   drawStrike,
   drawTelegraph,
   drawTerrain,
 } from './art';
-import { ARTWORK } from './artwork';
+import { ARTWORK, hasFinalArt } from './artwork';
 import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import { AutomapPage } from './automap-page';
 import { callsForSave } from './autosave';
@@ -23,14 +20,18 @@ import { FixedStepClock } from './fixed-step';
 import { HeroSprite } from './hero-sprite';
 import { checkHudFootprint, Hud } from './hud';
 import { InventoryMenu } from './inventory-menu';
+import { MonsterSprites } from './monster-sprites';
 import { Notice } from './notice';
 import { OpeningCard } from './opening-card';
 import { Overlay } from './overlay';
 import { PlayerInput } from './player-input';
 import { byShooter } from './projectiles';
+import { ProjectileSprites } from './projectile-sprites';
+import { PropSprites } from './prop-sprites';
 import type { SaveStore } from './save-store';
 import { SCENE_KEYS } from './scene-keys';
 import type { PlayStart } from './scene-keys';
+import { bakeGround } from './terrain-baker';
 
 /** How long the screen takes to fade in after the hero is defeated and returned, in milliseconds. */
 const DEFEAT_FADE_MS = 500;
@@ -66,13 +67,19 @@ export class PlayScene extends Phaser.Scene {
   private readonly inventoryMenu = new InventoryMenu();
   private playerInput!: PlayerInput;
   private heroSprite!: HeroSprite;
+  private monsterSprites!: MonsterSprites;
+  private projectileSprites!: ProjectileSprites;
+  private propSprites!: PropSprites;
   private hud!: Hud;
   private banner!: AreaBanner;
   private notice!: Notice;
   private overlay!: Overlay;
   private automapPage!: AutomapPage;
   private terrainLayer!: Phaser.GameObjects.Graphics;
+  /** The ground of an area whose art is final, painted once (terrain-baker.ts); hidden for any other area. */
+  private groundImage!: Phaser.GameObjects.Image;
   private telegraphLayer!: Phaser.GameObjects.Graphics;
+  /** The flat shapes of what has no picture yet: the monsters of an area whose art is not final, the gates and the levers. */
   private entityLayer!: Phaser.GameObjects.Graphics;
   private effectLayer!: Phaser.GameObjects.Graphics;
   private drawnAreaId: string | null = null;
@@ -107,17 +114,23 @@ export class PlayScene extends Phaser.Scene {
     buildDrawnArt(this.textures, ARTWORK);
     requireLoadedArt(this.textures, ARTWORK);
     checkHudFootprint();
-    // Added in drawing order: ground, then the telegraphs of monster attacks, then Checkpoints, chests, monsters and
-    // their projectiles, which share the lowest depth. The hero and its arrows are sprites above them (see depths.ts),
-    // and the strikes of the monsters above those. The HUD draws above them all, then the text of the area, the notice
-    // above that, and the overlay above that, which shares its place with the Automap page. The world scrolls with the
-    // camera; the HUD, the text, the notice, the overlay and the Automap page do not.
+    // The ground is added first, at the lowest depth: in colours, or the picture of it where the art is final. Everything
+    // above it has its depth in depths.ts: the marks of the exits and the props are sprites, then the telegraphs of
+    // monster attacks, then the flat shapes of what has no picture yet, then the monsters of final art, what they shoot,
+    // and the hero and its arrows, which are sprites too, and the strikes of the monsters above those. The HUD draws above
+    // them all, then the text of the area, the notice above that, and the overlay above that, which shares its place
+    // with the Automap page. The world scrolls with the camera; the HUD, the text, the notice, the overlay and the
+    // Automap page do not.
     this.terrainLayer = this.add.graphics();
+    this.groundImage = this.add.image(0, 0, '__WHITE').setOrigin(0, 0).setVisible(false);
     this.drawnAreaId = null;
     this.lastPlaying = null;
     this.fall = null;
-    this.telegraphLayer = this.add.graphics();
-    this.entityLayer = this.add.graphics();
+    this.propSprites = new PropSprites(this);
+    this.telegraphLayer = this.add.graphics().setDepth(DEPTH.telegraph);
+    this.entityLayer = this.add.graphics().setDepth(DEPTH.flatShapes);
+    this.monsterSprites = new MonsterSprites(this);
+    this.projectileSprites = new ProjectileSprites(this);
     this.heroSprite = new HeroSprite(this);
     this.effectLayer = this.add.graphics().setDepth(DEPTH.effects);
     this.hud = new Hud(this);
@@ -175,8 +188,12 @@ export class PlayScene extends Phaser.Scene {
     }
     this.feedback.age(frameMs);
     this.heroSprite.age(frameMs);
+    this.monsterSprites.age(frameMs);
+    this.projectileSprites.age(frameMs);
+    this.propSprites.age(frameMs);
     this.feedback.show(events);
     this.heroSprite.show(events);
+    this.monsterSprites.show(events);
     const view = this.core.view();
     if (view.phase === 'title') {
       // The core went back to the title, and the title screen shows it from here.
@@ -243,6 +260,9 @@ export class PlayScene extends Phaser.Scene {
     this.playerInput.pollActions();
     this.feedback.age(frameMs);
     this.heroSprite.age(frameMs);
+    this.monsterSprites.age(frameMs);
+    this.projectileSprites.age(frameMs);
+    this.propSprites.age(frameMs);
     if (fall.stage === 'fading-out' && !this.fadingOut) {
       this.fadingOut = true;
       this.cameras.main.fadeOut(FALL_FADE_OUT_MS, 0, 0, 0);
@@ -261,13 +281,28 @@ export class PlayScene extends Phaser.Scene {
     this.cameras.main.fadeIn(DEFEAT_FADE_MS, 0, 0, 0);
   }
 
+  /**
+   * The ground of the area the hero is in, drawn once: the picture of it where the art of the area is final, flat colours
+   * where it is not.
+   */
+  private drawGround(view: PlayingView): void {
+    // The monsters of the place the hero left are gone, and those of this one start from where they stand.
+    this.monsterSprites.clear();
+    this.terrainLayer.clear();
+    if (hasFinalArt(view.area.id)) {
+      this.groundImage.setTexture(bakeGround(this.textures, view.area)).setVisible(true);
+    } else {
+      this.groundImage.setVisible(false);
+      drawTerrain(this.terrainLayer, view.area);
+    }
+  }
+
   private draw(view: GameView, watching: boolean, time: number): void {
     if (view.phase !== 'playing') {
       return;
     }
     if (this.drawnAreaId !== view.area.id) {
-      drawTerrain(this.terrainLayer, view.area);
-      drawExits(this.terrainLayer, view.exits);
+      this.drawGround(view);
       this.drawnAreaId = view.area.id;
     }
     // The camera follows the hero, and shows a small area in the middle of the screen.
@@ -275,20 +310,26 @@ export class PlayScene extends Phaser.Scene {
     this.cameras.main.setScroll(scroll.x, scroll.y);
     this.telegraphLayer.clear();
     this.entityLayer.clear();
-    drawCheckpoints(this.entityLayer, view.checkpoints);
+    this.propSprites.draw(view);
     for (const interactable of view.interactables) {
       drawInteractable(this.entityLayer, interactable);
     }
+    const monstersAreSprites = hasFinalArt(view.area.id);
     for (const monster of view.monsters) {
       if (monster.action.type === 'winding-up') {
         drawTelegraph(this.telegraphLayer, monster.action.zone, monster.action.progress);
       }
-      drawMonster(this.entityLayer, monster, this.feedback.isFlashing(monster.id));
+      if (!monstersAreSprites) {
+        drawMonster(this.entityLayer, monster, this.feedback.isFlashing(monster.id));
+      }
     }
-    // The hero's arrows are sprites of the hero (hero-sprite.ts); a monster's projectile is an orb drawn here.
-    for (const projectile of byShooter(view.arrows).monster) {
-      drawProjectile(this.entityLayer, projectile);
+    if (monstersAreSprites) {
+      this.monsterSprites.draw(view, (monsterId) => this.feedback.isFlashing(monsterId));
+    } else {
+      this.monsterSprites.clear();
     }
+    // The hero's arrows are sprites of the hero (hero-sprite.ts); what a monster shoots is an orb (projectile-sprites.ts).
+    this.projectileSprites.draw(byShooter(view.arrows).monster);
     this.heroSprite.draw(view.hero, view.arrows);
     this.effectLayer.clear();
     for (const zone of this.feedback.strikeZones()) {
