@@ -93,8 +93,10 @@ export const cave: AreaDefinition = {
   interactables: [
     // The side path that a lever opens: a pocket of grass in the north wall of the middle chamber, shut by a gate that
     // the hero sees from the trail, with the Katana in a chest in it. The lever is set in a niche in the east wall of
-    // the same chamber, and a sign by the gate says where to look. The pocket is a dead end, so the way on needs
-    // neither the lever nor the gate.
+    // the same chamber, and a sign by the gate says where to look. The gate is one tile wide, a quarter of a tile
+    // wider than the hero, and the sign stands where it does for that: a hero who keeps to the wall below the gate
+    // slides along the row of the sign and is stopped by it in line with the gate. The pocket is a dead end, so the
+    // way on needs neither the lever nor the gate.
     { kind: 'gate', id: 'cave-gate', tile: { col: 17, row: 17 } },
     { kind: 'lever', id: 'cave-lever', tile: { col: 28, row: 21 }, targets: ['cave-gate'] },
     {

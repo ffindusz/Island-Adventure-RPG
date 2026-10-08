@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { monsterColour, terrainColour } from '../src/adapter/art';
 import { gameContent } from '../src/content';
-import { GEAR_SLOTS, createGame } from '../src/core';
+import { GEAR_SLOTS, STEPS_PER_SECOND, createGame } from '../src/core';
 import type {
   AreaDefinition,
   ChestDefinition,
@@ -384,6 +384,11 @@ describe('the side path behind the gate', () => {
     const { x, y } = playingView(game).hero.position;
     return { col: Math.floor(x), row: Math.floor(y) };
   };
+  /** The keys of the tiles that only a hero who stands the gate open can walk to: the pocket behind it. */
+  const behindTheGate = (): string[] => {
+    const shut = reachableFrom(isOpen, wayInTile);
+    return [...reachableFrom(openTilesOf(gameContent, cave, true), wayInTile)].filter((place) => !shut.has(place));
+  };
 
   it('keeps the chest of the weapon in a pocket behind the gate: the hero cannot walk to it while the gate is shut, and can when it stands open', () => {
     expect(routeBetween(isOpen, wayInTile, besideTheChest)).toBeNull();
@@ -391,8 +396,7 @@ describe('the side path behind the gate', () => {
   });
 
   it('shuts away a dead end and nothing more: what the gate keeps from the hero holds no way in, no way out and no Checkpoint', () => {
-    const shut = reachableFrom(isOpen, wayInTile);
-    const kept = [...reachableFrom(openTilesOf(gameContent, cave, true), wayInTile)].filter((place) => !shut.has(place));
+    const kept = behindTheGate();
     const ways = new Set(
       [
         ...(cave.entrances ?? []).map(({ tile }) => tile),
@@ -457,6 +461,30 @@ describe('the side path behind the gate', () => {
     expect(events).toEqual([{ type: 'lever-toggled', leverId: lever.id, pulled: true }]);
     expect(interactableViews(game, 'lever')).toEqual([expect.objectContaining({ id: lever.id, pulled: true })]);
     expect(interactableViews(game, 'gate')).toEqual([expect.objectContaining({ id: theGate().id, open: true })]);
+  });
+
+  it('lets in a hero who walks as a player does, not from tile to tile: the sign stops a hero who slides along the wall in line with the gate, which is one tile wide', () => {
+    const game = quietGameAt(CAVE, wayInTile);
+    const { col } = theGate().tile;
+    const hero = () => playingView(game).hero;
+    const stepsFor = (tiles: number): number =>
+      Math.ceil((tiles * STEPS_PER_SECOND) / gameContent.hero.speedTilesPerSecond);
+    interactWith(game, theLever().tile);
+
+    // The hero keeps to the walls of the chamber: up to the one above, along it to the left of the gate, up into the row
+    // of the sign and along that row, with the key held down, until the sign stops it.
+    walk(game, 'up', stepsFor(4));
+    walk(game, 'left', stepsFor(hero().position.x - (col - 0.5)));
+    walk(game, 'up', stepsFor(2));
+    walk(game, 'right', stepsFor(2));
+
+    const room = (1 - hero().size) / 2;
+    expect(hero().position.x).toBeGreaterThanOrEqual(col + 0.5 - room - 1e-9);
+    expect(hero().position.x).toBeLessThanOrEqual(col + 0.5 + room + 1e-9);
+
+    walk(game, 'up', stepsFor(5));
+
+    expect(behindTheGate()).toContain(keyOf(tileOfHero(game)));
   });
 });
 
