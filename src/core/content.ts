@@ -24,6 +24,8 @@ import type {
   DropDefinition,
   GearDefinition,
   GearSlot,
+  GuardianMonsterDefinition,
+  GuardianPatternDefinition,
   HealingPotionDefinition,
   InteractableDefinition,
   MeleeWeaponDefinition,
@@ -198,8 +200,54 @@ export interface RangedMonsterType {
   } | null;
 }
 
+/** What every pattern of a Guardian has, as the rules use it. */
+interface GuardianPatternBase {
+  readonly damage: number;
+  readonly windUpSteps: number;
+  readonly recoverySteps: number;
+}
+
+export interface GuardianSweep extends GuardianPatternBase {
+  readonly kind: 'sweep';
+  readonly reach: number;
+}
+
+export interface GuardianCharge extends GuardianPatternBase {
+  readonly kind: 'charge';
+  /** Tiles dashed in one fixed step. */
+  readonly dashSpeedPerStep: number;
+  readonly dashRange: number;
+}
+
+export interface GuardianSmite extends GuardianPatternBase {
+  readonly kind: 'smite';
+  readonly size: number;
+  readonly range: number;
+}
+
+export type GuardianPattern = GuardianSweep | GuardianCharge | GuardianSmite;
+
+export interface GuardianMonsterType {
+  readonly behavior: 'guardian';
+  readonly health: number;
+  readonly size: number;
+  readonly experience: number;
+  /** Never absent: a type without a drop table has an empty one. */
+  readonly drops: readonly DropDefinition[];
+  /** Tiles walked in one fixed step toward the hero. */
+  readonly speedPerStep: number;
+  readonly noticingDistance: number;
+  /** In the order of the turns. */
+  readonly patterns: readonly GuardianPattern[];
+}
+
 /** A monster type as the rules use it, one member for each behavior. */
-export type MonsterType = StationaryMonsterType | ChaserMonsterType | ChargerMonsterType | RangedMonsterType;
+export type MonsterType =
+  | StationaryMonsterType
+  | ChaserMonsterType
+  | ChargerMonsterType
+  | RangedMonsterType
+  | GuardianMonsterType;
 
 /** The hero's Ranged Weapon as the rules use it. */
 export interface RangedWeapon {
@@ -387,6 +435,8 @@ function loadMonsterType(name: string, definition: MonsterTypeDefinition): Monst
       return loadCharger(name, definition, drops);
     case 'ranged':
       return loadRanged(name, definition, drops);
+    case 'guardian':
+      return loadGuardian(name, definition, drops);
     default:
       return refuseBehavior(name, definition);
   }
@@ -515,6 +565,75 @@ function loadRanged(
             speedPerStep: keepsDistance.speedTilesPerSecond / STEPS_PER_SECOND,
           },
   };
+}
+
+function loadGuardian(
+  name: string,
+  definition: GuardianMonsterDefinition,
+  drops: readonly DropDefinition[],
+): GuardianMonsterType {
+  const field = (fieldName: string) => `Monster type "${name}": ${fieldName}`;
+  requireZeroOrMore(field('speedTilesPerSecond'), definition.speedTilesPerSecond);
+  requireZeroOrMore(field('noticingDistance'), definition.noticingDistance);
+  const { patterns } = definition;
+  if (patterns.length < 2) {
+    throw new Error(`${field('patterns')} must hold at least two patterns, but it holds ${patterns.length}`);
+  }
+  const kinds = new Set(patterns.map((pattern) => pattern.kind));
+  if (kinds.size < 2) {
+    throw new Error(
+      `${field('patterns')} must hold at least two different kinds of pattern, but all are ${[...kinds].join(', ')}`,
+    );
+  }
+  return {
+    behavior: 'guardian',
+    health: definition.health,
+    size: definition.size,
+    experience: definition.experience,
+    drops,
+    speedPerStep: definition.speedTilesPerSecond / STEPS_PER_SECOND,
+    noticingDistance: definition.noticingDistance,
+    patterns: patterns.map((pattern, index) => loadGuardianPattern(name, index, pattern)),
+  };
+}
+
+function loadGuardianPattern(name: string, index: number, definition: GuardianPatternDefinition): GuardianPattern {
+  const field = (fieldName: string) => `Monster type "${name}": patterns[${index}].${fieldName}`;
+  requireMoreThanZero(field('damage'), definition.damage);
+  requireAtLeastOneStep(field('windUpMs'), definition.windUpMs);
+  // Unlike the other behaviors, which may attack again at once: the hero must always have a moment to hit this one freely.
+  requireAtLeastOneStep(field('recoveryMs'), definition.recoveryMs);
+  const common = {
+    damage: definition.damage,
+    windUpSteps: msToSteps(definition.windUpMs),
+    recoverySteps: msToSteps(definition.recoveryMs),
+  };
+  switch (definition.kind) {
+    case 'sweep':
+      requireMoreThanZero(field('reach'), definition.reach);
+      return { kind: 'sweep', ...common, reach: definition.reach };
+    case 'charge':
+      requireMoreThanZero(field('dashSpeedTilesPerSecond'), definition.dashSpeedTilesPerSecond);
+      requireMoreThanZero(field('dashRange'), definition.dashRange);
+      return {
+        kind: 'charge',
+        ...common,
+        dashSpeedPerStep: definition.dashSpeedTilesPerSecond / STEPS_PER_SECOND,
+        dashRange: definition.dashRange,
+      };
+    case 'smite':
+      requireMoreThanZero(field('size'), definition.size);
+      requireMoreThanZero(field('range'), definition.range);
+      return { kind: 'smite', ...common, size: definition.size, range: definition.range };
+    default:
+      return refusePattern(name, index, definition);
+  }
+}
+
+/** Only content that got past the compiler gets here. Its parameter type makes a kind of pattern without a case a compile error. */
+function refusePattern(name: string, index: number, definition: never): never {
+  const { kind } = definition as { kind?: unknown };
+  throw new Error(`Monster type "${name}": patterns[${index}] has unknown kind "${String(kind)}"`);
 }
 
 /** A wind-up shorter than one fixed step would be over before it showed: the telegraph needs at least one. */

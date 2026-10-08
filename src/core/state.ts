@@ -1,13 +1,13 @@
 import type { Area, Content, Interactable } from './content';
 import { monsterTypeOf } from './content';
 import { GEAR_SLOTS } from './definitions';
-import type { ConsumableId, GearSlot, StatId, WeaponSlot } from './definitions';
+import type { ConsumableId, GearSlot, MonsterPlacement, StatId, WeaponSlot } from './definitions';
 import type { Box, Direction, Point, Tile } from './geometry';
 import { boxAround, centerOf } from './geometry';
 import { heroMaxHealth } from './stats';
 
 /** Bumped whenever the shape of a Snapshot changes in a way an older save cannot satisfy. */
-export const SNAPSHOT_VERSION = 2;
+export const SNAPSHOT_VERSION = 3;
 
 // The state of a running game, as plain data: numbers, strings, arrays and objects only, so it survives
 // JSON.stringify and JSON.parse unchanged. Anything that is not saved belongs elsewhere (see game.ts).
@@ -19,6 +19,12 @@ export interface MonsterState {
   health: number;
   /** What the monster is doing now. Every behavior moves a monster through these same few kinds of action. */
   action: MonsterAction;
+  /**
+   * Only a Guardian has it: the index of the pattern it tries first when it next decides, so the rotation of its
+   * patterns carries on where it was after a save. It is also, one back, the pattern it is making while it winds up,
+   * dashes or recovers.
+   */
+  nextPattern?: number;
 }
 
 /** What a monster is doing. Like all state it is plain data, so a wind-up in progress is saved with the game. */
@@ -270,13 +276,23 @@ export function newPlayState(content: Content): PlayState {
 
 /** Every monster of an Adventure Area as the content places it: at full Health, on its starting tile, doing nothing. */
 export function freshMonsters(area: Area, content: Content): MonsterState[] {
-  return area.monsters.map((placement) => ({
+  return area.monsters.map((placement) => freshMonster(placement, content));
+}
+
+/** One monster as the content places it: at full Health, on its starting tile, doing nothing, a Guardian at its first pattern. */
+export function freshMonster(placement: MonsterPlacement, content: Content): MonsterState {
+  const type = monsterTypeOf(content, placement.type);
+  const monster: MonsterState = {
     id: placement.id,
     type: placement.type,
     position: centerOf(placement.tile),
-    health: monsterTypeOf(content, placement.type).health,
+    health: type.health,
     action: { type: 'idle' },
-  }));
+  };
+  if (type.behavior === 'guardian') {
+    monster.nextPattern = 0;
+  }
+  return monster;
 }
 
 /** Every interactable of an Adventure Area as the content places it: nothing opened, taken or used yet. */

@@ -191,13 +191,12 @@ function checkMonsters(value: unknown, path: string, area: AreaDefinition, conte
   }
   area.monsters.forEach((placed, i) => {
     const monsterPath = atIndex(path, i);
-    const monster = expectKeys(expectRecord(monsters[i], monsterPath), monsterPath, [
-      'id',
-      'type',
-      'position',
-      'health',
-      'action',
-    ]);
+    const monster = expectKeys(
+      expectRecord(monsters[i], monsterPath),
+      monsterPath,
+      ['id', 'type', 'position', 'health', 'action'],
+      ['nextPattern'],
+    );
     const id = expectString(monster['id'], at(monsterPath, 'id'));
     const type = expectString(monster['type'], at(monsterPath, 'type'));
     if (id !== placed.id) {
@@ -209,8 +208,33 @@ function checkMonsters(value: unknown, path: string, area: AreaDefinition, conte
     }
     expectPositionIn(monster['position'], at(monsterPath, 'position'), area);
     expectNonNegative(monster['health'], at(monsterPath, 'health'));
-    checkAction(monster['action'], at(monsterPath, 'action'), type, definition.behavior);
+    const attackDashes = checkNextPattern(monster, monsterPath, definition);
+    checkAction(monster['action'], at(monsterPath, 'action'), type, definition.behavior, attackDashes);
   });
+}
+
+/**
+ * The turn of a Guardian's patterns, which it keeps and no other monster does: the index of the pattern it makes next.
+ * Returns whether the attack the monster makes, or is making now, is a dash: a charger's is, and a Guardian's is while
+ * the pattern before the next is a charge.
+ */
+function checkNextPattern(monster: Record<string, unknown>, path: string, definition: MonsterTypeDefinition): boolean {
+  const kept = Object.hasOwn(monster, 'nextPattern');
+  if (definition.behavior !== 'guardian') {
+    if (kept) {
+      throw incompatible(at(path, 'nextPattern'), 'should not be there: only a Guardian keeps the turn of its patterns');
+    }
+    return definition.behavior === 'charger';
+  }
+  if (!kept) {
+    throw incompatible(at(path, 'nextPattern'), 'is missing: a Guardian keeps the turn of its patterns');
+  }
+  const next = expectCount(monster['nextPattern'], at(path, 'nextPattern'));
+  const count = definition.patterns.length;
+  if (next >= count) {
+    throw incompatible(at(path, 'nextPattern'), `is ${next}, but the Guardian has ${count} patterns`);
+  }
+  return definition.patterns[(next + count - 1) % count]?.kind === 'charge';
 }
 
 function monsterTypeIn(content: ContentDefinition, type: string, path: string): MonsterTypeDefinition {
@@ -222,7 +246,8 @@ function monsterTypeIn(content: ContentDefinition, type: string, path: string): 
 }
 
 type Behavior = MonsterTypeDefinition['behavior'];
-type ActionCheck = (action: Record<string, unknown>, path: string, behavior: Behavior) => void;
+/** `attackDashes` is whether the attack the monster makes, or is making now, is a dash (see checkNextPattern). */
+type ActionCheck = (action: Record<string, unknown>, path: string, attackDashes: boolean) => void;
 
 /** The kinds of action each behavior moves a monster through: the same few for all, but not every kind for each. */
 const ACTIONS_OF: Record<Behavior, readonly MonsterAction['type'][]> = {
@@ -230,6 +255,7 @@ const ACTIONS_OF: Record<Behavior, readonly MonsterAction['type'][]> = {
   chaser: ['idle', 'chasing', 'winding-up', 'recovering'],
   charger: ['idle', 'chasing', 'winding-up', 'dashing', 'recovering'],
   ranged: ['idle', 'chasing', 'winding-up', 'recovering'],
+  guardian: ['idle', 'chasing', 'winding-up', 'dashing', 'recovering'],
 };
 
 /** What each kind of action keeps with it, and how the fields are checked. A new kind of action must be added here. */
@@ -240,21 +266,23 @@ const ACTION_CHECKS: Record<MonsterAction['type'], ActionCheck> = {
   chasing: (action, path) => {
     expectKeys(action, path, ['type']);
   },
-  'winding-up': (action, path, behavior) => {
-    // Only a monster that dashes keeps the direction of its dash, which is fixed when the wind-up begins.
-    const dashes = behavior === 'charger';
-    if (Object.hasOwn(action, 'direction') !== dashes) {
-      throw incompatible(at(path, 'direction'), dashes ? 'is missing: a charger winds up to dash' : 'should not be there');
+  'winding-up': (action, path, attackDashes) => {
+    // Only a wind-up for a dash keeps the direction of the dash, which is fixed when the wind-up begins.
+    if (Object.hasOwn(action, 'direction') !== attackDashes) {
+      throw incompatible(at(path, 'direction'), attackDashes ? 'is missing: this wind-up is for a dash' : 'should not be there');
     }
-    expectKeys(action, path, ['type', 'zone', 'elapsed', 'length', ...(dashes ? ['direction'] : [])]);
+    expectKeys(action, path, ['type', 'zone', 'elapsed', 'length', ...(attackDashes ? ['direction'] : [])]);
     expectBox(action['zone'], at(path, 'zone'));
     expectCount(action['elapsed'], at(path, 'elapsed'));
     expectCount(action['length'], at(path, 'length'));
-    if (dashes) {
+    if (attackDashes) {
       expectOneOf(action['direction'], DIRECTIONS, at(path, 'direction'));
     }
   },
-  dashing: (action, path) => {
+  dashing: (action, path, attackDashes) => {
+    if (!attackDashes) {
+      throw incompatible(path, 'is "dashing", but the attack this monster is making is not a dash');
+    }
     expectKeys(action, path, ['type', 'direction', 'rangeLeft']);
     expectOneOf(action['direction'], DIRECTIONS, at(path, 'direction'));
     expectNonNegative(action['rangeLeft'], at(path, 'rangeLeft'));
@@ -265,13 +293,19 @@ const ACTION_CHECKS: Record<MonsterAction['type'], ActionCheck> = {
   },
 };
 
-function checkAction(value: unknown, path: string, monsterType: string, behavior: Behavior): void {
+function checkAction(
+  value: unknown,
+  path: string,
+  monsterType: string,
+  behavior: Behavior,
+  attackDashes: boolean,
+): void {
   const action = expectRecord(value, path);
   const type = expectOneOf(action['type'], Object.keys(ACTION_CHECKS) as MonsterAction['type'][], at(path, 'type'));
   if (!ACTIONS_OF[behavior].includes(type)) {
     throw incompatible(path, `is "${type}", which a ${behavior} monster ("${monsterType}") never does`);
   }
-  ACTION_CHECKS[type](action, path, behavior);
+  ACTION_CHECKS[type](action, path, attackDashes);
 }
 
 /** The arrows in flight: the hero's own, and the projectiles of ranged monsters. */

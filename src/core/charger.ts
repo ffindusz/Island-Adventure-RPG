@@ -83,7 +83,7 @@ function lineUp(
 }
 
 /** The wind-up is over: the dash is launched along the lane that was telegraphed, and the lane flashes. */
-function launchDash(monster: MonsterState, windUp: WindingUp): GameEvent[] {
+export function launchDash(monster: MonsterState, windUp: WindingUp): GameEvent[] {
   const { direction, zone } = windUp;
   if (direction === undefined) {
     throw new Error(`Charger "${monster.id}" wound up with no direction to dash in`);
@@ -92,14 +92,22 @@ function launchDash(monster: MonsterState, windUp: WindingUp): GameEvent[] {
   return [{ type: 'monster-attacked', monsterId: monster.id, zone }];
 }
 
+/** What a dash needs of a monster type: its size, how far it dashes in one step, the damage that lands, and how long it rests afterwards. */
+export interface DashNumbers {
+  readonly size: number;
+  readonly dashSpeedPerStep: number;
+  readonly damage: number;
+  readonly recoverySteps: number;
+}
+
 /**
  * One step of the dash. The charger runs on along its lane until it reaches the hero, which hurts the hero once, or
  * is stopped by solid terrain, a chest or another monster, or comes to the end of the lane. Then it recovers.
  */
-function dash(
+export function dash(
   monster: MonsterState,
   dashing: Dashing,
-  type: ChargerMonsterType,
+  type: DashNumbers,
   state: PlayState,
   content: Content,
 ): GameEvent[] {

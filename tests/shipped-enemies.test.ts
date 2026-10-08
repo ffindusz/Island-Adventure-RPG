@@ -59,6 +59,20 @@ function awarenessOf(type: MonsterTypeDefinition): number {
     case 'charger':
     case 'ranged':
       return type.noticingDistance;
+    case 'guardian':
+      return Math.max(
+        type.noticingDistance,
+        ...type.patterns.map((pattern) => {
+          switch (pattern.kind) {
+            case 'sweep':
+              return pattern.reach;
+            case 'charge':
+              return pattern.dashRange;
+            case 'smite':
+              return pattern.range;
+          }
+        }),
+      );
   }
 }
 

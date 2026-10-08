@@ -202,6 +202,77 @@ export interface RangedMonsterDefinition extends MonsterTypeBase {
 }
 
 /**
+ * What every pattern of a Guardian has. A pattern is one telegraphed attack: the Guardian winds up, the attack lands
+ * once the wind-up is over, and the Guardian rests before it decides on the next.
+ */
+interface GuardianPatternBase {
+  /** The damage of one hit, before the hero's Defense reduces it. */
+  readonly damage: number;
+  /** How long the Guardian winds up before the attack lands: the time the player has to avoid it. */
+  readonly windUpMs: number;
+  /** How long the Guardian rests after the attack before it may decide on the next: the time the hero can hit it freely. */
+  readonly recoveryMs: number;
+}
+
+/**
+ * The sweep, which the chaser's attack is too: it lands on the zone within `reach` tiles of the Guardian's body, in
+ * every direction. It is made when the hero is in that zone as the wind-up begins.
+ */
+export interface GuardianSweepDefinition extends GuardianPatternBase {
+  readonly kind: 'sweep';
+  /** How far the zone reaches beyond the Guardian's body, in every direction, in tiles. */
+  readonly reach: number;
+}
+
+/**
+ * The charge, which the charger's attack is too: the Guardian dashes along the lane in front of it, as wide as its
+ * body, from the body to the first solid terrain or chest or as far as `dashRange`. It is made when the hero is in that
+ * lane as the wind-up begins, and the lane is fixed then. The dash hurts the hero only if the hero is in its way.
+ */
+export interface GuardianChargeDefinition extends GuardianPatternBase {
+  readonly kind: 'charge';
+  /** How fast the Guardian dashes. */
+  readonly dashSpeedTilesPerSecond: number;
+  /** The farthest the dash goes, in tiles, if nothing stops it before. */
+  readonly dashRange: number;
+}
+
+/**
+ * The smite: the attack lands on a square, `size` tiles wide, centred on where the hero stands as the wind-up begins.
+ * The square is fixed then, and hurts what of the hero is in it when the wind-up ends. It is made when the hero is
+ * within `range` tiles of the Guardian's body, and needs nothing else, so that it presses a hero who keeps away.
+ */
+export interface GuardianSmiteDefinition extends GuardianPatternBase {
+  readonly kind: 'smite';
+  /** Width and height of the square, in tiles. */
+  readonly size: number;
+  /** How near the hero must be to the Guardian's body, in tiles, for the Guardian to make the smite. */
+  readonly range: number;
+}
+
+/** One attack of a Guardian. Adding a pattern means adding a member here and a case in guardian.ts and in content.ts. */
+export type GuardianPatternDefinition =
+  | GuardianSweepDefinition
+  | GuardianChargeDefinition
+  | GuardianSmiteDefinition;
+
+/**
+ * The monster of the last fight: one per game, in the arena at the end of the castle. It notices the hero, walks toward
+ * it, and attacks with its patterns in turn. Each time it decides, it takes the first pattern that reaches the hero from
+ * the one after the last it made, going on through the list and round to its start; when none reaches the hero it walks
+ * toward it. Nothing is random: which pattern comes next follows from where the hero is and what the Guardian did last.
+ * A hero's hit never interrupts a wind-up. Defeating the Guardian opens the gate that names it (see GateDefinition).
+ */
+export interface GuardianMonsterDefinition extends MonsterTypeBase {
+  readonly behavior: 'guardian';
+  readonly speedTilesPerSecond: number;
+  /** How near the hero must come to the monster's body, in tiles, for the monster to notice it and decide on an attack. */
+  readonly noticingDistance: number;
+  /** The patterns in the order of the turns, at least two, and not all of one kind. */
+  readonly patterns: readonly GuardianPatternDefinition[];
+}
+
+/**
  * A monster type. Its `behavior` names the rules the monster follows (see behaviors.ts); the other fields are the
  * numbers that behavior needs. Adding a behavior means adding a member here and an entry in the behavior registry.
  */
@@ -209,7 +280,8 @@ export type MonsterTypeDefinition =
   | StationaryMonsterDefinition
   | ChaserMonsterDefinition
   | ChargerMonsterDefinition
-  | RangedMonsterDefinition;
+  | RangedMonsterDefinition
+  | GuardianMonsterDefinition;
 
 /** One monster standing in an Adventure Area. */
 export interface MonsterPlacement {

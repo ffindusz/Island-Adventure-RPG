@@ -501,7 +501,7 @@ export type GameView = TitleView | PlayingView;
  * It is not validated when restored: whoever reads one from storage must check it first.
  */
 export interface Snapshot {
-  readonly version: 2;
+  readonly version: 3;
   readonly state: PlayState;
 }
 
