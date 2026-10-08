@@ -1017,6 +1017,149 @@ describe('a save whose monsters do what this game could not have them do', () =>
   ])('is $problem when $fault', expectUnusable);
 });
 
+describe('a save whose Guardian does what this game could not have it do', () => {
+  // The warden of the saved adventure's keep makes its three patterns in turn: the sweep, the charge and the smite
+  // (guardian-fixtures.ts). `nextPattern` is the one it makes next, so the one it is making is the one before it: with
+  // 0 that is the smite, with 1 the sweep and with 2 the charge, the only one of the three that dashes.
+  const WIND_UP = { type: 'winding-up', zone: { minX: 5, minY: 3, maxX: 11, maxY: 4 }, elapsed: 2, length: 36 };
+  const warden = (saved: Saved): Saved => saved.state.areas['keep'].monsters[0];
+
+  it.each<BadSave>([
+    {
+      fault: 'a Guardian keeps no turn of its patterns',
+      damage: (saved) => delete warden(saved).nextPattern,
+      problem: 'incompatible',
+      names: 'state.areas.keep.monsters[0].nextPattern is missing',
+    },
+    {
+      fault: 'the turn of the patterns of a Guardian is text',
+      damage: (saved) => (warden(saved).nextPattern = '1'),
+      problem: 'damaged',
+      names: 'state.areas.keep.monsters[0].nextPattern',
+    },
+    {
+      fault: 'the turn of the patterns of a Guardian is less than 0',
+      damage: (saved) => (warden(saved).nextPattern = -1),
+      problem: 'damaged',
+      names: 'state.areas.keep.monsters[0].nextPattern',
+    },
+    {
+      fault: 'the turn of the patterns of a Guardian is a fraction',
+      damage: (saved) => (warden(saved).nextPattern = 1.5),
+      problem: 'damaged',
+      names: 'state.areas.keep.monsters[0].nextPattern',
+    },
+    {
+      fault: 'the turn of the patterns of a Guardian is a pattern it does not have',
+      damage: (saved) => (warden(saved).nextPattern = 3),
+      problem: 'incompatible',
+      names: 'state.areas.keep.monsters[0].nextPattern is 3, but the Guardian has 3 patterns',
+    },
+    {
+      fault: 'a monster that is not a Guardian keeps the turn of the patterns of one',
+      damage: (saved) => (saved.state.areas['ruins'].monsters[0].nextPattern = 0),
+      problem: 'incompatible',
+      names: 'state.areas.ruins.monsters[0].nextPattern should not be there',
+    },
+    {
+      fault: 'a Guardian winds up its charge with no direction to dash in',
+      after: 'warden-wind-up',
+      damage: (saved) => delete warden(saved).action.direction,
+      problem: 'incompatible',
+      names: 'state.areas.keep.monsters[0].action.direction is missing',
+    },
+    {
+      fault: 'a Guardian winds up its smite as if to dash',
+      after: 'warden-wind-up',
+      damage: (saved) => (warden(saved).nextPattern = 0),
+      problem: 'incompatible',
+      names: 'state.areas.keep.monsters[0].action.direction should not be there',
+    },
+    {
+      fault: 'a Guardian winds up its sweep as if to dash',
+      after: 'warden-wind-up',
+      damage: (saved) => (warden(saved).nextPattern = 1),
+      problem: 'incompatible',
+      names: 'state.areas.keep.monsters[0].action.direction should not be there',
+    },
+    {
+      fault: 'a Guardian dashes in the middle of its smite',
+      after: 'dodge',
+      damage: (saved) => (warden(saved).nextPattern = 0),
+      problem: 'incompatible',
+      names: 'state.areas.keep.monsters[0].action is "dashing"',
+    },
+    {
+      fault: 'a Guardian dashes in the middle of its sweep',
+      after: 'dodge',
+      damage: (saved) => (warden(saved).nextPattern = 1),
+      problem: 'incompatible',
+      names: 'state.areas.keep.monsters[0].action is "dashing"',
+    },
+  ])('is $problem when $fault', expectUnusable);
+
+  it.each<[string, number, object]>([
+    ['its smite, with no direction', 0, WIND_UP],
+    ['its sweep, with no direction', 1, WIND_UP],
+    ['its charge, with the direction of the dash', 2, { ...WIND_UP, direction: 'left' }],
+  ])('is usable when a Guardian winds up %s', (_, nextPattern, action) => {
+    expectUsable((saved) => {
+      warden(saved).nextPattern = nextPattern;
+      warden(saved).action = action;
+    });
+  });
+
+  const ACTIONS: [string, object][] = [
+    ['is idle', { type: 'idle' }],
+    ['is chasing the hero', { type: 'chasing' }],
+    ['rests after a pattern', { type: 'recovering', stepsLeft: 12 }],
+  ];
+
+  it.each<[string, number, object]>(
+    [0, 1, 2].flatMap((next) => ACTIONS.map(([what, action]): [string, number, object] => [what, next, action])),
+  )('is usable when a Guardian %s and the next of its patterns is number %d', (_, nextPattern, action) => {
+    expectUsable((saved) => {
+      warden(saved).nextPattern = nextPattern;
+      warden(saved).action = action;
+    });
+  });
+});
+
+describe('a save whose Guardian and the gate that its fall opens do not agree', () => {
+  const warden = (saved: Saved): Saved => saved.state.areas['keep'].monsters[0];
+  const gate = (saved: Saved): Saved => saved.state.areas['keep'].interactables['keep-gate'];
+
+  it.each<BadSave>([
+    {
+      fault: 'the gate is open and its Guardian has not been touched',
+      damage: (saved) => (gate(saved).open = true),
+      problem: 'damaged',
+      names: 'state.areas.keep.interactables.keep-gate.open is open, but the Guardian "warden" has not fallen',
+    },
+    {
+      fault: 'the gate is open and its Guardian has 1 Health left',
+      after: 'warden-hit',
+      damage: (saved) => {
+        warden(saved).health = 1;
+        gate(saved).open = true;
+      },
+      problem: 'damaged',
+      names: 'state.areas.keep.interactables.keep-gate.open is open, but the Guardian "warden" has not fallen',
+    },
+    {
+      fault: 'the gate is shut and its Guardian has fallen',
+      after: 'victory',
+      damage: (saved) => (gate(saved).open = false),
+      problem: 'damaged',
+      names: 'state.areas.keep.interactables.keep-gate.open is shut, but the Guardian "warden" has fallen',
+    },
+  ])('is $problem when $fault', expectUnusable);
+
+  it('is usable when the gate is shut and its Guardian has 1 Health left', () => {
+    expectUsable((saved) => (warden(saved).health = 1));
+  });
+});
+
 describe('a save that holds what the saved adventure does not show', () => {
   it('is usable when no Area Text is shown', () => {
     expectUsable((saved) => (saved.state.areaText = null));

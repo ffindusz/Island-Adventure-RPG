@@ -175,20 +175,23 @@ function checkWorld(value: unknown, path: string, area: AreaDefinition, content:
     'interactables',
     'revealed',
   ]);
-  checkMonsters(world['monsters'], at(path, 'monsters'), area, content);
+  const defeated = checkMonsters(world['monsters'], at(path, 'monsters'), area, content);
   checkMilestones(world['reachedMilestones'], at(path, 'reachedMilestones'), area);
   expectBoolean(world['visited'], at(path, 'visited'));
-  const keysTaken = checkInteractables(world['interactables'], at(path, 'interactables'), area);
+  const keysTaken = checkInteractables(world['interactables'], at(path, 'interactables'), area, defeated);
   checkRevealed(world['revealed'], at(path, 'revealed'), area);
   return keysTaken;
 }
 
-/** Every monster the area places, defeated ones too, in the order the area places them. */
-function checkMonsters(value: unknown, path: string, area: AreaDefinition, content: ContentDefinition): void {
+/**
+ * Every monster the area places, defeated ones too, in the order the area places them. Returns the ids of the defeated.
+ */
+function checkMonsters(value: unknown, path: string, area: AreaDefinition, content: ContentDefinition): string[] {
   const monsters = expectList(value, path);
   if (monsters.length !== area.monsters.length) {
     throw incompatible(path, `has ${monsters.length} monsters, but the area places ${area.monsters.length}`);
   }
+  const defeated: string[] = [];
   area.monsters.forEach((placed, i) => {
     const monsterPath = atIndex(path, i);
     const monster = expectKeys(
@@ -207,10 +210,13 @@ function checkMonsters(value: unknown, path: string, area: AreaDefinition, conte
       throw incompatible(at(monsterPath, 'type'), `is "${type}", but the area places a "${placed.type}" here`);
     }
     expectPositionIn(monster['position'], at(monsterPath, 'position'), area);
-    expectNonNegative(monster['health'], at(monsterPath, 'health'));
+    if (expectNonNegative(monster['health'], at(monsterPath, 'health')) === 0) {
+      defeated.push(id);
+    }
     const attackDashes = checkNextPattern(monster, monsterPath, definition);
     checkAction(monster['action'], at(monsterPath, 'action'), type, definition.behavior, attackDashes);
   });
+  return defeated;
 }
 
 /**
@@ -365,7 +371,16 @@ const FLAG_OF: Record<InteractableDefinition['kind'], string | null> = {
   sign: null,
 };
 
-function checkInteractables(value: unknown, path: string, area: AreaDefinition): string[] {
+/**
+ * The state of each interactable of the area. `defeated` is the ids of the monsters of the area that have fallen, which
+ * the gates that a Guardian's fall opens must agree with. Returns the ids of the keys marked taken.
+ */
+function checkInteractables(
+  value: unknown,
+  path: string,
+  area: AreaDefinition,
+  defeated: readonly string[],
+): string[] {
   const states = expectRecord(value, path);
   const placed = area.interactables ?? [];
   for (const id of Object.keys(states)) {
@@ -386,11 +401,29 @@ function checkInteractables(value: unknown, path: string, area: AreaDefinition):
     }
     const flag = FLAG_OF[interactable.kind];
     expectKeys(state, statePath, flag === null ? ['kind'] : ['kind', flag]);
-    if (flag !== null && expectBoolean(state[flag], at(statePath, flag)) && interactable.kind === 'key') {
+    if (flag === null) {
+      continue;
+    }
+    const set = expectBoolean(state[flag], at(statePath, flag));
+    if (set && interactable.kind === 'key') {
       keysTaken.push(interactable.id);
+    }
+    if (interactable.kind === 'gate' && interactable.opensWhenDefeated !== undefined) {
+      expectOpenOnlyOnceFallen(set, at(statePath, flag), interactable.opensWhenDefeated, defeated);
     }
   }
   return keysTaken;
+}
+
+/** A gate that a Guardian's fall opens is open when that Guardian has fallen and not before: nothing else moves it. */
+function expectOpenOnlyOnceFallen(open: boolean, path: string, guardianId: string, defeated: readonly string[]): void {
+  const fallen = defeated.includes(guardianId);
+  if (open && !fallen) {
+    throw damaged(path, `is open, but the Guardian "${guardianId}" has not fallen`);
+  }
+  if (!open && fallen) {
+    throw damaged(path, `is shut, but the Guardian "${guardianId}" has fallen`);
+  }
 }
 
 /** The Automap's grid: one yes or no for each tile of the area, indexed [row][col]. */
