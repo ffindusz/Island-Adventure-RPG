@@ -15,13 +15,13 @@ export const shipwreckCoast: AreaDefinition = {
   id: 'shipwreck-coast',
   name: 'Shipwreck Coast',
   text: 'Wreckage litters the shore. Follow the beach east.',
-  entrances: [{ id: 'from-trail', tile: { col: 38, row: 8 } }],
+  entrances: [{ id: 'from-woods', tile: { col: 38, row: 8 } }],
   checkpoints: [{ id: 'coast-checkpoint', tile: { col: 5, row: 9 } }],
   exits: [
     {
-      id: 'to-trail',
+      id: 'to-woods',
       zone: { col: 39, row: 8, width: 1, height: 2 },
-      to: { area: 'overgrown-trail', entrance: 'from-coast' },
+      to: { area: 'woods', entrance: 'from-coast' },
     },
   ],
   layout: [
@@ -44,7 +44,7 @@ export const shipwreckCoast: AreaDefinition = {
     '~####################..........#########',
     '~#######################################',
   ],
-  // Kept clear of the entrance from the trail as well as the start with its Checkpoint, so that a hero who comes in
+  // Kept clear of the entrance from the woods as well as the start with its Checkpoint, so that a hero who comes in
   // there, or returns to the Checkpoint after a defeat, is not at once in danger: no monster's noticing distance
   // reaches a hero who stands on either (shipped-enemies.test.ts). The first crab waits in the bay, the second in the
   // corridor, and the third in the cove, by the chest.

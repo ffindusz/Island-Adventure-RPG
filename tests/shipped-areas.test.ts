@@ -9,7 +9,8 @@ import { keyOf, neighboursOf, openTilesOf } from './routes';
 // areas are tested on purpose-built content (area-connections.test.ts), so that changing what ships never breaks them.
 
 const COAST = 'shipwreck-coast';
-const TRAIL = 'overgrown-trail';
+const WOODS = 'woods';
+const MOUNTAIN = 'mountain';
 
 /** The canvas shows this many tiles (VIEW_TILES_WIDE and VIEW_TILES_HIGH in the adapter). */
 const SCREEN_TILES = { wide: 20, high: 12 };
@@ -111,32 +112,54 @@ const ENTRANCES = gameContent.areas.flatMap((area) =>
 
 describe('the Adventure Areas the game ships with', () => {
   it('has a second area larger than the screen in both directions, so that the view must follow the hero', () => {
-    const { area } = playingView(gameComingInBy(TRAIL, 'from-coast'));
+    const { area } = playingView(gameComingInBy(WOODS, 'from-coast'));
 
     expect(area.width).toBeGreaterThan(SCREEN_TILES.wide);
     expect(area.height).toBeGreaterThan(SCREEN_TILES.high);
   });
 
   it('leads east from the coast into the second area, where the hero arrives at the entrance the exit names', () => {
-    const game = gameComingInBy(COAST, 'from-trail');
+    const game = gameComingInBy(COAST, 'from-woods');
 
     const events = walkThroughExit(game, 'right');
 
-    expect(events).toContainEqual({ type: 'area-changed', areaId: TRAIL });
+    expect(events).toContainEqual({ type: 'area-changed', areaId: WOODS });
     const view = playingView(game);
-    expect(view.area.id).toBe(TRAIL);
-    expect(view.hero.position).toEqual(centreOf(TRAIL, 'from-coast'));
+    expect(view.area.id).toBe(WOODS);
+    expect(view.hero.position).toEqual(centreOf(WOODS, 'from-coast'));
   });
 
   it('leads west from the second area back to the coast, where the hero arrives at the entrance there', () => {
-    const game = gameComingInBy(TRAIL, 'from-coast');
+    const game = gameComingInBy(WOODS, 'from-coast');
 
     const events = walkThroughExit(game, 'left');
 
     expect(events).toContainEqual({ type: 'area-changed', areaId: COAST });
     const view = playingView(game);
     expect(view.area.id).toBe(COAST);
-    expect(view.hero.position).toEqual(centreOf(COAST, 'from-trail'));
+    expect(view.hero.position).toEqual(centreOf(COAST, 'from-woods'));
+  });
+
+  it('leads east from the woods into the third area, where the hero arrives at the entrance the exit names', () => {
+    const game = gameComingInBy(WOODS, 'from-mountain');
+
+    const events = walkThroughExit(game, 'right');
+
+    expect(events).toContainEqual({ type: 'area-changed', areaId: MOUNTAIN });
+    const view = playingView(game);
+    expect(view.area.id).toBe(MOUNTAIN);
+    expect(view.hero.position).toEqual(centreOf(MOUNTAIN, 'from-woods'));
+  });
+
+  it('leads west from the third area back to the woods, where the hero arrives at the entrance there', () => {
+    const game = gameComingInBy(MOUNTAIN, 'from-woods');
+
+    const events = walkThroughExit(game, 'left');
+
+    expect(events).toContainEqual({ type: 'area-changed', areaId: WOODS });
+    const view = playingView(game);
+    expect(view.area.id).toBe(WOODS);
+    expect(view.hero.position).toEqual(centreOf(WOODS, 'from-mountain'));
   });
 
   it('begins a new game by showing the text of the first area', () => {
@@ -150,13 +173,13 @@ describe('the Adventure Areas the game ships with', () => {
   });
 
   it('shows the text of an area the first time the hero comes in, and not on a later visit', () => {
-    const game = gameComingInBy(COAST, 'from-trail');
-    const trailText = areaNamed(TRAIL).text;
+    const game = gameComingInBy(COAST, 'from-woods');
+    const woodsText = areaNamed(WOODS).text;
 
     walkThroughExit(game, 'right');
 
-    expect(trailText).toBeTypeOf('string');
-    expect(playingView(game).areaText).toBe(trailText);
+    expect(woodsText).toBeTypeOf('string');
+    expect(playingView(game).areaText).toBe(woodsText);
     advance(game, 10 * STEPS_PER_SECOND);
     expect(playingView(game).areaText).toBeNull();
     const later = [...walkThroughExit(game, 'left'), ...walkThroughExit(game, 'right')];
@@ -177,12 +200,13 @@ describe('the Adventure Areas the game ships with', () => {
     },
   );
 
-  it('puts a Checkpoint at the entrance of each area: the start of the adventure on the coast, the way in from it on the trail', () => {
+  it('puts a Checkpoint at the entrance of each area: the start of the adventure on the coast, the way in from it in the woods, the way in from the woods in the mountain', () => {
     const checkpointTiles = (id: string) => (areaNamed(id).checkpoints ?? []).map(({ tile }) => tile);
 
     expect(gameContent.start.area).toBe(COAST);
     expect(checkpointTiles(COAST)).toContainEqual(gameContent.start.tile);
-    expect(checkpointTiles(TRAIL)).toContainEqual(entranceOf(TRAIL, 'from-coast').tile);
+    expect(checkpointTiles(WOODS)).toContainEqual(entranceOf(WOODS, 'from-coast').tile);
+    expect(checkpointTiles(MOUNTAIN)).toContainEqual(entranceOf(MOUNTAIN, 'from-woods').tile);
   });
 
   it('begins a new game with the Checkpoint of the coast active, as the start of the adventure counts as the first', () => {
@@ -192,13 +216,24 @@ describe('the Adventure Areas the game ships with', () => {
     expect(playingView(game).checkpoints).toEqual([expect.objectContaining({ id: 'coast-checkpoint', active: true })]);
   });
 
-  it('touches the Checkpoint of the trail when the hero comes in from the coast', () => {
-    const game = gameComingInBy(COAST, 'from-trail');
+  it('touches the Checkpoint of the woods when the hero comes in from the coast', () => {
+    const game = gameComingInBy(COAST, 'from-woods');
 
     const events = walkThroughExit(game, 'right');
 
-    expect(events).toContainEqual({ type: 'checkpoint-activated', checkpointId: 'trail-checkpoint' });
-    expect(playingView(game).checkpoints).toEqual([expect.objectContaining({ id: 'trail-checkpoint', active: true })]);
+    expect(events).toContainEqual({ type: 'checkpoint-activated', checkpointId: 'woods-checkpoint' });
+    expect(playingView(game).checkpoints).toEqual([expect.objectContaining({ id: 'woods-checkpoint', active: true })]);
+  });
+
+  it('touches the Checkpoint of the mountain when the hero comes in from the woods', () => {
+    const game = gameComingInBy(WOODS, 'from-mountain');
+
+    const events = walkThroughExit(game, 'right');
+
+    expect(events).toContainEqual({ type: 'checkpoint-activated', checkpointId: 'mountain-checkpoint' });
+    expect(playingView(game).checkpoints).toEqual([
+      expect.objectContaining({ id: 'mountain-checkpoint', active: true }),
+    ]);
   });
 
   it('puts every exit and milestone on tiles the hero can stand on, so that each can be reached', () => {

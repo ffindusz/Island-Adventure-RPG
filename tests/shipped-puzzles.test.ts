@@ -16,14 +16,14 @@ import type {
 } from '../src/core';
 import { face, fixedRandom, interactableViews, inventoryOf, playingView, throughStorage, walk } from './fixtures';
 
-// The light puzzles the game ships with, both on the trail: a cabin behind a locked door whose key lies in the north
+// The light puzzles the game ships with, both in the woods: a cabin behind a locked door whose key lies in the north
 // woods, and a shed behind a gate that a lever opens. What a key, a door, a lever and a gate do is tested on purpose-built
 // content (keys, doors, levers), and that no route needs one in device-routes.test.ts, so that changing what ships never
 // breaks those. Here the shipped rooms are checked as made: where each thing stands, that every text can be drawn, and
-// that a hero can walk through the steps of each puzzle to its reward. The trail is walked without its monsters. The
+// that a hero can walk through the steps of each puzzle to its reward. The woods are walked without their monsters. The
 // last part is where the puzzles meet the opening of a new game and the saved game, which other tickets made.
 
-const TRAIL = 'overgrown-trail';
+const WOODS = 'woods';
 
 /** A tile takes this many steps to cross at the hero's walking speed. */
 const STEPS_PER_TILE = Math.round(STEPS_PER_SECOND / gameContent.hero.speedTilesPerSecond);
@@ -120,22 +120,22 @@ function standsBeside(routes: ReadonlyMap<string, unknown>, tile: Tile): boolean
   return NEIGHBOURS.some(([, step]) => routes.has(tileKey({ col: tile.col + step.col, row: tile.row + step.row })));
 }
 
-/** The walks to every tile the hero can reach in the shipped trail from its way in, with these doors and gates open. */
-function trailRoutes(...open: string[]): Map<string, Direction[]> {
-  const trail = areaNamed(TRAIL);
-  return routesFrom(trail, firstEntranceOf(trail).tile, blockedByPlacements(trail, open));
+/** The walks to every tile the hero can reach in the shipped woods from their way in, with these doors and gates open. */
+function woodsRoutes(...open: string[]): Map<string, Direction[]> {
+  const woods = areaNamed(WOODS);
+  return routesFrom(woods, firstEntranceOf(woods).tile, blockedByPlacements(woods, open));
 }
 
-/** The shipped content, with the hero beginning at the way in to the trail and the monsters of the trail taken out. */
-function quietTrailContent(): ContentDefinition {
-  const trail = areaNamed(TRAIL);
-  const areas = gameContent.areas.map((area) => (area.id === TRAIL ? { ...area, monsters: [] } : area));
-  return { ...gameContent, areas, start: { area: TRAIL, tile: firstEntranceOf(trail).tile } };
+/** The shipped content, with the hero beginning at the way in to the woods and the monsters of the woods taken out. */
+function quietWoodsContent(): ContentDefinition {
+  const woods = areaNamed(WOODS);
+  const areas = gameContent.areas.map((area) => (area.id === WOODS ? { ...area, monsters: [] } : area));
+  return { ...gameContent, areas, start: { area: WOODS, tile: firstEntranceOf(woods).tile } };
 }
 
-/** A new game in which the hero begins at the way in to the trail, with the monsters of the trail taken out. */
-function quietTrail(): Game {
-  const game = createGame({ content: quietTrailContent(), random: fixedRandom });
+/** A new game in which the hero begins at the way in to the woods, with the monsters of the woods taken out. */
+function quietWoods(): Game {
+  const game = createGame({ content: quietWoodsContent(), random: fixedRandom });
   game.send({ type: 'new-game' });
   return game;
 }
@@ -148,7 +148,7 @@ function routesInGame(game: Game): Map<string, Direction[]> {
       .filter((item) => stopsHero(item.kind, 'open' in item && item.open))
       .map((item) => tileKey(tileOf(item.position))),
   );
-  return routesFrom(areaNamed(TRAIL), tileOf(view.hero.position), blocked);
+  return routesFrom(areaNamed(WOODS), tileOf(view.hero.position), blocked);
 }
 
 function walkAlong(game: Game, route: readonly Direction[]): GameEvent[] {
@@ -193,31 +193,31 @@ function drawnRectangles(text: string): number {
   return rectangles;
 }
 
-describe('the cabin on the trail', () => {
+describe('the cabin in the woods', () => {
   it('keeps its key where the hero can take it with every door and gate shut', () => {
     const key = placedNamed('key', placedNamed('door', 'cabin-door').key);
 
-    expect(trailRoutes().has(tileKey(key.tile))).toBe(true);
+    expect(woodsRoutes().has(tileKey(key.tile))).toBe(true);
   });
 
   it('keeps its chest behind the door: the hero cannot stand beside it while the door is shut, and can once it is open', () => {
     const chest = placedNamed('chest', 'cabin-chest');
 
-    expect(standsBeside(trailRoutes(), chest.tile)).toBe(false);
-    expect(standsBeside(trailRoutes('cabin-door'), chest.tile)).toBe(true);
+    expect(standsBeside(woodsRoutes(), chest.tile)).toBe(false);
+    expect(standsBeside(woodsRoutes('cabin-door'), chest.tile)).toBe(true);
   });
 
   it('puts a sign near the door, where the hero can read it with the door shut', () => {
     const door = placedNamed('door', 'cabin-door');
     const sign = placedNamed('sign', 'cabin-sign');
 
-    expect(standsBeside(trailRoutes(), sign.tile)).toBe(true);
+    expect(standsBeside(woodsRoutes(), sign.tile)).toBe(true);
     expect(Math.abs(sign.tile.col - door.tile.col)).toBeLessThanOrEqual(2);
     expect(Math.abs(sign.tile.row - door.tile.row)).toBeLessThanOrEqual(2);
   });
 
   it('is opened by a hero who takes its key, uses it on the door and opens the chest', () => {
-    const game = quietTrail();
+    const game = quietWoods();
     const door = placedNamed('door', 'cabin-door');
     const key = placedNamed('key', door.key);
     const chest = placedNamed('chest', 'cabin-chest');
@@ -237,23 +237,23 @@ describe('the cabin on the trail', () => {
   });
 });
 
-describe('the shed on the trail', () => {
+describe('the shed in the woods', () => {
   it('keeps its lever where the hero can reach it with every door and gate shut, and has it move the gate', () => {
     const lever = placedNamed('lever', 'shed-lever');
 
-    expect(standsBeside(trailRoutes(), lever.tile)).toBe(true);
+    expect(standsBeside(woodsRoutes(), lever.tile)).toBe(true);
     expect(lever.targets).toEqual(['shed-gate']);
   });
 
   it('keeps its Healing Potion behind the gate: out of reach while the gate is shut, within reach once it is open', () => {
     const potion = placedNamed('pickup', 'shed-potion');
 
-    expect(trailRoutes().has(tileKey(potion.tile))).toBe(false);
-    expect(trailRoutes('shed-gate').has(tileKey(potion.tile))).toBe(true);
+    expect(woodsRoutes().has(tileKey(potion.tile))).toBe(false);
+    expect(woodsRoutes('shed-gate').has(tileKey(potion.tile))).toBe(true);
   });
 
   it('is opened by a hero who pulls its lever, walks through the gate and takes the potion', () => {
-    const game = quietTrail();
+    const game = quietWoods();
     const lever = placedNamed('lever', 'shed-lever');
     const potion = placedNamed('pickup', 'shed-potion');
     expect(interactableViews(game, 'gate')).toMatchObject([{ id: 'shed-gate', open: false }]);
@@ -320,7 +320,7 @@ describe('the puzzles with the opening and the saved game', () => {
     { after: 'taking the key and pulling the lever', play: takeTheKeyAndPullTheLever },
     { after: 'opening the cabin and its chest', play: openTheCabinAndItsChest },
   ])('begins a new game with the opening and every device as placed, after $after', ({ play }) => {
-    const game = quietTrail();
+    const game = quietWoods();
     play(game);
 
     const events = game.send({ type: 'new-game' });
@@ -335,13 +335,13 @@ describe('the puzzles with the opening and the saved game', () => {
   });
 
   it('continues a saved game with its key held, its gate open and its lever pulled, and without the opening', () => {
-    const game = quietTrail();
+    const game = quietWoods();
     const door = placedNamed('door', 'cabin-door');
     const key = placedNamed('key', door.key);
     takeTheKeyAndPullTheLever(game);
     const saved = throughStorage(game.snapshot());
 
-    const continued = createGame({ content: quietTrailContent(), random: fixedRandom });
+    const continued = createGame({ content: quietWoodsContent(), random: fixedRandom });
     const events = continued.send({ type: 'continue', snapshot: saved });
 
     expect(events).toEqual([]);

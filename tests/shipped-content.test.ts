@@ -243,6 +243,6 @@ describe('the Automap of the content the game ships with', () => {
     const next = areaOnMap(page, nextAreaId);
     expect(next).toMatchObject({ discovered: true, current: true, name: definitionOf(nextAreaId).name });
     expect(next.hero).toEqual(playingView(game).hero.position);
-    expect(next.connections).toEqual([startAreaId]);
+    expect(next.connections).toContain(startAreaId);
   });
 });
