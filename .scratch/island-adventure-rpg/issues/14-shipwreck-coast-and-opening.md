@@ -4,7 +4,7 @@
 
 **Blocked by:** 11: Title screen, autosave, and Continue
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 7, 8, 11-14, 52, 67
 
@@ -17,6 +17,8 @@
 - [ ] Reviewer play check (manual, in a browser): New Game, read the opening, walk the whole coast, defeat the monsters, open the chest, and take the exit.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 5e1c568
 
 ### What was built
 
