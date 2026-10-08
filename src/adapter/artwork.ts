@@ -67,12 +67,15 @@ export const ARTWORK = {
   'fx-puff': sheet('fx-puff.png', 32),
   // What every area shares, see prop-sprites.ts for which frame is which: chests and caches (closed and open), what lies
   // on the ground (plain and with a glint), the Checkpoint's flags (16 by 26 pixels), the marks of an exit (one way each),
-  // the door (shut and open) and the sign.
+  // the door (shut and open), the gate (shut and open; 24 by 25 pixels, for its arch stands over the way), the lever (at
+  // rest and pulled) and the sign.
   'prop-chest': sheet('prop-chest.png', 16),
   'prop-pickup': sheet('prop-pickup.png', 16),
   'prop-checkpoint': sheet('prop-checkpoint.png', 16, 26),
   'prop-exit': sheet('prop-exit.png', 16),
   'prop-door': sheet('prop-door.png', 16),
+  'prop-gate': sheet('prop-gate.png', 24, 25),
+  'prop-lever': sheet('prop-lever.png', 16),
   'prop-sign': image('prop-sign.png'),
   // The pieces the HUD and the pages are built from, see ui-layer.ts: a dark panel, the orange frame of a window, the
   // orange button behind the line the cursor is on, and the heart of Health.

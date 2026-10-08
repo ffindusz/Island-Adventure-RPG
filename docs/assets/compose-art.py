@@ -446,8 +446,9 @@ def monster_side(pack, folder, name):
 
 
 # ---------------------------------------------------------------------------------------------------------------------
-# What every area shares (src/adapter/prop-sprites.ts): chests and caches, pickups, Checkpoints, exits, signs and doors.
-# The cell of each is one tile with the picture standing at the foot of it; the Checkpoint's cell is taller.
+# What every area shares (src/adapter/prop-sprites.ts): chests and caches, pickups, Checkpoints, exits, signs, doors, gates
+# and levers. The cell of each is one tile with the picture standing at the foot of it; the Checkpoint's cell is taller,
+# and a gate's is taller and wider, for its arch stands over the way and on the rock beside it.
 
 POLE = hexrgb('#8f3e56')
 CHECKPOINT_HEIGHT = 26
@@ -553,6 +554,75 @@ def door_sheet(pack):
     return frames_sheet([shut, cut(house, 9, 3)], 2)
 
 
+# The pack's iron arch (TilesetHouse) is 24 by 25 pixels: legs of four pixels, nine rows of arch, and an opening of exactly
+# one tile. Its fence is 14 rows high, so a strip of it is made two rows taller by repeating a row of its stem.
+GATE_ARCH = (172, 183, 196, 208)
+GATE_WAY = (4, 9)
+FENCE_TOP, FENCE_STEM, FENCE_FOOT = 194, 200, 208
+FENCE_STRIPS = ((155, 159), (159, 161), (155, 159), (159, 161), (155, 159))
+IRON, IRON_SHADE = hexrgb('#f2eaf1'), hexrgb('#abc2bc')
+REST_KNOB = (hexrgb('#d14b34'), hexrgb('#ffcba9'))
+PULLED_KNOB = (hexrgb('#79b8ce'), IRON)
+KNOB_ROUND = [(dx, dy) for dx in range(-2, 2) for dy in range(-3, 1) if dx in (-1, 0) or dy in (-2, -1)]
+
+
+def fence_strip(house, x0, x1):
+    """The strip of the pack's iron fence between x0 and x1, a tile high: the stem of its pickets is stretched by two rows."""
+    rows = [*range(FENCE_TOP, FENCE_STEM), FENCE_STEM, FENCE_STEM, *range(FENCE_STEM, FENCE_FOOT)]
+    out = Image.new('RGBA', (x1 - x0, TILE), (0, 0, 0, 0))
+    for y, source in enumerate(rows):
+        out.paste(house.crop((x0, source, x1, source + 1)), (0, y))
+    return out
+
+
+def gate_sheet(pack):
+    """Two frames, the gate shut and the gate open: the pack's iron arch, which stands over the way and on the rock on each
+    side of it, and, shut, the pack's fence of three pickets between its legs, a small touch (the fence is stretched two
+    rows to fill the opening). Open, it is the arch alone, and the way through it is clear."""
+    house = pack.tileset('TilesetHouse')
+    arch = house.crop(GATE_ARCH)
+    fence = Image.new('RGBA', (TILE, TILE), (0, 0, 0, 0))
+    x = 0
+    for x0, x1 in FENCE_STRIPS:
+        strip = fence_strip(house, x0, x1)
+        fence.paste(strip, (x, 0))
+        x += strip.width
+    shut = arch.copy()
+    shut.alpha_composite(fence, GATE_WAY)
+    return frames_sheet([shut, arch], 2, arch.size)
+
+
+def line(start, end):
+    """The pixels of a straight line from start to end."""
+    (x0, y0), (x1, y1) = start, end
+    steps = max(abs(x1 - x0), abs(y1 - y0))
+    return [(round(x0 + (x1 - x0) * i / steps), round(y0 + (y1 - y0) * i / steps)) for i in range(steps + 1)]
+
+
+def lever_frame(dungeon, lean, knob):
+    """A lever set in the rock, filling its tile: a near-black niche, the lower rows of the pack's stone block that the
+    dungeon tileset uses as a socket, and a white stick that stands on it leaning `lean` (-1 left, 1 right) with a ball of
+    colour on its end. The stick and the ball are a small touch: the pack has no lever."""
+    colour, glint = knob
+    out = Image.new('RGBA', (TILE, TILE), (*OUTLINE, 255))
+    out.alpha_composite(cut(dungeon, 2, 3).crop((0, 9, TILE, TILE)), (0, 9))
+    layer = Image.new('RGBA', (TILE, TILE), (0, 0, 0, 0))
+    stick = line((8, 9), (8 + lean * 4, 4))
+    paint(layer, [*stick, *((x + 1, y) for x, y in stick)], IRON)
+    paint(layer, [(x + 1, y) for x, y in stick], IRON_SHADE)
+    tip_x, tip_y = stick[-1]
+    paint(layer, [(tip_x + dx, tip_y + dy) for dx, dy in KNOB_ROUND], colour)
+    paint(layer, [(tip_x - 1, tip_y - 2)], glint)
+    out.alpha_composite(outlined(layer))
+    return out
+
+
+def lever_sheet(pack):
+    """Two frames, the lever at rest, its stick leaning left with a red ball, and the lever pulled, leaning right with a blue one."""
+    dungeon = pack.tileset('TilesetDungeon')
+    return frames_sheet([lever_frame(dungeon, -1, REST_KNOB), lever_frame(dungeon, 1, PULLED_KNOB)], 2)
+
+
 def bow_icon(pack, folder, shorter_by=0):
     """A bow of the pack turned a quarter, to stand upright like the icons of the swords: its string on the left, its belly
     on the right. Lying down, as the hero holds it, it reads as a bowl in the HUD and the inventory. A shorter bow has that
@@ -599,6 +669,8 @@ BUILDERS = {
     'prop-checkpoint': checkpoint_sheet,
     'prop-exit': exit_sheet,
     'prop-door': door_sheet,
+    'prop-gate': gate_sheet,
+    'prop-lever': lever_sheet,
     'prop-sign': lambda pack: cut(pack.tileset('TilesetElement'), 0, 2),
 }
 

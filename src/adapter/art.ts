@@ -1,14 +1,13 @@
 import type Phaser from 'phaser';
 import type { AreaView, Box, Direction, InteractableView, MonsterView, Point } from '../core';
 import { TILE_SIZE } from './config';
-import { drawGate, drawLever } from './device-art';
 
 // The flat shapes of what has no picture yet, and the colours of every kind of terrain and type of monster. Drawn here
-// from the state view: the ground and the monsters of an area whose art is not final, the gates and the levers of the
-// light puzzles, and the telegraphs and the strikes of the monster attacks, which stay flat shapes. The pictures are
-// elsewhere: the baked ground (terrain-baker.ts), the monsters of final art and what they shoot (monster-sprites.ts,
-// projectile-sprites.ts), the props every area shares (prop-sprites.ts), and the hero and its arrows (hero-sprite.ts).
-// The rest of the adapter only calls the draw functions below.
+// from the state view: the ground and the monsters of an area whose art is not final, and the telegraphs and the strikes
+// of the monster attacks, which stay flat shapes. The pictures are elsewhere: the baked ground (terrain-baker.ts), the
+// monsters of final art and what they shoot (monster-sprites.ts, projectile-sprites.ts), the props every area shares
+// (prop-sprites.ts), and the hero and its arrows (hero-sprite.ts). The rest of the adapter only calls the draw functions
+// below.
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -119,24 +118,22 @@ export function drawTerrain(graphics: Graphics, area: AreaView): void {
 }
 
 /**
- * Draws what the hero can interact with that has no picture yet: the gates and the levers of the light puzzles, as flat
- * shapes. The rest has its picture (prop-sprites.ts), so a kind drawn there is listed here to say that it is not forgotten:
- * a new kind of interactable does not compile until it is listed in both.
+ * Draws what the hero can interact with that has no picture yet, as flat shapes. Every kind has its picture
+ * (prop-sprites.ts) for now, so each is listed here to say that it is not forgotten: a new kind of interactable does not
+ * compile until it is listed here, and one that has no picture yet is drawn here until it has.
  */
-export function drawInteractable(graphics: Graphics, interactable: InteractableView): void {
+export function drawInteractable(_graphics: Graphics, interactable: InteractableView): void {
   switch (interactable.kind) {
     case 'chest':
     case 'pickup':
     case 'key':
     case 'door':
+    case 'gate':
+    case 'lever':
     case 'sign':
       return;
-    case 'gate':
-      drawGate(graphics, interactable);
-      return;
-    case 'lever':
-      drawLever(graphics, interactable);
-      return;
+    default:
+      interactable satisfies never;
   }
 }
 

@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { inflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { ARTWORK } from '../src/adapter/artwork';
 import type { ArtManifest } from '../src/adapter/asset-manifest';
 import { gameContent } from '../src/content';
+import { bytesOf, fileOf, frameOf, readPicture } from './pictures';
+import type { Picture, Pixel } from './pictures';
 
 // The raiders of the mountain and the creatures of the cave are drawn from sheets of their own, the way the monsters of
 // the coast and the woods are (src/adapter/monster-sprites.ts): four columns, the way each faces (down, up, left, right),
@@ -21,82 +21,15 @@ const HIT_ROW = WALK_FRAMES;
 const WIND_UP_ROW = WALK_FRAMES + 1;
 const OUTLINE = [0x14, 0x1b, 0x1b];
 
-type Pixel = readonly [number, number, number, number];
-
-interface Picture {
-  readonly width: number;
-  readonly height: number;
-  pixel(x: number, y: number): Pixel;
-}
-
 function typesOf(areaId: string): string[] {
   const area = gameContent.areas.find((candidate) => candidate.id === areaId);
   if (!area) throw new Error(`the shipped content has no area "${areaId}"`);
   return [...new Set(area.monsters.map((monster) => monster.type))].sort();
 }
 
-function fileOf(art: string): string {
-  const entry = (ARTWORK as ArtManifest)[art];
-  if (entry?.kind !== 'sheet') throw new Error(`"${art}" is not a sheet of the manifest`);
-  return entry.file;
-}
-
-function bytesOf(file: string): Buffer {
-  return readFileSync(new URL(`../public/art/${file}`, import.meta.url));
-}
-
-function paeth(left: number, up: number, upLeft: number): number {
-  const estimate = left + up - upLeft;
-  const toLeft = Math.abs(estimate - left);
-  const toUp = Math.abs(estimate - up);
-  const toUpLeft = Math.abs(estimate - upLeft);
-  if (toLeft <= toUp && toLeft <= toUpLeft) return left;
-  return toUp <= toUpLeft ? up : upLeft;
-}
-
-/** The pixels of a picture on disk (public/art): the 8-bit RGBA PNGs that compose-art.py saves, unfiltered row by row. */
-function readPicture(file: string): Picture {
-  const png = bytesOf(file);
-  const width = png.readUInt32BE(16);
-  const height = png.readUInt32BE(20);
-  expect([png[24], png[25], png[28]], `the bit depth, colour type and interlacing of ${file}`).toEqual([8, 6, 0]);
-  const data: Buffer[] = [];
-  for (let at = 8; at < png.length; ) {
-    const length = png.readUInt32BE(at);
-    if (png.toString('latin1', at + 4, at + 8) === 'IDAT') data.push(png.subarray(at + 8, at + 8 + length));
-    at += 12 + length;
-  }
-  const raw = inflateSync(Buffer.concat(data));
-  const stride = width * 4;
-  const rgba = new Uint8Array(stride * height);
-  const byteAt = (bytes: Uint8Array, index: number): number => bytes[index] ?? 0;
-  for (let y = 0; y < height; y++) {
-    const filter = byteAt(raw, y * (stride + 1));
-    for (let i = 0; i < stride; i++) {
-      const left = i >= 4 ? byteAt(rgba, y * stride + i - 4) : 0;
-      const up = y > 0 ? byteAt(rgba, (y - 1) * stride + i) : 0;
-      const upLeft = y > 0 && i >= 4 ? byteAt(rgba, (y - 1) * stride + i - 4) : 0;
-      const predicted = [0, left, up, (left + up) >> 1, paeth(left, up, upLeft)][filter] ?? 0;
-      rgba[y * stride + i] = (byteAt(raw, y * (stride + 1) + 1 + i) + predicted) & 255;
-    }
-  }
-  return {
-    width,
-    height,
-    pixel: (x, y) => [byteAt(rgba, (y * width + x) * 4), byteAt(rgba, (y * width + x) * 4 + 1), byteAt(rgba, (y * width + x) * 4 + 2), byteAt(rgba, (y * width + x) * 4 + 3)],
-  };
-}
-
 /** The opaque pixels of the cell in this row and column of a sheet, as a map from "x,y" to the pixel. */
 function cellOf(sheet: Picture, row: number, column: number): Map<string, Pixel> {
-  const cell = new Map<string, Pixel>();
-  for (let y = 0; y < CELL; y++) {
-    for (let x = 0; x < CELL; x++) {
-      const pixel = sheet.pixel(column * CELL + x, row * CELL + y);
-      if (pixel[3] > 0) cell.set(`${x},${y}`, pixel);
-    }
-  }
-  return cell;
+  return frameOf(sheet, row, column, CELL);
 }
 
 const isOutline = (pixel: Pixel): boolean => OUTLINE.every((channel, index) => channel === pixel[index]);
