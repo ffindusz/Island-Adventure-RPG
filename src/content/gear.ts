@@ -3,7 +3,8 @@ import type { GearDefinition } from '../core';
 /**
  * Every piece of Gear in the game, by id. The basic sword and basic armor are what the hero begins with and add
  * nothing, so the hero's base numbers stand as they are. The hero begins without a bow: it finds the short bow, which
- * adds to the Attack of its arrows. The upgrades are placeholders until the tuning pass.
+ * adds to the Attack of its arrows, and may find the long bow, which adds more, behind the locked door of the cabin in
+ * the woods. The upgrades are placeholders until the tuning pass.
  */
 export const gear: Readonly<Record<string, GearDefinition>> = {
   'basic-sword': { name: 'Basic Sword', slot: 'melee-weapon', bonus: 0 },
@@ -11,4 +12,5 @@ export const gear: Readonly<Record<string, GearDefinition>> = {
   'steel-sword': { name: 'Steel Sword', slot: 'melee-weapon', bonus: 1 },
   'chain-mail': { name: 'Chain Mail', slot: 'armor', bonus: 1 },
   'short-bow': { name: 'Short Bow', slot: 'ranged-weapon', bonus: 1 },
+  'long-bow': { name: 'Long Bow', slot: 'ranged-weapon', bonus: 2 },
 };

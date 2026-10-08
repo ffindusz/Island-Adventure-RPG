@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
-import { createGame } from '../src/core';
+import { GEAR_SLOTS, WEAPON_SLOTS, createGame } from '../src/core';
 import type {
   AreaDefinition,
   ChaserMonsterDefinition,
@@ -63,9 +63,18 @@ const onTrail = new Set((trail ?? []).map(keyOf));
 const interactables = woods.interactables ?? [];
 const chests = interactables.flatMap((item) => (item.kind === 'chest' ? [item] : []));
 const pickups = interactables.flatMap((item) => (item.kind === 'pickup' ? [item] : []));
+const doors = interactables.flatMap((item) => (item.kind === 'door' ? [item] : []));
+const keys = interactables.flatMap((item) => (item.kind === 'key' ? [item] : []));
 
 function gearSlotOf({ contents }: ChestDefinition): string | undefined {
   return contents.kind === 'gear' ? gameContent.gear[contents.gear]?.slot : undefined;
+}
+
+/** The ids of the Gear that the chests of an area hold. */
+function gearInChestsOf(area: AreaDefinition): string[] {
+  return (area.interactables ?? []).flatMap((item) =>
+    item.kind === 'chest' && item.contents.kind === 'gear' ? [item.contents.gear] : [],
+  );
 }
 
 function holdsAmmunition(item: InteractableDefinition): boolean {
@@ -253,6 +262,47 @@ describe('what the hero finds in the woods', () => {
     const armor = chestThat('chest of armor', (chest) => gearSlotOf(chest) === 'armor');
 
     expect(detourFromTrail(armor.tile) ?? 0).toBeGreaterThanOrEqual(LEAST_DETOUR);
+  });
+});
+
+describe('the cabin in the woods', () => {
+  const doorsOpen = openTilesOf(gameContent, woods, true);
+  const standsBeside = (isWalkable: (tile: Tile) => boolean, chest: ChestDefinition): boolean =>
+    routeBetween(isWalkable, wayInTile, (spot) => neighboursOf(spot).some((next) => keyOf(next) === keyOf(chest.tile))) !== null;
+  const weaponChests = chests.filter((chest) => (WEAPON_SLOTS as readonly string[]).includes(gearSlotOf(chest) ?? ''));
+  const behindDoors = weaponChests.filter((chest) => !standsBeside(isOpen, chest));
+
+  it('keeps a weapon in a chest that the hero cannot stand beside with every door shut, but can once a door is open', () => {
+    expect(behindDoors, 'a chest of a weapon behind a door').not.toEqual([]);
+    expect(behindDoors.every((chest) => standsBeside(doorsOpen, chest))).toBe(true);
+  });
+
+  it('is an upgrade: that weapon adds more than any Gear of its slot that the hero begins with or finds before it, on the coast and in the rest of the woods', () => {
+    expect(behindDoors, 'a chest of a weapon behind a door').not.toEqual([]);
+    for (const reward of behindDoors) {
+      const upgrade = reward.contents.kind === 'gear' ? gameContent.gear[reward.contents.gear] : undefined;
+      const others = [
+        ...GEAR_SLOTS.flatMap((slot) => gameContent.hero.startingGear[slot] ?? []),
+        ...gearInChestsOf(definitionOf(COAST)),
+        ...chests.filter((chest) => chest !== reward).flatMap((chest) => (chest.contents.kind === 'gear' ? [chest.contents.gear] : [])),
+      ].flatMap((id) => gameContent.gear[id] ?? []);
+
+      const best = Math.max(0, ...others.filter((gear) => gear.slot === upgrade?.slot).map((gear) => gear.bonus));
+
+      expect(upgrade, `the Gear in the chest ${reward.id}`).toBeDefined();
+      expect(upgrade?.bonus ?? 0).toBeGreaterThan(best);
+    }
+  });
+
+  it('keeps its door and its key a good walk from the trail, and its key in the north woods, as the sign by the door says', () => {
+    expect(doors, 'a locked door in the woods').not.toEqual([]);
+    for (const door of doors) {
+      const key = keys.find(({ id }) => id === door.key);
+      expect(key, `the key of the door ${door.id}`).toBeDefined();
+      expect(detourFromTrail(door.tile) ?? 0, `the way to the door ${door.id}`).toBeGreaterThanOrEqual(LEAST_DETOUR);
+      expect(detourFromTrail(key?.tile ?? door.tile) ?? 0, `the way to the key ${key?.id}`).toBeGreaterThanOrEqual(LEAST_DETOUR);
+      expect(key?.tile.row ?? Number.POSITIVE_INFINITY).toBeLessThan(woods.layout.length / 2);
+    }
   });
 });
 

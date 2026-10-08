@@ -216,11 +216,13 @@ describe('the cabin in the woods', () => {
     expect(Math.abs(sign.tile.row - door.tile.row)).toBeLessThanOrEqual(2);
   });
 
-  it('is opened by a hero who takes its key, uses it on the door and opens the chest', () => {
+  it('is opened by a hero who takes its key, uses it on the door and opens the chest, which holds a piece of Gear', () => {
     const game = quietWoods();
     const door = placedNamed('door', 'cabin-door');
     const key = placedNamed('key', door.key);
     const chest = placedNamed('chest', 'cabin-chest');
+    expect(chest.contents.kind).toBe('gear');
+    const reward = chest.contents.kind === 'gear' ? chest.contents.gear : '';
 
     expect(walkOnto(game, key.tile)).toContainEqual({
       type: 'pickup',
@@ -232,8 +234,9 @@ describe('the cabin in the woods', () => {
     expect(inventoryOf(game).keys).toEqual([]);
     expect(interactWith(game, chest.tile)).toEqual([
       { type: 'chest-opened', chestId: chest.id },
-      { type: 'pickup', item: { kind: 'consumable', id: 'healing-potion', amount: 2 } },
+      { type: 'pickup', item: expect.objectContaining({ kind: 'gear', id: reward }) },
     ]);
+    expect(inventoryOf(game).gear.map(({ id }) => id)).toContain(reward);
   });
 });
 

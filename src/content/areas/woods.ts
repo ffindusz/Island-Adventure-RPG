@@ -8,10 +8,10 @@ import type { AreaDefinition } from '../../core';
 // bow in a chest, two caches of arrows for it, a wolf, a Healing Potion lying on the ground, a slime, a spitter and a
 // boar; a chest of Healing Potions stands by the pond to the north. The side paths are the hero's to find and want
 // nothing but a walk and, for the cabin, a key: the Chain Mail in a nook to the south, and a cabin in the south-west
-// behind a locked door, whose key lies in the north glade, guarded by a wolf. Neither the cabin nor the Chain Mail
-// is on any route. No monster stands near either way in, so that a hero who comes in, or is defeated and returns to the
-// Checkpoint there, is not at once in danger. The trees at the north-west corner, down to row 2 and across to column 5,
-// are where the HUD sits when the view is at that corner, so that it never covers the hero.
+// behind a locked door, whose key lies in the north glade, guarded by a wolf, and which holds the Long Bow. Neither the
+// cabin nor the Chain Mail is on any route. No monster stands near either way in, so that a hero who comes in, or is
+// defeated and returns to the Checkpoint there, is not at once in danger. The trees at the north-west corner, down to
+// row 2 and across to column 5, are where the HUD sits when the view is at that corner, so that it never covers the hero.
 export const woods: AreaDefinition = {
   id: 'woods',
   name: 'The Woods',
@@ -98,7 +98,7 @@ export const woods: AreaDefinition = {
     // A side path: the Chain Mail, in a nook to the south a good walk from the trail.
     { kind: 'chest', id: 'armor-chest', tile: { col: 22, row: 25 }, contents: { kind: 'gear', gear: 'chain-mail' } },
     // A side path with a key: the cabin in the south-west is locked, a sign by its door says where the key is, and the
-    // brass key lies in the north glade. The chest inside holds what the key is worth.
+    // brass key lies in the north glade. The chest inside holds a better bow than the one in the first chest.
     { kind: 'key', id: 'brass-key', tile: { col: 41, row: 1 }, name: 'Brass Key' },
     { kind: 'door', id: 'cabin-door', tile: { col: 5, row: 22 }, key: 'brass-key' },
     {
@@ -107,11 +107,6 @@ export const woods: AreaDefinition = {
       tile: { col: 6, row: 21 },
       text: 'The cabin is locked. Its key is in the north woods.',
     },
-    {
-      kind: 'chest',
-      id: 'cabin-chest',
-      tile: { col: 7, row: 25 },
-      contents: { kind: 'consumable', consumable: 'healing-potion', amount: 2 },
-    },
+    { kind: 'chest', id: 'cabin-chest', tile: { col: 7, row: 25 }, contents: { kind: 'gear', gear: 'long-bow' } },
   ],
 };
