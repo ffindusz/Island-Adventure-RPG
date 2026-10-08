@@ -7,6 +7,7 @@ import type {
   ChestDefinition,
   Game,
   GameEvent,
+  InteractableDefinition,
   MonsterTypeDefinition,
   Tile,
   TileRect,
@@ -68,6 +69,9 @@ const LEAST_COLOUR_GAP = 50;
 
 /** A chest is near the route when the walk to it from the route is this many tiles at most: a step aside, not a trip. */
 const MOST_NEARBY = 4;
+
+/** A side path is a walk, not a step aside: this many tiles from the route to the spot beside what lies at its end. */
+const LEAST_DETOUR = 6;
 
 function definitionOf(id: string): AreaDefinition {
   const area = gameContent.areas.find((candidate) => candidate.id === id);
@@ -171,6 +175,7 @@ function colourGap(one: number, other: number): number {
 }
 
 const chests = (castle.interactables ?? []).flatMap((item) => (item.kind === 'chest' ? [item] : []));
+const pickups = (castle.interactables ?? []).flatMap((item) => (item.kind === 'pickup' ? [item] : []));
 const onRoute = new Set((route ?? []).map(keyOf));
 
 function gearSlotOf({ contents }: ChestDefinition): string | undefined {
@@ -182,6 +187,12 @@ function gearInChestsOf(area: AreaDefinition): string[] {
   return (area.interactables ?? []).flatMap((item) =>
     item.kind === 'chest' && item.contents.kind === 'gear' ? [item.contents.gear] : [],
   );
+}
+
+function holdsAmmunition(item: InteractableDefinition): boolean {
+  return item.kind === 'chest'
+    ? item.contents.kind === 'consumable' && item.contents.consumable === 'ammunition'
+    : item.kind === 'pickup' && item.consumable === 'ammunition';
 }
 
 function chestThat(what: string, matches: (chest: ChestDefinition) => boolean): ChestDefinition {
@@ -208,6 +219,11 @@ function detourFromRoute(spot: Tile): number | null {
   const walkBack = walkToRoute(spot);
   return walkBack === null ? null : walkBack.length - 2;
 }
+
+/** How far along the route the tougher undead first notices the hero, or -1 when it never does. */
+const firstMetTougher = (route ?? []).findIndex((tile) =>
+  toughUndead.some((one) => distanceBetween(tile, one.tile) <= noticingOf(gameContent, one)),
+);
 
 /** The hero walks from where it stands to a spot beside a chest over open ground, faces the chest and uses Interact. */
 function openChest(game: Game, chest: ChestDefinition): readonly GameEvent[] {
@@ -465,12 +481,8 @@ describe('the armor of the castle', () => {
   });
 
   it('is found before the tougher undead is met: the chest lies on the way before the first place where that undead notices the hero', () => {
-    const firstMet = (route ?? []).findIndex((tile) =>
-      toughUndead.some((one) => distanceBetween(tile, one.tile) <= noticingOf(gameContent, one)),
-    );
-
-    expect(firstMet, 'a place on the route where the tougher undead notices the hero').toBeGreaterThan(-1);
-    expect(placeOnRoute(armorChest().tile) ?? Number.POSITIVE_INFINITY).toBeLessThan(firstMet);
+    expect(firstMetTougher, 'a place on the route where the tougher undead notices the hero').toBeGreaterThan(-1);
+    expect(placeOnRoute(armorChest().tile) ?? Number.POSITIVE_INFINITY).toBeLessThan(firstMetTougher);
   });
 
   it('lets the hero walk to the chest, open it and wear the armor, which raises Defense by what it adds', () => {
@@ -492,6 +504,88 @@ describe('the armor of the castle', () => {
     expect(events).toContainEqual({ type: 'chest-opened', chestId: chest.id });
     expect(events).toContainEqual(pickupFrom(chest));
     expect(defense() - before).toBe(gameContent.gear[gearOf(chest)]?.bonus);
+  });
+});
+
+describe('what the hero finds in the castle', () => {
+  const nearTheRoute = ({ tile }: { readonly tile: Tile }): boolean =>
+    (detourFromRoute(tile) ?? Number.POSITIVE_INFINITY) <= MOST_NEARBY;
+  const beyondTheTougher = ({ tile }: { readonly tile: Tile }): boolean => (placeOnRoute(tile) ?? -1) > firstMetTougher;
+  const potions = pickups.filter(({ consumable }) => consumable === 'healing-potion');
+  /** The chests at the ends of the side paths: a good walk from the route. */
+  const sidePathChests = chests.filter(({ tile }) => (detourFromRoute(tile) ?? 0) >= LEAST_DETOUR);
+
+  it('has Ammunition caches near the route: two at least, each a few steps aside', () => {
+    const caches = chests.filter(holdsAmmunition).filter(nearTheRoute);
+
+    expect(caches.length, 'Ammunition caches a few steps off the route').toBeGreaterThanOrEqual(2);
+  });
+
+  it('lets the hero walk to each cache near the route and open it', () => {
+    const caches = chests.filter(holdsAmmunition).filter(nearTheRoute);
+
+    expect(caches.length).toBeGreaterThan(0);
+    for (const cache of caches) {
+      const events = openChest(quietGameAt(CASTLE, wayInTile), cache);
+
+      expect(events, `opening ${cache.id}`).toContainEqual({ type: 'chest-opened', chestId: cache.id });
+      expect(events, `opening ${cache.id}`).toContainEqual(pickupFrom(cache));
+    }
+  });
+
+  it('has Healing Potions on the ground near the route: two at least, which the hero takes by walking over them', () => {
+    const near = potions.filter(nearTheRoute);
+
+    expect(near.length, 'Healing Potions a few steps off the route').toBeGreaterThanOrEqual(2);
+    for (const potion of near) {
+      const walk = routeBetween(isOpen, wayInTile, (tile) => keyOf(tile) === keyOf(potion.tile));
+      expect(walk, `a walk to the potion ${potion.id}`).not.toBeNull();
+
+      const events = walkRoute(quietGameAt(CASTLE, wayInTile), walk ?? []);
+
+      expect(events).toContainEqual({
+        type: 'pickup',
+        item: { kind: 'consumable', id: 'healing-potion', amount: potion.amount },
+      });
+    }
+  });
+
+  it('keeps supplies for the final fight beyond the tougher undead: a cache and a Healing Potion that the hero reaches after the first place where that undead notices the hero', () => {
+    expect(firstMetTougher, 'a place on the route where the tougher undead notices the hero').toBeGreaterThan(-1);
+    expect(chests.filter(holdsAmmunition).filter(nearTheRoute).filter(beyondTheTougher).length, 'caches beyond').toBeGreaterThan(0);
+    expect(potions.filter(nearTheRoute).filter(beyondTheTougher).length, 'Healing Potions beyond').toBeGreaterThan(0);
+  });
+
+  it('has side paths: chests a good walk from the route, which the hero walks to and opens with every door shut', () => {
+    expect(sidePathChests.length, 'chests a good walk from the route').toBeGreaterThan(0);
+    for (const reward of sidePathChests) {
+      const events = openChest(quietGameAt(CASTLE, wayInTile), reward);
+
+      expect(events, `opening ${reward.id}`).toContainEqual({ type: 'chest-opened', chestId: reward.id });
+      expect(events, `opening ${reward.id}`).toContainEqual(pickupFrom(reward));
+    }
+  });
+
+  it('guards the end of each side path with an undead that the hero who keeps to the route does not meet', () => {
+    const metOnRoute = new Set(metOn(gameContent, castle, route).map(({ id }) => id));
+
+    expect(sidePathChests.length).toBeGreaterThan(0);
+    for (const reward of sidePathChests) {
+      const guards = castle.monsters.filter((monster) =>
+        neighboursOf(reward.tile).some(
+          (spot) => isOpen(spot) && distanceBetween(spot, monster.tile) <= noticingOf(gameContent, monster),
+        ),
+      );
+
+      expect(guards.length, `undead that notice a hero beside ${reward.id}`).toBeGreaterThan(0);
+      expect(guards.filter(({ id }) => metOnRoute.has(id)), `guards of ${reward.id} that the route meets`).toEqual([]);
+    }
+  });
+
+  it('keeps every chest and pickup out of the bottom rows, where the notice is drawn over the hero', () => {
+    const lowest = castle.layout.length - 1 - BOTTOM_ROWS;
+
+    expect((castle.interactables ?? []).filter(({ tile }) => tile.row > lowest).map(({ id }) => id)).toEqual([]);
   });
 });
 

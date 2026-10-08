@@ -73,7 +73,7 @@ export const castle: AreaDefinition = {
     { id: 'yard-skeleton-1', type: 'castle-skeleton', tile: { col: 10, row: 8 } },
     { id: 'yard-skeleton-2', type: 'castle-skeleton', tile: { col: 12, row: 11 } },
     { id: 'hall-skeleton', type: 'castle-skeleton', tile: { col: 15, row: 16 } },
-    { id: 'hall-wraith', type: 'castle-wraith', tile: { col: 25, row: 18 } },
+    { id: 'hall-wraith', type: 'castle-wraith', tile: { col: 22, row: 18 } },
     { id: 'court-skeleton', type: 'castle-skeleton', tile: { col: 31, row: 12 } },
     { id: 'court-ghoul', type: 'castle-ghoul', tile: { col: 38, row: 12 } },
     { id: 'court-wraith', type: 'castle-wraith', tile: { col: 40, row: 6 } },
@@ -91,6 +91,62 @@ export const castle: AreaDefinition = {
       id: 'castle-armor-chest',
       tile: { col: 19, row: 12 },
       contents: { kind: 'gear', gear: 'knight-armor' },
+    },
+    // Three caches of arrows a step or two off the route: the first by the west end of the long hall, the second in the
+    // south-east corner of the inner courtyard and the third in the great hall, past the knight and just before the last
+    // hall, so that the hero who has spent its arrows on the way can fill the quiver for the final fight.
+    {
+      kind: 'chest',
+      id: 'castle-arrow-cache-1',
+      tile: { col: 10, row: 16 },
+      contents: { kind: 'consumable', consumable: 'ammunition', amount: 6 },
+    },
+    {
+      kind: 'chest',
+      id: 'castle-arrow-cache-2',
+      tile: { col: 40, row: 17 },
+      contents: { kind: 'consumable', consumable: 'ammunition', amount: 6 },
+    },
+    {
+      kind: 'chest',
+      id: 'castle-arrow-cache-3',
+      tile: { col: 55, row: 12 },
+      contents: { kind: 'consumable', consumable: 'ammunition', amount: 6 },
+    },
+    // Healing Potions on the ground a step or two off the route: one in the long hall, one below the fountain of the
+    // inner courtyard and one in the north-east corner of the great hall, past the knight.
+    { kind: 'pickup', id: 'castle-potion-1', tile: { col: 16, row: 18 }, consumable: 'healing-potion', amount: 1 },
+    { kind: 'pickup', id: 'castle-potion-2', tile: { col: 36, row: 14 }, consumable: 'healing-potion', amount: 1 },
+    { kind: 'pickup', id: 'castle-potion-3', tile: { col: 55, row: 4 }, consumable: 'healing-potion', amount: 1 },
+    // The side path of the watch tower: the room at the top of the stair that rises from the long hall, a good walk from
+    // the route, which a wraith guards. It keeps two Healing Potions and a big cache of arrows.
+    {
+      kind: 'chest',
+      id: 'tower-potion-chest',
+      tile: { col: 20, row: 4 },
+      contents: { kind: 'consumable', consumable: 'healing-potion', amount: 2 },
+    },
+    {
+      kind: 'chest',
+      id: 'tower-arrow-chest',
+      tile: { col: 25, row: 4 },
+      contents: { kind: 'consumable', consumable: 'ammunition', amount: 8 },
+    },
+    // The side path of the crypt: the room at the foot of the stair that falls from the inner courtyard, a good walk
+    // from the route, which a ghoul guards. It keeps three Healing Potions and a big cache of arrows. Both chests stand
+    // above row 27: the view stops at the bottom of the area, so a hero in front of a chest in its last rows would
+    // stand under the notice.
+    {
+      kind: 'chest',
+      id: 'crypt-potion-chest',
+      tile: { col: 30, row: 25 },
+      contents: { kind: 'consumable', consumable: 'healing-potion', amount: 3 },
+    },
+    {
+      kind: 'chest',
+      id: 'crypt-arrow-chest',
+      tile: { col: 39, row: 26 },
+      contents: { kind: 'consumable', consumable: 'ammunition', amount: 8 },
     },
   ],
 };
