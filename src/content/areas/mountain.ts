@@ -9,13 +9,21 @@ export const mountain: AreaDefinition = {
   id: 'mountain',
   name: 'The Mountain',
   text: 'A cold wind blows down from the peaks.',
-  entrances: [{ id: 'from-woods', tile: { col: 1, row: 6 } }],
+  entrances: [
+    { id: 'from-woods', tile: { col: 1, row: 6 } },
+    { id: 'from-cave', tile: { col: 18, row: 6 } },
+  ],
   checkpoints: [{ id: 'mountain-checkpoint', tile: { col: 1, row: 6 } }],
   exits: [
     {
       id: 'to-woods',
       zone: { col: 0, row: 6, width: 1, height: 2 },
       to: { area: 'woods', entrance: 'from-mountain' },
+    },
+    {
+      id: 'to-cave',
+      zone: { col: 19, row: 6, width: 1, height: 2 },
+      to: { area: 'cave', entrance: 'from-mountain' },
     },
   ],
   layout: [
@@ -25,8 +33,8 @@ export const mountain: AreaDefinition = {
     '#,,,,,,,,,,,,,,,,,,#',
     '#,,,,,,##,,,,,##,,,#',
     '#,,,,,,,,,,,,,,,,,,#',
-    ',,,,,,,,,,,,,,,,,,,#',
-    ',,,,,,,,,,,,,,,,,,,#',
+    ',,,,,,,,,,,,,,,,,,,,',
+    ',,,,,,,,,,,,,,,,,,,,',
     '#,,,,,,,,,,,##,,,,,#',
     '#,,,,,,,,,,,,,,,,,,#',
     '#,,,,,,,,,,,,,,,,,,#',
