@@ -582,6 +582,12 @@ describe('what the hero finds in the castle', () => {
     }
   });
 
+  it('leaves nothing out of reach: a walk joins the route to every chest and every pickup', () => {
+    const cutOff = [...chests, ...pickups].filter(({ tile }) => detourFromRoute(tile) === null);
+
+    expect(cutOff.map(({ id }) => id)).toEqual([]);
+  });
+
   it('keeps every chest and pickup out of the bottom rows, where the notice is drawn over the hero', () => {
     const lowest = castle.layout.length - 1 - BOTTOM_ROWS;
 
