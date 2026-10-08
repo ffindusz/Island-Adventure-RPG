@@ -11,7 +11,18 @@ import type {
   Tile,
 } from '../src/core';
 import { face, fixedRandom, newGame, playingView } from './fixtures';
-import { directionBetween, isInZone, keyOf, neighboursOf, openTilesOf, routeBetween, walkRoute } from './routes';
+import {
+  directionBetween,
+  experienceOfAll,
+  isInZone,
+  keyOf,
+  metOn,
+  milestonesOf,
+  neighboursOf,
+  openTilesOf,
+  routeBetween,
+  walkRoute,
+} from './routes';
 
 // The woods, the second area on the route of the adventure, between the coast and the mountain: what they have to be
 // to give the hero its bow, its first beasts and a first choice of side path. Like the other tests of the shipped
@@ -346,27 +357,12 @@ describe('the Experience on the way through the woods', () => {
   const coastRoute = routeBetween(openTilesOf(gameContent, coast), gameContent.start.tile, (tile) =>
     (coast.exits ?? []).some(({ zone }) => isInZone(zone, tile)),
   );
-  const experienceOf = (monster: { readonly type: string }): number =>
-    gameContent.monsterTypes[monster.type]?.experience ?? 0;
-  const noticingOf = (monster: { readonly type: string }): number => {
-    const type = gameContent.monsterTypes[monster.type];
-    return type !== undefined && 'noticingDistance' in type ? type.noticingDistance : 0;
-  };
-  const distanceBetween = (one: Tile, other: Tile): number =>
-    Math.max(Math.abs(one.col - other.col), Math.abs(one.row - other.row));
-  /** A monster notices a hero in the square round its body that its noticing distance makes, so a hero on a route meets it when a tile of the route lies in that square. */
-  const metOn = (area: AreaDefinition, route: readonly Tile[] | null) =>
-    area.monsters.filter((monster) => (route ?? []).some((tile) => distanceBetween(tile, monster.tile) <= noticingOf(monster)));
-  const experienceOfAll = (monsters: readonly { readonly type: string }[]): number =>
-    monsters.reduce((total, monster) => total + experienceOf(monster), 0);
-  const milestonesOf = (area: AreaDefinition): number =>
-    (area.milestones ?? []).reduce((total, { reward }) => total + reward.experience, 0);
 
   it('gives a hero who fights what it meets from the start to the exit of the woods, and passes the milestones, the Experience of Level 3', () => {
     const earned =
-      experienceOfAll(metOn(coast, coastRoute)) +
+      experienceOfAll(gameContent, metOn(gameContent, coast, coastRoute)) +
       milestonesOf(coast) +
-      experienceOfAll(metOn(woods, trail)) +
+      experienceOfAll(gameContent, metOn(gameContent, woods, trail)) +
       milestonesOf(woods);
 
     expect(earned).toBeGreaterThanOrEqual(levelThree);
@@ -374,7 +370,10 @@ describe('the Experience on the way through the woods', () => {
 
   it('does not give a hero who clears the coast and the woods the Experience of Level 4: nobody has to grind', () => {
     const everything =
-      experienceOfAll(coast.monsters) + milestonesOf(coast) + experienceOfAll(woods.monsters) + milestonesOf(woods);
+      experienceOfAll(gameContent, coast.monsters) +
+      milestonesOf(coast) +
+      experienceOfAll(gameContent, woods.monsters) +
+      milestonesOf(woods);
 
     expect(everything).toBeLessThan(levelFour);
   });
