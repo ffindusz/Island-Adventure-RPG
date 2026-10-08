@@ -32,6 +32,10 @@ export function isInZone(zone: TileRect, { col, row }: Tile): boolean {
   return col >= zone.col && col < zone.col + zone.width && row >= zone.row && row < zone.row + zone.height;
 }
 
+/** What stops the hero whatever its state, and what stops it only while it is shut. */
+const ALWAYS_SOLID_KINDS: readonly string[] = ['chest', 'lever', 'sign'];
+const SOLID_WHILE_SHUT_KINDS: readonly string[] = ['door', 'gate'];
+
 /**
  * The tiles of an area the hero can stand on: terrain that is not solid, with no chest, lever or sign on it, which are
  * solid too. A door or a gate is solid as well while it is shut, and the hero begins with every one shut. With
@@ -42,7 +46,7 @@ export function openTilesOf(
   area: AreaDefinition,
   doorsOpen = false,
 ): (tile: Tile) => boolean {
-  const solidKinds: readonly string[] = doorsOpen ? ['chest', 'lever', 'sign'] : ['chest', 'lever', 'sign', 'door', 'gate'];
+  const solidKinds = doorsOpen ? ALWAYS_SOLID_KINDS : [...ALWAYS_SOLID_KINDS, ...SOLID_WHILE_SHUT_KINDS];
   const blocked = new Set(
     (area.interactables ?? []).flatMap((interactable) =>
       solidKinds.includes(interactable.kind) ? [keyOf(interactable.tile)] : [],

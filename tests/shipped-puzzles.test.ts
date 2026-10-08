@@ -5,6 +5,7 @@ import { gameContent } from '../src/content';
 import { STEPS_PER_SECOND, createGame } from '../src/core';
 import type {
   AreaDefinition,
+  ContentDefinition,
   Direction,
   EntranceDefinition,
   Game,
@@ -13,13 +14,14 @@ import type {
   Tile,
   TileRect,
 } from '../src/core';
-import { face, fixedRandom, interactableViews, inventoryOf, playingView, walk } from './fixtures';
+import { face, fixedRandom, interactableViews, inventoryOf, playingView, throughStorage, walk } from './fixtures';
 
 // The light puzzles the game ships with, both on the trail: a cabin behind a locked door whose key lies in the north
 // woods, and a shed behind a gate that a lever opens. What a key, a door, a lever and a gate do is tested on purpose-built
 // content (keys, doors, levers), and that no route needs one in device-routes.test.ts, so that changing what ships never
 // breaks those. Here the shipped rooms are checked as made: where each thing stands, that every text can be drawn, and
-// that a hero can walk through the steps of each puzzle to its reward. The trail is walked without its monsters.
+// that a hero can walk through the steps of each puzzle to its reward. The trail is walked without its monsters. The
+// last part is where the puzzles meet the opening of a new game and the saved game, which other tickets made.
 
 const TRAIL = 'overgrown-trail';
 
@@ -124,12 +126,16 @@ function trailRoutes(...open: string[]): Map<string, Direction[]> {
   return routesFrom(trail, firstEntranceOf(trail).tile, blockedByPlacements(trail, open));
 }
 
-/** A new game in which the hero begins at the way in to the trail, with the monsters of the trail taken out. */
-function quietTrail(): Game {
+/** The shipped content, with the hero beginning at the way in to the trail and the monsters of the trail taken out. */
+function quietTrailContent(): ContentDefinition {
   const trail = areaNamed(TRAIL);
   const areas = gameContent.areas.map((area) => (area.id === TRAIL ? { ...area, monsters: [] } : area));
-  const start = { area: TRAIL, tile: firstEntranceOf(trail).tile };
-  const game = createGame({ content: { ...gameContent, areas, start }, random: fixedRandom });
+  return { ...gameContent, areas, start: { area: TRAIL, tile: firstEntranceOf(trail).tile } };
+}
+
+/** A new game in which the hero begins at the way in to the trail, with the monsters of the trail taken out. */
+function quietTrail(): Game {
+  const game = createGame({ content: quietTrailContent(), random: fixedRandom });
   game.send({ type: 'new-game' });
   return game;
 }
@@ -292,5 +298,57 @@ describe('what the game ships with', () => {
     const undrawable = [...new Set(text)].filter((character) => character !== ' ' && drawnRectangles(character) === 0);
 
     expect(undrawable).toEqual([]);
+  });
+});
+
+function takeTheKeyAndPullTheLever(game: Game): void {
+  walkOnto(game, placedNamed('key', 'brass-key').tile);
+  interactWith(game, placedNamed('lever', 'shed-lever').tile);
+}
+
+function openTheCabinAndItsChest(game: Game): void {
+  const door = placedNamed('door', 'cabin-door');
+  walkOnto(game, placedNamed('key', door.key).tile);
+  interactWith(game, door.tile);
+  interactWith(game, placedNamed('chest', 'cabin-chest').tile);
+}
+
+describe('the puzzles with the opening and the saved game', () => {
+  // A new game builds the world again from the content, and a continued one takes it from the save: the first must not
+  // keep a key, an open door or a pulled lever, and the second must not lose one, nor show the opening again.
+  it.each([
+    { after: 'taking the key and pulling the lever', play: takeTheKeyAndPullTheLever },
+    { after: 'opening the cabin and its chest', play: openTheCabinAndItsChest },
+  ])('begins a new game with the opening and every device as placed, after $after', ({ play }) => {
+    const game = quietTrail();
+    play(game);
+
+    const events = game.send({ type: 'new-game' });
+
+    expect(events[0]).toEqual({ type: 'opening', lines: gameContent.opening });
+    expect(inventoryOf(game).keys).toEqual([]);
+    expect(interactableViews(game, 'key')).toHaveLength(1);
+    expect(interactableViews(game, 'door')).toMatchObject([{ open: false }]);
+    expect(interactableViews(game, 'gate')).toMatchObject([{ open: false }]);
+    expect(interactableViews(game, 'lever')).toMatchObject([{ pulled: false }]);
+    expect(interactableViews(game, 'chest').filter((chest) => chest.opened)).toEqual([]);
+  });
+
+  it('continues a saved game with its key held, its gate open and its lever pulled, and without the opening', () => {
+    const game = quietTrail();
+    const door = placedNamed('door', 'cabin-door');
+    const key = placedNamed('key', door.key);
+    takeTheKeyAndPullTheLever(game);
+    const saved = throughStorage(game.snapshot());
+
+    const continued = createGame({ content: quietTrailContent(), random: fixedRandom });
+    const events = continued.send({ type: 'continue', snapshot: saved });
+
+    expect(events).toEqual([]);
+    expect(inventoryOf(continued).keys).toEqual([{ id: key.id, name: key.name }]);
+    expect(interactableViews(continued, 'key')).toEqual([]);
+    expect(interactableViews(continued, 'gate')).toMatchObject([{ open: true }]);
+    expect(interactableViews(continued, 'lever')).toMatchObject([{ pulled: true }]);
+    expect(interactWith(continued, door.tile)).toEqual([{ type: 'door-opened', doorId: door.id, keyName: key.name }]);
   });
 });
