@@ -231,6 +231,37 @@ describe('the cabin on the trail', () => {
   });
 });
 
+describe('the shed on the trail', () => {
+  it('keeps its lever where the hero can reach it with every door and gate shut, and has it move the gate', () => {
+    const lever = placedNamed('lever', 'shed-lever');
+
+    expect(standsBeside(trailRoutes(), lever.tile)).toBe(true);
+    expect(lever.targets).toEqual(['shed-gate']);
+  });
+
+  it('keeps its Healing Potion behind the gate: out of reach while the gate is shut, within reach once it is open', () => {
+    const potion = placedNamed('pickup', 'shed-potion');
+
+    expect(trailRoutes().has(tileKey(potion.tile))).toBe(false);
+    expect(trailRoutes('shed-gate').has(tileKey(potion.tile))).toBe(true);
+  });
+
+  it('is opened by a hero who pulls its lever, walks through the gate and takes the potion', () => {
+    const game = quietTrail();
+    const lever = placedNamed('lever', 'shed-lever');
+    const potion = placedNamed('pickup', 'shed-potion');
+    expect(interactableViews(game, 'gate')).toMatchObject([{ id: 'shed-gate', open: false }]);
+
+    expect(interactWith(game, lever.tile)).toEqual([{ type: 'lever-toggled', leverId: lever.id, pulled: true }]);
+
+    expect(interactableViews(game, 'gate')).toMatchObject([{ id: 'shed-gate', open: true }]);
+    expect(walkOnto(game, potion.tile)).toContainEqual({
+      type: 'pickup',
+      item: { kind: 'consumable', id: 'healing-potion', amount: 1 },
+    });
+  });
+});
+
 describe('what the game ships with', () => {
   // The content check refuses a chest, a pickup or a device on a Checkpoint or where the hero begins, but not on an
   // entrance or in an exit, where it would stop or surprise a hero who comes in or tries to leave.

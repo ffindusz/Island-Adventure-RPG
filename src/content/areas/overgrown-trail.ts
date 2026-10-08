@@ -8,6 +8,7 @@ import { trailPuzzles } from './trail-puzzles';
 // and returns to the Checkpoint there, is not at once in danger. Reaching the clearing is a milestone. The rock at the
 // north-west corner, down to row 2 and across to column 5, is where the HUD sits when the view is at that corner, so
 // that it never covers the hero. The Checkpoint of the area is at the way in from the coast, where the hero comes in.
+// A cabin behind a locked door and a shed behind a gate, in the south corners, are its light puzzles (trail-puzzles.ts).
 export const overgrownTrail: AreaDefinition = {
   id: 'overgrown-trail',
   name: 'Overgrown Trail',
@@ -38,9 +39,9 @@ export const overgrownTrail: AreaDefinition = {
     '#,,,,,,,#,,,,,,,,,,,,,,,,,,,,#',
     '#,,##,,,#,,,,,,,,,,,##,,,,,,,#',
     '#,,##,,,,,,,,##,,,,,,#,,,##,,#',
-    '##,##,,,,,,,,#,,,,,,,,,,,,#,,#',
-    '#,,,#,,,,,,,,,,,,,,,,,,,,,,,,#',
-    '#,,,#,,,,,,,,,,,,,,,,,,,,,,,,#',
+    '##,##,,,,,,,,#,,,,,,,,,,,,#,##',
+    '#,,,#,,,,,,,,,,,,,,,,,,,,#,,,#',
+    '#,,,#,,,,,,,,,,,,,,,,,,,,#,,,#',
     '##############################',
   ],
   monsters: [
