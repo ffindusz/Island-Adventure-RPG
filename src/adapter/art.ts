@@ -29,11 +29,14 @@ const TERRAIN_COLOURS: Readonly<Record<string, number>> = {
   sand: 0xdcc58a,
   grass: 0x5a9e45,
   wreckage: 0x7b5a3a,
+  tree: 0x2f5d2a,
 };
 
 /** Monster colours, by monster type. */
 const MONSTER_COLOURS: Readonly<Record<string, number>> = {
   crab: 0xd9534f,
+  wolf: 0x9aa3b8,
+  slime: 0x40e0d0,
   boar: 0x7d4e2d,
   spitter: 0xa86fd6,
 };

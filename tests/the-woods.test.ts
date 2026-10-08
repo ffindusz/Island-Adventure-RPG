@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
-import type { AreaDefinition, Game, Tile } from '../src/core';
+import type { AreaDefinition, ChaserMonsterDefinition, Game, Tile } from '../src/core';
 import { newGame, playingView } from './fixtures';
 import { isInZone, openTilesOf, routeBetween, walkRoute } from './routes';
 
@@ -18,6 +18,14 @@ function definitionOf(id: string): AreaDefinition {
     throw new Error(`The shipped content has no Adventure Area "${id}"`);
   }
   return area;
+}
+
+function chaserNamed(name: string): ChaserMonsterDefinition {
+  const type = gameContent.monsterTypes[name];
+  if (type === undefined || type.behavior !== 'chaser') {
+    throw new Error(`The shipped content has no chasing monster type "${name}"`);
+  }
+  return type;
 }
 
 /** A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out. */
@@ -52,8 +60,35 @@ describe('the way through the woods', () => {
 
     const entrance = (definitionOf(MOUNTAIN).entrances ?? []).find(({ id }) => id === wayForward?.to.entrance);
     expect(events).toContainEqual({ type: 'area-changed', areaId: MOUNTAIN });
-    expect(events).toContainEqual(expect.objectContaining({ type: 'checkpoint-activated' }));
     expect(playingView(game).area.id).toBe(MOUNTAIN);
     expect(playingView(game).hero.position).toEqual({ x: (entrance?.tile.col ?? 0) + 0.5, y: (entrance?.tile.row ?? 0) + 0.5 });
+    expect(playingView(game).checkpoints.filter(({ active }) => active)).toHaveLength(1);
+  });
+});
+
+describe('the creatures of the woods', () => {
+  const crab = chaserNamed('crab');
+
+  it('has the wolf, a forest beast that chases the hero quicker than a crab does, yet slower than the hero walks, and is frailer', () => {
+    const wolf = chaserNamed('wolf');
+
+    expect(wolf.speedTilesPerSecond).toBeGreaterThan(crab.speedTilesPerSecond);
+    expect(wolf.speedTilesPerSecond).toBeLessThan(gameContent.hero.speedTilesPerSecond);
+    expect(wolf.health).toBeLessThan(crab.health);
+  });
+
+  it('has the slime, which chases the hero slower than a crab does, takes more hits and hits more lightly', () => {
+    const slime = chaserNamed('slime');
+
+    expect(slime.speedTilesPerSecond).toBeLessThan(crab.speedTilesPerSecond);
+    expect(slime.health).toBeGreaterThan(crab.health);
+    expect(slime.damage).toBeLessThan(crab.damage);
+  });
+
+  it('has trees, a kind of terrain the hero cannot walk through', () => {
+    const trees = Object.values(gameContent.terrain).filter(({ kind }) => kind === 'tree');
+
+    expect(trees).not.toEqual([]);
+    expect(trees.every(({ solid }) => solid)).toBe(true);
   });
 });
