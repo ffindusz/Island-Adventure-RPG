@@ -394,6 +394,12 @@ export interface ContentDefinition {
   /** How long the text of an Adventure Area stays on screen, in milliseconds. Leave it out for the default of 4000. */
   readonly areaTextMs?: number;
   /**
+   * The opening: a short card the player reads once, as a new game begins and before the hero can move. Its lines, from
+   * 1 to 4, none of them blank; the caller wraps each to fit its screen. A game that is continued does not show it.
+   * Leave it out for none.
+   */
+  readonly opening?: readonly string[];
+  /**
    * How far from the hero's tile the Automap reveals terrain, in tiles: every tile whose middle is no farther than this
    * from the middle of the hero's tile. It is 0 or more: 0 reveals only the hero's own tile. Leave it out for the
    * default of 4. An exit is marked on the Automap once any tile of it is revealed, so under 1 an exit can be crossed

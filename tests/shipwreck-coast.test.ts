@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
+import { createGame } from '../src/core';
 import type { AreaDefinition, Tile } from '../src/core';
-import { face, playingView } from './fixtures';
+import { face, fixedRandom, playingView } from './fixtures';
 import {
   directionBetween,
   isInZone,
@@ -206,5 +207,47 @@ describe('the text of the shipwreck coast', () => {
   it('is a short line, not a page', () => {
     expect(coast.text).toBeTypeOf('string');
     expect(coast.text?.length).toBeLessThanOrEqual(60);
+  });
+});
+
+describe('a new game on the shipwreck coast', () => {
+  function newShippedGame() {
+    const game = createGame({ content: gameContent, random: fixedRandom });
+    const events = game.send({ type: 'new-game' });
+    return { game, events };
+  }
+
+  it('opens with a few short lines, before anything else happens', () => {
+    const { events } = newShippedGame();
+
+    const [first] = events;
+    const lines = first?.type === 'opening' ? first.lines : [];
+    expect(lines.length).toBeGreaterThanOrEqual(2);
+    expect(lines.length).toBeLessThanOrEqual(4);
+    expect(lines.every((line) => line.length <= 60)).toBe(true);
+  });
+
+  it('begins on the Checkpoint at the entrance of the coast, where defeat sends the hero back to', () => {
+    const { game } = newShippedGame();
+
+    const entrance = (coast.checkpoints ?? []).find(({ tile }) => tile.col === start.col && tile.row === start.row);
+    expect(entrance, 'a Checkpoint stands where the hero begins').toBeDefined();
+    const view = playingView(game);
+    expect(view.area.id).toBe(COAST);
+    expect(view.hero.position).toEqual({ x: start.col + 0.5, y: start.row + 0.5 });
+    expect(view.checkpoints.filter(({ active }) => active).map(({ id }) => id)).toEqual([entrance?.id]);
+  });
+
+  it('begins with the basic sword and the basic armor equipped, and carrying nothing else', () => {
+    const { game } = newShippedGame();
+
+    game.send({ type: 'open-page', page: 'inventory' });
+
+    const { page } = playingView(game);
+    const gear = page?.id === 'inventory' ? page.gear : [];
+    expect(gear.map(({ id, equipped }) => ({ id, equipped }))).toEqual([
+      { id: 'basic-sword', equipped: true },
+      { id: 'basic-armor', equipped: true },
+    ]);
   });
 });

@@ -26,7 +26,7 @@ export interface GameOptions {
 
 /** What the player asks for. A command takes effect immediately and returns the events it caused. */
 export type Command =
-  /** Start a new game from the content's start position. */
+  /** Start a new game from the content's start position. It begins with the content's opening, if it has one. */
   | { readonly type: 'new-game' }
   /** Restore a game from a snapshot taken by game.snapshot(). */
   | { readonly type: 'continue'; readonly snapshot: Snapshot }
@@ -79,6 +79,13 @@ export type Command =
 
 /** Something that happened, for the adapter to show or play. Events never carry rules; the state view is the truth. */
 export type GameEvent =
+  /**
+   * A new game begins, and these are the lines of its opening, for the caller to show before the hero moves. It is the
+   * first event of the `new-game` command, and only the content that has an opening gives one. A continued game has
+   * none. The core does not pause for it: the game is in play already, and the caller holds the steps until the
+   * player has read it.
+   */
+  | { readonly type: 'opening'; readonly lines: readonly string[] }
   /** The hero swung. `zone` is the area the strike covered. */
   | { readonly type: 'hero-attacked'; readonly direction: Direction; readonly zone: Box }
   /** The hero loosed an arrow in this direction, spending one Ammunition. The arrow flies on in the view. */

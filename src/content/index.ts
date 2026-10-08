@@ -5,6 +5,7 @@ import { gear } from './gear';
 import { healingPotion } from './healing-potion';
 import { hero } from './hero';
 import { monsterTypes } from './monsters';
+import { opening } from './opening';
 import { progression } from './progression';
 import { terrain } from './terrain';
 
@@ -22,6 +23,7 @@ export const gameContent: ContentDefinition = {
   gear,
   monsterTypes,
   areas: [shipwreckCoast, overgrownTrail],
+  opening,
   checkCoveredCorner: true,
   start: { area: shipwreckCoast.id, tile: { col: 5, row: 9 } },
 };
