@@ -149,10 +149,11 @@ describe('a Guardian the rules cannot work with is refused when the game is crea
     expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
   });
 
-  it('two patterns of two kinds are enough, and a kind may come more than once', () => {
-    const content = guardianContent([], {
-      monsterTypes: { guardian: { ...GUARDIAN, patterns: [SWEEP, SMITE, { ...SWEEP, reach: 2 }] } },
-    });
+  it.each([
+    { what: 'two patterns of two kinds are enough', patterns: [SWEEP, SMITE] },
+    { what: 'a kind may come more than once', patterns: [SWEEP, SMITE, { ...SWEEP, reach: 2 }] },
+  ])('$what', ({ patterns }) => {
+    const content = guardianContent([], { monsterTypes: { guardian: { ...GUARDIAN, patterns } } });
 
     expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
   });
