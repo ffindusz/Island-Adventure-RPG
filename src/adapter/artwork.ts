@@ -26,7 +26,7 @@ export const ARTWORK = {
   'gear-basic-armor': drawn(TUNIC_ROWS, PACK_PALETTE),
   'gear-chain-mail': drawn(MAIL_ROWS, PACK_PALETTE),
   'gear-plate-armor': drawn(PLATE_ROWS, PACK_PALETTE),
-  'gear-knight-armor': drawn(KNIGHT_ROWS, PACK_PALETTE),
+  'gear-knight-mail': drawn(KNIGHT_ROWS, PACK_PALETTE),
   'consumable-ammunition': image('consumable-ammunition.png'),
   'consumable-healing-potion': image('consumable-healing-potion.png'),
   // The icon of every key, in the notice of finding one and in the inventory page.

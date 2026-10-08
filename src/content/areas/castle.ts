@@ -26,7 +26,7 @@ import type { AreaDefinition } from '../../core';
 // The undead are variants of the behaviors the earlier areas taught, in the order of the route: skeletons chase in the
 // yard, the long hall and the courtyard, a wraith shoots from the long hall and another from the courtyard, a ghoul
 // charges across the courtyard, and the knight, the tougher variant, holds the great hall, where every way through meets
-// it. Nothing notices the hero in the last hall. The Knight's Armor lies in the armory, found long before the knight;
+// it. Nothing notices the hero in the last hall. The Knight Mail lies in the armory, found long before the knight;
 // three caches of arrows and three Healing Potions lie a step or two off the route, the last of each in the great hall
 // past the knight, and a larger stock waits at the end of each side path, where a wraith and a ghoul keep watch.
 export const castle: AreaDefinition = {
@@ -91,13 +91,13 @@ export const castle: AreaDefinition = {
   // The great gateway: the passage from the great hall into the last hall, two tiles wide, which every way on takes.
   milestones: [{ id: 'great-gateway', zone: { col: 57, row: 11, width: 1, height: 2 }, reward: { experience: 3 } }],
   interactables: [
-    // The Knight's Armor, in a chest at the back of the small armory off the long hall, a few steps from the route,
+    // The Knight Mail, in a chest at the back of the small armory off the long hall, a few steps from the route,
     // where the hero passes it long before the knight of the great hall notices it.
     {
       kind: 'chest',
       id: 'castle-armor-chest',
       tile: { col: 19, row: 12 },
-      contents: { kind: 'gear', gear: 'knight-armor' },
+      contents: { kind: 'gear', gear: 'knight-mail' },
     },
     // Three caches of arrows a step or two off the route: the first by the west end of the long hall, the second in the
     // south-east corner of the inner courtyard and the third in the great hall, past the knight and just before the last

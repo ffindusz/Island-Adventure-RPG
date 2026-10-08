@@ -73,6 +73,12 @@ const MOST_NEARBY = 4;
 /** A side path is a walk, not a step aside: this many tiles from the route to the spot beside what lies at its end. */
 const LEAST_DETOUR = 6;
 
+/**
+ * The longest name of a piece of Gear that the Inventory page shows whole: the row of the list has 144 pixels for an
+ * icon, the name, the bonus and a tick, and a letter takes 6 of them. A longer name is cut off at the end.
+ */
+const LONGEST_GEAR_NAME = 11;
+
 function definitionOf(id: string): AreaDefinition {
   const area = gameContent.areas.find((candidate) => candidate.id === id);
   if (area === undefined) {
@@ -478,6 +484,13 @@ describe('the armor of the castle', () => {
 
     expect(upgrade, 'the Gear in the chest of armor').toBeDefined();
     expect(upgrade?.bonus ?? 0).toBeGreaterThan(best);
+  });
+
+  it('has a name that the Inventory page shows whole, and not cut off at the end', () => {
+    const upgrade = gameContent.gear[gearOf(armorChest())];
+
+    expect(upgrade, 'the Gear in the chest of armor').toBeDefined();
+    expect(upgrade?.name.length ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(LONGEST_GEAR_NAME);
   });
 
   it('is found before the tougher undead is met: the chest lies on the way before the first place where that undead notices the hero', () => {

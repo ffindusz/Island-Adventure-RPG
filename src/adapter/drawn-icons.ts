@@ -1,6 +1,6 @@
 // Pictures drawn in code, because the Ninja Adventure pack has no armor icons: a leather tunic for the Basic Armor, a
-// shirt of mail for the Chain Mail, a steel cuirass for the Plate Armor and a harness of dark iron for the Knight's
-// Armor, in the pack's own colours. Each letter is one pixel, `.` is clear.
+// shirt of mail for the Chain Mail, a steel cuirass for the Plate Armor and a harness of dark iron for the Knight
+// Mail, in the pack's own colours. Each letter is one pixel, `.` is clear.
 
 /** The pack's palette, as it is used in its item icons; the letters are only a shorthand for the rows below. */
 export const PACK_PALETTE: Readonly<Record<string, number>> = {
