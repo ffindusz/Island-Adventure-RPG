@@ -113,9 +113,10 @@ export function monsterArt(type: string): string {
 
 /**
  * The ids of the Adventure Areas whose terrain and monsters have their final art. Tickets that draw a new area add its id
- * here once its kinds and types have their pictures; until then it is drawn in colours, and the game still starts.
+ * here once its kinds and types have their pictures; until then it is drawn in colours, and the game still starts. The
+ * castle is not in it: it stays in flat colours until its own art pass.
  */
-export const FINAL_ART_AREAS: readonly string[] = ['shipwreck-coast', 'woods'];
+export const FINAL_ART_AREAS: readonly string[] = ['shipwreck-coast', 'woods', 'mountain', 'cave'];
 
 /** Whether the terrain and the monsters of the area with this id are drawn with their final art, and not in colours. */
 export function hasFinalArt(areaId: string): boolean {
