@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Game, GameEvent, PlayState } from '../src/core';
 import { advance, playingView } from './fixtures';
-import { CHAPTERS, adventureAfter, recorded, restoredFrom } from './saved-adventure';
+import { CHAPTERS, NOTICE_TEXT, adventureAfter, recorded, restoredFrom } from './saved-adventure';
 import type { Frame } from './saved-adventure';
 
 // The round trip of a saved game, at the Game core's interface: a game restored from its snapshot, after the snapshot
@@ -98,7 +98,7 @@ describe('the saved adventure', () => {
     expect(outlived.areas['ruins']?.monsters.find(({ id }) => id === 'shooter')?.health).toBe(0);
   });
 
-  it('has opened and unopened chests, taken and untaken pickups, caches and keys, shut and open doors and gates, levers, reached and unreached milestones', () => {
+  it('has opened and unopened chests, taken and untaken pickups, caches and keys, shut and open doors and gates, levers, signs, reached and unreached milestones', () => {
     const arena = stateAfter('crossing').areas['arena'];
     const ruins = stateAfter('crossing').areas['ruins'];
 
@@ -116,6 +116,7 @@ describe('the saved adventure', () => {
       'brass-door': { kind: 'door', open: true },
       switch: { kind: 'lever', pulled: true },
       portcullis: { kind: 'gate', open: true },
+      notice: { kind: 'sign' },
     });
     expect(ruins?.interactables).toEqual({
       'ruin-cache': { kind: 'chest', opened: false },
@@ -148,6 +149,12 @@ describe('the saved adventure', () => {
     expect(interactable('lever', 'portcullis')).toEqual({ kind: 'gate', open: true });
     expect(interactable('defeat', 'switch')).toEqual({ kind: 'lever', pulled: true });
     expect(interactable('defeat', 'portcullis')).toEqual({ kind: 'gate', open: true });
+  });
+
+  it('has the clue of a sign on show once it is read, with the time it has left, and the text of the area before', () => {
+    expect(stateAfter('lever').areaText).toMatchObject({ text: 'The wind drops.' });
+    // The hero read the sign, and walked 8 steps after.
+    expect(stateAfter('sign').areaText).toEqual({ text: NOTICE_TEXT, stepsLeft: 232 });
   });
 
   it('has visited the first area and, from the crossing on, the second, with its text showing', () => {

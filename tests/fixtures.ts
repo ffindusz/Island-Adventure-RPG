@@ -286,6 +286,11 @@ export function leverAt(id: string, col: number, row: number, targets: readonly 
   return { kind: 'lever', id, tile: { col, row }, targets };
 }
 
+/** A sign on the tile (col, row) that shows the given text when the hero reads it. */
+export function signAt(id: string, col: number, row: number, text: string): InteractableDefinition {
+  return { kind: 'sign', id, tile: { col, row }, text };
+}
+
 /** A milestone that gives the given Experience when the hero's body first overlaps the block of tiles `zone`. */
 export function milestone(id: string, zone: TileRect, experience: number): MilestoneDefinition {
   return { id, zone, reward: { experience } };

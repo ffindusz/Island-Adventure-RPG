@@ -129,6 +129,13 @@ function interactableView(interactable: Interactable, state: PlayState): Interac
         size: interactable.body.maxX - interactable.body.minX,
         pulled: interactableStateOf(state, interactable).pulled,
       };
+    case 'sign':
+      return {
+        kind: 'sign',
+        id: interactable.id,
+        position: centerOfBox(interactable.body),
+        size: interactable.body.maxX - interactable.body.minX,
+      };
   }
 }
 

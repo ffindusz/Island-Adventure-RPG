@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGame } from '../src/core';
 import type { ContentDefinition } from '../src/core';
-import { ARENA_LAYOUT, arena, chestAt, doorAt, fixedRandom, gateAt, keyAt, leverAt } from './fixtures';
+import { ARENA_LAYOUT, arena, chestAt, doorAt, fixedRandom, gateAt, keyAt, leverAt, signAt } from './fixtures';
 
 // The devices are the keys, the doors, the gates, the levers and the signs. Content that makes no sense to them is
 // refused when the game is created, with a message that names the area and the device, so that whoever writes the
@@ -134,5 +134,26 @@ describe('levers and gates that do not make sense are refused when the game is c
         ],
       }),
     );
+  });
+});
+
+describe('signs that do not make sense are refused when the game is created', () => {
+  it.each([
+    {
+      what: 'a sign with no text for the player to read',
+      content: arena({ interactables: [signAt('sign-1', 3, 2, '  ')] }),
+      message: 'Area "arena": sign "sign-1" has no text',
+    },
+    {
+      what: 'a sign on solid terrain',
+      content: arena({ interactables: [signAt('sign-1', 2, 2, 'Beware of the well.')] }), // the water
+      message: 'Area "arena": sign "sign-1" is placed at (col 2, row 2), which is solid terrain or outside the map',
+    },
+  ])('$what', ({ content, message }) => {
+    expectRefused(content, message);
+  });
+
+  it('a sign with text is accepted', () => {
+    expectAccepted(arena({ interactables: [signAt('sign-1', 3, 2, 'Beware of the well.')] }));
   });
 });

@@ -123,6 +123,11 @@ export type GameEvent =
    * open is shut.
    */
   | { readonly type: 'lever-toggled'; readonly leverId: string; readonly pulled: boolean }
+  /**
+   * The hero read this sign: `text` is the clue, which now shows as the text of an Adventure Area does, in place of any
+   * that was showing. The game does not pause. Reading the sign again shows it again.
+   */
+  | { readonly type: 'sign-read'; readonly signId: string; readonly text: string }
   /** The hero took an item and now has it. */
   | { readonly type: 'pickup'; readonly item: PickedUpItem }
   /** The hero equipped this Gear in its slot, in place of the piece there. */
@@ -244,7 +249,7 @@ export interface ChestView {
 }
 
 /** Something placed in the Adventure Area, for the adapter to draw: one member for each kind. */
-export type InteractableView = ChestView | PickupView | KeyView | DoorView | GateView | LeverView;
+export type InteractableView = ChestView | PickupView | KeyView | DoorView | GateView | LeverView | SignView;
 
 /** A pickup lying on the ground, for the adapter to draw. One that the hero has taken is not listed any more. */
 export interface PickupView {
@@ -306,6 +311,19 @@ export interface LeverView {
   /** Width and height of the tile it fills, in tiles. */
   readonly size: number;
   readonly pulled: boolean;
+}
+
+/**
+ * A sign, for the adapter to draw. It says nothing of what is written on it: the text comes with the event when the hero
+ * reads it, and shows as the text of the area does.
+ */
+export interface SignView {
+  readonly kind: 'sign';
+  readonly id: string;
+  /** The centre of the tile it fills. */
+  readonly position: Point;
+  /** Width and height of the tile it fills, in tiles. */
+  readonly size: number;
 }
 
 export interface AreaView {

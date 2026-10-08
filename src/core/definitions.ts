@@ -360,6 +360,22 @@ export interface LeverDefinition {
 }
 
 /**
+ * A sign filling a tile, with a clue on it. It is always solid. The hero reads it with Interact, and the text shows across
+ * the top of the screen as the text of an Adventure Area does, for as long: no page opens and the game does not pause.
+ * Reading it again shows the text again. It has nothing that changes, so a saved game holds no more of it than that it
+ * stands there.
+ */
+export interface SignDefinition {
+  readonly kind: 'sign';
+  /** Unique across all interactables of all Adventure Areas: saves refer to the sign by it. */
+  readonly id: string;
+  /** The tile it fills. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+  /** The clue the hero reads. It must not be blank, and the text of an Adventure Area is drawn in the same pixel font. */
+  readonly text: string;
+}
+
+/**
  * Something in an Adventure Area that the hero acts on with Interact, or takes by walking onto it (a pickup, a key). Its
  * `kind` names the rules it follows (see interactables.ts); the other fields are what that kind needs. Adding a kind
  * means adding a member here and the cases the recipe in interactables.ts lists.
@@ -370,7 +386,8 @@ export type InteractableDefinition =
   | KeyDefinition
   | DoorDefinition
   | GateDefinition
-  | LeverDefinition;
+  | LeverDefinition
+  | SignDefinition;
 
 /** Where the hero stands when it comes into an Adventure Area through an exit of another. */
 export interface EntranceDefinition {

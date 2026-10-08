@@ -301,6 +301,24 @@ describe('a save that does not fit the interactables, milestones and Automap of 
       names: 'state.areas.arena.interactables.switch',
     },
     {
+      fault: 'a sign is kept with something that a sign has no use for',
+      damage: (saved) => (saved.state.areas['arena'].interactables['notice'].read = true),
+      problem: 'damaged',
+      names: 'state.areas.arena.interactables.notice.read',
+    },
+    {
+      fault: 'a sign is kept as if it were a lever',
+      damage: (saved) => (saved.state.areas['arena'].interactables['notice'] = { kind: 'lever', pulled: false }),
+      problem: 'incompatible',
+      names: 'state.areas.arena.interactables.notice',
+    },
+    {
+      fault: 'a lever is kept as if it were a sign',
+      damage: (saved) => (saved.state.areas['arena'].interactables['switch'] = { kind: 'sign' }),
+      problem: 'incompatible',
+      names: 'state.areas.arena.interactables.switch',
+    },
+    {
       fault: 'an interactable is of a kind the game does not know',
       damage: (saved) => (saved.state.areas['arena'].interactables['armor-chest'] = { kind: 'portal', open: false }),
       problem: 'damaged',

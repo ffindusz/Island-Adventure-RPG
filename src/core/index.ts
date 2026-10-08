@@ -37,6 +37,7 @@ export type {
   ProgressionDefinition,
   RangedMonsterDefinition,
   RangedWeaponDefinition,
+  SignDefinition,
   StatId,
   StationaryMonsterDefinition,
   TerrainDefinition,
@@ -79,6 +80,7 @@ export type {
   PlayingView,
   ProgressView,
   RandomSource,
+  SignView,
   Snapshot,
   StatChoiceView,
   StatPageView,
@@ -100,4 +102,5 @@ export type {
   PageId,
   PickupState,
   PlayState,
+  SignState,
 } from './state';

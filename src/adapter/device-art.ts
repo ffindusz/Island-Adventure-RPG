@@ -1,11 +1,10 @@
 import type Phaser from 'phaser';
-import type { DoorView, GateView, KeyView, LeverView } from '../core';
+import type { DoorView, GateView, KeyView, LeverView, SignView } from '../core';
 import { TILE_SIZE } from './config';
 
-// The placeholder look of the devices of the light puzzles: the key, the door, the gate and the lever, and (below
-// them, as the kinds are built) the sign. Each is a small picture of letters, one palette colour per pixel and `.` for
-// a clear one, drawn with rectangles on the tile where it stands. Ticket 23 makes the final art; art.ts calls the draw
-// functions below for these kinds.
+// The placeholder look of the devices of the light puzzles: the key, the door, the gate, the lever and the sign. Each is
+// a small picture of letters, one palette colour per pixel and `.` for a clear one, drawn with rectangles on the tile
+// where it stands. Ticket 23 makes the final art; art.ts calls the draw functions below for these kinds.
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -149,6 +148,26 @@ const LEVER_RESTING_ROWS: readonly string[] = [
 /** A pulled lever: the stick leans the other way, as a mirror shows it. */
 const LEVER_PULLED_ROWS: readonly string[] = LEVER_RESTING_ROWS.map((row) => [...row].reverse().join(''));
 
+/** A sign: a wooden board with three lines of writing on a post. A whole tile. */
+const SIGN_ROWS: readonly string[] = [
+  '................',
+  '.AAAAAAAAAAAAAA.',
+  '.ALLLLLLLLLLLLA.',
+  '.ALWWWWWWWWWWDA.',
+  '.ALWDDWDDDWDWDA.',
+  '.ALWWWWWWWWWWDA.',
+  '.ALWDDDDWDDDWDA.',
+  '.ALWWWWWWWWWWDA.',
+  '.ALWDDDWDDWWWDA.',
+  '.ADDDDDDDDDDDDA.',
+  '.AAAAAAAAAAAAAA.',
+  '......ALDA......',
+  '......ALDA......',
+  '......ALDA......',
+  '......ALDA......',
+  '.....AAAAAA.....',
+];
+
 /** Draws the rows with their top left corner at x, y: a run of one letter along a row is one rectangle. */
 function drawPixels(graphics: Graphics, rows: readonly string[], x: number, y: number): void {
   rows.forEach((row, rowIndex) => {
@@ -185,4 +204,9 @@ export function drawGate(graphics: Graphics, gate: GateView): void {
 /** Draws a lever on the tile it stands on, at rest or pulled. */
 export function drawLever(graphics: Graphics, lever: LeverView): void {
   drawCentred(graphics, lever.pulled ? LEVER_PULLED_ROWS : LEVER_RESTING_ROWS, lever.position);
+}
+
+/** Draws a sign on the tile it fills. */
+export function drawSign(graphics: Graphics, sign: SignView): void {
+  drawCentred(graphics, SIGN_ROWS, sign.position);
 }

@@ -1,10 +1,10 @@
 import { areaOf } from './content';
 import type { Content } from './content';
-import type { Door, Key, Lever } from './device-content';
+import type { Door, Key, Lever, Sign } from './device-content';
 import { overlaps } from './geometry';
 import type { GameEvent, KeyInfo } from './interface';
 import { heroBody, interactableStateOf } from './state';
-import type { DoorState, LeverState, PlayState } from './state';
+import type { DoorState, LeverState, PlayState, SignState } from './state';
 
 // The devices: the keys, and the doors, gates, levers and signs that go with them, which make up the light puzzles and
 // clues of the Adventure Areas. Loading them is in device-content.ts. That the hero meets them as interactables is
@@ -52,8 +52,8 @@ export function useDoor(door: Door, doorState: DoorState, state: PlayState, cont
 
 /**
  * Interact on a lever. The hero pulls it, or puts it back if it was pulled, and every door and gate it names is moved
- * the other way: one that is shut opens, and one that is open shuts. A door that a lever opens takes no key, and a door
- * that it shuts after a key opened it opens again with the lever, and needs no second key.
+ * the other way: one that is shut opens, and one that is open shuts. A door that the lever opens takes no key; one that
+ * it shuts again after the key opened it can be opened by the lever once more, so no hero is locked out.
  */
 export function useLever(lever: Lever, leverState: LeverState, state: PlayState, content: Content): GameEvent[] {
   leverState.pulled = !leverState.pulled;
@@ -64,6 +64,16 @@ export function useLever(lever: Lever, leverState: LeverState, state: PlayState,
     }
   }
   return [{ type: 'lever-toggled', leverId: lever.id, pulled: leverState.pulled }];
+}
+
+/**
+ * Interact on a sign. The hero reads it: its text shows as the text of an Adventure Area does, in place of any that was
+ * showing, and for as long. The game does not pause, and nothing about the sign changes, so reading it again shows the
+ * text again from the start.
+ */
+export function readSign(sign: Sign, _signState: SignState, state: PlayState, content: Content): GameEvent[] {
+  state.areaText = { text: sign.text, stepsLeft: content.areaTextSteps };
+  return [{ type: 'sign-read', signId: sign.id, text: sign.text }];
 }
 
 /** The keys the hero holds, in the order it took them, as the player reads about them. */

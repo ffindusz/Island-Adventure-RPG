@@ -319,15 +319,16 @@ function checkMilestones(value: unknown, path: string, area: AreaDefinition): vo
 
 /**
  * What the hero can change about each interactable of the area: a chest is opened, a pickup or a key is taken, a door or
- * a gate is opened, a lever is pulled.
+ * a gate is opened, a lever is pulled. Nothing about a sign changes, and its state is its kind alone.
  */
-const FLAG_OF: Record<InteractableDefinition['kind'], string> = {
+const FLAG_OF: Record<InteractableDefinition['kind'], string | null> = {
   chest: 'opened',
   pickup: 'collected',
   key: 'collected',
   door: 'open',
   gate: 'open',
   lever: 'pulled',
+  sign: null,
 };
 
 function checkInteractables(value: unknown, path: string, area: AreaDefinition): string[] {
@@ -350,8 +351,8 @@ function checkInteractables(value: unknown, path: string, area: AreaDefinition):
       throw incompatible(statePath, `is the state of a ${kind}, but the area places a ${interactable.kind}`);
     }
     const flag = FLAG_OF[interactable.kind];
-    expectKeys(state, statePath, ['kind', flag]);
-    if (expectBoolean(state[flag], at(statePath, flag)) && interactable.kind === 'key') {
+    expectKeys(state, statePath, flag === null ? ['kind'] : ['kind', flag]);
+    if (flag !== null && expectBoolean(state[flag], at(statePath, flag)) && interactable.kind === 'key') {
       keysTaken.push(interactable.id);
     }
   }

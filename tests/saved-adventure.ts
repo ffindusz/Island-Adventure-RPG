@@ -27,6 +27,7 @@ import {
   milestone,
   newGame,
   pickupAt,
+  signAt,
   throughStorage,
   walk,
 } from './fixtures';
@@ -51,6 +52,8 @@ import {
 //                 hero opens it from the camp, and the door takes the key
 //     levers      the switch on (3, 2), above the camp, which moves the portcullis, a gate on (1, 2): the hero pulls it
 //                 from the camp, after the door
+//     signs       the notice on (4, 2), above the key's tile: the hero reads it from there, and walks back to the camp
+//                 while its clue shows
 //     monsters    a dummy on (6, 5), which the hero only wounds, and a rat on (3, 5), worth 8 Experience
 //     milestones  the lookout on (5, 4), worth 2 Experience, which the hero reaches; the far point on (11, 1), which
 //                 it does not
@@ -70,6 +73,9 @@ const TO_RUINS: ExitDefinition = {
   to: { area: 'ruins', entrance: 'from-arena' },
 };
 const FROM_RUINS: EntranceDefinition = { id: 'from-ruins', tile: { col: 11, row: 3 } };
+
+/** What the notice of the arena says. */
+export const NOTICE_TEXT = 'The brass key fits the old door.';
 
 const RUINS: AreaDefinition = {
   id: 'ruins',
@@ -113,6 +119,7 @@ export function adventureContent(): ContentDefinition {
       doorAt('brass-door', 2, 3, 'brass-key'),
       leverAt('switch', 3, 2, ['portcullis']),
       gateAt('portcullis', 1, 2),
+      signAt('notice', 4, 2, NOTICE_TEXT),
     ],
     milestones: [
       milestone('lookout', { col: 5, row: 4, width: 1, height: 1 }, 2),
@@ -206,6 +213,16 @@ export const CHAPTERS: readonly Chapter[] = [
     play(game) {
       face(game, 'up');
       game.send({ type: 'interact' });
+    },
+  },
+  {
+    id: 'sign',
+    does: 'reads the notice above the key\u2019s tile and comes back onto the camp while its clue shows',
+    play(game) {
+      walk(game, 'right', 8);
+      face(game, 'up');
+      game.send({ type: 'interact' });
+      walk(game, 'left', 8);
     },
   },
   {

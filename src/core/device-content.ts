@@ -1,5 +1,5 @@
 import type { Area } from './content';
-import type { DoorDefinition, GateDefinition, KeyDefinition, LeverDefinition } from './definitions';
+import type { DoorDefinition, GateDefinition, KeyDefinition, LeverDefinition, SignDefinition } from './definitions';
 import type { Box, Tile } from './geometry';
 
 // Loading the devices of an Adventure Area: the keys, and the doors, gates, levers and signs that go with them, which
@@ -39,6 +39,15 @@ export interface Lever {
   readonly targets: readonly string[];
 }
 
+/** A sign as the rules use it: its body is the box of the tile it fills, which always stops walkers. */
+export interface Sign {
+  readonly kind: 'sign';
+  readonly id: string;
+  readonly body: Box;
+  /** The clue the hero reads. */
+  readonly text: string;
+}
+
 export function loadKey(areaId: string, definition: KeyDefinition): Key {
   if (definition.name.trim() === '') {
     throw new Error(`Area "${areaId}": key "${definition.id}" has no name`);
@@ -64,6 +73,13 @@ export function loadLever(areaId: string, definition: LeverDefinition): Lever {
     throw new Error(`Area "${areaId}": lever "${id}" names "${named}" more than once`);
   }
   return { kind: 'lever', id, body: tileBox(definition.tile), targets };
+}
+
+export function loadSign(areaId: string, definition: SignDefinition): Sign {
+  if (definition.text.trim() === '') {
+    throw new Error(`Area "${areaId}": sign "${definition.id}" has no text`);
+  }
+  return { kind: 'sign', id: definition.id, body: tileBox(definition.tile), text: definition.text };
 }
 
 /**

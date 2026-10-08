@@ -97,8 +97,20 @@ export interface LeverState {
   pulled: boolean;
 }
 
+/** What changes about a sign: nothing. It is here so that a saved game says which signs stand where it was saved. */
+export interface SignState {
+  readonly kind: 'sign';
+}
+
 /** What changes about an interactable during the game, one member for each kind. */
-export type InteractableState = ChestState | PickupState | KeyState | DoorState | GateState | LeverState;
+export type InteractableState =
+  | ChestState
+  | PickupState
+  | KeyState
+  | DoorState
+  | GateState
+  | LeverState
+  | SignState;
 
 export interface AreaState {
   /** Every monster placed in the Adventure Area, defeated ones included (at 0 Health), so that they stay defeated. */
@@ -295,6 +307,8 @@ function freshInteractable(interactable: Interactable): InteractableState {
       return { kind: 'gate', open: false };
     case 'lever':
       return { kind: 'lever', pulled: false };
+    case 'sign':
+      return { kind: 'sign' };
   }
 }
 

@@ -2,7 +2,7 @@ import { areaOf } from './content';
 import type { Chest, Content, Interactable, Pickup } from './content';
 import { grantConsumable } from './consumables';
 import type { ChestContents } from './definitions';
-import { useDoor, useLever } from './devices';
+import { useDoor, useLever, readSign } from './devices';
 import type { Gate, Key } from './device-content';
 import { grantGear } from './gear';
 import { centerOfBox, overlaps, zoneInFront } from './geometry';
@@ -12,9 +12,9 @@ import { interactableStateOf } from './state';
 import type { ChestState, InteractableState, PlayState } from './state';
 
 // Interactables: things placed on a tile of an Adventure Area. The content places each with a kind, and the kind is
-// what it is and does. The hero acts on most with Interact, such as a chest, a door or a lever. The hero takes a pickup
-// or a key by walking onto it instead, and that is a step of the game (see pickups.ts and devices.ts). A gate it neither
-// takes nor acts on: a lever moves it.
+// what it is and does. The hero acts on most with Interact, such as a chest, a door, a lever or a sign. The hero takes
+// a pickup or a key by walking onto it instead, and that is a step of the game (see pickups.ts and devices.ts). A gate
+// it neither takes nor acts on: a lever moves it.
 //
 // To add a kind:
 //   1. add its definition to InteractableDefinition (definitions.ts), its loaded form to Interactable (content.ts) and
@@ -44,6 +44,7 @@ const INTERACTIONS: { readonly [K in InteractedWith['kind']]: Interaction<Extrac
   chest: openChest,
   door: useDoor,
   lever: useLever,
+  sign: readSign,
 };
 
 /**
@@ -55,6 +56,7 @@ function isInteractedWith(interactable: Interactable): interactable is Interacte
     case 'chest':
     case 'door':
     case 'lever':
+    case 'sign':
       return true;
     case 'pickup':
     case 'key':
@@ -64,13 +66,14 @@ function isInteractedWith(interactable: Interactable): interactable is Interacte
 }
 
 /**
- * Whether the hero and the monsters are stopped by an interactable. A chest and a lever are solid, opened or pulled or
- * not; a door and a gate are solid while they are shut; a pickup and a key are not.
+ * Whether the hero and the monsters are stopped by an interactable. A chest, a lever and a sign are solid, opened or
+ * pulled or not; a door and a gate are solid while they are shut; a pickup and a key are not.
  */
 function blocksWalkers(interactable: Interactable, state: PlayState): boolean {
   switch (interactable.kind) {
     case 'chest':
     case 'lever':
+    case 'sign':
       return true;
     case 'door':
     case 'gate':

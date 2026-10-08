@@ -8,8 +8,9 @@ import {
   loadGate,
   loadKey,
   loadLever,
+  loadSign,
 } from './device-content';
-import type { Door, Gate, Key, Lever } from './device-content';
+import type { Door, Gate, Key, Lever, Sign } from './device-content';
 import { CONSUMABLE_IDS, GEAR_SLOTS, STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
@@ -75,7 +76,7 @@ export interface Pickup {
 }
 
 /** An interactable as the rules use it, one member for each kind. */
-export type Interactable = Chest | Pickup | Key | Door | Gate | Lever;
+export type Interactable = Chest | Pickup | Key | Door | Gate | Lever | Sign;
 
 /** An entrance as the rules use it: the hero arrives standing at the centre of its tile. */
 export interface Entrance {
@@ -741,6 +742,8 @@ function loadInteractable(
       return loadGate(definition);
     case 'lever':
       return loadLever(areaId, definition);
+    case 'sign':
+      return loadSign(areaId, definition);
     default:
       return refuseKind(areaId, id, kind);
   }
