@@ -113,6 +113,11 @@ export function terrainColour(kind: string): number {
   return TERRAIN_COLOURS[kind] ?? UNKNOWN_COLOUR;
 }
 
+/** The colour of a type of monster. */
+export function monsterColour(type: string): number {
+  return MONSTER_COLOURS[type] ?? UNKNOWN_COLOUR;
+}
+
 /** Draws the ground of the whole area. Call it once per area: terrain never changes. */
 export function drawTerrain(graphics: Graphics, area: AreaView): void {
   graphics.clear();
@@ -336,7 +341,7 @@ export function drawProjectile(graphics: Graphics, projectile: ArrowView): void 
  */
 export function drawMonster(graphics: Graphics, monster: MonsterView, flashing: boolean): void {
   const body = bodyRect(monster.position, monster.size);
-  const colour = MONSTER_COLOURS[monster.type] ?? UNKNOWN_COLOUR;
+  const colour = monsterColour(monster.type);
   const resting = monster.action.type === 'recovering';
   const warning = flashesToWarn(monster) && !flashing;
   if (monster.action.type === 'dashing') {
