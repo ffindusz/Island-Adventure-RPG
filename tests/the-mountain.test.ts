@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
 import { createGame } from '../src/core';
-import type { AreaDefinition, Game, Tile } from '../src/core';
+import type { AreaDefinition, Game, MonsterTypeDefinition, Tile } from '../src/core';
 import { fixedRandom, newGame, playingView } from './fixtures';
-import { isInZone, openTilesOf, routeBetween, walkRoute } from './routes';
+import { distanceBetween, isInZone, metOn, noticingOf, openTilesOf, routeBetween, walkRoute } from './routes';
 
 // The mountain, the third area on the route of the adventure, between the woods and the cave: what it has to be to be
 // a climb of its own, with narrow passes and ledges, raiders to fight, an armor upgrade to find and a side path. Like
@@ -65,6 +65,28 @@ function widthAt(tile: Tile): number {
     return length;
   };
   return Math.min(runAlong(1, 0), runAlong(0, 1));
+}
+
+/** The type of a monster of the mountain, which the loader sees to exist; none here only for content it refuses. */
+function typeOf(monster: { readonly type: string }): MonsterTypeDefinition | undefined {
+  return gameContent.monsterTypes[monster.type];
+}
+
+/** The damage of one hit of a monster type, before the Defense of the hero: of the blow, or of the shot. */
+function hitOf(type: MonsterTypeDefinition): number {
+  if ('damage' in type) {
+    return type.damage;
+  }
+  return 'projectile' in type ? type.projectile.damage : 0;
+}
+
+/** Whether a tile lies in a block of open ground two tiles wide and two high: a place to step aside in either way. */
+function inOpenBlock({ col, row }: Tile): boolean {
+  return [-1, 0].some((fromCol) =>
+    [-1, 0].some((fromRow) =>
+      [0, 1].every((across) => [0, 1].every((down) => isOpen({ col: col + fromCol + across, row: row + fromRow + down }))),
+    ),
+  );
 }
 
 describe('the way through the mountain', () => {
@@ -153,6 +175,72 @@ describe('the way through the mountain', () => {
     const rock = [...tiles].filter((symbol) => rockSymbols.has(symbol));
 
     expect(rock.length / tiles.length).toBeGreaterThanOrEqual(1 / 2);
+  });
+});
+
+describe('the raiders of the mountain', () => {
+  const raiders = [...new Set(mountain.monsters.map(({ type }) => type))].flatMap((id) => {
+    const type = gameContent.monsterTypes[id];
+    return type === undefined ? [] : [{ id, type }];
+  });
+  const tougher = [...raiders].sort((one, other) => other.type.health - one.type.health)[0];
+  const toughRaiders = mountain.monsters.filter(({ type }) => type === tougher?.id);
+
+  it('holds the mountain with raiders and nothing else: every monster in it is of a raider type', () => {
+    expect(mountain.monsters.length).toBeGreaterThan(0);
+    expect(mountain.monsters.filter(({ type }) => !type.startsWith('raider'))).toEqual([]);
+  });
+
+  it('meets a hero who walks the trail with raiders that chase, that charge and that shoot', () => {
+    const behaviors = metOn(gameContent, mountain, trail).map((monster) => typeOf(monster)?.behavior);
+
+    expect(behaviors).toContain('chaser');
+    expect(behaviors).toContain('charger');
+    expect(behaviors).toContain('ranged');
+  });
+
+  it('has a tougher raider than the rest: at least twice the health of any other raider, and a harder hit', () => {
+    if (tougher === undefined) {
+      throw new Error('The mountain has no monsters');
+    }
+    const others = raiders.filter(({ id }) => id !== tougher.id);
+
+    expect(others.length).toBeGreaterThan(0);
+    for (const other of others) {
+      expect(tougher.type.health, `the health of ${tougher.id} against ${other.id}`).toBeGreaterThanOrEqual(
+        2 * other.type.health,
+      );
+      expect(hitOf(tougher.type), `the hit of ${tougher.id} against ${other.id}`).toBeGreaterThan(hitOf(other.type));
+    }
+  });
+
+  it('puts the tougher raider on every way through: none keeps out of the reach of its notice', () => {
+    const keepingOut = routeBetween(
+      (tile) =>
+        isOpen(tile) && toughRaiders.every((raider) => distanceBetween(tile, raider.tile) > noticingOf(gameContent, raider)),
+      wayInTile,
+      isWayForward,
+    );
+
+    expect(toughRaiders.length).toBeGreaterThan(0);
+    expect(keepingOut).toBeNull();
+  });
+
+  it('leaves room to step aside wherever a charger can notice the hero: no ground there is narrower than two tiles', () => {
+    const chargers = mountain.monsters.filter((monster) => typeOf(monster)?.behavior === 'charger');
+
+    const cramped = chargers.flatMap((charger) =>
+      mountain.layout.flatMap((symbols, row) =>
+        [...symbols].flatMap((_, col) => {
+          const tile = { col, row };
+          const near = distanceBetween(tile, charger.tile) <= noticingOf(gameContent, charger);
+          return near && isOpen(tile) && !inOpenBlock(tile) ? [`${charger.id} at ${col},${row}`] : [];
+        }),
+      ),
+    );
+
+    expect(chargers.length).toBeGreaterThan(0);
+    expect(cramped).toEqual([]);
   });
 });
 

@@ -59,6 +59,13 @@ export const mountain: AreaDefinition = {
     '############################################',
     '############################################',
   ],
-  monsters: [],
+  monsters: [
+    { id: 'mountain-raider-1', type: 'raider', tile: { col: 18, row: 24 } },
+    { id: 'mountain-raider-2', type: 'raider', tile: { col: 26, row: 25 } },
+    { id: 'mountain-charger-1', type: 'raider-charger', tile: { col: 28, row: 14 } },
+    { id: 'mountain-archer-1', type: 'raider-archer', tile: { col: 16, row: 15 } },
+    { id: 'mountain-veteran-1', type: 'raider-veteran', tile: { col: 11, row: 7 } },
+    { id: 'mountain-raider-3', type: 'raider', tile: { col: 40, row: 23 } },
+  ],
   milestones: [{ id: 'high-gap', zone: { col: 29, row: 5, width: 3, height: 3 }, reward: { experience: 3 } }],
 };
