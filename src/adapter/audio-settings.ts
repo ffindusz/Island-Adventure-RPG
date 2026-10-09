@@ -57,6 +57,23 @@ export function toggleMute(settings: AudioSettings): AudioSettings {
   return { muted: false, volume: settings.volume === 0 ? DEFAULT_AUDIO_SETTINGS.volume : settings.volume };
 }
 
+/** What the keys of the audio can ask of the settings. */
+export const AUDIO_CHANGES = ['toggle-mute', 'lower', 'raise'] as const;
+
+export type AudioChange = (typeof AUDIO_CHANGES)[number];
+
+/** The settings after one press of a key of the audio. */
+export function changeSettings(settings: AudioSettings, change: AudioChange): AudioSettings {
+  switch (change) {
+    case 'toggle-mute':
+      return toggleMute(settings);
+    case 'lower':
+      return lowerVolume(settings);
+    case 'raise':
+      return raiseVolume(settings);
+  }
+}
+
 export interface AudioSettingsStore {
   /** The settings now: what the storage holds, mended field by field, or the defaults. */
   read(): AudioSettings;

@@ -3,13 +3,14 @@ import {
   AUDIO_SETTINGS_KEY,
   DEFAULT_AUDIO_SETTINGS,
   MAX_VOLUME,
+  changeSettings,
   createAudioSettingsStore,
   lowerVolume,
   parseAudioSettings,
   raiseVolume,
   toggleMute,
 } from '../src/adapter/audio-settings';
-import type { AudioSettings } from '../src/adapter/audio-settings';
+import type { AudioChange, AudioSettings } from '../src/adapter/audio-settings';
 import { SAVE_KEY, createSaveStore } from '../src/adapter/save-store';
 import type { SaveStorage } from '../src/adapter/save-store';
 import { adventureAfter, adventureContent } from './saved-adventure';
@@ -331,5 +332,26 @@ describe('changing the audio settings', () => {
     expect(lowerVolume(given)).not.toBe(given);
     expect(toggleMute(given)).not.toBe(given);
     expect(given).toEqual({ muted: true, volume: 0 });
+  });
+});
+
+describe('what each key of the audio does to the settings', () => {
+  const heard: AudioSettings = { muted: false, volume: 6 };
+  const muted: AudioSettings = { muted: true, volume: 6 };
+
+  it('turns the sound off, or on again, for the key that mutes', () => {
+    expect(changeSettings(heard, 'toggle-mute')).toEqual({ muted: true, volume: 6 });
+    expect(changeSettings(muted, 'toggle-mute')).toEqual({ muted: false, volume: 6 });
+  });
+
+  it('lowers the volume for the key that lowers it, and raises it for the key that raises it', () => {
+    expect(changeSettings(heard, 'lower')).toEqual({ muted: false, volume: 5 });
+    expect(changeSettings(heard, 'raise')).toEqual({ muted: false, volume: 7 });
+  });
+
+  it('does what a press of each kind in a row does, one after the other', () => {
+    const presses: AudioChange[] = ['lower', 'lower', 'toggle-mute', 'raise'];
+
+    expect(presses.reduce(changeSettings, heard)).toEqual({ muted: false, volume: 5 });
   });
 });
