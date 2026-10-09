@@ -1,6 +1,13 @@
 import { gameContent } from '../src/content';
-import type { AreaDefinition, ExitDefinition, MilestoneDefinition, MonsterPlacement, Tile } from '../src/core';
-import { experienceOfAll, isInZone, keyOf, metOn, openTilesOf, routeBetween } from './routes';
+import type {
+  AreaDefinition,
+  ConsumableId,
+  ExitDefinition,
+  MilestoneDefinition,
+  MonsterPlacement,
+  Tile,
+} from '../src/core';
+import { experienceOfAll, isInZone, keyOf, metOn, neighboursOf, openTilesOf, routeBetween } from './routes';
 
 // The intended route of the adventure, read from the shipped content, for the tests of the balance pass: the legs a
 // first-time player walks, from the start of the coast to the Guardian's Checkpoint, with every door and gate shut.
@@ -95,4 +102,67 @@ export function experienceOnRoute(id: AreaId): number {
 /** The Level of a hero with some Experience, by the thresholds of the content: Level 1 below the first. */
 export function levelOf(experience: number): number {
   return 1 + gameContent.progression.levelThresholds.filter((threshold) => experience >= threshold).length;
+}
+
+/** What a hero has earned on the way in to an area: the route of every area before it, monsters and milestones. */
+export function experienceBefore(id: AreaId): number {
+  return AREA_IDS.slice(0, AREA_IDS.indexOf(id)).reduce((total, before) => total + experienceOnRoute(before), 0);
+}
+
+/** As in the area tests: something this many steps from the route or fewer is on it, for a hero who looks around. */
+export const MOST_NEARBY = 4;
+
+const detours = new Map<AreaId, Map<string, number>>();
+
+/** How far every tile of open ground an area is from its route, in steps with every door and gate shut. */
+function detoursOf(id: AreaId): Map<string, number> {
+  const known = detours.get(id);
+  if (known !== undefined) {
+    return known;
+  }
+  const isOpen = openTilesOf(gameContent, areaOf(id));
+  const distances = new Map<string, number>(routeOf(id).map((tile) => [keyOf(tile), 0]));
+  const frontier = [...routeOf(id)];
+  for (const tile of frontier) {
+    const here = distances.get(keyOf(tile)) ?? 0;
+    for (const next of neighboursOf(tile)) {
+      if (!distances.has(keyOf(next)) && isOpen(next)) {
+        distances.set(keyOf(next), here + 1);
+        frontier.push(next);
+      }
+    }
+  }
+  detours.set(id, distances);
+  return distances;
+}
+
+/**
+ * How many steps off the route a hero goes to take or open what lies on a tile: to the tile itself for a pickup, and to
+ * the nearest open tile beside it for a chest, which is solid. Undefined when a shut door or gate is in the way.
+ */
+export function detourTo(id: AreaId, tile: Tile): number | undefined {
+  const distances = detoursOf(id);
+  const reached = [tile, ...neighboursOf(tile)].flatMap((candidate) => distances.get(keyOf(candidate)) ?? []);
+  return reached.length === 0 ? undefined : Math.min(...reached);
+}
+
+/** What a chest or a pickup of an area holds, and how far off the route it lies. */
+export type Find =
+  | { readonly kind: 'gear'; readonly gear: string; readonly detour: number | undefined }
+  | { readonly kind: 'consumable'; readonly consumable: ConsumableId; readonly amount: number; readonly detour: number | undefined };
+
+export function findsOf(id: AreaId): Find[] {
+  return (areaOf(id).interactables ?? []).flatMap((interactable): Find[] => {
+    const detour = detourTo(id, interactable.tile);
+    if (interactable.kind === 'pickup') {
+      return [{ kind: 'consumable', consumable: interactable.consumable, amount: interactable.amount, detour }];
+    }
+    if (interactable.kind === 'chest') {
+      const { contents } = interactable;
+      return contents.kind === 'gear'
+        ? [{ kind: 'gear', gear: contents.gear, detour }]
+        : [{ kind: 'consumable', consumable: contents.consumable, amount: contents.amount, detour }];
+    }
+    return [];
+  });
 }

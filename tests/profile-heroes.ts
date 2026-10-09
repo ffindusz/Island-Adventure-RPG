@@ -1,4 +1,4 @@
-import type { ConsumableId, Game, GearSlot, Snapshot, StatId } from '../src/core';
+import type { ConsumableId, ContentDefinition, Direction, Game, GearSlot, Point, Snapshot, StatId } from '../src/core';
 import { gameContent } from '../src/content';
 import { gameAtTitle, newGame } from './fixtures';
 import { withoutOrdinaryMonsters } from './routes';
@@ -79,29 +79,35 @@ export function heroAt(
 /** The Guardian's Checkpoint, in the gateway to the arena: where a hero stands before it goes in to the Guardian. */
 const GUARDIAN_CHECKPOINT = 'guardian-checkpoint';
 
-let base: Snapshot | undefined;
+/** Where a hero is put: an Adventure Area, the centre of its body and the way it faces. */
+export interface Place {
+  readonly areaId: string;
+  readonly position: Point;
+  readonly facing: Direction;
+}
+
+const bases = new WeakMap<ContentDefinition, Snapshot>();
 
 /** The most Health a hero with these Stat Points has: the base Health and what the points spent on Health add. */
-export function maxHealthOf(points: Points): number {
-  return gameContent.hero.health + points.health * gameContent.progression.statPointValue.health;
+export function maxHealthOf(points: Points, content: ContentDefinition = gameContent): number {
+  return content.hero.health + points.health * content.progression.statPointValue.health;
 }
 
 /**
- * A game of the shipped content with the hero as the profile says, at full Health on the Guardian's Checkpoint in the
- * gateway to the arena, facing the arena, and the Guardian waiting where the content puts it.
+ * A game of this content with the hero as the profile says, at full Health and in the place: a game continued from a
+ * save, which is how a hero of any make is built through the core's own interface.
  */
-export function gameAtTheGuardian(profile: HeroProfile): Game {
-  const castle = gameContent.areas.find(({ id }) => id === 'castle');
-  const checkpoint = castle?.checkpoints?.find(({ id }) => id === GUARDIAN_CHECKPOINT);
-  if (checkpoint === undefined) {
-    throw new Error('The castle has no Guardian Checkpoint');
+export function gameWithHero(content: ContentDefinition, profile: HeroProfile, place: Place): Game {
+  let base = bases.get(content);
+  if (base === undefined) {
+    base = newGame(content).snapshot();
+    bases.set(content, base);
   }
-  base ??= newGame(QUIET).snapshot();
   const snapshot = structuredClone(base);
   const { hero } = snapshot.state;
-  snapshot.state.areaId = 'castle';
-  hero.position = { x: checkpoint.tile.col + 0.5, y: checkpoint.tile.row + 0.5 };
-  hero.facing = 'right';
+  snapshot.state.areaId = place.areaId;
+  hero.position = { ...place.position };
+  hero.facing = place.facing;
   hero.experience = profile.experience;
   hero.statPoints = { ...profile.points };
   const carried = Object.values(profile.equipped).filter((id): id is string => id !== undefined);
@@ -109,8 +115,54 @@ export function gameAtTheGuardian(profile: HeroProfile): Game {
   hero.equipped = { ...profile.equipped };
   hero.activeWeapon = 'melee-weapon';
   hero.consumables = { ...profile.consumables };
-  hero.health = maxHealthOf(profile.points);
-  const game = gameAtTitle(QUIET);
+  hero.health = maxHealthOf(profile.points, content);
+  const game = gameAtTitle(content);
   game.send({ type: 'continue', snapshot });
   return game;
+}
+
+/**
+ * The Attack and Defense the core reports for the hero, with the equipped Gear counted in: the inventory page's. The
+ * Attack is that of the weapon in hand, so the Ranged Weapon's is read by taking it in hand and putting it away again.
+ */
+export function statsOf(
+  game: Game,
+  hand: 'melee-weapon' | 'ranged-weapon' = 'melee-weapon',
+): { readonly attack: number; readonly defense: number } {
+  if (hand === 'ranged-weapon') {
+    game.send({ type: 'switch-weapon' });
+  }
+  game.send({ type: 'open-page', page: 'inventory' });
+  const view = game.view();
+  const page = view.phase === 'playing' ? view.page : null;
+  const inHand = view.phase === 'playing' ? view.hero.activeWeapon : null;
+  game.send({ type: 'close-page', page: 'inventory' });
+  if (inHand !== hand) {
+    throw new Error(`The hero has no ${hand} to take in hand`);
+  }
+  if (hand === 'ranged-weapon') {
+    game.send({ type: 'switch-weapon' });
+  }
+  if (page?.id !== 'inventory') {
+    throw new Error('The inventory page did not open');
+  }
+  return { attack: page.attack, defense: page.defense };
+}
+
+/**
+ * A game of the shipped content, without its ordinary monsters, with the hero as the profile says, at full Health on
+ * the Guardian's Checkpoint in the gateway to the arena, facing the arena, and the Guardian waiting where the content
+ * puts it.
+ */
+export function gameAtTheGuardian(profile: HeroProfile): Game {
+  const castle = gameContent.areas.find(({ id }) => id === 'castle');
+  const checkpoint = castle?.checkpoints?.find(({ id }) => id === GUARDIAN_CHECKPOINT);
+  if (checkpoint === undefined) {
+    throw new Error('The castle has no Guardian Checkpoint');
+  }
+  return gameWithHero(QUIET, profile, {
+    areaId: 'castle',
+    position: { x: checkpoint.tile.col + 0.5, y: checkpoint.tile.row + 0.5 },
+    facing: 'right',
+  });
 }

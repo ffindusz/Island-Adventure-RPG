@@ -106,14 +106,15 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   },
   // The raider that charges, like the boar: it notices the hero from four tiles away, walks to where its lane takes in
   // the hero, winds up for 0.7 s while the lane lights up, dashes six tiles at most at twelve tiles a second and rests
-  // for a second. It hits for 7 (6 after the hero's Defense) only a hero who is still in the lane. It takes five hits
-  // from the hero's basic sword and three from the Steel Sword, and is worth 4 Experience.
+  // for a second. It hits for 6 (5 after the hero's Defense) only a hero who is still in the lane: the tuning pass took
+  // one off, so that a hero who never leaves the lane loses under half of its Health (docs/balance.md). It takes five
+  // hits from the hero's basic sword and three from the Steel Sword, and is worth 4 Experience.
   'raider-charger': {
     behavior: 'charger',
     health: 5,
     size: 0.85,
     experience: 4,
-    damage: 7,
+    damage: 6,
     speedTilesPerSecond: 2.2,
     noticingDistance: 4,
     windUpMs: 700,
@@ -177,14 +178,15 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // The lizard of the cave charges, like the boar and the raider that charges: it notices the hero from five tiles away
   // and walks, slower than the hero, to where its lane takes in the hero. It then winds up for 0.65 s while the lane
   // lights up, dashes down the lane at thirteen tiles a second, for seven tiles at most, and rests for 1.1 s before it
-  // looks for the hero again. It hits for 7 (6 after the hero's Defense) only a hero who is still in the lane. It takes
-  // six hits from the hero's basic sword and three from the Steel Sword, and is worth 4 Experience.
+  // looks for the hero again. It hits for 6 (5 after the hero's Defense) only a hero who is still in the lane: the
+  // tuning pass took one off, so that a hero who never leaves the lane loses under half of its Health (docs/balance.md).
+  // It takes six hits from the hero's basic sword and three from the Steel Sword, and is worth 4 Experience.
   'cave-lizard': {
     behavior: 'charger',
     health: 6,
     size: 0.8,
     experience: 4,
-    damage: 7,
+    damage: 6,
     speedTilesPerSecond: 2.4,
     noticingDistance: 5,
     windUpMs: 650,
@@ -248,14 +250,15 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // The ghoul charges, like the boar and the lizard of the cave: it notices the hero from five tiles away and walks,
   // slower than the hero, to where its lane takes in the hero. It then winds up for 0.7 s while the lane lights up,
   // dashes down the lane at fourteen tiles a second, for eight tiles at most, and rests for 1.3 s before it looks for the
-  // hero again. It hits for 9 (8 after the hero's Defense) only a hero who is still in the lane. It takes eight hits from
-  // the hero's basic sword and four from the Steel Sword, and is worth 5 Experience.
+  // hero again. It hits for 7 (6 after the hero's Defense) only a hero who is still in the lane: the tuning pass took two
+  // off, so that a hero who never leaves the lane loses under half of its Health (docs/balance.md). It takes eight hits
+  // from the hero's basic sword and four from the Steel Sword, and is worth 5 Experience.
   'castle-ghoul': {
     behavior: 'charger',
     health: 8,
     size: 0.85,
     experience: 5,
-    damage: 9,
+    damage: 7,
     speedTilesPerSecond: 2.1,
     noticingDistance: 5,
     windUpMs: 700,
@@ -303,14 +306,15 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // The Guardian of the castle, the last fight of the game and the only monster of its kind. It is the biggest creature
   // there is, 1.6 tiles wide where the knight is 0.9, and its width is the width of its charge. It has 100 Health, five
   // times the knight's: twenty-five hits from a hero of Level 6 who put two Stat Points in Attack and carries the Steel
-  // Sword (twenty with the Katana, thirty-four from a hero of Level 4), and more than the quiver of the route can take
-  // off it. It leaves nothing behind. It is worth 30 Experience, which takes a hero of Level 5 to Level 6; a hero who is
-  // at the top Level already gets none, so it is no prize to wait for. It notices the hero from seven tiles away, as far
-  // as the hero's arrows fly, so that nobody shoots it from where it does not see, and walks at 2.2 tiles a second, less
-  // than half the hero's pace. It attacks with three patterns in turn: after each it takes the first of them that
-  // reaches the hero, starting from the one after the last it made, and when none does it walks toward the hero. Each is
-  // telegraphed for as long as it winds up, shows where it will land, and leaves the hero free to hit the Guardian
-  // while it rests; a hero's blow does not stop a wind-up.
+  // Sword (twenty with the Katana, thirty-four from a hero of Level 4), or as many arrows of the short bow, which the
+  // arrows that lie near the route cover twice over (docs/balance.md). It leaves nothing behind. It is worth 30
+  // Experience, which takes a hero of Level 5 to Level 6; a hero who is at the top Level already gets none, so it is no
+  // prize to wait for. It notices the hero from seven tiles away, as far as the hero's arrows fly, so that nobody shoots
+  // it from where it does not see, and walks at 2.2 tiles a second, less than half the hero's pace. It attacks with
+  // three patterns in turn: after each it takes the first of them that reaches the hero, starting from the one after
+  // the last it made, and when none does it walks toward the hero. Each is telegraphed for as long as it winds up,
+  // shows where it will land, and leaves the hero free to hit the Guardian while it rests; a hero's blow does not stop
+  // a wind-up.
   //   The sweep lights up the ground within 1.4 tiles of its body, all around, when the hero is on it. It winds up for
   //   0.9 s, hits for 8 and rests for 1.1 s.
   //   The charge lights up the lane, as wide as the Guardian, that runs from it toward the hero, when the hero is in

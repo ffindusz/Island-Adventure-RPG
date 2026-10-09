@@ -60,7 +60,7 @@ const ASIDE_MARGIN = 0.3;
 const LONGEST_WAY_OUT_STEPS = 60;
 const LIMIT_SECONDS = 300;
 
-function boxAround({ x, y }: Point, size: number): Box {
+export function boxAround({ x, y }: Point, size: number): Box {
   const half = size / 2;
   return { minX: x - half, minY: y - half, maxX: x + half, maxY: y + half };
 }
@@ -69,7 +69,7 @@ function expandBox(box: Box, by: number): Box {
   return { minX: box.minX - by, minY: box.minY - by, maxX: box.maxX + by, maxY: box.maxY + by };
 }
 
-function overlaps(a: Box, b: Box): boolean {
+export function overlaps(a: Box, b: Box): boolean {
   return a.minX < b.maxX - EPSILON && a.maxX > b.minX + EPSILON && a.minY < b.maxY - EPSILON && a.maxY > b.minY + EPSILON;
 }
 
@@ -86,7 +86,7 @@ function fitsOn(open: (tile: Tile) => boolean, box: Box): boolean {
 }
 
 /** The area in front of a hero that its blow covers, as the weapon's reach and width give it. */
-function strikeZone(hero: Point, size: number, direction: Direction, reach: number, width: number): Box {
+export function strikeZone(hero: Point, size: number, direction: Direction, reach: number, width: number): Box {
   const half = size / 2;
   const side = width / 2;
   switch (direction) {
@@ -145,7 +145,7 @@ interface Running {
 type Tally = { -readonly [K in keyof Omit<FightResult, 'steps' | 'telegraphs'>]: FightResult[K] };
 
 /** What the bot does to get the hero to where its blow lands: the key to hold, or null to stand and strike. */
-function wayToStrike(
+export function wayToStrike(
   view: PlayingView,
   guardian: { readonly position: Point; readonly size: number },
   reach: number,
