@@ -66,10 +66,12 @@ export interface MenuInput {
 
 /**
  * Whether any of the keys went down again since the last check. Every key is checked, so a key pressed together
- * with its twin is not left over for the next frame.
+ * with its twin is not left over for the next frame. A key that is held down from the screen before is not pressed
+ * again: Phaser makes new keys for each screen, and a new key takes the first repeat of a held key for a press. So
+ * Enter held down to sail home does not turn the first page of the ending, nor does it go on to pick on the title.
  */
 function pressedAgain(keys: readonly Key[]): boolean {
-  return keys.filter((key) => Phaser.Input.Keyboard.JustDown(key)).length > 0;
+  return keys.filter((key) => Phaser.Input.Keyboard.JustDown(key) && !key.originalEvent.repeat).length > 0;
 }
 
 /**
