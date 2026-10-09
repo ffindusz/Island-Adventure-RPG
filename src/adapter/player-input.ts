@@ -39,7 +39,7 @@ export function pageKeyLabel(page: PageId): string {
   return PAGE_KEYS[page];
 }
 
-/** The key that closes the page that is open. */
+/** The key that closes the page that is open, and declines the question whether to sail home. */
 const CLOSE_PAGE_KEY = 'ESC';
 
 /** The keys that assign a Stat Point to each stat, number row and keypad alike, and the label the player reads. */
@@ -131,7 +131,8 @@ export class PlayerInput {
 
   /**
    * The commands for the attack, interact, switch weapon, page and Stat Point keys that were pressed again since the
-   * last call. Holding a key down does not repeat its command.
+   * last call, and for Esc, which closes the page that is open and declines the question whether to sail home. Holding
+   * a key down does not repeat its command.
    */
   pollActions(): Command[] {
     const commands: Command[] = [];
@@ -153,6 +154,7 @@ export class PlayerInput {
       for (const page of PAGE_IDS) {
         commands.push({ type: 'close-page', page });
       }
+      commands.push({ type: 'cancel-departure' });
     }
     for (const { stat, keys } of this.statKeys) {
       if (pressedAgain(keys)) {
@@ -174,7 +176,8 @@ export class PlayerInput {
 
   /**
    * Whether Esc went down again since the last call, to turn down what a menu asks. Esc also closes the page that is
-   * open, and `pollActions` takes that press: so a screen asks only one of the two, as the title asks this.
+   * open and declines the question whether to sail home, and `pollActions` takes that press: so a screen asks only one
+   * of the two, as the title asks this.
    */
   pollCancel(): boolean {
     return pressedAgain([this.closePageKey]);

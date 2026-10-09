@@ -3,6 +3,8 @@ import type { ContentDefinition, Game } from '../core';
 import { ARTWORK, neededArt } from './artwork';
 import { manifestLookup, requireArt } from './asset-manifest';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
+import { requireDrawableEnding } from './ending-pages';
+import { EndingScene } from './ending-scene';
 import { PlayScene } from './play-scene';
 import { createSaveStore } from './save-store';
 import type { SaveStorage } from './save-store';
@@ -11,10 +13,12 @@ import { TitleScene } from './title-scene';
 /**
  * Starts the Phaser game that shows and controls the given Game core, on the title screen. The saved game lives in the
  * storage, which is null when the browser gives none. This is the only way into the adapter. It refuses to start,
- * naming them, when the content needs pictures that the asset manifest does not list.
+ * naming them, when the content needs pictures that the asset manifest does not list, or has an ending or credits with
+ * a character the pixel font cannot draw.
  */
 export function startAdapter(core: Game, content: ContentDefinition, storage: SaveStorage | null): Phaser.Game {
   requireArt(neededArt(content), manifestLookup(ARTWORK), 'The content needs pictures that the asset manifest lacks');
+  requireDrawableEnding(content);
   const saves = createSaveStore(storage, content);
   const game = new Phaser.Game({
     type: Phaser.AUTO,
@@ -26,8 +30,9 @@ export function startAdapter(core: Game, content: ContentDefinition, storage: Sa
     banner: false,
     // A whole-number zoom keeps every pixel square; any other scale smears pixel art.
     scale: { mode: Phaser.Scale.NONE, zoom: Phaser.Scale.MAX_ZOOM, autoCenter: Phaser.Scale.CENTER_BOTH },
-    // The first scene is the one that starts: the title, which starts the play screen.
-    scene: [new TitleScene(core, saves), new PlayScene(core, saves)],
+    // The first scene is the one that starts: the title, which starts the play screen; the play screen starts the ending
+    // when the hero sails home, and both go back to the title.
+    scene: [new TitleScene(core, saves), new PlayScene(core, saves), new EndingScene()],
   });
   // The zoom above is only chosen at start-up, so choose it again whenever the window changes size.
   game.scale.on(Phaser.Scale.Events.RESIZE, () => {

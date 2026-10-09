@@ -13,6 +13,7 @@ import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import { AutomapPage } from './automap-page';
 import { callsForSave } from './autosave';
 import { scrollFor } from './camera';
+import { departureAnswer } from './departure-menu';
 import { DEPTH } from './depths';
 import { Fall, FALL_FADE_OUT_MS } from './fall';
 import { Feedback } from './feedback';
@@ -29,7 +30,7 @@ import { byShooter } from './projectiles';
 import { ProjectileSprites } from './projectile-sprites';
 import { PropSprites } from './prop-sprites';
 import type { SaveStore } from './save-store';
-import { SCENE_KEYS } from './scene-keys';
+import { SCENE_KEYS, startOfEnding } from './scene-keys';
 import type { PlayStart } from './scene-keys';
 import { bakeGround } from './terrain-baker';
 import { gameIsWaiting } from './waiting';
@@ -52,14 +53,16 @@ function playerIsWatching(): boolean {
  * The play screen. Every frame it turns the keyboard into commands, runs the Game core's fixed steps, and draws
  * what the core's view says. It decides nothing about the game, except that no step runs while nobody is watching.
  * It also saves the game when the hero touches a Checkpoint or comes into another area (autosave.ts), and takes the
- * player back to the title when the core has gone back to it. A New Game starts with the card of the opening: until the
- * player presses Enter, the game is held and nothing but the card is on the screen (opening-card.ts).
+ * player back to the title when the core has gone back to it, or on to the ending when it went back because the hero
+ * sailed home (ending-scene.ts), which saves nothing. A New Game starts with the card of the opening: until the
+ * player presses Enter, the game is held and nothing but the card is on the screen (opening-card.ts). The scene is
+ * started again for every game of a session, so what it keeps from one is made anew in `init`.
  */
 export class PlayScene extends Phaser.Scene {
   private readonly core: Game;
   private readonly saves: SaveStore;
-  private readonly clock = new FixedStepClock();
-  private readonly feedback = new Feedback();
+  private clock!: FixedStepClock;
+  private feedback!: Feedback;
   private readonly inventoryMenu = new InventoryMenu();
   private playerInput!: PlayerInput;
   private heroSprite!: HeroSprite;
@@ -98,6 +101,10 @@ export class PlayScene extends Phaser.Scene {
   }
 
   init(start: PlayStart): void {
+    // A game that follows another in the same session (the title is reached again after the ending) starts with no time
+    // owed to the steps and nothing of the last game's flashes and notice left on the screen.
+    this.clock = new FixedStepClock();
+    this.feedback = new Feedback();
     this.saveAtOnce = start.saveAtOnce === true;
     this.openingLines = start.opening ?? [];
   }
@@ -167,8 +174,13 @@ export class PlayScene extends Phaser.Scene {
     if (!waiting) {
       send(this.playerInput.pollWalking());
     }
-    send(this.inventoryMenu.update(viewAtStart, this.playerInput.pollMenu()));
+    const menu = this.playerInput.pollMenu();
+    send(this.inventoryMenu.update(viewAtStart, menu));
     send(this.playerInput.pollActions());
+    // After the actions, so that Esc, which declines the question, goes first and the core then ignores an Enter that
+    // answers it in the same frame. Decided from the view before the commands, so that the Interact that opens the
+    // question cannot be answered by an Enter pressed with it.
+    send(departureAnswer(viewAtStart, menu));
     if (waiting && !gameIsWaiting(this.core.view())) {
       // The wait ended just now. The walk keys were left alone during it, so the hero walks by the keys that are down
       // now, from the first step of this frame.
@@ -192,8 +204,15 @@ export class PlayScene extends Phaser.Scene {
     this.monsterSprites.show(events);
     const view = this.core.view();
     if (view.phase === 'title') {
-      // The core went back to the title, and the title screen shows it from here.
-      this.scene.start(SCENE_KEYS.title);
+      // The core went back to the title, which is how the game ends when the hero sails home: the ending shows first, and
+      // the title screen after it. The core is at the title, where there is nothing to save, so this comes before the
+      // autosave.
+      const ending = startOfEnding(events);
+      if (ending === null) {
+        this.scene.start(SCENE_KEYS.title);
+      } else {
+        this.scene.start(SCENE_KEYS.ending, ending);
+      }
       return;
     }
     this.autosave(events);
