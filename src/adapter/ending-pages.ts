@@ -6,8 +6,8 @@ import { textWidthOf, undrawableIn } from './pixel-font';
 
 // The ending and the credits as the screen shows them: cards one after another, the ending first. The Game core gives
 // both as lines of text and says nothing of the screen, so this breaks the lines into rows that fit a card and the
-// rows into as many cards as the screen needs. It is worked out apart from the drawing, so that it can be tested
-// (ending-scene.ts draws and flips the pages).
+// rows into as many cards as the screen needs, and says what Enter does among the cards. It is worked out apart from
+// the drawing, so that it can be tested (ending-scene.ts draws and flips the pages).
 
 /** What the card tells the player under a page that another follows, and under the last page. */
 export const CONTINUE_HINT = 'ENTER TO CONTINUE';
@@ -100,6 +100,23 @@ function paginate(lines: readonly string[]): (readonly string[])[][] {
 export function layoutEnding(ending: readonly string[], credits: readonly string[]): EndingPage[] {
   const cards = [...paginate(ending), ...paginate(credits)];
   return cards.map((card, at) => layoutRows(card, at === cards.length - 1 ? TITLE_HINT : CONTINUE_HINT));
+}
+
+/** Where the player is among the pages, and whether the reading is over: Enter on the last page. */
+export interface Reading {
+  readonly page: number;
+  readonly done: boolean;
+}
+
+/**
+ * What Enter does among the pages: it turns to the next, one at a time, and from the last it ends the reading, after
+ * which the game goes on to the title. No other key does either, so that nothing skips a page the player has not read.
+ */
+export function turnPage(page: number, pageCount: number, confirm: boolean): Reading {
+  if (!confirm) {
+    return { page, done: false };
+  }
+  return page >= pageCount - 1 ? { page, done: true } : { page: page + 1, done: false };
 }
 
 /** What the ending and credits of the content lack in the pixel font, as the player would see the gaps: where each is. */

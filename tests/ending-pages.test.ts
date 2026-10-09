@@ -7,6 +7,7 @@ import {
   layoutEnding,
   requireDrawableEnding,
   TITLE_HINT,
+  turnPage,
 } from '../src/adapter/ending-pages';
 import type { EndingPage } from '../src/adapter/ending-pages';
 import { CARD_MAX_HEIGHT, CARD_TEXT_WIDTH, SIDE_MARGIN } from '../src/adapter/opening-card';
@@ -255,5 +256,49 @@ describe('the ending and the credits that the pixel font cannot draw', () => {
 
   it('are not looked for when there is no ending or credits', () => {
     expect(() => requireDrawableEnding({})).not.toThrow();
+  });
+});
+
+describe('Enter on the pages of the ending', () => {
+  it('turns to the next page, one page at a time', () => {
+    expect(turnPage(0, 3, true)).toEqual({ page: 1, done: false });
+    expect(turnPage(1, 3, true)).toEqual({ page: 2, done: false });
+  });
+
+  it('leaves for the title from the last page, and from no page before it', () => {
+    expect(turnPage(2, 3, true)).toEqual({ page: 2, done: true });
+    expect(turnPage(1, 3, true).done).toBe(false);
+    expect(turnPage(0, 3, true).done).toBe(false);
+  });
+
+  it('does nothing when Enter was not pressed, on any page', () => {
+    for (const page of [0, 1, 2]) {
+      expect(turnPage(page, 3, false)).toEqual({ page, done: false });
+    }
+  });
+
+  it('leaves at once from a single page', () => {
+    expect(turnPage(0, 1, true)).toEqual({ page: 0, done: true });
+  });
+
+  it('leaves rather than wait for a page that is not there', () => {
+    expect(turnPage(0, 0, true).done).toBe(true);
+  });
+
+  it('shows every page of the game as it ships once, in order, and leaves with the Enter after the last', () => {
+    const pageCount = layoutEnding(ENDING, CREDITS).length;
+    const shown = [0];
+    let reading = { page: 0, done: false };
+    let presses = 0;
+    while (!reading.done && presses < 100) {
+      reading = turnPage(reading.page, pageCount, true);
+      presses += 1;
+      if (!reading.done) {
+        shown.push(reading.page);
+      }
+    }
+
+    expect(shown).toEqual(Array.from({ length: pageCount }, (_, at) => at));
+    expect(presses).toBe(pageCount);
   });
 });
