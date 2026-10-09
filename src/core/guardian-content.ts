@@ -1,6 +1,6 @@
 import type { Area, Checkpoint, Content, Interactable } from './content';
 import type { MonsterPlacement } from './definitions';
-import type { Gate } from './device-content';
+import { isGuardianGate } from './device-content';
 import { blockedTiles, keyOf, reachableFrom, sourcesOf } from './device-routes';
 import type { Place, Start } from './device-routes';
 import type { Tile } from './geometry';
@@ -72,11 +72,6 @@ function checkGatesNameTheirGuardians(areas: readonly Area[], monsterTypes: Cont
       }
     }
   }
-}
-
-/** A gate that opens when a Guardian is defeated, which no lever moves. */
-function isGuardianGate(interactable: Interactable): interactable is Gate & { readonly opensWhenDefeated: string } {
-  return interactable.kind === 'gate' && interactable.opensWhenDefeated !== null;
 }
 
 /**

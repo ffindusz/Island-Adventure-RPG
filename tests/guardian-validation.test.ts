@@ -194,9 +194,26 @@ describe('the way to a Guardian never needs a door or a gate to be opened', () =
     );
   });
 
-  it('is refused for a Checkpoint in the harbor too: to the route the gate of a Guardian is a gate like any other', () => {
+  it('is accepted for a Checkpoint in the harbor too: to the route the gate of a Guardian is the way, and no key, lever or door', () => {
+    expectAccepted(castle({ checkpoints: [GATEWAY_STONE, { id: 'harbor-stone', tile: { col: 10, row: 2 } }] }));
+  });
+
+  it('is refused for a Checkpoint in the harbor that an ordinary door also shuts off: only the gate of a Guardian may be passed', () => {
     expectRefused(
-      castle({ checkpoints: [GATEWAY_STONE, { id: 'harbor-stone', tile: { col: 10, row: 2 } }] }),
+      castle({
+        checkpoints: [GATEWAY_STONE, { id: 'harbor-stone', tile: { col: 10, row: 2 } }],
+        interactables: [HARBOR_GATE, keyAt('rusty-key', 1, 1), doorAt('harbor-door', 9, 2, 'rusty-key')],
+      }),
+      'Area "arena": Checkpoint "harbor-stone" cannot be reached from entrance "way-in" unless a door or gate is opened',
+    );
+  });
+
+  it('is refused for a Checkpoint in the harbor that an ordinary gate also shuts off: only the gate of a Guardian may be passed', () => {
+    expectRefused(
+      castle({
+        checkpoints: [GATEWAY_STONE, { id: 'harbor-stone', tile: { col: 10, row: 2 } }],
+        interactables: [HARBOR_GATE, gateAt('side-gate', 9, 2)],
+      }),
       'Area "arena": Checkpoint "harbor-stone" cannot be reached from entrance "way-in" unless a door or gate is opened',
     );
   });
