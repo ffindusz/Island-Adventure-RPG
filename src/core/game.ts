@@ -5,7 +5,7 @@ import { stepMonsters } from './behaviors';
 import { coolDownHero } from './combat';
 import { activateCheckpoints, touchedCheckpoints } from './checkpoints';
 import { loadContent } from './content';
-import { cancelDeparture } from './departure';
+import { cancelDeparture, sailHome } from './departure';
 import { collectKeys } from './devices';
 import { equipGear } from './gear';
 import type { Direction } from './geometry';
@@ -87,6 +87,15 @@ export function createGame(options: GameOptions): Game {
             cancelDeparture(state);
           }
           return [];
+        case 'confirm-departure': {
+          if (state.phase !== 'playing' || state.departure === null) {
+            return [];
+          }
+          // The game is over: it is at the title, as it was before the first new game.
+          const events = sailHome(content);
+          state = { phase: 'title' };
+          return events;
+        }
       }
     },
     step() {

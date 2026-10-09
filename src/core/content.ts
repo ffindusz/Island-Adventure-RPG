@@ -13,7 +13,7 @@ import {
 import type { Door, Gate, Key, Lever, Sign } from './device-content';
 import { checkRoutesStayOpen } from './device-routes';
 import { checkGuardianPlace, checkGuardians } from './guardian-content';
-import { loadVessel } from './vessel-content';
+import { checkVessels, loadVessel } from './vessel-content';
 import type { Vessel } from './vessel-content';
 import { CONSUMABLE_IDS, GEAR_SLOTS, STAT_IDS } from './definitions';
 import type {
@@ -57,8 +57,8 @@ const DEFAULT_AREA_TEXT_MS = 4000;
 /** Used when the content does not set how far from the hero the Automap reveals terrain, in tiles. */
 const DEFAULT_AUTOMAP_REVEAL_DISTANCE = 4;
 
-/** The most lines an opening may have: it is a card to read at a glance, not a page. */
-const MAX_OPENING_LINES = 4;
+/** The most lines an opening or an ending may have: each is a card to read at a glance, not a page. */
+const MAX_CARD_LINES = 4;
 
 /** A milestone as the rules use it: its zone is a box in tile units, like the bodies it is compared with. */
 export interface Milestone {
@@ -262,6 +262,14 @@ export interface RangedWeapon {
   readonly arrowSize: number;
 }
 
+/** What the hero sails home to: the card of the ending, and then the credits. */
+export interface Ending {
+  /** The lines of the card, from 1 to 4. */
+  readonly lines: readonly string[];
+  /** The lines of the credits, one or more. */
+  readonly credits: readonly string[];
+}
+
 export interface Content {
   readonly hero: {
     readonly size: number;
@@ -290,6 +298,8 @@ export interface Content {
   readonly areaTextSteps: number;
   /** The lines of the opening a new game begins with, or null when the content has none. */
   readonly opening: readonly string[] | null;
+  /** What the hero sails home to, or null when the content has none. */
+  readonly ending: Ending | null;
   /** How far from the hero's tile the Automap reveals terrain, in tiles. */
   readonly automapRevealDistance: number;
   readonly start: { readonly areaId: string; readonly tile: Tile };
@@ -310,7 +320,9 @@ export function loadContent(definition: ContentDefinition): Content {
     );
   }
   const progression = loadProgression(definition.progression);
-  const opening = loadOpening(definition.opening);
+  const opening =
+    definition.opening === undefined ? null : loadLines('The opening', 'has', definition.opening, MAX_CARD_LINES);
+  const ending = loadEnding(definition.ending, definition.credits);
   const automapRevealDistance = definition.automapRevealDistance ?? DEFAULT_AUTOMAP_REVEAL_DISTANCE;
   requireZeroOrMore('The Automap reveal distance', automapRevealDistance);
   requireMoreThanZero('The Health a Healing Potion restores', definition.healingPotion.restores);
@@ -349,6 +361,7 @@ export function loadContent(definition: ContentDefinition): Content {
   }
   checkKeysAndDoors(Object.values(areas));
   checkLeverTargets(Object.values(areas));
+  checkVessels(Object.values(areas), ending !== null);
   const start = { areaId: startArea.id, tile: definition.start.tile };
   const guardians = checkGuardians(Object.values(areas), monsterTypes);
   checkRoutesStayOpen(Object.values(areas), start, guardians);
@@ -375,6 +388,7 @@ export function loadContent(definition: ContentDefinition): Content {
     areaOrder: definition.areas.map((area) => area.id),
     areaTextSteps: msToSteps(areaTextMs),
     opening,
+    ending,
     automapRevealDistance,
     start: { areaId: definition.start.area, tile: definition.start.tile },
   };
@@ -795,23 +809,40 @@ function loadAreaText(area: AreaDefinition): string | null {
   return area.text;
 }
 
-/** The lines of the opening, or null when the content has none. */
-function loadOpening(lines: readonly string[] | undefined): readonly string[] | null {
-  if (lines === undefined) {
-    return null;
-  }
+/**
+ * The lines of a text that is shown as cards or pages: at most `most` of them, and none blank. `name` and `verb` make
+ * the messages read right: "The opening has", "The credits have".
+ */
+function loadLines(name: string, verb: 'has' | 'have', lines: readonly string[], most = Infinity): readonly string[] {
   if (lines.length === 0) {
-    throw new Error('The opening has no lines: leave it out for none');
+    throw new Error(`${name} ${verb} no lines: leave ${verb === 'has' ? 'it' : 'them'} out for none`);
   }
-  if (lines.length > MAX_OPENING_LINES) {
-    throw new Error(`The opening has ${lines.length} lines, but the card holds at most ${MAX_OPENING_LINES}`);
+  if (lines.length > most) {
+    throw new Error(`${name} ${verb} ${lines.length} lines, but the card holds at most ${most}`);
   }
   lines.forEach((line, index) => {
     if (line.trim() === '') {
-      throw new Error(`The opening: line ${index + 1} is blank`);
+      throw new Error(`${name}: line ${index + 1} is blank`);
     }
   });
   return [...lines];
+}
+
+/** The ending and the credits, which go together, or null when the content has neither. */
+function loadEnding(ending: readonly string[] | undefined, credits: readonly string[] | undefined): Ending | null {
+  if (ending === undefined && credits === undefined) {
+    return null;
+  }
+  if (credits === undefined) {
+    throw new Error('The ending needs credits: give both, or leave both out');
+  }
+  if (ending === undefined) {
+    throw new Error('The credits need an ending: give both, or leave both out');
+  }
+  return {
+    lines: loadLines('The ending', 'has', ending, MAX_CARD_LINES),
+    credits: loadLines('The credits', 'have', credits),
+  };
 }
 
 /** `width` and `height` are the size of the map of the Adventure Area, in tiles. */

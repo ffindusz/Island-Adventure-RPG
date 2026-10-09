@@ -581,6 +581,18 @@ export interface ContentDefinition {
    */
   readonly opening?: readonly string[];
   /**
+   * The ending: a short card the player reads when the hero sails home, written as the opening is. Its lines, from 1 to
+   * 4, none of them blank; the caller wraps each to fit its screen. It is given together with the credits or not at all.
+   * Content that places a vessel needs both, as that is what the hero sails home to. Leave it out for none.
+   */
+  readonly ending?: readonly string[];
+  /**
+   * The credits: what the player reads after the ending, before the game is at the title again. Its lines, one or more
+   * and as many as are needed, none of them blank; the caller sets them out to fit its screen. It is given together
+   * with the ending or not at all.
+   */
+  readonly credits?: readonly string[];
+  /**
    * How far from the hero's tile the Automap reveals terrain, in tiles: every tile whose middle is no farther than this
    * from the middle of the hero's tile. It is 0 or more: 0 reveals only the hero's own tile. Leave it out for the
    * default of 4. An exit is marked on the Automap once any tile of it is revealed, so under 1 an exit can be crossed

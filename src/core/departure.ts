@@ -1,3 +1,4 @@
+import type { Content } from './content';
 import type { Vessel } from './vessel-content';
 import type { GameEvent } from './interface';
 import type { PlayState, VesselState } from './state';
@@ -22,4 +23,15 @@ export function useVessel(vessel: Vessel, vesselState: VesselState, state: PlayS
 /** Declines to sail home: the question closes, and nothing else changes. The vessel stays prepared. */
 export function cancelDeparture(state: PlayState): void {
   state.departure = null;
+}
+
+/**
+ * The event of sailing home: what the hero sails home to. Loading refuses a vessel in content without an ending, so
+ * the question cannot be open in such a game, but a snapshot is not checked here, and no ending to tell is a bug.
+ */
+export function sailHome(content: Content): GameEvent[] {
+  if (content.ending === null) {
+    throw new Error('The hero cannot sail home: this content has no ending');
+  }
+  return [{ type: 'ending-reached', ending: content.ending.lines, credits: content.ending.credits }];
 }

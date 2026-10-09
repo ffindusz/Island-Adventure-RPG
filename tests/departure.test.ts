@@ -11,8 +11,7 @@ import {
   walk,
   WITH_BOW,
 } from './fixtures';
-import type { ArenaOptions } from './fixtures';
-import { harborContent, harborGame, VESSEL_ID } from './harbor-fixtures';
+import { askingGame, harborContent, harborGame, preparedGame, VESSEL_ID } from './harbor-fixtures';
 
 // Departing is the game's only point of no return, so the game asks first. Interact on a vessel that the hero has
 // prepared opens the question, which is part of the game state as an open page is, and pauses the game in the same way
@@ -21,20 +20,6 @@ import { harborContent, harborGame, VESSEL_ID } from './harbor-fixtures';
 const INTERACT = { type: 'interact' } as const;
 const CANCEL = { type: 'cancel-departure' } as const;
 const ASKED_ABOUT_THE_VESSEL = { vesselId: VESSEL_ID };
-
-/** A game with the hero in front of the vessel, which it has prepared. */
-function preparedGame(options: ArenaOptions = {}): Game {
-  const game = harborGame(options);
-  game.send(INTERACT);
-  return game;
-}
-
-/** A game that asks whether to sail home: the hero has prepared the vessel and used Interact on it once more. */
-function askingGame(options: ArenaOptions = {}): Game {
-  const game = preparedGame(options);
-  game.send(INTERACT);
-  return game;
-}
 
 describe('Interact on a vessel that is prepared asks whether to sail home', () => {
   it('asks nothing before the vessel is prepared, nor in the moment that it is', () => {

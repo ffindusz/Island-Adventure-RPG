@@ -34,6 +34,10 @@ export const GUARDIAN_ID = 'guardian-1';
 export const GATE_ID = 'gate-1';
 export const VESSEL_ID = 'vessel-1';
 
+/** What the harbor of the tests ends with: any vessel needs an ending and credits to sail home to. */
+export const HARBOR_ENDING = ['The old vessel takes the wind.', 'The island falls behind you.'];
+export const HARBOR_CREDITS = ['THE HARBOR', 'Made of fixtures.', 'Thank you for playing.'];
+
 /** A vessel on the tile (col, row). */
 export function vesselAt(id: string, col: number, row: number): InteractableDefinition {
   return { kind: 'vessel', id, tile: { col, row } };
@@ -45,13 +49,18 @@ export const HARBOR_INTERACTABLES: readonly InteractableDefinition[] = [
   vesselAt(VESSEL_ID, 12, 3),
 ];
 
-/** The content of the harbor: the Guardian, its gate and the vessel, with the hero in front of the vessel. */
+/**
+ * The content of the harbor: the Guardian, its gate and the vessel, with the hero in front of the vessel, and the
+ * ending and credits that the vessel sails home to. A test that has none says `ending: undefined, credits: undefined`.
+ */
 export function harborContent(options: ArenaOptions = {}): ContentDefinition {
   return guardianContent([guardianAt(GUARDIAN_ID, 4, 3), ...(options.monsters ?? [])], {
     layout: HARBOR_LAYOUT,
     start: { area: 'arena', tile: { col: 11, row: 3 } },
     hero: { attack: 12 },
     interactables: HARBOR_INTERACTABLES,
+    ending: HARBOR_ENDING,
+    credits: HARBOR_CREDITS,
     ...options,
   });
 }
@@ -60,5 +69,19 @@ export function harborContent(options: ArenaOptions = {}): ContentDefinition {
 export function harborGame(options: ArenaOptions = {}): Game {
   const game = newGame(harborContent(options));
   face(game, 'right');
+  return game;
+}
+
+/** A harbor game in which the hero has prepared the vessel. */
+export function preparedGame(options: ArenaOptions = {}): Game {
+  const game = harborGame(options);
+  game.send({ type: 'interact' });
+  return game;
+}
+
+/** A harbor game that asks whether to sail home: the hero has prepared the vessel and used Interact on it once more. */
+export function askingGame(options: ArenaOptions = {}): Game {
+  const game = preparedGame(options);
+  game.send({ type: 'interact' });
   return game;
 }

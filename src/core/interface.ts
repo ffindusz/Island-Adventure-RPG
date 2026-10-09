@@ -80,7 +80,14 @@ export type Command =
    * Decline to sail home: the question the game asks when the hero uses Interact on a prepared vessel closes, and
    * everything else stays as it was, the vessel prepared. Ignored when no question is open, and at the title.
    */
-  | { readonly type: 'cancel-departure' };
+  | { readonly type: 'cancel-departure' }
+  /**
+   * Sail home: the answer yes to the question the game asks when the hero uses Interact on a prepared vessel. It ends
+   * the game. The one event is `ending-reached`, which carries the ending and the credits for the caller to show, and
+   * the game is at the title afterwards: there is no postgame, and everything but new-game and continue is ignored.
+   * The core writes nothing, so what was saved before is as it was. Ignored when no question is open, and at the title.
+   */
+  | { readonly type: 'confirm-departure' };
 
 /** Something that happened, for the adapter to show or play. Events never carry rules; the state view is the truth. */
 export type GameEvent =
@@ -150,6 +157,12 @@ export type GameEvent =
    * vessel is what asks whether to sail home.
    */
   | { readonly type: 'vessel-prepared'; readonly vesselId: string }
+  /**
+   * The hero sailed home, and the game is over: it is at the title, and these are the lines of the ending, for the
+   * caller to show as a card, and of the credits, for it to set out as it can. It is the only event of the
+   * `confirm-departure` command. Saving is the caller's: the core wrote nothing, and tells nothing of what was saved.
+   */
+  | { readonly type: 'ending-reached'; readonly ending: readonly string[]; readonly credits: readonly string[] }
   /** The hero took an item and now has it. */
   | { readonly type: 'pickup'; readonly item: PickedUpItem }
   /** The hero equipped this Gear in its slot, in place of the piece there. */
