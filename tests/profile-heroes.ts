@@ -76,6 +76,16 @@ export function heroAt(
   };
 }
 
+/** A hero of the intended Level, with the best Gear that the route itself gives it. */
+export function mainRouteHero(points: Points, potions: number): HeroProfile {
+  return heroAt(INTENDED_LEVEL, points, MAIN_ROUTE_GEAR, potions);
+}
+
+/** A hero three Levels short of the intended one, with the best Gear that the route gives it. */
+export function underLeveledHero(potions: number): HeroProfile {
+  return heroAt(3, { health: 1, attack: 1, defense: 0 }, MAIN_ROUTE_GEAR, potions);
+}
+
 /** The Guardian's Checkpoint, in the gateway to the arena: where a hero stands before it goes in to the Guardian. */
 const GUARDIAN_CHECKPOINT = 'guardian-checkpoint';
 

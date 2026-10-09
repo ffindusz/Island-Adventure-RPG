@@ -3,7 +3,17 @@ import { gameContent } from '../src/content';
 import { fightTable, gearBefore, gearFrom, renderFightTable, SPENDS } from './fight-table';
 import { AREA_IDS, MOST_NEARBY } from './main-route';
 import { type HeroProfile, MAIN_ROUTE_GEAR, POTIONS_SPARED } from './profile-heroes';
-import { arrowLedger, isNoticeable, potionLedger, steps } from './route-supplies';
+import {
+  areaOfGear,
+  arrowLedger,
+  isNoticeable,
+  potionLedger,
+  renderArrowLedger,
+  renderDrops,
+  renderPotionLedger,
+  renderSteps,
+  steps,
+} from './route-supplies';
 
 // The balance of the fights and of what the route gives a hero to fight with, against the shipped content: the ticket's
 // "most fights approachable, a few demanding; upgrades that are noticeable steps; supplies enough with no grinding".
@@ -99,5 +109,16 @@ describe('the supplies along the route', () => {
         expect(row.found, `${spend} in ${row.area}: ${row.shots} shots`).toBeGreaterThanOrEqual(row.needed);
       }
     }
+  }, 60_000);
+});
+
+describe('the Gear and supplies tables of docs/balance.md', () => {
+  it('have a line for every piece of Gear in the world and for every build in every area: run this file with --silent=false to print them', () => {
+    const rendered = [renderSteps(), renderPotionLedger(), renderPotionLedger(Infinity), renderArrowLedger(), renderDrops()];
+    console.log(rendered.join('\n\n'));
+    const piecesInTheWorld = Object.keys(gameContent.gear).filter((piece) => areaOfGear(piece) !== undefined).length;
+    const lines = rendered.map((text) => text.split('\n').length - 2);
+    const perBuild = SPENDS.length * AREA_IDS.length;
+    expect(lines).toEqual([piecesInTheWorld, perBuild, perBuild, perBuild, AREA_IDS.length]);
   }, 60_000);
 });

@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { fightTheGuardian, type FightResult } from './dodging-bot';
+import { GUARDIAN_HEROES, guardianTable, PLAYS, renderGuardianTable } from './guardian-table';
 import {
   gameAtTheGuardian,
   type HeroProfile,
   heroAt,
   INTENDED_LEVEL,
   MAIN_ROUTE_GEAR,
+  mainRouteHero,
   OPTIONAL_GEAR,
   POTIONS_SPARED,
-  type Points,
   SPLITS,
+  underLeveledHero,
 } from './profile-heroes';
 
 // The Guardian's fight, played by the dodging bot (dodging-bot.ts) at the Game core's interface: the real core, the
@@ -24,15 +26,6 @@ function fight(hero: HeroProfile, reactionMs: number, missEvery: number): FightR
 
 function damageOf(result: FightResult): number {
   return result.telegraphs.reduce((sum, { damage }) => sum + damage, 0);
-}
-
-function mainRouteHero(points: Points, potions: number): HeroProfile {
-  return heroAt(INTENDED_LEVEL, points, MAIN_ROUTE_GEAR, potions);
-}
-
-/** A hero three Levels short of the intended one, with the best Gear that the route gives it. */
-function underLeveledHero(potions: number): HeroProfile {
-  return heroAt(3, { health: 1, attack: 1, defense: 0 }, MAIN_ROUTE_GEAR, potions);
 }
 
 const ANSWERED_WITHIN_MS = [150, 250, 450, 600];
@@ -115,4 +108,17 @@ describe('the Guardian against a hero well below the intended Level', () => {
     expect(underLeveled.outcome).toBe('won');
     expect(underLeveled.potionsDrunk).toBeGreaterThan(intended.potionsDrunk);
   });
+});
+
+describe('the table of docs/balance.md', () => {
+  it('has a line for every hero and every way of playing, each fought to its end: run this file with --silent=false to print it', () => {
+    const table = guardianTable();
+    expect(table).toHaveLength(GUARDIAN_HEROES.length * PLAYS.length);
+    for (const row of table) {
+      expect(row.result.outcome, `${row.hero}, ${row.play}`).not.toBe('timed-out');
+    }
+    const rendered = renderGuardianTable(table);
+    console.log(rendered);
+    expect(rendered.split('\n')).toHaveLength(table.length + 2);
+  }, 60_000);
 });
