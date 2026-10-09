@@ -4,7 +4,7 @@
 
 **Blocked by:** 19: The Guardian
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 15, 17-19, 27
 
@@ -17,6 +17,8 @@
 - [ ] Reviewer play check (manual, in a browser): defeat the Guardian, prepare the vessel, decline the departure and backtrack, then depart, read the ending and credits, and land on the title screen.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at a185bc4
 
 Implemented on `ticket/20-harbor-and-ending`, from `integration/island-adventure-rpg` at e87583c ("Resolve ticket 19"). The Status line is as it was.
 
