@@ -150,7 +150,7 @@ export function offRouteFights(): Fight[] {
 const ERRAND_KINDS: readonly string[] = ['chest', 'pickup', 'key', 'lever'];
 
 /** What lies off the route in an area: the walk there and back, with every door open, for the near and the far. */
-function errandsOf(area: AreaId): {
+export function errandsOf(area: AreaId): {
   readonly nearSeconds: number;
   readonly farSeconds: number;
   readonly puzzles: number;

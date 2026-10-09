@@ -1,8 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
 import { STEP_MS } from '../src/core';
-import { AREA_IDS, routeOf, wayInOf } from './main-route';
+import { AREA_IDS, type AreaId, areaOf, monstersOnRoute, routeOf, wayInOf } from './main-route';
 import {
+  errandsOf,
   estimate,
   guardianAttempt,
   type Guesses,
@@ -14,7 +15,7 @@ import {
   wordsIn,
 } from './play-time';
 import { FIRST_GEAR, gameWithHero, heroAt, QUIET } from './profile-heroes';
-import { walkRoute } from './routes';
+import { distanceBetween, noticingOf, walkRoute } from './routes';
 
 // A small adventure of round numbers, so that every figure below is worked out by hand and not by the code it checks.
 const SMALL: Measured = {
@@ -101,14 +102,21 @@ describe('the basis measured from the content', () => {
     expect(measured.routeSeconds).toBeCloseTo(AREA_IDS.reduce((sum, id) => sum + routeSecondsOf(id), 0), 9);
   });
 
-  it('lets a plain fight last at least as long as the blows that win it take', () => {
+  it('lets a plain fight last as long as its blows take, and a second more to close in', () => {
     const fights = [...routeFights(), ...offRouteFights()];
     expect(fights.length).toBeGreaterThan(0);
     for (const fight of fights) {
-      expect(fight.seconds, `${fight.type} in ${fight.area}`).toBeGreaterThanOrEqual(
-        (fight.hitsToKill - 1) * cooldownSeconds,
-      );
+      const label = `${fight.type} in ${fight.area}`;
+      expect(fight.seconds, label).toBeGreaterThanOrEqual((fight.hitsToKill - 1) * cooldownSeconds);
+      expect(fight.seconds, label).toBeLessThanOrEqual(fight.hitsToKill * cooldownSeconds + 1);
     }
+  });
+
+  it('counts every ordinary monster once, on the route or off it', () => {
+    const ordinary = gameContent.areas
+      .flatMap((area) => area.monsters)
+      .filter((placement) => gameContent.monsterTypes[placement.type]?.behavior !== 'guardian');
+    expect(routeFights().length + offRouteFights().length).toBe(ordinary.length);
   });
 
   it('adds up the fights of the route and those off it', () => {
@@ -118,11 +126,63 @@ describe('the basis measured from the content', () => {
     expect(measured.offRouteFightSeconds).toBeCloseTo(seconds(offRouteFights()), 9);
   });
 
+  it('retries each demanding fight from the way in, up to where its monster first notices the hero', () => {
+    const demanding: readonly (readonly [AreaId, string])[] = [
+      ['mountain', 'raider-veteran'],
+      ['cave', 'cave-bear'],
+      ['castle', 'castle-knight'],
+    ];
+    expect(measured.hardFights).toHaveLength(demanding.length);
+    demanding.forEach(([area, type], index) => {
+      const label = `${type} in the ${area}`;
+      const retry = measured.hardFights[index];
+      const placement = monstersOnRoute(area).find((one) => one.type === type);
+      const plain = routeFights().find((one) => one.area === area && one.type === type);
+      if (retry === undefined || placement === undefined || plain === undefined) {
+        throw new Error(`${label} is not a fight of the route`);
+      }
+      const route = routeOf(area);
+      const noticing = noticingOf(gameContent, placement);
+      const noticesAt = (tileIndex: number): boolean => {
+        const tile = route[tileIndex];
+        return tile !== undefined && distanceBetween(tile, placement.tile) <= noticing;
+      };
+      const tileIndex = Math.round(retry.approachSeconds * gameContent.hero.speedTilesPerSecond);
+      expect(noticesAt(tileIndex), label).toBe(true);
+      expect(noticesAt(tileIndex - 1), label).toBe(false);
+      expect(retry.fightSeconds, label).toBeCloseTo(plain.seconds, 9);
+    });
+  });
+
   it('takes the Guardian as one fight that is won, and lasts as long as its blows take', () => {
     const attempt = guardianAttempt();
     expect(attempt.outcome).toBe('won');
     expect((attempt.steps * STEP_MS) / 1000).toBeGreaterThanOrEqual((attempt.blows - 1) * cooldownSeconds);
     expect(measured.guardian.fightSeconds).toBeCloseTo((attempt.steps * STEP_MS) / 1000, 9);
+  });
+
+  it('walks from the Checkpoint to the Guardian, and from the Guardian to the vessel', () => {
+    const castle = areaOf('castle');
+    const checkpoint = castle.checkpoints?.find(({ id }) => id === 'guardian-checkpoint');
+    const guardian = castle.monsters.find(({ id }) => id === 'arena-guardian');
+    const vessel = castle.interactables?.find(({ id }) => id === 'old-vessel');
+    if (checkpoint === undefined || guardian === undefined || vessel === undefined) {
+      throw new Error('The castle has no Guardian Checkpoint, Guardian or vessel under their names');
+    }
+    // The three stand in one row, so each walk is the difference of two columns.
+    expect(new Set([checkpoint.tile.row, guardian.tile.row, vessel.tile.row]).size).toBe(1);
+    const speed = gameContent.hero.speedTilesPerSecond;
+    expect(measured.guardian.approachSeconds).toBeCloseTo((guardian.tile.col - checkpoint.tile.col) / speed, 9);
+    expect(measured.guardian.vesselSeconds).toBeCloseTo((vessel.tile.col - guardian.tile.col) / speed, 9);
+  });
+
+  it('goes to what lies a tile off the route at once, and to what lies far off at a longer walk', () => {
+    // On the coast, the potion chest and the beach potion lie a tile off the route and the steel sword's chest 11.
+    const speed = gameContent.hero.speedTilesPerSecond;
+    const coast = errandsOf('shipwreck-coast');
+    expect(coast.nearSeconds).toBeCloseTo((2 * (1 + 1)) / speed, 9);
+    expect(coast.farSeconds).toBeCloseTo((2 * 11) / speed, 9);
+    expect(coast).toMatchObject({ puzzles: 0, nearGear: 0, farGear: 1 });
   });
 
   it('counts what the content has: the level-ups, the areas, the Gear and the puzzles', () => {
@@ -135,8 +195,8 @@ describe('the basis measured from the content', () => {
     expect(measured.puzzles).toBe(interactables.filter(({ kind }) => kind === 'key' || kind === 'lever').length);
   });
 
-  it('counts the words by their spaces, so that a link is one word', () => {
-    expect(wordsIn(['A storm broke the ship.', 'Go on!'])).toBe(7);
+  it('counts the words by their white space, so that a link is one word', () => {
+    expect(wordsIn(['A storm broke the ship.', 'Go\non!'])).toBe(7);
     expect(wordsIn(['See https://example.org/a-b now', '  '])).toBe(3);
   });
 
