@@ -18,10 +18,11 @@ import type { Bitmap, Graphics } from './pixel-font';
 import { statKeyLabel } from './player-input';
 import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
 
-// The overlay: what covers the game while it waits for the player. It shows the level-up choice or the page that is
-// open, or says the game is paused when the window has lost focus. It is drawn from the Game core's view alone, in a
-// window over a dimmed copy of the game, and every number on it is a number the view gives: it works out nothing. The
-// one thing it is given besides the view is where the player's cursor is on the inventory page.
+// The overlay: what covers the game while it waits for the player. It shows the level-up choice, the page that is open
+// or the question whether to sail home, or says the game is paused when the window has lost focus. It is drawn from
+// the Game core's view alone, in a window over a dimmed copy of the game, and every number on it is a number the view
+// gives: it works out nothing. The one thing it is given besides the view is where the player's cursor is on the
+// inventory page.
 
 /** Above the HUD. The dimming sits just under the window. */
 const OVERLAY_DEPTH = 200;
@@ -29,7 +30,7 @@ const OVERLAY_DEPTH = 200;
 const WIDE_WINDOW = 160;
 const NARROW_WINDOW = 96;
 /** From a window's edge to what it holds, the window's frame being the first 4 pixels of it. */
-const PADDING = 12;
+export const PADDING = 12;
 /** The space between rows, the height of a bar, and the space between a stat's value and its gain. */
 const ROW_GAP = 4;
 const BAR_HEIGHT = 5;
@@ -99,12 +100,12 @@ type Row =
       readonly right: readonly Row[];
     };
 
-interface Panel {
+export interface Panel {
   readonly width: number;
   readonly rows: readonly Row[];
 }
 
-/** The level-up choice, the open page, or the pause notice, whichever the game is showing. */
+/** The level-up choice, the open page, the question whether to sail home, or the pause notice, whichever is showing. */
 export class Overlay {
   private readonly backdrop: Graphics;
   private readonly layer: UiLayer;
@@ -133,18 +134,39 @@ export class Overlay {
   }
 }
 
-/** The choice that waits comes first, then the page that is open, then the notice that the window lost focus. */
-function panelFor(view: PlayingView, focused: boolean, inventoryCursor: number): Panel | null {
+/**
+ * The choice that waits comes first, then the page that is open, then the question whether to sail home, then the
+ * notice that the window lost focus. The question waits for an answer, so it shows over that notice: the player who
+ * comes back to the window finds it there.
+ */
+export function panelFor(view: PlayingView, focused: boolean, inventoryCursor: number): Panel | null {
   if (view.levelUp !== null) {
     return levelUpPanel(view.levelUp);
   }
   if (view.page !== null) {
     return pagePanel(view.page, view.hero, inventoryCursor);
   }
+  if (view.departure !== null) {
+    return departurePanel();
+  }
   if (!focused) {
     return { width: NARROW_WINDOW, rows: [{ kind: 'text', text: 'PAUSED', colour: INK.title }] };
   }
   return null;
+}
+
+/** The question before the game's one point of no return: sailing home ends the adventure. */
+function departurePanel(): Panel {
+  return {
+    width: WIDE_WINDOW,
+    rows: [
+      { kind: 'text', text: 'SAIL HOME?', colour: INK.title },
+      { kind: 'text', text: 'THE ADVENTURE ENDS.', colour: INK.warning },
+      { kind: 'space', height: 0 },
+      { kind: 'text', text: 'ENTER TO SAIL', colour: INK.text },
+      { kind: 'text', text: 'ESC TO STAY', colour: INK.text },
+    ],
+  };
 }
 
 function levelUpPanel(levelUp: LevelUpView): Panel {
