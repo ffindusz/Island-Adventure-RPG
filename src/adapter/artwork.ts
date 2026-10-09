@@ -107,6 +107,10 @@ export const ARTWORK = {
   // The picture behind the title screen: the whole canvas (320 by 192 pixels), a morning on the coast, composed from the
   // pack by docs/assets/compose-art.py. The name and the menu window are drawn over it (title-layout.ts).
   'backdrop-title': image('backdrop-title.png'),
+  // The picture behind the ending and the credits: the whole canvas, the evening the hero sails home, composed the same
+  // way. The cards of the ending are drawn over its middle (opening-card.ts), so what shows is the sky above them and the sea
+  // and the quay at their foot and sides.
+  'backdrop-ending': image('backdrop-ending.png'),
 } as const satisfies ArtManifest;
 
 /** The name of a picture the adapter itself asks for. */

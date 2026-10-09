@@ -2,8 +2,9 @@
 """Composes pictures from pieces of the Ninja Adventure pack: the ground and the monsters of the shipwreck coast and the
 woods, the ground and the monsters of the mountain and of the cave, the ground (the masonry, the flagstones, the moss, the
 pillars, the fountain, the harbor and its quay) and the undead and the Guardian of the castle, the old vessel of its harbor
-(the pack's boat and sail), the props every area shares, the icons of the two bows, and the backdrop of the title screen (a
-picture of the size of the canvas, put together from the coast's own sea, sand and wreck).
+(the pack's boat and sail), the props every area shares, the icons of the two bows, and the backdrops of the title screen and of
+the ending (pictures of the size of the canvas, put together from the coast's own sea, sand and wreck, and from the quay of
+the castle's harbor).
 
 The pack (CC0, Pixel-Boy and AAA) is not in the repository. Pass the folder that holds `Backgrounds`, `Actor`, `Items`
 and `FX` as --pack; the pictures are written under public/art/ and are committed with it. Run it again to remake them:
@@ -12,9 +13,9 @@ and `FX` as --pack; the pictures are written under public/art/ and are committed
     python docs/assets/compose-art.py --pack "<path>" terrain-water monster-crab    (only these)
 
 Every picture is cut from named pieces of the pack and put together here; what is drawn by the recipe instead (a glint, the
-pillars and the fountain of the castle, the courses of its walls, the mast and the post of the vessel, the sky, the clouds, the
-gulls and the far castle of a backdrop) is said so by its function and by docs/assets/licences.md, which lists each result
-and the pieces it was made from.
+pillars and the fountain of the castle, the courses of its walls, the mast and the post of the vessel, the sky, the sun, the
+clouds, the gulls, the far castle and the far vessel of a backdrop) is said so by its function and by
+docs/assets/licences.md, which lists each result and the pieces it was made from.
 """
 import argparse
 import math
@@ -1266,6 +1267,101 @@ def title_backdrop(pack):
     return out
 
 
+# The ending: the evening the hero sails home. The sun is low over the sea at the left and the old vessel crosses it under sail;
+# the island, with its castle, is a dark shape on the horizon at the right; the quay of the harbor runs along the foot. The cards
+# of the ending cover the middle of the picture, as the title's window does, so the horizon is high (the tallest card, the
+# credits, starts at row 29): the sky and the vessel stand in the strip above the cards, and the sea and the quay show at the
+# foot and at the two sides.
+ENDING_HORIZON = 25
+ENDING_SKY = (('#543c52', 0), ('#8f3e56', 5), ('#cf736d', 10), ('#ef914f', 15), ('#ffad5d', 20))
+ENDING_SEA = (('#ef914f', 0), ('#cf736d', 7), ('#8f3e56', 17), ('#543c52', 40), ('#4a5270', 80), ('#3b3643', 130))
+ENDING_SUN = (66, 12, 9)
+ENDING_QUAY = 164
+ENDING_CLOUDS = {'W': hexrgb('#ef9597'), 'S': hexrgb('#a5608b')}
+ENDING_DARK = hexrgb('#3b3643')
+GLITTER = ((0.78, '#ffe18d'), (0.0, '#ffbc75'))
+VESSEL_AFAR_AT = (64, 5)
+VESSEL_AFAR_CANVAS = {'W': hexrgb('#fce2ca'), 'S': hexrgb('#d3a2c0')}
+
+
+def sun(img, centre_x, radius, glow):
+    """A sun half set on the horizon: a disc with a lighter core and a halo of dithered light in the sky round it."""
+    surface = img.load()
+    for y in range(ENDING_HORIZON - radius - glow, ENDING_HORIZON):
+        for x in range(centre_x - radius - glow, centre_x + radius + glow + 1):
+            distance = math.hypot(x - centre_x, y + 0.5 - ENDING_HORIZON)
+            if distance <= radius * 0.55:
+                surface[x, y] = (*hexrgb('#fce2ca'), 255)
+            elif distance <= radius:
+                surface[x, y] = (*hexrgb('#ffe18d'), 255)
+            elif distance < radius + glow and BAYER[y % 4][x % 4] / 16 < 0.75 * (1 - (distance - radius) / glow):
+                surface[x, y] = (*hexrgb('#ffbc75'), 255)
+
+
+def ending_sea(height):
+    """The sea under the sunset: bands from the orange of the horizon down to the dark of the foot, a ripple on it here and
+    there in the colour of the band above, and the sun's path, a stripe of dashes of light that widens towards the viewer."""
+    out = sky(ENDING_SEA, height)
+    surface = out.load()
+    centre = ENDING_SUN[0]
+    for y in range(height):
+        band = max(i for i, (_, first) in enumerate(ENDING_SEA) if first <= y)
+        ripple = hexrgb(ENDING_SEA[max(band - 1, 0)][0])
+        half = 6 + y * 0.28
+        for segment in range(CANVAS[0] // 4):
+            x = segment * 4
+            reach = max(0.0, 1 - abs(x + 2 - centre) / half)
+            roll = scatter(segment, y, 7) % 100
+            length = 2 + scatter(segment, y, 9) % 3
+            if roll < 55 * reach:
+                colour = next(hexrgb(colour) for floor, colour in GLITTER if reach >= floor)
+                paint(out, [(x + dx, y) for dx in range(length)], colour)
+            elif reach < 0.5 and roll < 55 * reach + 14:
+                paint(out, [(x + dx, y) for dx in range(length)], ripple)
+    return out
+
+
+def vessel_afar():
+    """The old vessel seen from far away, under sail, bow to the left: the wood and the canvas of the vessel of the harbor in
+    the evening light, one square sail on one mast with a pennant, a hull with a raised bow. 28 by 24."""
+    art = Image.new('RGBA', (28, 24), (0, 0, 0, 0))
+    wood, light = VESSEL_COLOURS['M'], VESSEL_COLOURS['L']
+    canvas, shade = VESSEL_AFAR_CANVAS['W'], VESSEL_AFAR_CANVAS['S']
+    paint(art, [(14, y) for y in range(1, 18)], wood)
+    paint(art, [(15, 1), (16, 1), (17, 1), (15, 2), (16, 2), (15, 3)], hexrgb('#cf736d'))
+    paint(art, [(x, y) for x in range(7, 22) for y in range(4, 14)], canvas)
+    paint(art, [(x, y) for x in range(16, 22) for y in range(4, 14)], shade)
+    paint(art, [(x, 14) for x in range(7, 22)], wood)
+    paint(art, [(x, y) for y, (first, last) in {17: (2, 26), 18: (3, 25), 19: (4, 23), 20: (6, 21)}.items() for x in range(first, last + 1)], wood)
+    paint(art, [(x, 17) for x in range(3, 26)], light)
+    paint(art, [(1, 16), (2, 16), (2, 17)], light)
+    return outlined(art)
+
+
+def ending_backdrop(pack):
+    out = Image.new('RGBA', CANVAS, (0, 0, 0, 255))
+    out.alpha_composite(sky(ENDING_SKY, ENDING_HORIZON), (0, 0))
+    sun(out, ENDING_SUN[0], ENDING_SUN[1], ENDING_SUN[2])
+    for at, rows in (((22, 7), CLOUD_SMALL), ((112, 5), CLOUD_LONG), ((176, 12), CLOUD_MEDIUM), ((218, 4), CLOUD_SMALL)):
+        stamp(out, rows, ENDING_CLOUDS, *at)
+    for at in ((132, 17), (148, 12), (160, 18)):
+        stamp(out, GULL, {'X': ENDING_DARK}, *at)
+    far_island(out, 262, ENDING_HORIZON, 56, 6, ENDING_DARK)
+    out.alpha_composite(far_castle(ENDING_DARK, OUTLINE, hexrgb('#ffbc75')), (272, ENDING_HORIZON - 24))
+    out.alpha_composite(ending_sea(CANVAS[1] - ENDING_HORIZON), (0, ENDING_HORIZON))
+    out.alpha_composite(vessel_afar(), VESSEL_AFAR_AT)
+    paint(out, [(x, ENDING_HORIZON + 2) for x in range(92, 102)] + [(x, ENDING_HORIZON + 4) for x in range(95, 103)], hexrgb('#fce2ca'))
+    planks = frames_of(castle_dock(pack), 6, 6)
+    for row in range(2):
+        for column in range(CANVAS[0] // TILE):
+            roll = scatter(column, row, 5) % 8
+            frame = planks[column % 2 if roll < 5 else 2 + (roll - 5) + (column % 2 if roll == 5 else 0)]
+            out.alpha_composite(frame, (column * TILE, ENDING_QUAY + row * TILE))
+    for x in (34, 148, 268):
+        stamp(out, POST, VESSEL_COLOURS, x, ENDING_QUAY - 5)
+    return out
+
+
 BUILDERS = {
     'gear-short-bow': lambda pack: bow_icon(pack, 'Bow', shorter_by=2),
     'gear-long-bow': lambda pack: bow_icon(pack, 'Bow2'),
@@ -1317,6 +1413,7 @@ BUILDERS = {
     'prop-sign': lambda pack: cut(pack.tileset('TilesetElement'), 0, 2),
     'prop-vessel': vessel_sheet,
     'backdrop-title': title_backdrop,
+    'backdrop-ending': ending_backdrop,
 }
 
 

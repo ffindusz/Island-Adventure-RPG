@@ -10,10 +10,10 @@ import { SCENE_KEYS } from './scene-keys';
 import type { EndingStart } from './scene-keys';
 import { UiLayer } from './ui-layer';
 
-// The ending and the credits: cards on a black screen, one after another, which Enter turns, and after the last the
-// title screen. The play screen starts it with the lines the Game core gave when the hero sailed home. The core is at
-// the title by then and has written nothing, so the saved game is as it was; what the cards say and what Enter does
-// are in ending-pages.ts. The scene decides nothing about the game.
+// The ending and the credits: cards over a picture of the evening the hero sails home (the backdrop), one after another,
+// which Enter turns, and after the last the title screen. The play screen starts it with the lines the Game core gave when
+// the hero sailed home. The core is at the title by then and has written nothing, so the saved game is as it was; what the
+// cards say and what Enter does are in ending-pages.ts. The scene decides nothing about the game.
 
 /** The ending and the credits. */
 export class EndingScene extends Phaser.Scene {
@@ -41,6 +41,7 @@ export class EndingScene extends Phaser.Scene {
   create(): void {
     buildDrawnArt(this.textures, ARTWORK);
     requireLoadedArt(this.textures, ARTWORK);
+    this.add.image(0, 0, 'backdrop-ending').setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.backdrop);
     this.layer = new UiLayer(this, DEPTH.ending);
     const keyboard = this.input.keyboard;
     if (keyboard === null) {
