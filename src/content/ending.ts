@@ -5,7 +5,8 @@
  *
  * The pixel font draws letters (as capitals), digits, spaces and . , ! ? ' - + / : ( ) % = and nothing else: a
  * quotation mark, an ampersand, a semicolon or an accent in a line would not be drawn. tests/the-credits.test.ts looks at
- * every line.
+ * every line, and the game refuses to start with one that the font cannot draw (`requireDrawableEnding` in
+ * src/adapter/ending-pages.ts).
  */
 export const ending: readonly string[] = [
   'The storm is long gone, and the sea is calm.',
