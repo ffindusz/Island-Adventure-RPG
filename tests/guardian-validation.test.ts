@@ -73,6 +73,7 @@ const WALLED_HALL = ['#########', '#...#...#', '#########'];
 
 const WAY_IN: EntranceDefinition = { id: 'way-in', tile: { col: 1, row: 2 } };
 const GATEWAY_STONE = { id: 'gateway-stone', tile: { col: 4, row: 2 } };
+const WEST_STONE = { id: 'west-stone', tile: { col: 3, row: 2 } };
 const WARDEN = guardianAt('warden', 6, 2);
 const HARBOR_GATE = guardianGateAt('harbor-gate', 8, 2, 'warden');
 
@@ -282,6 +283,16 @@ describe('content that asks for a Guardian needs a Checkpoint immediately before
       }),
       message: `${NO_CHECKPOINT}: monster "vault-rat" stands between Checkpoint "gateway-stone" and it`,
     },
+    {
+      what: 'an ordinary monster in the arena, with a Checkpoint in the west room too: the one nearer the arena is named',
+      content: castle({ checkpoints: [WEST_STONE, GATEWAY_STONE], monsters: [WARDEN, dummyAt('stray', 5, 1)] }),
+      message: `${NO_CHECKPOINT}: monster "stray" stands between Checkpoint "gateway-stone" and it`,
+    },
+    {
+      what: 'the same, with the Checkpoints in the other order',
+      content: castle({ checkpoints: [GATEWAY_STONE, WEST_STONE], monsters: [WARDEN, dummyAt('stray', 5, 1)] }),
+      message: `${NO_CHECKPOINT}: monster "stray" stands between Checkpoint "gateway-stone" and it`,
+    },
   ])('is refused for $what', ({ content, message }) => {
     expectRefused(content, message);
   });
@@ -295,6 +306,24 @@ describe('content that asks for a Guardian needs a Checkpoint immediately before
       what: 'a second Checkpoint, in the west room, besides the one in the gateway',
       content: castle({
         checkpoints: [{ id: 'west-stone', tile: { col: 2, row: 1 } }, GATEWAY_STONE],
+      }),
+    },
+    {
+      what: 'a Checkpoint on the tile where the hero comes in, with the arena beyond it',
+      content: castle({ checkpoints: [{ id: 'door-stone', tile: WAY_IN.tile }] }),
+    },
+    {
+      what: 'an ordinary monster in the gateway, between two Checkpoints on the way: the nearer stands before the arena',
+      content: castle({
+        checkpoints: [WEST_STONE, { id: 'mouth-stone', tile: { col: 5, row: 2 } }],
+        monsters: [WARDEN, dummyAt('gateway-guard', 4, 2)],
+      }),
+    },
+    {
+      what: 'the same, with the Checkpoints in the other order',
+      content: castle({
+        checkpoints: [{ id: 'mouth-stone', tile: { col: 5, row: 2 } }, WEST_STONE],
+        monsters: [WARDEN, dummyAt('gateway-guard', 4, 2)],
       }),
     },
     {
