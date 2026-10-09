@@ -31,4 +31,6 @@ export const DEPTH = {
   title: 300,
   /** The ending and the credits, a scene of its own as the title is. */
   ending: 300,
+  /** The picture behind the title screen, and behind the ending and the credits: under their windows, text and logo. */
+  backdrop: 290,
 } as const;

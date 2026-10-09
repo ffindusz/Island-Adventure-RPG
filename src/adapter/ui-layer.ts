@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { drawBitmap, drawText } from './pixel-font';
+import { drawBitmap, drawScaledBitmap, drawText, textBitmap } from './pixel-font';
 import type { Bitmap, Graphics } from './pixel-font';
 
 // What the HUD, the overlay, the notice and the area banner draw with, so that they look like one set: the colours of
@@ -18,6 +18,9 @@ export const INK = {
   dim: 0x8d977f,
   /** Text on the orange button that shows where the cursor is. */
   onButton: 0x34312c,
+  /** The dark outline and the brown extrusion of the big name on the title screen, round letters of the `title` colour. */
+  logoOutline: 0x141b1b,
+  logoShade: 0x965340,
   health: 0xe0394c,
   experience: 0xffad5d,
 } as const;
@@ -146,6 +149,11 @@ export class UiLayer {
 
   text(text: string, left: number, top: number, colour: number): void {
     drawText(this.graphics, text, left, top, colour);
+  }
+
+  /** The text `scale` times as big, a whole number of times, so that its pixels stay as sharp as the pictures'. */
+  scaledText(text: string, left: number, top: number, colour: number, scale: number): void {
+    drawScaledBitmap(this.graphics, textBitmap(text), left, top, colour, scale);
   }
 
   bitmap(bitmap: Bitmap, left: number, top: number, colour: number): void {

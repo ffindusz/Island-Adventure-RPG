@@ -2,13 +2,14 @@ import Phaser from 'phaser';
 import type { Game } from '../core';
 import { ARTWORK } from './artwork';
 import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
-import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
+import { VIEW_WIDTH } from './config';
 import { DEPTH } from './depths';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import { PlayerInput } from './player-input';
 import type { SavedGame, SaveStore } from './save-store';
 import { SCENE_KEYS, startOfNewGame } from './scene-keys';
 import type { PlayStart } from './scene-keys';
+import { GAME_TITLE, LOGO_EXTRUSION_OFFSETS, LOGO_OUTLINE_OFFSETS, logoLayout, windowTop } from './title-layout';
 import { MENU_ENTRIES, openMenu, pressMenu, selectableEntries } from './title-menu';
 import type { MenuEntry, TitleMenu } from './title-menu';
 import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
@@ -16,7 +17,9 @@ import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
 // The title screen: what the game opens on, and the way into it. It offers New Game and Continue, tells the player why
 // a saved game cannot be continued from, and starts the play screen. It decides nothing about the game: the rules of
 // the menu are in title-menu.ts, the verdict on the saved game is the save store's (save-store.ts), and the Game core
-// is only told which of the two begins. It never saves: the autosave belongs to the play screen (autosave.ts).
+// is only told which of the two begins. It never saves: the autosave belongs to the play screen (autosave.ts). It is a
+// picture of the coast (the backdrop), the name of the game across the top in big letters and the menu in a window
+// under it; where the name and the window go is title-layout.ts's.
 
 const WINDOW_WIDTH = 200;
 /** From a window's edge to what it holds, the window's frame being the first 4 pixels of it. */
@@ -59,6 +62,7 @@ export class TitleScene extends Phaser.Scene {
   create(): void {
     buildDrawnArt(this.textures, ARTWORK);
     requireLoadedArt(this.textures, ARTWORK);
+    this.add.image(0, 0, 'backdrop-title').setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.backdrop);
     this.layer = new UiLayer(this, DEPTH.title);
     const keyboard = this.input.keyboard;
     if (keyboard === null) {
@@ -103,6 +107,7 @@ export class TitleScene extends Phaser.Scene {
     }
     this.shown = key;
     this.layer.clear();
+    drawLogo(this.layer);
     drawWindow(this.layer, rows);
   }
 }
@@ -138,12 +143,9 @@ function entryRow(entry: MenuEntry, menu: TitleMenu, canContinue: boolean): Row 
   };
 }
 
-/** What the window holds for the menu and the saved game as they stand. */
+/** What the window holds for the menu and the saved game as they stand. The name of the game is the logo's, over it. */
 function rowsFor(menu: TitleMenu, saved: SavedGame): Row[] {
-  const rows: Row[] = [
-    { kind: 'text', text: 'ISLAND ADVENTURE', colour: INK.title },
-    { kind: 'space', height: 0 },
-  ];
+  const rows: Row[] = [];
   if (menu.confirming) {
     rows.push(
       { kind: 'text', text: 'REPLACE THE SAVED GAME?', colour: INK.warning },
@@ -192,11 +194,21 @@ function stackHeight(rows: readonly Row[]): number {
   return height;
 }
 
-/** Draws the window with the rows one under the other, in the middle of the screen. */
+/** Draws the name of the game across the top: the letters in the title colour, a brown extrusion under them and a dark outline round both. */
+function drawLogo(layer: UiLayer): void {
+  const logo = logoLayout();
+  const paint = (offset: { readonly x: number; readonly y: number }, colour: number): void =>
+    layer.scaledText(GAME_TITLE, logo.left + offset.x, logo.top + offset.y, colour, logo.scale);
+  LOGO_OUTLINE_OFFSETS.forEach((offset) => paint(offset, INK.logoOutline));
+  LOGO_EXTRUSION_OFFSETS.forEach((offset) => paint(offset, INK.logoShade));
+  paint({ x: 0, y: 0 }, INK.title);
+}
+
+/** Draws the window with the rows one under the other, under the name of the game. */
 function drawWindow(layer: UiLayer, rows: readonly Row[]): void {
   const height = stackHeight(rows) + 2 * PADDING;
   const left = Math.floor((VIEW_WIDTH - WINDOW_WIDTH) / 2);
-  const top = Math.floor((VIEW_HEIGHT - height) / 2);
+  const top = windowTop(height);
   const inside = { left: left + WINDOW_FRAME, top: top + WINDOW_FRAME };
   layer.frame('window', left, top, WINDOW_WIDTH, height);
   layer.frame('panel', inside.left, inside.top, WINDOW_WIDTH - 2 * WINDOW_FRAME, height - 2 * WINDOW_FRAME);

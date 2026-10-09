@@ -117,3 +117,58 @@ export function drawText(graphics: Graphics, text: string, x: number, y: number,
     left += ADVANCE;
   }
 }
+
+/** A rectangle of canvas pixels. */
+export interface Rect {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+const BLANK_ROW = '.'.repeat(GLYPH_WIDTH);
+
+/** A rectangle that `scaledRects` is still making taller. */
+type Growing = { x: number; y: number; width: number; height: number };
+
+/** The text as one bitmap, its letters one advance apart as `drawText` lays them out: blank where the font has no letter. */
+export function textBitmap(text: string): Bitmap {
+  const letters = [...text].map((character) => glyphFor(character) ?? []);
+  return Array.from({ length: GLYPH_HEIGHT }, (_, row) => letters.map((glyph) => glyph[row] ?? BLANK_ROW).join('.'));
+}
+
+/**
+ * The rectangles that draw the bitmap with each of its pixels `scale` canvas pixels wide and high, a run of pixels along
+ * a row as one rectangle and the same run on the rows under it joined to it. The scale is a whole number: anything
+ * between would put the edge of a pixel inside a canvas pixel, and the letters would blur.
+ */
+export function scaledRects(bitmap: Bitmap, scale: number): Rect[] {
+  if (!Number.isInteger(scale) || scale < 1) {
+    throw new RangeError(`A bitmap is drawn at a whole number of canvas pixels per pixel, not ${scale}.`);
+  }
+  const rects: Growing[] = [];
+  let open = new Map<string, Growing>();
+  bitmap.forEach((row, rowIndex) => {
+    const next = new Map<string, Growing>();
+    for (const run of row.matchAll(/#+/g)) {
+      const key = `${run.index}:${run[0].length}`;
+      let rect = open.get(key);
+      if (rect === undefined) {
+        rect = { x: run.index * scale, y: rowIndex * scale, width: run[0].length * scale, height: 0 };
+        rects.push(rect);
+      }
+      rect.height += scale;
+      next.set(key, rect);
+    }
+    open = next;
+  });
+  return rects;
+}
+
+/** Draws the bitmap with each pixel `scale` canvas pixels across, its top left at x, y. */
+export function drawScaledBitmap(graphics: Graphics, bitmap: Bitmap, x: number, y: number, colour: number, scale: number): void {
+  graphics.fillStyle(colour);
+  for (const rect of scaledRects(bitmap, scale)) {
+    graphics.fillRect(x + rect.x, y + rect.y, rect.width, rect.height);
+  }
+}

@@ -104,6 +104,9 @@ export const ARTWORK = {
   'ui-window': image('ui-window.png'),
   'ui-button': image('ui-button.png'),
   'ui-heart': image('ui-heart.png'),
+  // The picture behind the title screen: the whole canvas (320 by 192 pixels), a morning on the coast, composed from the
+  // pack by docs/assets/compose-art.py. The name and the menu window are drawn over it (title-layout.ts).
+  'backdrop-title': image('backdrop-title.png'),
 } as const satisfies ArtManifest;
 
 /** The name of a picture the adapter itself asks for. */
