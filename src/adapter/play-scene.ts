@@ -32,6 +32,7 @@ import type { SaveStore } from './save-store';
 import { SCENE_KEYS } from './scene-keys';
 import type { PlayStart } from './scene-keys';
 import { bakeGround } from './terrain-baker';
+import { gameIsWaiting } from './waiting';
 
 /** How long the screen takes to fade in after the hero is defeated and returned, in milliseconds. */
 const DEFEAT_FADE_MS = 500;
@@ -45,11 +46,6 @@ const OPENING_FADE_MS = 600;
 /** Whether the player can be looking at the game: its tab is showing and its window has the keyboard focus. */
 function playerIsWatching(): boolean {
   return document.hasFocus() && !document.hidden;
-}
-
-/** Whether the game waits for the player: a page is open, or a Stat Point has to be assigned. */
-function gameIsWaiting(view: GameView): boolean {
-  return view.phase === 'playing' && (view.page !== null || view.levelUp !== null);
 }
 
 /**
