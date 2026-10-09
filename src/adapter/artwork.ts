@@ -72,6 +72,11 @@ export const ARTWORK = {
   'monster-cave-lizard': sheet('monster-cave-lizard.png', 16),
   'monster-cave-eye': sheet('monster-cave-eye.png', 16),
   'monster-cave-bear': sheet('monster-cave-bear.png', 16),
+  // The undead of the castle, in sheets of the same make.
+  'monster-castle-skeleton': sheet('monster-castle-skeleton.png', 16),
+  'monster-castle-ghoul': sheet('monster-castle-ghoul.png', 16),
+  'monster-castle-wraith': sheet('monster-castle-wraith.png', 16),
+  'monster-castle-knight': sheet('monster-castle-knight.png', 16),
   // What monsters share: the orb that a ranged monster shoots (four frames of 16 pixels), and the puff left where one
   // fell (six frames of 32 pixels).
   'projectile-orb': sheet('projectile-orb.png', 16),

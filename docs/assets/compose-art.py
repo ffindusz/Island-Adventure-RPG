@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Composes pictures from pieces of the Ninja Adventure pack: the ground and the monsters of the shipwreck coast and the
 woods, the ground and the monsters of the mountain and of the cave, the ground (the masonry, the flagstones, the moss, the
-pillars, the fountain, the harbor and its quay) of the castle, the props every area shares, and the icons of the two bows.
+pillars, the fountain, the harbor and its quay) and the undead of the castle, the props every area shares, and the icons of
+the two bows.
 
 The pack (CC0, Pixel-Boy and AAA) is not in the repository. Pass the folder that holds `Backgrounds`, `Actor`, `Items`
 and `FX` as --pack; the pictures are written under public/art/ and are committed with it. Run it again to remake them:
@@ -430,6 +431,14 @@ SPITTER_CAP = {'#e0394c': '#a15fd8', '#8f3e56': '#5e3a8c'}
 # pack's bear is red too, so the cave's bear is made brown.
 VETERAN_STEEL = {'#8d977f': '#8aa0d0', '#5f7160': '#4c62a4', '#4e484a': '#3c4478', '#3b3643': '#2a2e5a'}
 CAVE_BEAR = {'#d14b34': '#8a6246', '#8f3e56': '#523a2c'}
+
+# The undead of the castle are the pack's creatures, drawn four ways like the others. The skeleton is the pack's, as it
+# is. The ghoul is the pack's red beast, a squat thing with a scowl, made the yellow-green of something long dead (it is
+# paler than the floors, so that it shows on them). The wraith is the pack's spirit made violet, the colour of the orb it
+# shoots. The knight is the pack's golden knight, tarnished: a gold, horned thing that no raider of the mountain is.
+GHOUL_FLESH = {'#d14b34': '#b9c28e', '#8f3e56': '#7c8650', '#ef914f': '#e8e6a8'}
+WRAITH_VIOLET = {'#79b8ce': '#a77ee0', '#9ba7aa': '#7c60b8'}
+KNIGHT_TARNISHED = {'#f1c471': '#d1a64e', '#d78b4a': '#9a6e36', '#d14b34': '#c0392b', '#8f3e56': '#5a2d4a'}
 
 
 def projectile_orb(pack):
@@ -986,6 +995,10 @@ BUILDERS = {
     'monster-cave-lizard': lambda pack: monster_four_ways(pack, 'Lizard', 'Lizard.png'),
     'monster-cave-eye': lambda pack: monster_four_ways(pack, 'Eye', 'Eye.png'),
     'monster-cave-bear': lambda pack: monster_four_ways(pack, 'Bear', 'SpriteSheet.png', CAVE_BEAR),
+    'monster-castle-skeleton': lambda pack: monster_four_ways(pack, 'Skeleton', 'SpriteSheet.png', kind='Character'),
+    'monster-castle-ghoul': lambda pack: monster_four_ways(pack, 'Beast', 'Beast.png', GHOUL_FLESH),
+    'monster-castle-wraith': lambda pack: monster_four_ways(pack, 'Spirit', 'SpriteSheet.png', WRAITH_VIOLET, 'Character'),
+    'monster-castle-knight': lambda pack: monster_four_ways(pack, 'KnightGold', 'SpriteSheet.png', KNIGHT_TARNISHED, 'Character'),
     'prop-chest': chest_sheet,
     'prop-pickup': pickup_sheet,
     'prop-checkpoint': checkpoint_sheet,
