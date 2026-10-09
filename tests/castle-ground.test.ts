@@ -190,12 +190,18 @@ describe('the harbor of the castle', () => {
     for (const x of [0, 1]) expect(new Set(artsOn(stamps, x, 0)), `the tile at ${x}`).toEqual(new Set(['castle-floor']));
   });
 
-  it('counts the water above and below as near too, and lays no planks on grass or on rock', () => {
-    const stamps = plan('castle', '~', '.', '.', '.', '.', '.', ',', '#');
+  it('counts the water above and below as near too, four tiles from either', () => {
+    const stamps = plan('castle', '~', '.', '.', '.', '.', '.', '.', '.', '.', '.', '~');
 
-    expect(artsOn(stamps, 0, 4)).toEqual(['castle-dock']);
+    for (const y of [1, 2, 3, 4, 6, 7, 8, 9]) expect(artsOn(stamps, 0, y), `the tile at row ${y}`).toEqual(['castle-dock']);
     expect(new Set(artsOn(stamps, 0, 5))).toEqual(new Set(['castle-floor']));
-    expect(stamps.filter((stamp) => stamp.art === 'castle-dock' && stamp.y > 4)).toEqual([]);
+  });
+
+  it('lays no planks on grass or on rock, though the water is beside them', () => {
+    const stamps = plan('castle', '~,.', '~#.', '~#.');
+    const planked = stamps.filter((stamp) => stamp.art === 'castle-dock').map((stamp) => `${stamp.x},${stamp.y}`);
+
+    expect(planked.sort()).toEqual(['2,0', '2,1', '2,2']);
   });
 
   it('draws the water from the grey-green sheet of the castle, its shore included, and leaves other looks their water', () => {
