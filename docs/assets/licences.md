@@ -106,8 +106,8 @@ Last updated: 2026-10-09. The user approved the Ninja Adventure pack as the art 
   - `Audio\Sounds\Bonus\PowerUp1.wav` as `sfx\powerup1.wav`: a new level.
   - `Audio\Sounds\Magic & Skill\Magic1.wav` as `sfx\magic1.wav`: a Checkpoint lit, and the vessel prepared.
   - `Audio\Sounds\Alert\Alert.wav` as `sfx\alert.wav`: the hero defeated.
-  - `Audio\Sounds\Menu\Menu5.wav` as `sfx\menu5.wav`: a page opened.
-  - `Audio\Sounds\Menu\Menu6.wav` as `sfx\menu6.wav`: a page closed.
+  - `Audio\Sounds\Menu\Menu5.wav` as `sfx\menu5.wav`: a page opened, and a question asked (whether to sail home, and whether to replace the saved game).
+  - `Audio\Sounds\Menu\Menu6.wav` as `sfx\menu6.wav`: a page closed, and a question put away.
   - `Audio\Sounds\Menu\Accept3.wav` as `sfx\accept3.wav`: a choice made: gear equipped, a Stat Point spent, the choices of the title screen, and the ending reached.
   - `Audio\Sounds\Magic & Skill\Heal.wav` as `sfx\heal.wav`: a Healing Potion used.
   - `Audio\Sounds\Menu\Cancel2.wav` as `sfx\cancel2.wav`: a refusal: a locked door, and a shot with no ammunition.
