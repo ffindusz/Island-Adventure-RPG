@@ -1,4 +1,4 @@
-import type { ContentDefinition, GameEvent } from '../core';
+import type { ContentDefinition, GameEvent, GameView } from '../core';
 import type { ArtLookup } from './asset-manifest';
 
 // The audio manifest: every sound the adapter can play is registered here by name, and the scenes ask for sounds by those
@@ -223,4 +223,55 @@ export function effectsFor(events: readonly GameEvent[]): Effect[] {
     }
   }
   return effects;
+}
+
+/**
+ * The effects of one frame of play: those of its events, and the one of the question whether to sail home opening or being
+ * turned down. The core tells nothing of that question, so the views before and after the frame tell it.
+ */
+export function effectsOfFrame(events: readonly GameEvent[], before: GameView, after: GameView): Effect[] {
+  const effects = effectsFor(events);
+  const question = questionEffect(before, after);
+  return question === null || effects.includes(question) ? effects : [...effects, question];
+}
+
+/**
+ * Opening the question is heard as a page opening, and turning it down as one closing. Answering it is `ending-reached`,
+ * after which the game is back at the title: that is not a closing.
+ */
+function questionEffect(before: GameView, after: GameView): Effect | null {
+  if (after.phase !== 'playing') {
+    return null;
+  }
+  const wasOpen = before.phase === 'playing' && before.departure !== null;
+  const isOpen = after.departure !== null;
+  if (isOpen === wasOpen) {
+    return null;
+  }
+  return isOpen ? 'page-open' : 'page-close';
+}
+
+/**
+ * Whether the fight is on after the events of a frame, given whether it was on before. The Guardian noticing the hero
+ * begins it. It ends when the Guardian or the hero falls, when the hero comes into another area, and when the game ends.
+ * The events are taken in the order they were told, so the last of them in a frame wins.
+ */
+export function fightAfter(fight: boolean, events: readonly GameEvent[]): boolean {
+  let on = fight;
+  for (const event of events) {
+    switch (event.type) {
+      case 'guardian-engaged':
+        on = true;
+        break;
+      case 'guardian-defeated':
+      case 'hero-defeated':
+      case 'area-changed':
+      case 'ending-reached':
+        on = false;
+        break;
+      default:
+        break;
+    }
+  }
+  return on;
 }
