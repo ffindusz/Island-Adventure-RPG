@@ -1008,10 +1008,11 @@ def castle_fountain(pack):
 
 # The old vessel lies in the water at the end of the quay with its bow to the north and its side against the planks: the
 # pack's boat, a tile shorter so that water shows round it, turned and weathered, with a mast and the pack's sail. The
-# picture is three tiles wide and seven tall (src/adapter/prop-sprites.ts stands it so that its bottom left tile is the
-# vessel's own, the last of the quay): that tile with the post the vessel is moored to, then the two tiles of water, and the
-# two tiles of rock above them, over which the mast and the sail stand. Frame 0 is the vessel as it is found, its sail furled
-# on the mast; frame 1 is the vessel prepared, its sail hoisted.
+# picture is three tiles wide and seven tall (src/adapter/prop-sprites.ts stands it so that the left tile of its fifth row
+# is the vessel's own, the last of the quay): that tile holds the post the vessel is moored to, the hull lies in the water of
+# the two columns beside it, which is five rows tall (two above the tile and two below), and the two tiles of rock above that
+# water are where the mast and the sail stand. Frame 0 is the vessel as it is found, its sail furled on the mast; frame 1 is
+# the vessel prepared, its sail hoisted.
 VESSEL_CELL = (3 * TILE, 7 * TILE)
 VESSEL_HULL_AT = (17, 40)
 VESSEL_MAST_AT = (30, 30)
