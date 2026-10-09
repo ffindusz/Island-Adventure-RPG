@@ -77,6 +77,8 @@ export const ARTWORK = {
   'monster-castle-ghoul': sheet('monster-castle-ghoul.png', 16),
   'monster-castle-wraith': sheet('monster-castle-wraith.png', 16),
   'monster-castle-knight': sheet('monster-castle-knight.png', 16),
+  // The Guardian is the one monster of its picture's size: cells of 96 pixels, for it stands four tiles and a half wide.
+  'monster-castle-guardian': sheet('monster-castle-guardian.png', 96),
   // What monsters share: the orb that a ranged monster shoots (four frames of 16 pixels), and the puff left where one
   // fell (six frames of 32 pixels).
   'projectile-orb': sheet('projectile-orb.png', 16),

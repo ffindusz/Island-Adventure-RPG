@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Composes pictures from pieces of the Ninja Adventure pack: the ground and the monsters of the shipwreck coast and the
 woods, the ground and the monsters of the mountain and of the cave, the ground (the masonry, the flagstones, the moss, the
-pillars, the fountain, the harbor and its quay) and the undead of the castle, the props every area shares, and the icons of
-the two bows.
+pillars, the fountain, the harbor and its quay) and the undead and the Guardian of the castle, the props every area
+shares, and the icons of the two bows.
 
 The pack (CC0, Pixel-Boy and AAA) is not in the repository. Pass the folder that holds `Backgrounds`, `Actor`, `Items`
 and `FX` as --pack; the pictures are written under public/art/ and are committed with it. Run it again to remake them:
@@ -454,6 +454,50 @@ def monster_side(pack, folder, name):
     right = [sprite.crop((i * width, 0, (i + 1) * width, sprite.height)) for i in range(2)]
     left = [frame.transpose(Image.FLIP_LEFT_RIGHT) for frame in right]
     return monster_sheet([[right[i], right[i], left[i], right[i]] for i in range(2)])
+
+
+# The Guardian of the castle is the pack's Giant Blue Samurai, a boss as wide as four tiles and a half, so its cells are
+# 96 by 96 pixels. The pack draws it from the front only, with the strips of its idle and walk 48 pixels tall and those of
+# its lunge 96 tall, so each frame is set in its cell so that the middle of the body is the middle of the cell, which is
+# where the monster stands. Its blue is made a pale teal, its gold crescent ivory and its orange and red knots the glow of
+# a lit lamp: the Guardian is armour with nothing in it. The pack has no back or side view, so up is the mirror of down,
+# and left and right lean three pixels each way. The wind-up row is the lunge of the pack, the blade raised high.
+GUARDIAN_PALE = {
+    '#79b8ce': '#b6e6d9', '#5f7160': '#5aa59b', '#3b3643': '#2b5560', '#f1c471': '#eef7e3',
+    '#ef914f': '#5ff0d6', '#d3a2c0': '#cfeee6', '#d14b34': '#3fd8c8',
+}
+BOSS_CELL = 96
+BOSS_WALK_FRAMES = 6
+BOSS_LIFT = 24
+BOSS_LUNGE_LIFT = {'ChargeLeft': -2, 'ChargeRight': -10}
+BOSS_LEAN = 3
+
+
+def boss_frame(strip, index, lift, lean=0):
+    """Frame `index` of a strip of the pack's boss, set in a cell of 96 by 96, `lift` pixels down and `lean` to the right."""
+    cell = Image.new('RGBA', (BOSS_CELL, BOSS_CELL), (0, 0, 0, 0))
+    cell.paste(strip.crop((index * BOSS_CELL, 0, (index + 1) * BOSS_CELL, strip.height)), (lean, lift))
+    return cell
+
+
+def guardian_sheet(pack):
+    colours = {hexrgb(old): hexrgb(new) for old, new in GUARDIAN_PALE.items()}
+    strip = {
+        name: recolour(pack.image('Actor', 'Boss', 'GiantBlueSamurai', name + '.png'), colours)
+        for name in ('Walk', 'ChargeLeft', 'ChargeRight')
+    }
+    ways = [
+        [boss_frame(strip['Walk'], f, BOSS_LIFT) for f in range(BOSS_WALK_FRAMES)],
+        [boss_frame(strip['Walk'], f, BOSS_LIFT).transpose(Image.FLIP_LEFT_RIGHT) for f in range(BOSS_WALK_FRAMES)],
+        [boss_frame(strip['Walk'], f, BOSS_LIFT, -BOSS_LEAN) for f in range(BOSS_WALK_FRAMES)],
+        [boss_frame(strip['Walk'], f, BOSS_LIFT, BOSS_LEAN).transpose(Image.FLIP_LEFT_RIGHT) for f in range(BOSS_WALK_FRAMES)],
+    ]
+    rows = [[way[f] for way in ways] for f in range(BOSS_WALK_FRAMES)]
+    lunge_left = boss_frame(strip['ChargeLeft'], 1, BOSS_LUNGE_LIFT['ChargeLeft'])
+    lunge_right = boss_frame(strip['ChargeRight'], 1, BOSS_LUNGE_LIFT['ChargeRight'])
+    rows.append([white_shape(frame) for frame in rows[0]])
+    rows.append([red_shape(frame) for frame in (lunge_right, lunge_left, lunge_left, lunge_right)])
+    return frames_sheet([frame for row in rows for frame in row], 4, (BOSS_CELL, BOSS_CELL))
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -999,6 +1043,7 @@ BUILDERS = {
     'monster-castle-ghoul': lambda pack: monster_four_ways(pack, 'Beast', 'Beast.png', GHOUL_FLESH),
     'monster-castle-wraith': lambda pack: monster_four_ways(pack, 'Spirit', 'SpriteSheet.png', WRAITH_VIOLET, 'Character'),
     'monster-castle-knight': lambda pack: monster_four_ways(pack, 'KnightGold', 'SpriteSheet.png', KNIGHT_TARNISHED, 'Character'),
+    'monster-castle-guardian': guardian_sheet,
     'prop-chest': chest_sheet,
     'prop-pickup': pickup_sheet,
     'prop-checkpoint': checkpoint_sheet,
