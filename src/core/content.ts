@@ -12,6 +12,7 @@ import {
 } from './device-content';
 import type { Door, Gate, Key, Lever, Sign } from './device-content';
 import { checkRoutesStayOpen } from './device-routes';
+import { checkGuardianPlace, checkGuardians } from './guardian-content';
 import { CONSUMABLE_IDS, GEAR_SLOTS, STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
@@ -346,7 +347,10 @@ export function loadContent(definition: ContentDefinition): Content {
   }
   checkKeysAndDoors(Object.values(areas));
   checkLeverTargets(Object.values(areas));
-  checkRoutesStayOpen(Object.values(areas), { areaId: startArea.id, tile: definition.start.tile });
+  const start = { areaId: startArea.id, tile: definition.start.tile };
+  const guardians = checkGuardians(Object.values(areas), monsterTypes);
+  checkRoutesStayOpen(Object.values(areas), start, guardians);
+  checkGuardianPlace(start, guardians, definition.requireGuardian === true);
   return {
     hero: {
       size: definition.hero.size,
