@@ -9,6 +9,7 @@ To print the tables again after a tuning:
 
 - `npx vitest run tests/fights.test.ts --silent=false`: the fight table, the Gear steps and the supplies.
 - `npx vitest run tests/guardian-balance.test.ts --silent=false`: the Guardian's table.
+- `npx vitest run tests/play-time.test.ts --silent=false`: the basis, the guesses and the estimates of the play time.
 - The Experience of the route is pinned in `tests/route-experience.test.ts`.
 
 ## Experience along the route
@@ -228,8 +229,90 @@ says otherwise; the Level 3 hero has the Knight Mail and the Basic Sword. The se
 - The Guardian's Health cannot be raised much past 117 without breaking the 40-strike ceiling that
   `tests/the-guardian.test.ts` keeps.
 
+## Play time
+
+The spec expects a first playthrough of about 45 to 60 minutes (`spec.md`, the aims and user story 20).
+`tests/play-time.ts` estimates it from two kinds of input; `tests/play-time.test.ts` keeps its arithmetic and its
+measurements true. **No number was chosen to reach the target**: the guesses below were written down before the
+estimate was first computed, and they were not changed after.
+
+**Measured or counted** from the shipped content and the core: the route of each area walked at the hero's speed (5
+tiles a second; the model's walk agrees with the core's own to within a tile), the plain fights played through the core
+(a build with its Stat Points split, as in "The fights"), the walk there and back to what lies off the route (with
+every door open; *near* is within four tiles of the route with the doors shut, as in "The supplies"), the words on
+show, the level-ups, the areas, the pieces of Gear, the keys and levers, the walk back to each demanding fight, and one
+fight with the Guardian played by the dodging bot (reaction 450 ms, a lapse every third telegraph, a potion at half
+Health, a main-route hero with the Stat Points split and six potions).
+
+| Area | Walk (s) | Fights met | Plain fights (s) | Fights off the route | Plain fights off it (s) | Near errands (s) | Far errands (s) | Puzzles | Near Gear | Far Gear |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| shipwreck-coast | 6.8 | 2 | 2.1 | 1 | 1.1 | 0.8 | 4.4 | 0 | 0 | 1 |
+| woods | 11.2 | 4 | 2.8 | 2 | 1.3 | 1.6 | 19.2 | 1 | 1 | 2 |
+| mountain | 22.0 | 5 | 6.8 | 1 | 1.0 | 4.4 | 8.0 | 0 | 1 | 0 |
+| cave | 22.8 | 5 | 5.8 | 1 | 1.3 | 4.4 | 14.8 | 1 | 0 | 1 |
+| castle | 17.8 | 8 | 9.5 | 2 | 2.9 | 5.2 | 19.6 | 0 | 1 | 0 |
+| Total | 80.6 | 24 | 27.0 | 7 | 7.5 | 16.4 | 66.0 | 2 | 3 | 4 |
+
+| Counted for the whole adventure | Value |
+| --- | ---: |
+| Words to read | 143 |
+| Level-ups | 5 |
+| Areas | 5 |
+| Demanding fights: walk back from the Checkpoint (s) | 13.6, 20.6, 13.0 |
+| Demanding fights: plain fight (s) | 2.4, 2.6, 2.6 |
+| Guardian: walk to it, one won fight, walk on to the vessel (s) | 2.2, 19.4, 2.4 |
+
+**Guessed**: what only a playtest can tell. Each guess has a low, a typical and a high value, and a scenario takes all of
+its values at once: the low estimate is a quick player who knows where to go, the high one a slow player who looks for
+everything.
+
+| Guess | Unit | Low | Typical | High | Why |
+| --- | --- | --- | --- | --- | --- |
+| setupSeconds | seconds | 15 | 60 | 180 | The title, the controls and a first look around the coast before the first step of the way. |
+| wordsPerMinute | words a minute | 250 | 200 | 120 | Silent reading runs at 200 to 250 words a minute; on a screen with a hero to steer it is slower. |
+| wandering | times the route | 1.5 | 2.5 | 4 | The way is marked but not known, so a first visit doubles back, tries a branch and stops at the map. |
+| fightCare | times a plain fight | 1 | 2 | 3 | A plain fight is the quickest win; a player also backs off, shoots, dodges and picks up what is dropped. |
+| sideShare | share of the side material | 0 | 0.5 | 1 | A player goes to none of the far finds, puzzles and lone monsters, or half of them, or all of them. |
+| puzzleSeconds | seconds a puzzle | 20 | 90 | 300 | A player who looks for the key or the lever from the sign finds it fast; one who does not searches the area. |
+| pageSeconds | seconds a look | 8 | 15 | 30 | A level-up, a new area or a new piece of Gear brings a look at the inventory, the Stat Points or the Automap. |
+| defeatsPerHardFight | defeats a demanding fight | 0 | 0.5 | 1.5 | A defeat costs the walk back from the Checkpoint and the fight again; the demanding fights defeat some players. |
+| guardianAttempts | fights with the Guardian | 1 | 2 | 4 | The first try learns the three attacks that a player has not seen, and the next ones use what it learned. |
+
+**The estimate**, part by part, in minutes (each part is a measured figure times its guesses: the route is walked
+`wandering` times, a plain fight is taken `fightCare` times over, and the side material is taken `sideShare` of the
+way):
+
+| Part (minutes) | low | typical | high |
+| --- | ---: | ---: | ---: |
+| setup | 0.3 | 1.0 | 3.0 |
+| reading | 0.6 | 0.7 | 1.2 |
+| walking | 2.0 | 3.4 | 5.4 |
+| fights | 0.5 | 1.0 | 1.7 |
+| side finds | 0.3 | 0.8 | 1.4 |
+| puzzles | 0.0 | 1.5 | 10.0 |
+| pages | 1.7 | 3.8 | 8.5 |
+| defeats | 0.0 | 0.5 | 1.8 |
+| Guardian | 0.4 | 1.4 | 4.1 |
+| Total | 5.7 | 14.1 | 37.0 |
+| Against the 45 to 60 minutes of the spec | under | under | under |
+
+**The adventure is well short of the target.** A hero that never stops walks all five routes in 81 seconds and wins the
+24 fights of the way in 27; the typical estimate is 14 minutes, the low about 6 and the high 37. No scenario reaches 45,
+and the high one takes every guess at its slow end at once. The parts that move most between the scenarios are the
+puzzles (up to ten minutes if a player searches for both keys), the looks at the menus and walking.
+
+**No number can close the gap**, and none was tried. The 24 plain fights of the way together last under half a minute,
+so doubling the Health of every monster would add about a minute to the typical estimate; a hero half as fast would add
+about five minutes of walking and cost the feel of the controls. At about three minutes an area for the typical
+player, 45 minutes is an adventure of roughly fifteen areas of this size, or five areas about three times as long,
+with more to meet and more to find (see "Proposals"). The estimate is the answer of a model, and the manual playtest is
+its test: the playtest checklist asks for the clock time from the title to the credits.
+
 ## What these numbers rest on
 
+- **The play-time estimate is arithmetic over guesses.** What is measured is exact for this content; the nine guesses
+  are mine, with the reasons in the table, and only a playtest can replace them. The words to read are the placeholder
+  story: a longer story adds about a minute for every 200 words.
 - **The bot's reaction and lapse are stand-ins** for a person: a lapse is a fixed pattern (every third telegraph), not
   chance, so that a run is exactly repeatable. A person's mistakes come in bunches. The reaction counts from the first
   step of the wind-up. The playtest is what confirms or corrects them.
@@ -248,6 +331,11 @@ says otherwise; the Level 3 hero has the Knight Mail and the Basic Sword. The se
 
 These are not things a number can solve; each would be a new ticket.
 
+- **The adventure is about a third of the length that the spec asks for** (see "Play time": a typical first playthrough
+  of 14 minutes against 45 to 60, and 37 minutes for a slow player who does everything). A content ticket could add
+  areas, lengthen the trails, put more encounters or optional content along them (and then this balance pass would
+  need to run again), or the target could be revised to the length that the adventure has. That is a decision for the
+  user, and the playtest's clock time is the evidence for it.
 - **The weapon upgrades are not near the route.** The ticket asks for upgrades "on or near the route". The Steel Sword
   lies eleven tiles off a 35-step coast, and the Katana is behind a puzzle, so the main-route hero fights the whole game
   with the Basic Sword: the armor and the bow come to it, the sword does not. A placement ticket could put a Melee
