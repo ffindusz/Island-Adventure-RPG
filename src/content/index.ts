@@ -28,5 +28,6 @@ export const gameContent: ContentDefinition = {
   areas: [shipwreckCoast, woods, mountain, cave, castle],
   opening,
   checkCoveredCorner: true,
+  requireGuardian: true,
   start: { area: shipwreckCoast.id, tile: { col: 5, row: 9 } },
 };

@@ -26,6 +26,7 @@ import {
   openTilesOf,
   routeBetween,
   walkRoute,
+  withoutOrdinaryMonsters,
 } from './routes';
 
 // The cave, the fourth area on the route of the adventure, between the mountain and the old castle: what it has to be to
@@ -73,9 +74,12 @@ function definitionOf(id: string): AreaDefinition {
   return area;
 }
 
-/** A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out. */
+/**
+ * A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the
+ * Guardian, which the content must keep.
+ */
 function quietGameAt(areaId: string, tile: Tile): Game {
-  const areas = gameContent.areas.map((area) => ({ ...area, monsters: [] }));
+  const areas = withoutOrdinaryMonsters(gameContent);
   return newGame({ ...gameContent, areas, start: { area: areaId, tile } });
 }
 
@@ -263,7 +267,10 @@ describe('the way through the cave', () => {
 
     expect(events).toContainEqual({ type: 'area-changed', areaId: CASTLE });
     expect(playingView(game).area.id).toBe(CASTLE);
-    expect(playingView(game).checkpoints).toEqual([expect.objectContaining({ id: 'castle-checkpoint', active: true })]);
+    expect(playingView(game).checkpoints).toEqual([
+      expect.objectContaining({ id: 'castle-checkpoint', active: true }),
+      expect.objectContaining({ id: 'guardian-checkpoint', active: false }),
+    ]);
   });
 
   it('winds: the trail is half as long again as the straight line from the way in to the exit forward, and no shorter way over open ground cuts it', () => {

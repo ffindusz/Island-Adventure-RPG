@@ -24,6 +24,7 @@ import {
   openTilesOf,
   routeBetween,
   walkRoute,
+  withoutOrdinaryMonsters,
 } from './routes';
 
 // The mountain, the third area on the route of the adventure, between the woods and the cave: what it has to be to be
@@ -62,9 +63,12 @@ function definitionOf(id: string): AreaDefinition {
   return area;
 }
 
-/** A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out. */
+/**
+ * A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the
+ * Guardian, which the content must keep.
+ */
 function quietGameAt(areaId: string, tile: Tile): Game {
-  const areas = gameContent.areas.map((area) => ({ ...area, monsters: [] }));
+  const areas = withoutOrdinaryMonsters(gameContent);
   return newGame({ ...gameContent, areas, start: { area: areaId, tile } });
 }
 

@@ -22,6 +22,7 @@ import {
   openTilesOf,
   routeBetween,
   walkRoute,
+  withoutOrdinaryMonsters,
 } from './routes';
 
 // The woods, the second area on the route of the adventure, between the coast and the mountain: what they have to be
@@ -54,9 +55,12 @@ function chaserNamed(name: string): ChaserMonsterDefinition {
   return type;
 }
 
-/** A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out. */
+/**
+ * A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the
+ * Guardian, which the content must keep.
+ */
 function quietGameAt(areaId: string, tile: Tile): Game {
-  const areas = gameContent.areas.map((area) => ({ ...area, monsters: [] }));
+  const areas = withoutOrdinaryMonsters(gameContent);
   return newGame({ ...gameContent, areas, start: { area: areaId, tile } });
 }
 

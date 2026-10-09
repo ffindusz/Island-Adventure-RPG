@@ -1,10 +1,10 @@
 import type { AreaDefinition } from '../../core';
 
-// The old castle, the fifth and last area of the adventure, beyond the cave: 64 by 30 tiles, more than three screens wide
+// The old castle, the fifth and last area of the adventure, beyond the cave: 92 by 30 tiles, more than four screens wide
 // and more than two high (20 by 12), so that the view follows the hero. Rock (solid, #) is the walls and all that lies
 // between the rooms. The courtyards are grass and the halls are sand, and the route runs through them in turn, from one
-// to the next by a gateway two tiles wide, and ends at a plain wall: the ticket that adds the Guardian's arena replaces
-// that wall with the way to it. Rows 0 to 2 are rock, so that the top-left corner, which the HUD covers
+// to the next by a gateway two tiles wide, and ends in the last hall, where a gateway of one tile in the east wall leads
+// on to the Guardian's arena. Rows 0 to 2 are rock, so that the top-left corner, which the HUD covers
 // (core/covered-corner.ts), is solid.
 //
 // The way in is the outer yard at the west (grass, columns 1 to 14, rows 4 to 12), the Checkpoint on its tile and the way
@@ -15,7 +15,16 @@ import type { AreaDefinition } from '../../core';
 // columns 28 to 42, rows 5 to 19), with a fountain and four pillars. The route runs along its east side and north to the
 // door of the great hall (column 43, rows 5 and 6), through the great hall (sand, columns 44 to 56, rows 4 to 12), with
 // four pillars, and out by the great gateway (column 57, rows 11 and 12) into the last hall (sand, columns 58 to 62,
-// rows 8 to 14), where nothing is placed. The east wall (column 63) is the end of the route, at the tile (62, 11).
+// rows 8 to 14), where nothing is placed. The east wall (column 63) is solid but for the mouth of the Guardian's
+// gateway, in row 11, and the route of the castle ends against it, at the tile (62, 11).
+//
+// The Guardian's part lies beyond, east of the last hall, and holds no ordinary monster: the gateway, one tile wide and
+// five long (row 11, columns 63 to 67), with the second Checkpoint of the castle in it (column 65); the arena (sand,
+// columns 68 to 83, rows 7 to 15), with four pillars, where the Guardian stands alone, in the middle of the east half
+// at (76, 11), so that all it notices lies within the arena; and, in the far wall of the arena (column 84), the gate
+// that only the Guardian's defeat opens, at the tile (84, 11). Behind the gate lies the forgotten harbor, which nothing
+// else leads to: for now a stub, a quay of sand (columns 85 to 88, rows 10 to 12) with water beside it (columns 89 and
+// 90), enclosed by rock, which the ticket that completes the harbor takes on.
 //
 // Two side paths lead off the route, a good walk each, behind the creatures that the route does not meet. The watch
 // tower is a room (sand, columns 19 to 26, rows 4 to 9) up the stair (columns 24 and 25, rows 10 to 14) that rises from
@@ -28,13 +37,20 @@ import type { AreaDefinition } from '../../core';
 // charges across the courtyard, and the knight, the tougher variant, holds the great hall, where every way through meets
 // it. Nothing notices the hero in the last hall. The Knight Mail lies in the armory, found long before the knight;
 // three caches of arrows and three Healing Potions lie a step or two off the route, the last of each in the great hall
-// past the knight, and a larger stock waits at the end of each side path, where a wraith and a ghoul keep watch.
+// past the knight, and a larger stock waits at the end of each side path, where a wraith and a ghoul keep watch. The
+// Guardian is the castle's one other creature: it waits alone beyond the second Checkpoint, and the supplies for the
+// fight are those of the route, before it.
 export const castle: AreaDefinition = {
   id: 'castle',
   name: 'The Old Castle',
   text: 'The old castle waits in silence.',
   entrances: [{ id: 'from-cave', tile: { col: 1, row: 6 } }],
-  checkpoints: [{ id: 'castle-checkpoint', tile: { col: 1, row: 6 } }],
+  checkpoints: [
+    { id: 'castle-checkpoint', tile: { col: 1, row: 6 } },
+    // The Guardian's Checkpoint, in the one-tile gateway to its arena, which no way to the Guardian goes round, three
+    // tiles from the arena.
+    { id: 'guardian-checkpoint', tile: { col: 65, row: 11 } },
+  ],
   exits: [
     {
       id: 'to-cave',
@@ -43,36 +59,36 @@ export const castle: AreaDefinition = {
     },
   ],
   layout: [
-    '################################################################',
-    '################################################################',
-    '################################################################',
-    '################################################################',
-    '#,,,,,,##,,,,,,####........#################.............#######',
-    '#,,,,,,##,,,,,,####........#,,,,,,,,,,,,,,,..............#######',
-    ',,,,,,,##,,,,,,####........#,,,,,,,,,,,,,,,....#.....#...#######',
-    ',,,,,,,,,,,,,,,####........#,,,,,,,,,,,,,,,#.............#######',
-    '#,,,,,,,,,,,,,,####........#,,,#,,,,,,,#,,,#.............#.....#',
-    '#,,,,,,,,,,,,,,####........#,,,,,,,,,,,,,,,#.............#.....#',
-    '#,,,,,,,,,,,,,,#########..##,,,,,,,,,,,,,,,#...#.....#...#.....#',
-    '#,,,,,,##,,,,,,#########..##,,,,,,###,,,,,,#...................#',
-    '#,,,,,,##,,,,,,##.....##..##,,,,,,###,,,,,,#...................#',
-    '############..###.....##..##,,,,,,###,,,,,,###############.....#',
-    '############..###.....##..##,,,,,,,,,,,,,,,###############.....#',
-    '#########..................#,,,#,,,,,,,,,,,#####################',
-    '#########...................,,,,,,,,,,,#,,,#####################',
-    '#########...#...#...#...#...,,,,,,,,,,,,,,,#####################',
-    '#########..................#,,,,,,,,,,,,,,,#####################',
-    '#########..................#,,,,,,,,,,,,,,,#####################',
-    '##################################..############################',
-    '##################################..############################',
-    '#############################.............######################',
-    '#############################.............######################',
-    '#############################...#.....#...######################',
-    '#############################.............######################',
-    '#############################.............######################',
-    '################################################################',
-    '################################################################',
-    '################################################################',
+    '############################################################################################',
+    '############################################################################################',
+    '############################################################################################',
+    '############################################################################################',
+    '#,,,,,,##,,,,,,####........#################.............###################################',
+    '#,,,,,,##,,,,,,####........#,,,,,,,,,,,,,,,..............###################################',
+    ',,,,,,,##,,,,,,####........#,,,,,,,,,,,,,,,....#.....#...###################################',
+    ',,,,,,,,,,,,,,,####........#,,,,,,,,,,,,,,,#.............###########................########',
+    '#,,,,,,,,,,,,,,####........#,,,#,,,,,,,#,,,#.............#.....#####................########',
+    '#,,,,,,,,,,,,,,####........#,,,,,,,,,,,,,,,#.............#.....#####....#.......#...#####~~#',
+    '#,,,,,,,,,,,,,,#########..##,,,,,,,,,,,,,,,#...#.....#...#.....#####................#....~~#',
+    '#,,,,,,##,,,,,,#########..##,,,,,,###,,,,,,#.............................................~~#',
+    '#,,,,,,##,,,,,,##.....##..##,,,,,,###,,,,,,#...................#####................#....~~#',
+    '############..###.....##..##,,,,,,###,,,,,,###############.....#####....#.......#...#####~~#',
+    '############..###.....##..##,,,,,,,,,,,,,,,###############.....#####................########',
+    '#########..................#,,,#,,,,,,,,,,,#########################................########',
+    '#########...................,,,,,,,,,,,#,,,#################################################',
+    '#########...#...#...#...#...,,,,,,,,,,,,,,,#################################################',
+    '#########..................#,,,,,,,,,,,,,,,#################################################',
+    '#########..................#,,,,,,,,,,,,,,,#################################################',
+    '##################################..########################################################',
+    '##################################..########################################################',
+    '#############################.............##################################################',
+    '#############################.............##################################################',
+    '#############################...#.....#...##################################################',
+    '#############################.............##################################################',
+    '#############################.............##################################################',
+    '############################################################################################',
+    '############################################################################################',
+    '############################################################################################',
   ],
   // The undead of the castle, in the order of the route. The optional ones come last: the wraith of the watch tower and
   // the ghoul of the crypt guard the side paths, where the hero who keeps to the route does not go.
@@ -85,6 +101,8 @@ export const castle: AreaDefinition = {
     { id: 'court-ghoul', type: 'castle-ghoul', tile: { col: 38, row: 12 } },
     { id: 'court-wraith', type: 'castle-wraith', tile: { col: 40, row: 6 } },
     { id: 'great-knight', type: 'castle-knight', tile: { col: 50, row: 8 } },
+    // The Guardian, alone in its arena: in the middle of its east half, so that what it notices lies within the arena.
+    { id: 'arena-guardian', type: 'castle-guardian', tile: { col: 76, row: 11 } },
     { id: 'tower-wraith', type: 'castle-wraith', tile: { col: 22, row: 6 } },
     { id: 'crypt-ghoul', type: 'castle-ghoul', tile: { col: 36, row: 24 } },
   ],
@@ -155,5 +173,8 @@ export const castle: AreaDefinition = {
       tile: { col: 39, row: 26 },
       contents: { kind: 'consumable', consumable: 'ammunition', amount: 8 },
     },
+    // The gate in the far wall of the arena, in front of the forgotten harbor: shut, with no key and no lever, until the
+    // Guardian is defeated.
+    { kind: 'gate', id: 'harbor-gate', tile: { col: 84, row: 11 }, opensWhenDefeated: 'arena-guardian' },
   ],
 };

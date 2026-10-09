@@ -32,9 +32,24 @@ export function neighboursOf({ col, row }: Tile): Tile[] {
   return NEIGHBOURS.map(([stepCol, stepRow]) => ({ col: col + stepCol, row: row + stepRow }));
 }
 
-/** A new game of the content with every monster taken out, for the tests that are not about the monsters. */
+/**
+ * The areas of the content with every monster taken out but the Guardian: the content is refused without one when it
+ * asks for it (`requireGuardian`, which the shipped content does), and the gate that waits for its defeat names it. The
+ * Guardian notices the hero only inside its own arena, which none of the walks of these tests goes into.
+ */
+export function withoutOrdinaryMonsters(content: ContentDefinition): AreaDefinition[] {
+  const guardianTypes = new Set(
+    Object.entries(content.monsterTypes).flatMap(([id, type]) => (type.behavior === 'guardian' ? [id] : [])),
+  );
+  return content.areas.map((area) => ({
+    ...area,
+    monsters: area.monsters.filter((placement) => guardianTypes.has(placement.type)),
+  }));
+}
+
+/** A new game of the content with every ordinary monster taken out, for the tests that are not about the monsters. */
 export function quietGameOf(content: ContentDefinition): Game {
-  return newGame({ ...content, areas: content.areas.map((area) => ({ ...area, monsters: [] })) });
+  return newGame({ ...content, areas: withoutOrdinaryMonsters(content) });
 }
 
 export function isInZone(zone: TileRect, { col, row }: Tile): boolean {
