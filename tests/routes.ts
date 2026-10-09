@@ -57,12 +57,12 @@ export function isInZone(zone: TileRect, { col, row }: Tile): boolean {
 }
 
 /** What stops the hero whatever its state, and what stops it only while it is shut. */
-const ALWAYS_SOLID_KINDS: readonly string[] = ['chest', 'lever', 'sign'];
+const ALWAYS_SOLID_KINDS: readonly string[] = ['chest', 'lever', 'sign', 'vessel'];
 const SOLID_WHILE_SHUT_KINDS: readonly string[] = ['door', 'gate'];
 
 /**
- * The tiles of an area the hero can stand on: terrain that is not solid, with no chest, lever or sign on it, which are
- * solid too. A door or a gate is solid as well while it is shut, and the hero begins with every one shut. With
+ * The tiles of an area the hero can stand on: terrain that is not solid, with no chest, lever, sign or vessel on it,
+ * which are solid too. A door or a gate is solid as well while it is shut, and the hero begins with every one shut. With
  * `doorsOpen` they all count as open ground, for what the hero can reach once the puzzles are solved.
  */
 export function openTilesOf(

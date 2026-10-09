@@ -4,6 +4,7 @@ import { cave } from './areas/cave';
 import { mountain } from './areas/mountain';
 import { shipwreckCoast } from './areas/shipwreck-coast';
 import { woods } from './areas/woods';
+import { credits, ending } from './ending';
 import { gear } from './gear';
 import { healingPotion } from './healing-potion';
 import { hero } from './hero';
@@ -27,6 +28,8 @@ export const gameContent: ContentDefinition = {
   monsterTypes,
   areas: [shipwreckCoast, woods, mountain, cave, castle],
   opening,
+  ending,
+  credits,
   checkCoveredCorner: true,
   requireGuardian: true,
   start: { area: shipwreckCoast.id, tile: { col: 5, row: 9 } },

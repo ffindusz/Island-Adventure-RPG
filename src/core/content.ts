@@ -361,11 +361,11 @@ export function loadContent(definition: ContentDefinition): Content {
   }
   checkKeysAndDoors(Object.values(areas));
   checkLeverTargets(Object.values(areas));
-  checkVessels(Object.values(areas), ending !== null);
   const start = { areaId: startArea.id, tile: definition.start.tile };
   const guardians = checkGuardians(Object.values(areas), monsterTypes);
-  checkRoutesStayOpen(Object.values(areas), start, guardians);
-  checkGuardianPlace(start, guardians, definition.requireGuardian === true);
+  const vessels = checkVessels(Object.values(areas), ending !== null);
+  checkRoutesStayOpen(Object.values(areas), start, [...guardians, ...vessels]);
+  checkGuardianPlace(start, guardians, vessels, definition.requireGuardian === true);
   return {
     hero: {
       size: definition.hero.size,

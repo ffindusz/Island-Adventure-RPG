@@ -23,7 +23,7 @@ import { isInZone, keyOf, neighboursOf, openTilesOf, routeBetween, walkRoute, wi
 
 // The Guardian of the island, the one monster that the game ships with besides the creatures of the five Adventure Areas,
 // and what lies around it at the east end of the castle: the gateway that leads to it, the Checkpoint in the gateway,
-// the arena, the gate that its defeat opens and the stub of the harbor behind the gate. Like the other tests of the
+// the arena, the gate that its defeat opens and the harbor behind the gate. Like the other tests of the
 // shipped content, these read the map and the lists of the content and play the hero over them with the core's own rules,
 // so that moving a tile never breaks them unless the castle stops being what it is for. The rules of the Guardian are
 // tested on purpose-built content (guardian-*.test.ts); what these test is that the content uses them as it should, and
@@ -37,6 +37,7 @@ import { isInZone, keyOf, neighboursOf, openTilesOf, routeBetween, walkRoute, wi
 const CASTLE = 'castle';
 const GUARDIAN_ID = 'arena-guardian';
 const GATE_ID = 'harbor-gate';
+const VESSEL_ID = 'old-vessel';
 const CHECKPOINT_ID = 'guardian-checkpoint';
 
 /** The gateway: one tile wide and five long, in the row where the route of the castle ends, east of the wall of the last hall. */
@@ -51,7 +52,7 @@ const ARENA: TileRect = { col: 68, row: 7, width: 16, height: 9 };
 /** The Guardian's gate: the one gap in the far wall of the arena, in the row of the gateway. */
 const GATE_TILE: Tile = { col: 84, row: 11 };
 
-/** The stub of the harbor: sand beyond the gate, closed in by water and rock. Ticket 20 completes it. */
+/** The harbor: a quay of sand beyond the gate, closed in by water and rock, with the vessel at the water's edge. */
 const HARBOR: TileRect = { col: 85, row: 10, width: 4, height: 3 };
 
 /** An arena has room for every pattern to be avoided by positioning alone: this wide and this high, at least. */
@@ -60,7 +61,7 @@ const LEAST_ARENA = { wide: 12, high: 9 };
 /** The most of the arena that its pillars may take. */
 const MOST_PILLAR_SHARE = 0.1;
 
-/** A harbor has room for a vessel and for the hero beside it: this many open tiles, at least. */
+/** A harbor has room for the vessel and for the hero beside it: this many open tiles besides the vessel's, at least. */
 const LEAST_HARBOR_TILES = 8;
 
 /** Two colours are set apart when they lie this far from each other, at least, in the cube of red, green and blue (0 to 255 each). */
@@ -94,6 +95,7 @@ const wayIn = (castle.entrances ?? [])[0];
 const wayInTile: Tile = wayIn?.tile ?? { col: 0, row: 0 };
 const guardian = castle.monsters.find(({ id }) => id === GUARDIAN_ID);
 const guardianTile: Tile = guardian?.tile ?? { col: 0, row: 0 };
+const vesselTile: Tile = (castle.interactables ?? []).find(({ id }) => id === VESSEL_ID)?.tile ?? { col: 0, row: 0 };
 const { hero } = gameContent;
 
 /** Where the hero can stand with every door and gate shut, as it begins, and with them all open, as it is once the puzzles are solved. */
@@ -309,6 +311,8 @@ describe('the way to the Guardian', () => {
 
 describe('the harbor behind the gate', () => {
   const stub = tilesOf(HARBOR);
+  /** The sand that the hero can stand on: the harbor but for the tile that the vessel fills, which stops it. */
+  const quay = stub.filter((tile) => keyOf(tile) !== keyOf(vesselTile));
   const reachesStub = (isOpenGround: (tile: Tile) => boolean) =>
     routeBetween(isOpenGround, wayInTile, (tile) => isInZone(HARBOR, tile));
 
@@ -324,24 +328,24 @@ describe('the harbor behind the gate', () => {
     expect(reachesStub(isOpen)).toBeNull();
   });
 
-  it('is reached through the gate once it is open: every tile of the stub can be walked to', () => {
-    expect(stub.every(isOpenOnceOpened)).toBe(true);
-    for (const tile of stub) {
+  it('is reached through the gate once it is open: every tile of the quay can be walked to', () => {
+    expect(quay.every(isOpenOnceOpened)).toBe(true);
+    for (const tile of quay) {
       expect(routeBetween(isOpenOnceOpened, wayInTile, (goal) => keyOf(goal) === keyOf(tile)), keyOf(tile)).not.toBeNull();
     }
   });
 
-  it('has room for a vessel and for the hero beside it: eight open tiles at least, which nothing but the gate leads out of', () => {
+  it('has room for the vessel and for the hero beside it: eight open tiles besides the vessel\'s, which nothing but the gate leads out of', () => {
     const closedIn = (tile: Tile) => isOpenOnceOpened(tile) && keyOf(tile) !== keyOf(GATE_TILE);
-    const first = stub[0];
+    const first = quay[0];
     const region = first === undefined ? [] : regionFrom(closedIn, first);
 
-    expect(stub.length).toBeGreaterThanOrEqual(LEAST_HARBOR_TILES);
-    expect(region.map(keyOf).sort()).toEqual(stub.map(keyOf).sort());
+    expect(quay.length).toBeGreaterThanOrEqual(LEAST_HARBOR_TILES);
+    expect(region.map(keyOf).sort()).toEqual(quay.map(keyOf).sort());
   });
 
-  it('is left for ticket 20 to complete: no monster, chest, pickup, device, Checkpoint, entrance, exit or milestone is placed in it', () => {
-    expect(placedIn(HARBOR)).toEqual([]);
+  it('holds the vessel and nothing else: no monster, chest, pickup, device, Checkpoint, entrance, exit or milestone is placed in it', () => {
+    expect(placedIn(HARBOR)).toEqual([VESSEL_ID]);
   });
 });
 

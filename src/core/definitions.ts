@@ -608,8 +608,10 @@ export interface ContentDefinition {
   readonly checkCoveredCorner?: boolean;
   /**
    * Whether loading insists on a Guardian that has its place: exactly one, with a Checkpoint immediately before its
-   * arena and a harbor that only its defeat opens (guardian-content.ts). The game's own content says yes. Leave it out
-   * for no: the small maps of a test have none. A second Guardian is refused either way.
+   * arena and a harbor that only its defeat opens, and in that harbor exactly one vessel, which the hero cannot walk up
+   * to before the Guardian is defeated (guardian-content.ts). The game's own content says yes. Leave it out for no: the
+   * small maps of a test have none. A second Guardian or a second vessel is refused either way, and so is a vessel
+   * that the way of the hero to it needs a key, a lever or a door for.
    */
   readonly requireGuardian?: boolean;
   /** Where a new game begins: the hero stands at the centre of this tile, which must not be solid. */
