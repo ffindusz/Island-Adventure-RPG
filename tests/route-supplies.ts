@@ -2,6 +2,7 @@ import { gameContent } from '../src/content';
 import type { ConsumableId, GearSlot } from '../src/core';
 import { buildAt, gearFrom, heroAtEntrance, pointsFor, SPENDS, type Spend } from './fight-table';
 import { AREA_IDS, type AreaId, experienceBefore, findsOf, levelOf, monstersOnRoute, MOST_NEARBY } from './main-route';
+import { markdownTable } from './markdown-table';
 import { gameAtTheGuardian, heroAt, maxHealthOf, statsOf } from './profile-heroes';
 
 // What the route gives a hero to fight with, for the balance pass: the steps its Gear makes, and the Healing Potions and
@@ -174,14 +175,6 @@ export function arrowLedger(spend: Spend, nearest = MOST_NEARBY): ArrowLedger[] 
   });
 }
 
-function table(head: readonly string[], rows: readonly (string | number)[][]): string {
-  return [
-    `| ${head.join(' | ')} |`,
-    `| ${head.map(() => '---').join(' | ')} |`,
-    ...rows.map((row) => `| ${row.join(' | ')} |`),
-  ].join('\n');
-}
-
 /** The Gear steps as a Markdown table, a line to a piece of Gear that lies in the world: for docs/balance.md. */
 export function renderSteps(): string {
   const found = steps();
@@ -198,7 +191,7 @@ export function renderSteps(): string {
     };
     return [piece, mine[0]?.over ?? 'nothing', mine[0]?.area ?? '', mine[0]?.level ?? '', ...SPENDS.map(cell)];
   });
-  return table(['Piece', 'Over', 'Found in', 'Level', ...SPENDS], rows);
+  return markdownTable(['Piece', 'Over', 'Found in', 'Level', ...SPENDS], rows);
 }
 
 /** The potion ledgers of the three builds as a Markdown table, for the potions within this many steps of the route. */
@@ -215,7 +208,7 @@ export function renderPotionLedger(nearest = MOST_NEARBY): string {
       row.left,
     ]),
   );
-  return table(['Build', 'Area', 'Max Health', 'Damage', 'Needed', 'Found', 'Carried in', 'Left'], rows);
+  return markdownTable(['Build', 'Area', 'Max Health', 'Damage', 'Needed', 'Found', 'Carried in', 'Left'], rows);
 }
 
 /** The arrow ledgers of the three builds as a Markdown table. */
@@ -223,12 +216,15 @@ export function renderArrowLedger(): string {
   const rows = SPENDS.flatMap((spend) =>
     arrowLedger(spend).map((row) => [spend, row.area, row.attack, row.ranged, row.shots, row.needed, row.found]),
   );
-  return table(['Build', 'Area', 'Arrow Attack', 'Ranged monsters', 'Shots', 'Arrows needed', 'Arrows near'], rows);
+  return markdownTable(
+    ['Build', 'Area', 'Arrow Attack', 'Ranged monsters', 'Shots', 'Arrows needed', 'Arrows near'],
+    rows,
+  );
 }
 
 /** What the monsters of the route of each area drop in the long run, as a Markdown table. */
 export function renderDrops(): string {
-  return table(
+  return markdownTable(
     ['Area', 'Potions', 'Arrows'],
     AREA_IDS.map((area) => [
       area,

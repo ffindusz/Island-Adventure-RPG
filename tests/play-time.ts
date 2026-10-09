@@ -3,6 +3,7 @@ import { type MonsterPlacement, STEP_MS } from '../src/core';
 import { type FightResult, fightTheGuardian } from './dodging-bot';
 import { buildAt, fightTable } from './fight-table';
 import { AREA_IDS, type AreaId, areaOf, detourTo, MOST_NEARBY, monstersOnRoute, routeOf } from './main-route';
+import { markdownTable } from './markdown-table';
 import { gameAtTheGuardian, mainRouteHero, POTIONS_SPARED, SPLITS } from './profile-heroes';
 import { distanceBetween, noticingOf } from './routes';
 
@@ -273,4 +274,213 @@ export function measureAdventure(): Measured {
     };
   }
   return measuredAdventure;
+}
+
+// What only a playtest can tell. Each guess has a low, a typical and a high value, and the three scenarios take them all
+// at once: the low estimate is a quick player who knows where to go, the high one a slow player who looks for everything.
+// No value was chosen to land on the target of the spec; they were written down before the estimate was first computed.
+
+export const SCENARIOS = ['low', 'typical', 'high'] as const;
+export type Scenario = (typeof SCENARIOS)[number];
+
+export interface Guess {
+  readonly unit: string;
+  readonly low: number;
+  readonly typical: number;
+  readonly high: number;
+  readonly reason: string;
+}
+
+export const GUESSES: Readonly<Record<keyof Guesses, Guess>> = {
+  setupSeconds: {
+    unit: 'seconds',
+    low: 15,
+    typical: 60,
+    high: 180,
+    reason: 'The title, the controls and a first look around the coast before the first step of the way.',
+  },
+  wordsPerMinute: {
+    unit: 'words a minute',
+    low: 250,
+    typical: 200,
+    high: 120,
+    reason: 'Silent reading runs at 200 to 250 words a minute; on a screen with a hero to steer it is slower.',
+  },
+  wandering: {
+    unit: 'times the route',
+    low: 1.5,
+    typical: 2.5,
+    high: 4,
+    reason: 'The way is marked but not known, so a first visit doubles back, tries a branch and stops at the map.',
+  },
+  fightCare: {
+    unit: 'times a plain fight',
+    low: 1,
+    typical: 2,
+    high: 3,
+    reason: 'A plain fight is the quickest win; a player also backs off, shoots, dodges and picks up what is dropped.',
+  },
+  sideShare: {
+    unit: 'share of the side material',
+    low: 0,
+    typical: 0.5,
+    high: 1,
+    reason: 'A player goes to none of the far finds, puzzles and lone monsters, or half of them, or all of them.',
+  },
+  puzzleSeconds: {
+    unit: 'seconds a puzzle',
+    low: 20,
+    typical: 90,
+    high: 300,
+    reason: 'A player who looks for the key or the lever from the sign finds it fast; one who does not searches the area.',
+  },
+  pageSeconds: {
+    unit: 'seconds a look',
+    low: 8,
+    typical: 15,
+    high: 30,
+    reason: 'A level-up, a new area or a new piece of Gear brings a look at the inventory, the Stat Points or the Automap.',
+  },
+  defeatsPerHardFight: {
+    unit: 'defeats a demanding fight',
+    low: 0,
+    typical: 0.5,
+    high: 1.5,
+    reason: 'A defeat costs the walk back from the Checkpoint and the fight again; the demanding fights defeat some players.',
+  },
+  guardianAttempts: {
+    unit: 'fights with the Guardian',
+    low: 1,
+    typical: 2,
+    high: 4,
+    reason: 'The first try learns the three attacks that a player has not seen, and the next ones use what it learned.',
+  },
+};
+
+/** What a scenario guesses: each guess at the value of the scenario. */
+export function guessesFor(scenario: Scenario): Guesses {
+  return {
+    wandering: GUESSES.wandering[scenario],
+    fightCare: GUESSES.fightCare[scenario],
+    sideShare: GUESSES.sideShare[scenario],
+    puzzleSeconds: GUESSES.puzzleSeconds[scenario],
+    wordsPerMinute: GUESSES.wordsPerMinute[scenario],
+    pageSeconds: GUESSES.pageSeconds[scenario],
+    defeatsPerHardFight: GUESSES.defeatsPerHardFight[scenario],
+    guardianAttempts: GUESSES.guardianAttempts[scenario],
+    setupSeconds: GUESSES.setupSeconds[scenario],
+  };
+}
+
+/** The play time of a first playthrough that the spec gives, in minutes (spec.md: the aims and user story 20). */
+export const TARGET_MINUTES = { from: 45, to: 60 } as const;
+
+/** What a play time in minutes makes of the target of the spec. */
+export function verdict(minutes: number): 'under' | 'within' | 'over' {
+  if (minutes < TARGET_MINUTES.from) {
+    return 'under';
+  }
+  return minutes <= TARGET_MINUTES.to ? 'within' : 'over';
+}
+
+// The tables of docs/balance.md, as Markdown.
+
+const oneDecimal = (value: number): string => value.toFixed(1);
+
+/** What was measured: area by area with a total row, and then what is counted for the whole adventure. */
+export function renderBasis(measured: Measured = measureAdventure()): string {
+  const met = routeFights();
+  const off = offRouteFights();
+  const rows = AREA_IDS.map((area) => {
+    const errands = errandsOf(area);
+    const metHere = met.filter((fight) => fight.area === area);
+    const offHere = off.filter((fight) => fight.area === area);
+    return [
+      area,
+      oneDecimal(routeSecondsOf(area)),
+      metHere.length,
+      oneDecimal(sum(metHere.map((fight) => fight.seconds))),
+      offHere.length,
+      oneDecimal(sum(offHere.map((fight) => fight.seconds))),
+      oneDecimal(errands.nearSeconds),
+      oneDecimal(errands.farSeconds),
+      errands.puzzles,
+      errands.nearGear,
+      errands.farGear,
+    ];
+  });
+  const totals = [
+    'Total',
+    oneDecimal(measured.routeSeconds),
+    met.length,
+    oneDecimal(measured.fightSeconds),
+    off.length,
+    oneDecimal(measured.offRouteFightSeconds),
+    oneDecimal(measured.nearErrandSeconds),
+    oneDecimal(measured.farErrandSeconds),
+    measured.puzzles,
+    measured.nearGear,
+    measured.farGear,
+  ];
+  const areas = markdownTable(
+    [
+      'Area',
+      'Walk (s)',
+      'Fights met',
+      'Plain fights (s)',
+      'Fights off the route',
+      'Plain fights off it (s)',
+      'Near errands (s)',
+      'Far errands (s)',
+      'Puzzles',
+      'Near Gear',
+      'Far Gear',
+    ],
+    [...rows, totals],
+    1,
+  );
+  const { guardian } = measured;
+  const seconds = (values: readonly number[]): string => values.map(oneDecimal).join(', ');
+  const rest = markdownTable(
+    ['Counted for the whole adventure', 'Value'],
+    [
+      ['Words to read', measured.words],
+      ['Level-ups', measured.levelUps],
+      ['Areas', measured.areas],
+      ['Demanding fights: walk back from the Checkpoint (s)', seconds(measured.hardFights.map((fight) => fight.approachSeconds))],
+      ['Demanding fights: plain fight (s)', seconds(measured.hardFights.map((fight) => fight.fightSeconds))],
+      [
+        'Guardian: walk to it, one won fight, walk on to the vessel (s)',
+        seconds([guardian.approachSeconds, guardian.fightSeconds, guardian.vesselSeconds]),
+      ],
+    ],
+    1,
+  );
+  return `${areas}\n\n${rest}`;
+}
+
+/** The named guesses, with their unit, their three values and the reason for them. */
+export function renderGuesses(): string {
+  return markdownTable(
+    ['Guess', 'Unit', 'Low', 'Typical', 'High', 'Why'],
+    Object.entries(GUESSES).map(([name, guess]) => [name, guess.unit, guess.low, guess.typical, guess.high, guess.reason]),
+  );
+}
+
+/** The estimate of each scenario in minutes, part by part, with the total and what it makes of the target. */
+export function renderEstimates(measured: Measured = measureAdventure()): string {
+  const estimates = SCENARIOS.map((scenario) => estimate(measured, guessesFor(scenario)));
+  const minutes = (seconds: number): string => oneDecimal(seconds / 60);
+  return markdownTable(
+    ['Part (minutes)', ...SCENARIOS],
+    [
+      ...COMPONENTS.map((component) => [component, ...estimates.map((one) => minutes(one.seconds[component]))]),
+      ['Total', ...estimates.map((one) => minutes(one.total))],
+      [
+        `Against the ${TARGET_MINUTES.from} to ${TARGET_MINUTES.to} minutes of the spec`,
+        ...estimates.map((one) => verdict(one.total / 60)),
+      ],
+    ],
+    1,
+  );
 }

@@ -3,15 +3,24 @@ import { gameContent } from '../src/content';
 import { STEP_MS } from '../src/core';
 import { AREA_IDS, type AreaId, areaOf, monstersOnRoute, routeOf, wayInOf } from './main-route';
 import {
+  COMPONENTS,
   errandsOf,
   estimate,
+  GUESSES,
   guardianAttempt,
   type Guesses,
+  guessesFor,
   measureAdventure,
   type Measured,
   offRouteFights,
+  renderBasis,
+  renderEstimates,
+  renderGuesses,
   routeFights,
   routeSecondsOf,
+  SCENARIOS,
+  TARGET_MINUTES,
+  verdict,
   wordsIn,
 } from './play-time';
 import { FIRST_GEAR, gameWithHero, heroAt, QUIET } from './profile-heroes';
@@ -202,5 +211,121 @@ describe('the basis measured from the content', () => {
 
   it('shows the player some words to read', () => {
     expect(measured.words).toBeGreaterThan(wordsIn(gameContent.opening ?? []) + wordsIn(gameContent.ending ?? []));
+  });
+});
+
+describe('the guesses of a first-time player', () => {
+  const total = (guesses: Guesses): number => estimate(SMALL, guesses).total;
+
+  it('are each given a unit, three values and a reason', () => {
+    for (const [name, guess] of Object.entries(GUESSES)) {
+      expect(guess.unit.length, `${name} has a unit`).toBeGreaterThan(0);
+      expect(guess.reason.length, `${name} has a reason`).toBeGreaterThanOrEqual(30);
+      expect(guess.reason, `${name} has a reason that fits a table cell`).not.toMatch(/[|\n]/);
+      for (const scenario of SCENARIOS) {
+        expect(guess[scenario] >= 0 && Number.isFinite(guess[scenario]), `${name}, ${scenario}`).toBe(true);
+      }
+    }
+  });
+
+  it('are all of the inputs that the estimate takes from a playtest, and no others', () => {
+    expect(Object.keys(GUESSES).sort()).toEqual(Object.keys(ROUND).sort());
+  });
+
+  it('are taken by each estimate at the value that it names', () => {
+    expect(SCENARIOS).toEqual(['low', 'typical', 'high']);
+    for (const scenario of SCENARIOS) {
+      const named = Object.fromEntries(Object.entries(GUESSES).map(([name, guess]) => [name, guess[scenario]]));
+      expect(guessesFor(scenario), scenario).toEqual(named);
+    }
+  });
+
+  it('make a slower player take longer in every part, so that the three estimates come out in order', () => {
+    const low = estimate(SMALL, guessesFor('low'));
+    const typical = estimate(SMALL, guessesFor('typical'));
+    const high = estimate(SMALL, guessesFor('high'));
+    for (const component of COMPONENTS) {
+      expect(low.seconds[component], component).toBeLessThanOrEqual(typical.seconds[component]);
+      expect(typical.seconds[component], component).toBeLessThanOrEqual(high.seconds[component]);
+    }
+    expect(low.total).toBeLessThan(typical.total);
+    expect(typical.total).toBeLessThan(high.total);
+  });
+
+  it('each move the estimate: the total is more at the high value of one and less at its low value', () => {
+    const typical = guessesFor('typical');
+    for (const [name, guess] of Object.entries(GUESSES)) {
+      expect(total({ ...typical, [name]: guess.high }), `${name} at its high`).toBeGreaterThan(total(typical));
+      expect(total({ ...typical, [name]: guess.low }), `${name} at its low`).toBeLessThan(total(typical));
+    }
+  });
+});
+
+describe('the verdict on a play time against the spec', () => {
+  it('has the 45 to 60 minutes that the spec gives for a first playthrough', () => {
+    expect(TARGET_MINUTES).toEqual({ from: 45, to: 60 });
+  });
+
+  it.each([
+    [30, 'under'],
+    [44.9, 'under'],
+    [45, 'within'],
+    [52.5, 'within'],
+    [60, 'within'],
+    [60.1, 'over'],
+    [90, 'over'],
+  ] as const)('calls %f minutes %s the target', (minutes, expected) => {
+    expect(verdict(minutes)).toBe(expected);
+  });
+});
+
+describe('the play-time tables of docs/balance.md', () => {
+  const cellsOf = (line: string): string[] =>
+    line
+      .split('|')
+      .slice(1, -1)
+      .map((cell) => cell.trim());
+
+  it('have a line for every area, guess and part of the estimate: run this file with --silent=false to print them', () => {
+    const [areas = '', rest = ''] = renderBasis().split('\n\n');
+    const guesses = renderGuesses();
+    const estimates = renderEstimates();
+    console.log([areas, rest, guesses, estimates].join('\n\n'));
+    expect(areas.split('\n')).toHaveLength(AREA_IDS.length + 3);
+    expect(guesses.split('\n')).toHaveLength(Object.keys(GUESSES).length + 2);
+    expect(estimates.split('\n')).toHaveLength(COMPONENTS.length + 4);
+  }, 60_000);
+
+  it('show a basis whose areas add up to the figures that were measured', () => {
+    const measured = measureAdventure();
+    const lines = (renderBasis(measured).split('\n\n')[0] ?? '').split('\n');
+    const rows = lines.slice(2).map(cellsOf);
+    const totals = rows.pop() ?? [];
+    expect(rows.map((row) => row[0])).toEqual([...AREA_IDS]);
+    expect(totals.slice(1)).toEqual([
+      measured.routeSeconds.toFixed(1),
+      String(routeFights().length),
+      measured.fightSeconds.toFixed(1),
+      String(offRouteFights().length),
+      measured.offRouteFightSeconds.toFixed(1),
+      measured.nearErrandSeconds.toFixed(1),
+      measured.farErrandSeconds.toFixed(1),
+      String(measured.puzzles),
+      String(measured.nearGear),
+      String(measured.farGear),
+    ]);
+    for (let column = 1; column < totals.length; column += 1) {
+      const added = rows.reduce((sum, row) => sum + Number(row[column]), 0);
+      expect(Math.abs(added - Number(totals[column])), `column ${column}`).toBeLessThanOrEqual(0.05 * rows.length);
+    }
+  }, 60_000);
+
+  it('give each estimate in minutes, part by part, with its total and what it makes of the target', () => {
+    const lines = renderEstimates(SMALL).split('\n');
+    const minutes = SCENARIOS.map((scenario) => estimate(SMALL, guessesFor(scenario)).total / 60);
+    expect(cellsOf(lines[0] ?? '')).toEqual(['Part (minutes)', ...SCENARIOS]);
+    expect(lines.slice(2, -2).map((line) => cellsOf(line)[0])).toEqual([...COMPONENTS]);
+    expect(cellsOf(lines.at(-2) ?? '')).toEqual(['Total', ...minutes.map((one) => one.toFixed(1))]);
+    expect(cellsOf(lines.at(-1) ?? '').slice(1)).toEqual(minutes.map((one) => verdict(one)));
   });
 });
