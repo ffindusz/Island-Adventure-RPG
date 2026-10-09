@@ -11,6 +11,9 @@ import {
 import { ARTWORK, hasFinalArt } from './artwork';
 import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import { AutomapPage } from './automap-page';
+import type { GameAudio } from './audio';
+import { AudioLine } from './audio-line';
+import { effectsOfFrame, fightAfter } from './audio-manifest';
 import { callsForSave } from './autosave';
 import { scrollFor } from './camera';
 import { departureAnswer } from './departure-menu';
@@ -56,11 +59,14 @@ function playerIsWatching(): boolean {
  * player back to the title when the core has gone back to it, or on to the ending when it went back because the hero
  * sailed home (ending-scene.ts), which saves nothing. A New Game starts with the card of the opening: until the
  * player presses Enter, the game is held and nothing but the card is on the screen (opening-card.ts). The scene is
- * started again for every game of a session, so what it keeps from one is made anew in `init`.
+ * started again for every game of a session, so what it keeps from one is made anew in `init`. It tells the audio
+ * service what the frame's events sound like and which place the music is for (audio.ts), and polls the keys of the
+ * audio in every frame, the card, the falls and the pages included.
  */
 export class PlayScene extends Phaser.Scene {
   private readonly core: Game;
   private readonly saves: SaveStore;
+  private readonly audio: GameAudio;
   private clock!: FixedStepClock;
   private feedback!: Feedback;
   private readonly inventoryMenu = new InventoryMenu();
@@ -74,6 +80,7 @@ export class PlayScene extends Phaser.Scene {
   private notice!: Notice;
   private overlay!: Overlay;
   private automapPage!: AutomapPage;
+  private audioLine!: AudioLine;
   private terrainLayer!: Phaser.GameObjects.Graphics;
   /** The ground of an area whose art is final, painted once (terrain-baker.ts); hidden for any other area. */
   private groundImage!: Phaser.GameObjects.Image;
@@ -93,29 +100,35 @@ export class PlayScene extends Phaser.Scene {
   private openingLines: readonly string[] = [];
   /** The card of the opening while it shows: no step runs and no key but Enter counts until the player ends it. */
   private card: OpeningCard | null = null;
+  /** Whether the fight with the Guardian is on, which the music of the fight plays for (audio-manifest.ts, `fightAfter`). */
+  private fight = false;
 
-  constructor(core: Game, saves: SaveStore) {
+  constructor(core: Game, saves: SaveStore, audio: GameAudio) {
     super(SCENE_KEYS.play);
     this.core = core;
     this.saves = saves;
+    this.audio = audio;
   }
 
   init(start: PlayStart): void {
     // A game that follows another in the same session (the title is reached again after the ending) starts with no time
-    // owed to the steps and nothing of the last game's flashes and notice left on the screen.
+    // owed to the steps, nothing of the last game's flashes and notice left on the screen, and no fight on.
     this.clock = new FixedStepClock();
     this.feedback = new Feedback();
     this.saveAtOnce = start.saveAtOnce === true;
     this.openingLines = start.opening ?? [];
+    this.fight = false;
   }
 
   preload(): void {
     queueArt(this.load, ARTWORK);
+    this.audio.queue(this);
   }
 
   create(): void {
     buildDrawnArt(this.textures, ARTWORK);
     requireLoadedArt(this.textures, ARTWORK);
+    this.audio.requireLoaded();
     checkHudFootprint();
     // The ground is added first, at the lowest depth: in colours, or the picture of it where the art is final. Everything
     // above it has its depth in depths.ts: the marks of the exits and the props are sprites, then the telegraphs of
@@ -141,6 +154,7 @@ export class PlayScene extends Phaser.Scene {
     this.notice = new Notice(this);
     this.overlay = new Overlay(this);
     this.automapPage = new AutomapPage(this);
+    this.audioLine = new AudioLine(this);
     const keyboard = this.input.keyboard;
     if (keyboard === null) {
       throw new Error('The keyboard plugin is not available, so nothing could control the hero.');
@@ -150,6 +164,8 @@ export class PlayScene extends Phaser.Scene {
   }
 
   override update(time: number, frameMs: number): void {
+    // The keys of the audio work in every frame of this screen: the opening card, a fall, a page and a Stat Point wait.
+    this.audioLine.update(this.audio.press(this.playerInput.pollAudio()), frameMs);
     if (this.card !== null) {
       this.holdForOpening(this.card);
       return;
@@ -203,6 +219,10 @@ export class PlayScene extends Phaser.Scene {
     this.heroSprite.show(events);
     this.monsterSprites.show(events);
     const view = this.core.view();
+    // What the frame sounded like, once for each kind of sound, before the screen changes: the effect of the sailing home
+    // too, and the fight that begins or ends in it.
+    this.audio.hear(effectsOfFrame(events, viewAtStart, view));
+    this.fight = fightAfter(this.fight, events);
     if (view.phase === 'title') {
       // The core went back to the title, which is how the game ends when the hero sails home: the ending shows first, and
       // the title screen after it. The core is at the title, where there is nothing to save, so this comes before the
@@ -236,15 +256,27 @@ export class PlayScene extends Phaser.Scene {
     if (view.phase === 'playing') {
       this.lastPlaying = view;
     }
+    // After the fall above, which keeps the music of the place the hero fell in until it is over, and so after the frame in
+    // which the hero was defeated.
+    this.playMusicFor(view);
+  }
+
+  /** Asks for the music of the place the hero is in: the area's own, or the fight's while the fight is on. */
+  private playMusicFor(view: GameView): void {
+    if (view.phase === 'playing') {
+      this.audio.playMusic({ at: 'play', areaId: view.area.id, fight: this.fight });
+    }
   }
 
   /**
    * One frame of the opening. The game is held: no step runs, and nothing the player presses reaches it. Enter ends the
    * opening, and the screen fades in on the hero. The walk keys are read again from the next frame, and a New Game is
-   * saved even now, so that a tab closed at the card brings back this game and not the old one.
+   * saved even now, so that a tab closed at the card brings back this game and not the old one. The music of the coast
+   * plays under the card.
    */
   private holdForOpening(card: OpeningCard): void {
     this.autosave([]);
+    this.playMusicFor(this.core.view());
     const { confirm } = this.playerInput.pollMenu();
     this.playerInput.pollActions();
     if (confirm) {

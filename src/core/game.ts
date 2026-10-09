@@ -62,20 +62,11 @@ export function createGame(options: GameOptions): Game {
         case 'interact':
           return state.phase === 'playing' && !isPaused(state, content) ? heroInteracts(state, content) : [];
         case 'open-page':
-          if (state.phase === 'playing') {
-            openPage(state, content, command.page);
-          }
-          return [];
+          return state.phase === 'playing' ? openPage(state, content, command.page) : [];
         case 'close-page':
-          if (state.phase === 'playing') {
-            closePage(state, command.page);
-          }
-          return [];
+          return state.phase === 'playing' ? closePage(state, command.page) : [];
         case 'assign-stat-point':
-          if (state.phase === 'playing') {
-            assignStatPoint(state, content, command.stat);
-          }
-          return [];
+          return state.phase === 'playing' ? assignStatPoint(state, content, command.stat) : [];
         case 'equip':
           return state.phase === 'playing' ? equipGear(state, content, command.gearId) : [];
         case 'use-healing-potion':

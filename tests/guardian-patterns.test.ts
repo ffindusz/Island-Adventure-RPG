@@ -21,6 +21,9 @@ import {
 
 const GUARDIAN = 'guardian-1';
 
+// The step in which a Guardian notices the hero tells that, and nothing else.
+const ENGAGED = { type: 'guardian-engaged', monsterId: GUARDIAN };
+
 // The sweep. In tile (5, 3) the Guardian stands at (5.5, 3.5): its body spans x 5 to 6 and y 3 to 4, and the hero's body
 // lies a quarter of a tile to the right of it, within the 1 tile its sweep reaches. The zone is its body grown by 1 on
 // every side. The hero is out of it with its left edge at x = 7 or more: after a walk of 6 steps to the right at the
@@ -52,7 +55,7 @@ describe('a Guardian with the hero within reach of its sweep', () => {
 
     const events = game.step();
 
-    expect(events).toEqual([]);
+    expect(events).toEqual([ENGAGED]);
     expect(monsterAction(game, GUARDIAN)).toEqual({ type: 'winding-up', progress: 0, zone: SWEEP_ZONE });
   });
 
@@ -151,7 +154,7 @@ describe('a Guardian with the hero in the lane of its charge', () => {
 
     const events = game.step();
 
-    expect(events).toEqual([]);
+    expect(events).toEqual([ENGAGED]);
     expect(monsterAction(game, GUARDIAN)).toEqual({ type: 'winding-up', progress: 0, zone: CHARGE_LANE });
   });
 
@@ -237,7 +240,7 @@ describe('a Guardian with the hero within reach of its smite', () => {
 
     const events = game.step();
 
-    expect(events).toEqual([]);
+    expect(events).toEqual([ENGAGED]);
     expect(monsterAction(game, GUARDIAN)).toEqual({ type: 'winding-up', progress: 0, zone: SMITE_ZONE });
   });
 
@@ -301,7 +304,7 @@ describe('a Guardian that has noticed the hero but has no pattern that reaches i
   it('walks toward the hero, a sixteenth of a tile in each step', () => {
     const game = walker();
 
-    expect(advance(game, 16)).toEqual([]);
+    expect(advance(game, 16)).toEqual([ENGAGED]);
 
     expect(monsterAction(game, GUARDIAN)).toEqual({ type: 'chasing' });
     expect(monsterNamed(game, GUARDIAN).position).toEqual({ x: 2.5 + 16 * GUARDIAN_WALK_STEP, y: 1.5 });

@@ -7,7 +7,8 @@ const core = createGame({ content: gameContent, random: Math.random });
 
 // Opening the page with ?debug exposes the running Game core as window.gameCore, so the smoke tool's --eval can read
 // gameCore.view(). It is a handle for checking the build, not something the game itself uses.
-if (new URLSearchParams(window.location.search).has('debug')) {
+const debug = new URLSearchParams(window.location.search).has('debug');
+if (debug) {
   Object.assign(window, { gameCore: core });
 }
 
@@ -21,4 +22,10 @@ function browserStorage(): Storage | null {
 }
 
 // The game opens on the title screen: it is the player who starts the adventure there, or continues the saved one.
-startAdapter(core, gameContent, browserStorage());
+const game = startAdapter(core, gameContent, browserStorage());
+
+// Under ?debug the running Phaser game is exposed too, as window.gamePhaser, for --eval to read what sounds are playing
+// (gamePhaser.sound.getAllPlaying()), whether the sound is muted, its volume and whether the browser keeps it locked.
+if (debug) {
+  Object.assign(window, { gamePhaser: game });
+}

@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { PAGE_IDS, STAT_IDS } from '../core';
 import type { Command, Direction, PageId, StatId } from '../core';
+import { AUDIO_CHANGES } from './audio-settings';
+import type { AudioChange } from './audio-settings';
 
 /** The keys that walk the hero, by Phaser key name. Changing the controls means changing the tables in this file. */
 const WALK_KEYS: Readonly<Record<Direction, readonly string[]>> = {
@@ -54,6 +56,68 @@ export function statKeyLabel(stat: StatId): string {
   return STAT_KEYS[stat].label;
 }
 
+/**
+ * The keys that turn the sound off and on, make it quieter and make it louder, and the label the player reads. The
+ * number pad has its twins of minus and plus. None of them may be bound to anything else: see `checkAudioKeys`.
+ */
+const AUDIO_KEYS: Readonly<Record<AudioChange, { readonly label: string; readonly keys: readonly string[] }>> = {
+  'toggle-mute': { label: 'N', keys: ['N'] },
+  lower: { label: '-', keys: ['MINUS', 'NUMPAD_SUBTRACT'] },
+  raise: { label: '+', keys: ['PLUS', 'NUMPAD_ADD'] },
+};
+
+/** The key that makes the audio change that way, as the title shows it. */
+export function audioKeyLabel(change: AudioChange): string {
+  return AUDIO_KEYS[change].label;
+}
+
+/** The keys of everything but the audio, and what each is for, to see that none of them is also a key of the audio. */
+function keysOfEverythingElse(): readonly { readonly use: string; readonly names: readonly string[] }[] {
+  return [
+    ...DIRECTIONS.map((direction) => ({ use: `walking ${direction}`, names: WALK_KEYS[direction] })),
+    { use: 'attacking', names: [ATTACK_KEY] },
+    { use: 'interacting', names: [INTERACT_KEY] },
+    { use: 'switching weapons', names: [SWITCH_WEAPON_KEY] },
+    { use: 'picking from a menu', names: [CONFIRM_KEY] },
+    ...PAGE_IDS.map((page) => ({ use: `opening the ${page} page`, names: [PAGE_KEYS[page]] })),
+    { use: 'closing a page', names: [CLOSE_PAGE_KEY] },
+    ...STAT_IDS.map((stat) => ({ use: `assigning a Stat Point to ${stat}`, names: STAT_KEYS[stat].keys })),
+  ];
+}
+
+/** The code of the key that Phaser calls by this name, which is what two bindings share when they clash. */
+function keyCodeOf(name: string): number {
+  const code = (Phaser.Input.Keyboard.KeyCodes as Record<string, number | undefined>)[name.toUpperCase()];
+  if (code === undefined) {
+    throw new Error(`"${name}" is not the name of a key that Phaser knows`);
+  }
+  return code;
+}
+
+/**
+ * Throws, naming the key, when a key of the audio is also bound to anything else, or to another of the audio's changes, or
+ * has a name that Phaser does not know. Two bindings on one key share a single Phaser key, which one of them takes the
+ * press from, so a clash is a key that works by chance. Call it before the game starts.
+ */
+export function checkAudioKeys(): void {
+  const taken = new Map<number, string>();
+  for (const { use, names } of keysOfEverythingElse()) {
+    for (const name of names) {
+      taken.set(keyCodeOf(name), use);
+    }
+  }
+  for (const change of AUDIO_CHANGES) {
+    for (const name of AUDIO_KEYS[change].keys) {
+      const code = keyCodeOf(name);
+      const clash = taken.get(code);
+      if (clash !== undefined) {
+        throw new Error(`The key ${name}, for the audio (${change}), is also the key for ${clash}`);
+      }
+      taken.set(code, `the audio (${change})`);
+    }
+  }
+}
+
 const DIRECTIONS: readonly Direction[] = ['up', 'down', 'left', 'right'];
 
 type Key = Phaser.Input.Keyboard.Key;
@@ -69,9 +133,18 @@ export interface MenuInput {
  * with its twin is not left over for the next frame. A key that is held down from the screen before is not pressed
  * again: Phaser makes new keys for each screen, and a new key takes the first repeat of a held key for a press. So
  * Enter held down to sail home does not turn the first page of the ending, nor does it go on to pick on the title.
+ * A press that `counts` refuses is used up all the same, and does not come back on the next frame.
  */
-function pressedAgain(keys: readonly Key[]): boolean {
-  return keys.filter((key) => Phaser.Input.Keyboard.JustDown(key) && !key.originalEvent.repeat).length > 0;
+function pressedAgain(keys: readonly Key[], counts: (press: KeyboardEvent) => boolean = () => true): boolean {
+  return (
+    keys.filter((key) => Phaser.Input.Keyboard.JustDown(key) && !key.originalEvent.repeat && counts(key.originalEvent))
+      .length > 0
+  );
+}
+
+/** Whether a press is for the game and not for the browser: Ctrl or Cmd with a key is a shortcut, such as Ctrl and minus, which zooms. */
+function isForTheGame(press: KeyboardEvent): boolean {
+  return !press.ctrlKey && !press.metaKey;
 }
 
 /**
@@ -79,7 +152,8 @@ function pressedAgain(keys: readonly Key[]): boolean {
  * events, because Phaser releases every key when the window loses focus without sending key-up events: polling
  * notices, so the hero never keeps walking by itself. It sends every command the keys call for and leaves it to the
  * Game core to ignore the ones that do not apply, such as closing a page that is not open. The one exception is the
- * walk keys, which a menu uses too: see `pollWalking`.
+ * walk keys, which a menu uses too: see `pollWalking`. The keys of the audio are not the game's and send no command:
+ * see `pollAudio`.
  */
 export class PlayerInput {
   private readonly walkKeys: Readonly<Record<Direction, readonly Key[]>>;
@@ -90,6 +164,7 @@ export class PlayerInput {
   private readonly pageKeys: readonly { readonly page: PageId; readonly key: Key }[];
   private readonly closePageKey: Key;
   private readonly statKeys: readonly { readonly stat: StatId; readonly keys: readonly Key[] }[];
+  private readonly audioKeys: readonly { readonly change: AudioChange; readonly keys: readonly Key[] }[];
   private readonly walking: Record<Direction, boolean> = { up: false, down: false, left: false, right: false };
 
   constructor(keyboard: Phaser.Input.Keyboard.KeyboardPlugin) {
@@ -105,6 +180,10 @@ export class PlayerInput {
     this.statKeys = STAT_IDS.map((stat) => ({
       stat,
       keys: STAT_KEYS[stat].keys.map((name) => keyboard.addKey(name, false)),
+    }));
+    this.audioKeys = AUDIO_CHANGES.map((change) => ({
+      change,
+      keys: AUDIO_KEYS[change].keys.map((name) => keyboard.addKey(name, false)),
     }));
   }
 
@@ -183,5 +262,14 @@ export class PlayerInput {
    */
   pollCancel(): boolean {
     return pressedAgain([this.closePageKey]);
+  }
+
+  /**
+   * What the keys of the audio asked of the settings since the last call, in the order of `AUDIO_CHANGES`. Holding a key
+   * down asks once, and a key pressed with Ctrl or Cmd asks nothing: that is the browser's, as Ctrl and minus is its
+   * zoom. Call it every frame in every screen, so that a press is not left over for a later one.
+   */
+  pollAudio(): AudioChange[] {
+    return this.audioKeys.filter(({ keys }) => pressedAgain(keys, isForTheGame)).map(({ change }) => change);
   }
 }
