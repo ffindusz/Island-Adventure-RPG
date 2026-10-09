@@ -4,7 +4,7 @@
 
 **Blocked by:** 20: The forgotten harbor and the ending
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 45, 97, 98
 
@@ -18,6 +18,8 @@
 - [ ] Reviewer play check (manual, in a browser): play from the title screen to the ending with sound on and confirm the music changes per area and for the Guardian, each sound effect fires, mute and volume work, and the settings survive a page reload.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 17eed74
 
 Implemented on `ticket/21-audio`, from `integration/island-adventure-rpg` at f70cddf ("Resolve ticket 20"). The Status line is as it was.
 
