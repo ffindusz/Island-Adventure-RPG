@@ -167,13 +167,15 @@ describe('the defeat of a Guardian', () => {
     const told: GameEvent[] = [];
 
     // The arrow leaves the hero's centre (x = 5.5) and flies 0.25 tile a step: the Guardian's body ends at x = 5, and
-    // the path of step 1 stops short of it at x = 5.125, while that of step 2 reaches into it.
+    // the path of step 1 stops short of it at x = 5.125, while that of step 2 reaches into it. The Guardian notices the
+    // hero in step 1, which is the first step of the game, and that is told then.
     for (const step of [1, 2]) {
       told.push(...game.step());
       expect(gateOf(game).open, `the gate after step ${step}`).toBe(step === 2);
     }
 
     expect(told).toEqual([
+      { type: 'guardian-engaged', monsterId: GUARDIAN_ID },
       { type: 'monster-hit', monsterId: GUARDIAN_ID, damage: 14, health: 0 },
       { type: 'monster-defeated', monsterId: GUARDIAN_ID },
       { type: 'guardian-defeated', monsterId: GUARDIAN_ID },

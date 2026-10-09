@@ -34,11 +34,20 @@ const BEHAVIORS: { readonly [B in MonsterType['behavior']]: Behavior<Extract<Mon
   guardian: stepGuardian,
 };
 
-/** Lets every living monster of the current Adventure Area act for one fixed step. Returns what happened, in order. */
+/**
+ * Lets every living monster of the current Adventure Area act for one fixed step. Returns what happened, in order. A
+ * Guardian that was idle and is not any more has noticed the hero: that is told as `guardian-engaged`, in the step in
+ * which it happens, though the Guardian's own step has no event for it.
+ */
 export function stepMonsters(state: PlayState, content: Content): GameEvent[] {
   const events: GameEvent[] = [];
   for (const monster of livingMonsters(state)) {
-    const happened = stepMonster(monster, monsterTypeOf(content, monster.type), state, content);
+    const type = monsterTypeOf(content, monster.type);
+    const wasIdleGuardian = type.behavior === 'guardian' && monster.action.type === 'idle';
+    const happened = stepMonster(monster, type, state, content);
+    if (wasIdleGuardian && monster.action.type !== 'idle') {
+      events.push({ type: 'guardian-engaged', monsterId: monster.id });
+    }
     events.push(...happened);
     if (happened.some((event) => event.type === 'hero-defeated')) {
       // The hero is back at its return point and the monsters are new ones: the rest of this list is out of date.

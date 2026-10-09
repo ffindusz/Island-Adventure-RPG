@@ -2,10 +2,12 @@ import Phaser from 'phaser';
 import type { Game } from '../core';
 import { ARTWORK } from './artwork';
 import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
+import type { GameAudio } from './audio';
+import { AudioLine } from './audio-line';
 import { VIEW_WIDTH } from './config';
 import { DEPTH } from './depths';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
-import { PlayerInput } from './player-input';
+import { audioKeyLabel, PlayerInput } from './player-input';
 import type { SavedGame, SaveStore } from './save-store';
 import { SCENE_KEYS, startOfNewGame } from './scene-keys';
 import type { PlayStart } from './scene-keys';
@@ -17,9 +19,10 @@ import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
 // The title screen: what the game opens on, and the way into it. It offers New Game and Continue, tells the player why
 // a saved game cannot be continued from, and starts the play screen. It decides nothing about the game: the rules of
 // the menu are in title-menu.ts, the verdict on the saved game is the save store's (save-store.ts), and the Game core
-// is only told which of the two begins. It never saves: the autosave belongs to the play screen (autosave.ts). It is a
-// picture of the coast (the backdrop), the name of the game across the top in big letters and the menu in a window
-// under it; where the name and the window go is title-layout.ts's.
+// is only told which of the two begins. It never saves: the autosave belongs to the play screen (autosave.ts). Its music,
+// and the sounds of its choices, are the audio service's (audio.ts). It is a picture of the coast (the backdrop), the name
+// of the game across the top in big letters and the menu in a window under it; where the name and the window go is
+// title-layout.ts's.
 
 const WINDOW_WIDTH = 200;
 /** From a window's edge to what it holds, the window's frame being the first 4 pixels of it. */
@@ -43,27 +46,33 @@ type Row =
 export class TitleScene extends Phaser.Scene {
   private readonly core: Game;
   private readonly saves: SaveStore;
+  private readonly audio: GameAudio;
   private layer!: UiLayer;
+  private audioLine!: AudioLine;
   private playerInput!: PlayerInput;
   private saved: SavedGame = { status: 'none' };
   private menu: TitleMenu = openMenu(false);
   private shown = '';
 
-  constructor(core: Game, saves: SaveStore) {
+  constructor(core: Game, saves: SaveStore, audio: GameAudio) {
     super(SCENE_KEYS.title);
     this.core = core;
     this.saves = saves;
+    this.audio = audio;
   }
 
   preload(): void {
     queueArt(this.load, ARTWORK);
+    this.audio.queue(this);
   }
 
   create(): void {
     buildDrawnArt(this.textures, ARTWORK);
     requireLoadedArt(this.textures, ARTWORK);
+    this.audio.requireLoaded();
     this.add.image(0, 0, 'backdrop-title').setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.backdrop);
     this.layer = new UiLayer(this, DEPTH.title);
+    this.audioLine = new AudioLine(this);
     const keyboard = this.input.keyboard;
     if (keyboard === null) {
       throw new Error('The keyboard plugin is not available, so nothing could choose from the title.');
@@ -78,7 +87,10 @@ export class TitleScene extends Phaser.Scene {
     this.shown = '';
   }
 
-  override update(): void {
+  override update(_time: number, frameMs: number): void {
+    // The keys of the audio work on every screen, whatever the menu is doing.
+    this.audioLine.update(this.audio.press(this.playerInput.pollAudio()), frameMs);
+    this.audio.playMusic({ at: 'title' });
     const { step, confirm } = this.playerInput.pollMenu();
     const saved = this.saved;
     const { menu, choice } = pressMenu(this.menu, saved.status === 'usable', {
@@ -86,6 +98,12 @@ export class TitleScene extends Phaser.Scene {
       confirm,
       cancel: this.playerInput.pollCancel(),
     });
+    // A choice is confirmed, and the question whether to replace the saved game opens and closes like a page.
+    if (choice !== null) {
+      this.audio.play('confirm');
+    } else if (menu.confirming !== this.menu.confirming) {
+      this.audio.play(menu.confirming ? 'page-open' : 'page-close');
+    }
     this.menu = menu;
     if (choice === 'new-game') {
       // The opening is among the events of a New Game; the play screen shows it and holds the game until Enter.
@@ -164,6 +182,10 @@ function rowsFor(menu: TitleMenu, saved: SavedGame): Row[] {
   rows.push(
     { kind: 'text', text: 'W/S OR ARROWS TO CHOOSE', colour: INK.hint },
     { kind: 'text', text: 'ENTER TO SELECT', colour: INK.hint },
+  );
+  rows.push(
+    { kind: 'text', text: `${audioKeyLabel('toggle-mute')} TO MUTE`, colour: INK.hint },
+    { kind: 'text', text: `${audioKeyLabel('lower')} OR ${audioKeyLabel('raise')} FOR VOLUME`, colour: INK.hint },
   );
   return rows;
 }
