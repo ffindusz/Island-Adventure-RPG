@@ -103,8 +103,8 @@ function* wrongKinds(saved: Saved): Generator<Damage> {
     const name = named(steps);
     for (const replacement of OF_EACH_KIND.filter((candidate) => kindOf(candidate) !== kindOf(value))) {
       let wanted: Judgement = { problem: 'damaged', says: `${name} should be` };
-      if (replacement === null && (name === 'state.page' || name === 'state.areaText')) {
-        // Nothing to show: no Page is open, and no Area Text is on the screen.
+      if (replacement === null && (name === 'state.page' || name === 'state.areaText' || name === 'state.departure')) {
+        // Nothing to show: no Page is open, no Area Text is on the screen and no question is asked.
         wanted = 'usable';
       } else if (name === 'state.areaText' && value === null && kindOf(replacement) === 'object') {
         // An empty object is Area Text that has no text.

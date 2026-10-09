@@ -75,7 +75,19 @@ export type Command =
    * the Ranged Weapon back to the Melee Weapon. It takes no time: the attack cooldown is neither started nor waited
    * for. Ignored at the title and while the game is paused, like attack.
    */
-  | { readonly type: 'switch-weapon' };
+  | { readonly type: 'switch-weapon' }
+  /**
+   * Decline to sail home: the question the game asks when the hero uses Interact on a prepared vessel closes, and
+   * everything else stays as it was, the vessel prepared. Ignored when no question is open, and at the title.
+   */
+  | { readonly type: 'cancel-departure' }
+  /**
+   * Sail home: the answer yes to the question the game asks when the hero uses Interact on a prepared vessel. It ends
+   * the game. The one event is `ending-reached`, which carries the ending and the credits for the caller to show, and
+   * the game is at the title afterwards: there is no postgame, and everything but new-game and continue is ignored.
+   * The core writes nothing, so what was saved before is as it was. Ignored when no question is open, and at the title.
+   */
+  | { readonly type: 'confirm-departure' };
 
 /** Something that happened, for the adapter to show or play. Events never carry rules; the state view is the truth. */
 export type GameEvent =
@@ -140,6 +152,17 @@ export type GameEvent =
    * that was showing. The game does not pause. Reading the sign again shows it again.
    */
   | { readonly type: 'sign-read'; readonly signId: string; readonly text: string }
+  /**
+   * The hero used Interact on a vessel that was not prepared, and now it is. It is told once: the next Interact on the
+   * vessel is what asks whether to sail home.
+   */
+  | { readonly type: 'vessel-prepared'; readonly vesselId: string }
+  /**
+   * The hero sailed home, and the game is over: it is at the title, and these are the lines of the ending, for the
+   * caller to show as a card, and of the credits, for it to set out as it can. It is the only event of the
+   * `confirm-departure` command. Saving is the caller's: the core wrote nothing, and tells nothing of what was saved.
+   */
+  | { readonly type: 'ending-reached'; readonly ending: readonly string[]; readonly credits: readonly string[] }
   /** The hero took an item and now has it. */
   | { readonly type: 'pickup'; readonly item: PickedUpItem }
   /** The hero equipped this Gear in its slot, in place of the piece there. */
@@ -261,7 +284,15 @@ export interface ChestView {
 }
 
 /** Something placed in the Adventure Area, for the adapter to draw: one member for each kind. */
-export type InteractableView = ChestView | PickupView | KeyView | DoorView | GateView | LeverView | SignView;
+export type InteractableView =
+  | ChestView
+  | PickupView
+  | KeyView
+  | DoorView
+  | GateView
+  | LeverView
+  | SignView
+  | VesselView;
 
 /** A pickup lying on the ground, for the adapter to draw. One that the hero has taken is not listed any more. */
 export interface PickupView {
@@ -336,6 +367,17 @@ export interface SignView {
   readonly position: Point;
   /** Width and height of the tile it fills, in tiles. */
   readonly size: number;
+}
+
+/** The old vessel, for the adapter to draw. It is solid, whether the hero has prepared it or not. */
+export interface VesselView {
+  readonly kind: 'vessel';
+  readonly id: string;
+  /** The centre of the tile it fills. */
+  readonly position: Point;
+  /** Width and height of the tile it fills, in tiles. */
+  readonly size: number;
+  readonly prepared: boolean;
 }
 
 export interface AreaView {
@@ -497,6 +539,14 @@ export interface PlayingView {
   readonly page: PageView | null;
   /** The Stat Point the hero has to assign, if any. While one waits the game is paused. */
   readonly levelUp: LevelUpView | null;
+  /** The question whether to sail home, if the game is asking it. While it is open the game is paused. */
+  readonly departure: DepartureView | null;
+}
+
+/** The question that the game asks before the hero sails home, the point of no return. */
+export interface DepartureView {
+  /** The id of the vessel the question is about. */
+  readonly vesselId: string;
 }
 
 export type GameView = TitleView | PlayingView;
@@ -506,7 +556,7 @@ export type GameView = TitleView | PlayingView;
  * It is not validated when restored: whoever reads one from storage must check it first.
  */
 export interface Snapshot {
-  readonly version: 3;
+  readonly version: 4;
   readonly state: PlayState;
 }
 

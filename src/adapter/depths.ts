@@ -29,4 +29,6 @@ export const DEPTH = {
   effects: 30,
   /** The title screen, a scene of its own: nothing of the world shares its display list, so this orders only its parts. */
   title: 300,
+  /** The ending and the credits, a scene of its own as the title is. */
+  ending: 300,
 } as const;

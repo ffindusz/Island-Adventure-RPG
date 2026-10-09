@@ -455,6 +455,20 @@ export interface SignDefinition {
 }
 
 /**
+ * The old vessel that sails the hero home, filling a tile. It is always solid. The hero prepares it with Interact, and
+ * with the next Interact it is asked whether to sail: the game waits for the answer, and only a yes ends the adventure
+ * (see departure.ts). There is one in the whole game, and the content that has one has an ending and credits to show.
+ * Whether it is prepared is kept like where a lever stands: defeat does not change it.
+ */
+export interface VesselDefinition {
+  readonly kind: 'vessel';
+  /** Unique across all interactables of all Adventure Areas: saves refer to the vessel by it. */
+  readonly id: string;
+  /** The tile it fills. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+}
+
+/**
  * Something in an Adventure Area that the hero acts on with Interact, or takes by walking onto it (a pickup, a key). Its
  * `kind` names the rules it follows (see interactables.ts); the other fields are what that kind needs. Adding a kind
  * means adding a member here and the cases the recipe in interactables.ts lists.
@@ -466,7 +480,8 @@ export type InteractableDefinition =
   | DoorDefinition
   | GateDefinition
   | LeverDefinition
-  | SignDefinition;
+  | SignDefinition
+  | VesselDefinition;
 
 /** Where the hero stands when it comes into an Adventure Area through an exit of another. */
 export interface EntranceDefinition {
@@ -566,6 +581,18 @@ export interface ContentDefinition {
    */
   readonly opening?: readonly string[];
   /**
+   * The ending: a short card the player reads when the hero sails home, written as the opening is. Its lines, from 1 to
+   * 4, none of them blank; the caller wraps each to fit its screen. It is given together with the credits or not at all.
+   * Content that places a vessel needs both, as that is what the hero sails home to. Leave it out for none.
+   */
+  readonly ending?: readonly string[];
+  /**
+   * The credits: what the player reads after the ending, before the game is at the title again. Its lines, one or more
+   * and as many as are needed, none of them blank; the caller sets them out to fit its screen. It is given together
+   * with the ending or not at all.
+   */
+  readonly credits?: readonly string[];
+  /**
    * How far from the hero's tile the Automap reveals terrain, in tiles: every tile whose middle is no farther than this
    * from the middle of the hero's tile. It is 0 or more: 0 reveals only the hero's own tile. Leave it out for the
    * default of 4. An exit is marked on the Automap once any tile of it is revealed, so under 1 an exit can be crossed
@@ -581,8 +608,10 @@ export interface ContentDefinition {
   readonly checkCoveredCorner?: boolean;
   /**
    * Whether loading insists on a Guardian that has its place: exactly one, with a Checkpoint immediately before its
-   * arena and a harbor that only its defeat opens (guardian-content.ts). The game's own content says yes. Leave it out
-   * for no: the small maps of a test have none. A second Guardian is refused either way.
+   * arena and a harbor that only its defeat opens, and in that harbor exactly one vessel, which the hero cannot walk up
+   * to before the Guardian is defeated (guardian-content.ts). The game's own content says yes. Leave it out for no: the
+   * small maps of a test have none. A second Guardian or a second vessel is refused either way, and so is a vessel
+   * that the way of the hero to it needs a key, a lever or a door for.
    */
   readonly requireGuardian?: boolean;
   /** Where a new game begins: the hero stands at the centre of this tile, which must not be solid. */

@@ -23,8 +23,9 @@ import type { AreaDefinition } from '../../core';
 // columns 68 to 83, rows 7 to 15), with four pillars, where the Guardian stands alone, in the middle of the east half
 // at (76, 11), so that all it notices lies within the arena; and, in the far wall of the arena (column 84), the gate
 // that only the Guardian's defeat opens, at the tile (84, 11). Behind the gate lies the forgotten harbor, which nothing
-// else leads to: for now a stub, a quay of sand (columns 85 to 88, rows 10 to 12) with water beside it (columns 89 and
-// 90), enclosed by rock, which the ticket that completes the harbor takes on.
+// else leads to: a quay of sand (columns 85 to 88, rows 10 to 12) with water beside it (columns 89 and 90), enclosed by
+// rock, and the old vessel at the water's edge, at (88, 11), with the quay in front of it: the hero prepares it there and
+// sails home.
 //
 // Two side paths lead off the route, a good walk each, behind the creatures that the route does not meet. The watch
 // tower is a room (sand, columns 19 to 26, rows 4 to 9) up the stair (columns 24 and 25, rows 10 to 14) that rises from
@@ -176,5 +177,8 @@ export const castle: AreaDefinition = {
     // The gate in the far wall of the arena, in front of the forgotten harbor: shut, with no key and no lever, until the
     // Guardian is defeated.
     { kind: 'gate', id: 'harbor-gate', tile: { col: 84, row: 11 }, opensWhenDefeated: 'arena-guardian' },
+    // The old vessel at the water's edge of the forgotten harbor, in the middle row of the quay: the hero reaches it only
+    // through the gate, prepares it and sails home.
+    { kind: 'vessel', id: 'old-vessel', tile: { col: 88, row: 11 } },
   ],
 };

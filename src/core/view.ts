@@ -71,6 +71,7 @@ export function buildView(state: GameState, content: Content): GameView {
     interactables: area.interactables.flatMap((interactable) => interactableView(interactable, state) ?? []),
     page: pageView(state, content),
     levelUp: levelUpView(state, content),
+    departure: state.departure === null ? null : { vesselId: state.departure },
   };
 }
 
@@ -135,6 +136,14 @@ function interactableView(interactable: Interactable, state: PlayState): Interac
         id: interactable.id,
         position: centerOfBox(interactable.body),
         size: interactable.body.maxX - interactable.body.minX,
+      };
+    case 'vessel':
+      return {
+        kind: 'vessel',
+        id: interactable.id,
+        position: centerOfBox(interactable.body),
+        size: interactable.body.maxX - interactable.body.minX,
+        prepared: interactableStateOf(state, interactable).prepared,
       };
   }
 }

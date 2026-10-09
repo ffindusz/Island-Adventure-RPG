@@ -4,19 +4,21 @@ import type { ContentDefinition, EntranceDefinition } from '../src/core';
 import { doorAt, dummyAt, FIELD_LAYOUT, fixedRandom, gateAt, keyAt } from './fixtures';
 import type { ArenaOptions } from './fixtures';
 import { guardianAt, guardianContent, guardianGateAt } from './guardian-fixtures';
+import { HARBOR_CREDITS, HARBOR_ENDING, vesselAt } from './harbor-fixtures';
 
 // The game has one Guardian, in the arena at the end of the route, and content is refused when it places more than one,
 // when a gate waits for something that is no Guardian of its own area, or when the hero cannot get to the Guardian
 // without a key, a lever or a door. Content that asks for a Guardian (`requireGuardian`, which the game's own content
 // does) is refused besides when there is none, when no Checkpoint lies immediately before the arena, and when the
-// harbor that the Guardian's gate opens onto can be reached without defeating it.
+// harbor that the Guardian's gate opens onto can be reached without defeating it. It must have the one vessel too, in
+// that harbor: the rules for the vessel are in vessel-validation.test.ts.
 //
 // The tests build a small castle, drawn here with its columns 0 to 12 across and its rows 0 to 4 down:
 //
 //   #############   A west room (columns 1 to 3), where the hero comes in, at (1, 2); the gateway at (4, 2), with the
 //   #...#...#####   Checkpoint in it; the arena (columns 5 to 7), with the Guardian at its middle, at (6, 2); the gate
-//   #...........#   at (8, 2) that the Guardian's defeat opens; and the harbor beyond it, in row 2 from column 9 to 11.
-//   #...#...#####
+//   #...........#   at (8, 2) that the Guardian's defeat opens; and the harbor beyond it, in row 2 from column 9 to 11,
+//   #...#...#####   with the vessel at its far end, at (11, 2), and the ending and credits that it sails home to.
 //   #############
 const CASTLE = ['#############', '#...#...#####', '#...........#', '#...#...#####', '#############'];
 
@@ -59,7 +61,7 @@ const CASTLE_WITH_A_BACK_WAY = [
   '#############',
 ];
 
-//   #############   The castle whose gate opens on a wall: there is no harbor.
+//   #############   The castle whose gate opens on a wall: there is no harbor, so no vessel in it.
 //   #...#...#####
 //   #........####
 //   #...#...#####
@@ -76,8 +78,9 @@ const GATEWAY_STONE = { id: 'gateway-stone', tile: { col: 4, row: 2 } };
 const WEST_STONE = { id: 'west-stone', tile: { col: 3, row: 2 } };
 const WARDEN = guardianAt('warden', 6, 2);
 const HARBOR_GATE = guardianGateAt('harbor-gate', 8, 2, 'warden');
+const VESSEL = vesselAt('old-vessel', 11, 2);
 
-/** The castle: a Guardian, the gate it opens, a Checkpoint in the gateway, and one way in. */
+/** The castle: a Guardian, the gate it opens, a Checkpoint in the gateway, the vessel in the harbor, and one way in. */
 function castle(options: ArenaOptions = {}): ContentDefinition {
   const { monsters = [WARDEN], ...rest } = options;
   return {
@@ -85,7 +88,9 @@ function castle(options: ArenaOptions = {}): ContentDefinition {
       layout: CASTLE,
       entrances: [WAY_IN],
       checkpoints: [GATEWAY_STONE],
-      interactables: [HARBOR_GATE],
+      interactables: [HARBOR_GATE, VESSEL],
+      ending: HARBOR_ENDING,
+      credits: HARBOR_CREDITS,
       start: { area: 'arena', tile: WAY_IN.tile },
       ...rest,
     }),
@@ -194,9 +199,26 @@ describe('the way to a Guardian never needs a door or a gate to be opened', () =
     );
   });
 
-  it('is refused for a Checkpoint in the harbor too: to the route the gate of a Guardian is a gate like any other', () => {
+  it('is accepted for a Checkpoint in the harbor too: to the route the gate of a Guardian is the way, and no key, lever or door', () => {
+    expectAccepted(castle({ checkpoints: [GATEWAY_STONE, { id: 'harbor-stone', tile: { col: 10, row: 2 } }] }));
+  });
+
+  it('is refused for a Checkpoint in the harbor that an ordinary door also shuts off: only the gate of a Guardian may be passed', () => {
     expectRefused(
-      castle({ checkpoints: [GATEWAY_STONE, { id: 'harbor-stone', tile: { col: 10, row: 2 } }] }),
+      castle({
+        checkpoints: [GATEWAY_STONE, { id: 'harbor-stone', tile: { col: 10, row: 2 } }],
+        interactables: [HARBOR_GATE, keyAt('rusty-key', 1, 1), doorAt('harbor-door', 9, 2, 'rusty-key')],
+      }),
+      'Area "arena": Checkpoint "harbor-stone" cannot be reached from entrance "way-in" unless a door or gate is opened',
+    );
+  });
+
+  it('is refused for a Checkpoint in the harbor that an ordinary gate also shuts off: only the gate of a Guardian may be passed', () => {
+    expectRefused(
+      castle({
+        checkpoints: [GATEWAY_STONE, { id: 'harbor-stone', tile: { col: 10, row: 2 } }],
+        interactables: [HARBOR_GATE, gateAt('side-gate', 9, 2)],
+      }),
       'Area "arena": Checkpoint "harbor-stone" cannot be reached from entrance "way-in" unless a door or gate is opened',
     );
   });
@@ -205,7 +227,7 @@ describe('the way to a Guardian never needs a door or a gate to be opened', () =
     expectAccepted(
       castle({
         layout: CASTLE_WITH_A_VAULT,
-        interactables: [HARBOR_GATE, keyAt('rusty-key', 1, 1), doorAt('vault-door', 6, 3, 'rusty-key')],
+        interactables: [HARBOR_GATE, VESSEL, keyAt('rusty-key', 1, 1), doorAt('vault-door', 6, 3, 'rusty-key')],
       }),
     );
   });
@@ -338,7 +360,7 @@ describe('content that asks for a Guardian needs a Checkpoint immediately before
       what: 'a vault off the arena with nothing in it',
       content: castle({
         layout: CASTLE_WITH_A_VAULT,
-        interactables: [HARBOR_GATE, keyAt('rusty-key', 1, 1), doorAt('vault-door', 6, 3, 'rusty-key')],
+        interactables: [HARBOR_GATE, VESSEL, keyAt('rusty-key', 1, 1), doorAt('vault-door', 6, 3, 'rusty-key')],
       }),
     },
   ])('is accepted for $what', ({ content }) => {
@@ -354,7 +376,7 @@ describe('content that asks for a Guardian needs a harbor that only its defeat o
   it.each([
     {
       what: 'a gate that opens on a wall',
-      content: castle({ layout: CASTLE_WITH_NO_HARBOR }),
+      content: castle({ layout: CASTLE_WITH_NO_HARBOR, interactables: [HARBOR_GATE] }),
     },
     {
       what: 'a harbor that a second way, shut by an ordinary door, also leads to',
@@ -374,11 +396,12 @@ describe('content that asks for a Guardian needs a harbor that only its defeat o
     expectRefused(content, NO_HARBOR);
   });
 
-  it('is accepted when the harbor lies behind an ordinary door as well as the Guardian\'s gate', () => {
-    expectAccepted(
+  it('is refused, for the vessel and not for the harbor, when an ordinary door shuts the harbor off as well as the Guardian\'s gate', () => {
+    expectRefused(
       castle({
-        interactables: [HARBOR_GATE, keyAt('rusty-key', 1, 1), doorAt('harbor-door', 9, 2, 'rusty-key')],
+        interactables: [HARBOR_GATE, VESSEL, keyAt('rusty-key', 1, 1), doorAt('harbor-door', 9, 2, 'rusty-key')],
       }),
+      'Area "arena": vessel "old-vessel" cannot be reached from entrance "way-in" unless a door or gate is opened',
     );
   });
 });

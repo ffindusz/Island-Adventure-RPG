@@ -1,15 +1,18 @@
 import type { Area } from './content';
+import { isGuardianGate } from './device-content';
 import type { Door, Gate } from './device-content';
 import type { Box, Tile } from './geometry';
 import { stopsWalkers } from './obstacles';
 
 // Checking that the light puzzles never stand in the way of the route. The hero finds every door and gate shut, and
 // whether it comes by a key or a lever is up to it, so the way along the route has to be there with all of them shut:
-// from where the hero comes into an Adventure Area, an exit, a Checkpoint or a Guardian that it could reach with every
-// door and gate open has to be reachable with every one shut. What it could not reach even with them open is not for
-// this check to say: a wall is the map's business, and content with no door or gate is never refused. content.ts calls
-// this once all the areas are loaded. The walking it works out is also what the check of a Guardian's place builds on
-// (guardian-content.ts).
+// from where the hero comes into an Adventure Area, an exit, a Checkpoint, a Guardian or a vessel that it could reach with
+// every door and gate open has to be reachable with every one shut. The gate of a Guardian is the exception: it opens by
+// defeating the Guardian, which is no key, lever or door but the way itself, so it counts as open in the shut case, and
+// what lies behind it (the harbor, the vessel) is on the route. What the hero could not reach even with every door and
+// gate open is not for this check to say: a wall is the map's business, and content with no door or gate is never
+// refused. content.ts calls this once all the areas are loaded. The walking it works out is also what the checks of a
+// Guardian's place and of the vessel's build on (guardian-content.ts).
 
 /** Where the hero can be put in an Adventure Area, and what a message calls it. */
 export interface Source {
@@ -34,7 +37,8 @@ export interface Place {
   readonly areaId: string;
   /** What a message calls it. */
   readonly what: string;
-  readonly tile: Tile;
+  /** The tiles that the hero uses it from: it is reached when any one of them is, as an exit is. */
+  readonly tiles: readonly Tile[];
 }
 
 /** The hero cannot pass between tiles that meet only at a corner, so it goes up, down, left and right across tiles. */
@@ -45,11 +49,14 @@ const STEPS: readonly Tile[] = [
   { col: 0, row: -1 },
 ];
 
-/** Throws an Error naming the first exit, Checkpoint or place that only an open door or gate lets the hero reach. */
+/**
+ * Throws an Error naming the first exit, Checkpoint or place that only an open door or gate lets the hero reach. The
+ * gates that wait for a Guardian count as open in the shut case: the Guardian's defeat is the way through them.
+ */
 export function checkRoutesStayOpen(areas: readonly Area[], start: Start, places: readonly Place[] = []): void {
   for (const area of areas) {
     const open = blockedTiles(area, () => false);
-    const shut = blockedTiles(area, () => true);
+    const shut = blockedTiles(area, (device) => !isGuardianGate(device));
     for (const source of sourcesOf(area, start)) {
       const reachedOpen = reachableFrom(area, source.tile, open);
       const reachedShut = reachableFrom(area, source.tile, shut);
@@ -74,7 +81,7 @@ function destinationsOf(area: Area, places: readonly Place[]): Destination[] {
   return [
     ...area.exits.map((exit) => ({ what: `exit "${exit.id}"`, tiles: tilesOf(exit.zone) })),
     ...area.checkpoints.map((checkpoint) => ({ what: `Checkpoint "${checkpoint.id}"`, tiles: [checkpoint.tile] })),
-    ...places.filter((place) => place.areaId === area.id).map((place) => ({ what: place.what, tiles: [place.tile] })),
+    ...places.filter((place) => place.areaId === area.id),
   ];
 }
 

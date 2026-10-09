@@ -124,6 +124,23 @@ describe('the saved adventure', () => {
     expect(stateAfter('open-gate')).toMatchObject({ areaId: 'keep', hero: { position: { x: 12.75, y: 3.5 } } });
   });
 
+  it('has the vessel prepared once the Guardian has fallen, asked about and declined, and the hero away from it', () => {
+    const vessel = (chapter: string) => stateAfter(chapter).areas['keep']?.interactables['old-vessel'];
+
+    expect([vessel('victory'), vessel('open-gate')]).toEqual(Array(2).fill({ kind: 'vessel', prepared: false }));
+    expect([vessel('prepare'), vessel('ask'), vessel('stay'), vessel('away')]).toEqual(
+      Array(4).fill({ kind: 'vessel', prepared: true }),
+    );
+    expect(['open-gate', 'prepare', 'ask', 'stay'].map((chapter) => stateAfter(chapter).departure)).toEqual([
+      null,
+      null,
+      'old-vessel',
+      null,
+    ]);
+    expect(playingView(adventureAfter('ask')).departure).toEqual({ vesselId: 'old-vessel' });
+    expect(stateAfter('away')).toMatchObject({ areaId: 'arena', departure: null });
+  });
+
   it('has arrows in flight: the hero\u2019s, and a projectile with the monster that shot it, which outlives it', () => {
     const inFlight = stateAfter('volley').arrows;
     const outlived = stateAfter('shooter-down');
@@ -315,6 +332,34 @@ describe('a game restored while it was paused', () => {
 
     expect(playingView(restored).levelUp).toBeNull();
     expect(playingView(restored).hero.position).toEqual({ x: 3.25, y: 4.5 });
+  });
+
+  it('waits for the question whether to sail home to be answered, as the game did', () => {
+    const restored = restoredFrom(adventureAfter('ask').snapshot());
+    const waiting = restored.view();
+
+    expect(playingView(restored).departure).toEqual({ vesselId: 'old-vessel' });
+    expect(advance(restored, 30)).toEqual([]);
+    expect(restored.view()).toEqual(waiting);
+
+    restored.send({ type: 'cancel-departure' });
+    restored.send({ type: 'move', direction: 'left' });
+    advance(restored, 8);
+
+    expect(playingView(restored).departure).toBeNull();
+    expect(playingView(restored).hero.position).toEqual({ x: 11.75, y: 3.5 });
+  });
+
+  it('sails home when the question is confirmed, as the game does', () => {
+    const never = adventureAfter('ask');
+    const restored = restoredFrom(never.snapshot());
+
+    const events = never.send({ type: 'confirm-departure' });
+
+    expect(events.map((event) => event.type)).toEqual(['ending-reached']);
+    expect(restored.send({ type: 'confirm-departure' })).toEqual(events);
+    expect(restored.view()).toEqual(never.view());
+    expect(restored.view()).toEqual({ phase: 'title' });
   });
 });
 

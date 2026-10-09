@@ -140,6 +140,10 @@ export interface ArenaOptions {
   readonly areaTextMs?: number;
   /** The lines of the opening a new game begins with. There is none unless a test gives some. */
   readonly opening?: readonly string[];
+  /** The lines of the ending, shown when the hero sails home. There is none unless a test gives some, with credits. */
+  readonly ending?: readonly string[];
+  /** The lines of the credits, shown after the ending. There is none unless a test gives some, with an ending. */
+  readonly credits?: readonly string[];
   /** How far from the hero the Automap reveals terrain, in tiles. Leave it out to get the default. */
   readonly automapRevealDistance?: number;
   readonly start?: ContentDefinition['start'];
@@ -172,6 +176,8 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     text,
     areaTextMs,
     opening,
+    ending,
+    credits,
     automapRevealDistance,
     start = { area: 'arena', tile: { col: 3, row: 3 } },
     hero = {},
@@ -206,6 +212,8 @@ export function arena(options: ArenaOptions = {}): ContentDefinition {
     ...(minimumDamage === undefined ? {} : { minimumDamage }),
     ...(areaTextMs === undefined ? {} : { areaTextMs }),
     ...(opening === undefined ? {} : { opening }),
+    ...(ending === undefined ? {} : { ending }),
+    ...(credits === undefined ? {} : { credits }),
     ...(automapRevealDistance === undefined ? {} : { automapRevealDistance }),
     progression: {
       levelThresholds: [10, 25, 45, 70, 100],

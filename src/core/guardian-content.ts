@@ -1,21 +1,25 @@
 import type { Area, Checkpoint, Content, Interactable } from './content';
 import type { MonsterPlacement } from './definitions';
-import type { Gate } from './device-content';
+import { isGuardianGate } from './device-content';
 import { blockedTiles, keyOf, reachableFrom, sourcesOf } from './device-routes';
 import type { Place, Start } from './device-routes';
 import type { Tile } from './geometry';
+import type { VesselSite } from './vessel-content';
 
 // Checking that the game's one Guardian has its place. Whatever the content, there is at most one Guardian, and a gate
 // that waits for a Guardian names one of its own Adventure Area. Content that asks for a Guardian (`requireGuardian`,
 // which the game's own content does) is refused besides when it has none, when no Checkpoint lies immediately before
-// the Guardian's arena, and when the harbor that the Guardian's gate opens onto can be reached without defeating it.
-// content.ts calls these once all the areas are loaded. The walking is device-routes.ts's: tiles joined up, down, left
-// and right, past solid terrain and whatever stops walkers.
+// the Guardian's arena, when the harbor that the Guardian's gate opens onto can be reached without defeating it, and when
+// the one vessel is not in that harbor: it is out of the hero's reach until the Guardian is defeated, and within it
+// after. content.ts calls these once all the areas are loaded. The walking is device-routes.ts's: tiles joined up, down,
+// left and right, past solid terrain and whatever stops walkers.
 
 /** A Guardian as the content places it: a place the route must lead to, and the id that the gates waiting for it name. */
 export interface GuardianSite extends Place {
   readonly monsterId: string;
   readonly area: Area;
+  /** The tile it stands on, which is the one tile that reaches it. */
+  readonly tile: Tile;
 }
 
 /**
@@ -35,7 +39,14 @@ export function checkGuardians(areas: readonly Area[], monsterTypes: Content['mo
           `Area "${area.id}": monster "${monster.id}" is a second Guardian, after "${first.monsterId}" of area "${first.areaId}": there is only one`,
         );
       }
-      sites.push({ areaId: area.id, area, what: `Guardian "${monster.id}"`, tile: monster.tile, monsterId: monster.id });
+      sites.push({
+        areaId: area.id,
+        area,
+        what: `Guardian "${monster.id}"`,
+        tile: monster.tile,
+        tiles: [monster.tile],
+        monsterId: monster.id,
+      });
     }
   }
   checkGatesNameTheirGuardians(areas, monsterTypes);
@@ -74,16 +85,17 @@ function checkGatesNameTheirGuardians(areas: readonly Area[], monsterTypes: Cont
   }
 }
 
-/** A gate that opens when a Guardian is defeated, which no lever moves. */
-function isGuardianGate(interactable: Interactable): interactable is Gate & { readonly opensWhenDefeated: string } {
-  return interactable.kind === 'gate' && interactable.opensWhenDefeated !== null;
-}
-
 /**
- * What content that asks for a Guardian must have: exactly one, a Checkpoint immediately before its arena, and a harbor
- * that its gate opens onto. `guardians` is what `checkGuardians` found. Content that does not ask is never refused here.
+ * What content that asks for a Guardian must have: exactly one, a Checkpoint immediately before its arena, a harbor that
+ * its gate opens onto, and in that harbor the one vessel. `guardians` is what `checkGuardians` found, and `vessels` what
+ * `checkVessels` found. Content that does not ask is never refused here.
  */
-export function checkGuardianPlace(start: Start, guardians: readonly GuardianSite[], asked: boolean): void {
+export function checkGuardianPlace(
+  start: Start,
+  guardians: readonly GuardianSite[],
+  vessels: readonly VesselSite[],
+  asked: boolean,
+): void {
   if (!asked) {
     return;
   }
@@ -93,6 +105,7 @@ export function checkGuardianPlace(start: Start, guardians: readonly GuardianSit
   }
   checkCheckpointBefore(guardian, start);
   checkHarbor(guardian, start);
+  checkVesselPlace(guardian, vessels, start);
 }
 
 /**
@@ -151,16 +164,48 @@ function checkHarbor(guardian: GuardianSite, start: Start): void {
 }
 
 /**
+ * The one vessel of content that asks for a Guardian lies in the Guardian's Adventure Area, where the hero cannot walk
+ * up to it while the gates that wait for a Guardian are shut, whatever other door or gate is open, and can once they
+ * are open. The hero uses it from any tile beside it, so one such tile reached is enough to count it reached.
+ */
+function checkVesselPlace(guardian: GuardianSite, vessels: readonly VesselSite[], start: Start): void {
+  const vessel = vessels[0];
+  if (vessel === undefined) {
+    throw new Error('The content places no vessel, but exactly one is required');
+  }
+  if (vessel.areaId !== guardian.areaId) {
+    throw new Error(
+      `Area "${vessel.areaId}": ${vessel.what} is not in area "${guardian.areaId}" with ${guardian.what}: the vessel must lie in the harbor behind the gate that it opens`,
+    );
+  }
+  const { area } = guardian;
+  const reachedBefore = reachedFromSources(area, start, blockedTiles(area, isGuardianGate));
+  if (vessel.tiles.some((tile) => reachedBefore.has(keyOf(tile)))) {
+    throw new Error(
+      `Area "${area.id}": ${vessel.what} can be reached before ${guardian.what} is defeated: the harbor must be out of reach until then`,
+    );
+  }
+  const reachedAfter = reachedFromSources(area, start, blockedTiles(area, () => false));
+  if (!vessel.tiles.some((tile) => reachedAfter.has(keyOf(tile)))) {
+    throw new Error(
+      `Area "${area.id}": ${vessel.what} cannot be reached even when ${guardian.what} is defeated: the hero must be able to walk up to it`,
+    );
+  }
+}
+
+/** The tiles that the hero can walk to from where it comes into the Adventure Area, past the `blocked` tiles. */
+function reachedFromSources(area: Area, start: Start, blocked: ReadonlySet<string>): Set<string> {
+  return new Set(sourcesOf(area, start).flatMap((source) => [...reachableFrom(area, source.tile, blocked)]));
+}
+
+/**
  * The harbor: the walkable tiles that the hero cannot reach from where it comes into the Adventure Area while the gates
  * that wait for a Guardian are shut, and can reach with them open, every other door and gate being open in both cases.
  * The tiles of the gates themselves are not among them. Row by row, from the top.
  */
 export function tilesBehindGuardianGates(area: Area, start: Start): Tile[] {
-  const sources = sourcesOf(area, start);
-  const reachedFrom = (blocked: ReadonlySet<string>) =>
-    new Set(sources.flatMap((source) => [...reachableFrom(area, source.tile, blocked)]));
-  const gatesShut = reachedFrom(blockedTiles(area, isGuardianGate));
-  const everythingOpen = reachedFrom(blockedTiles(area, () => false));
+  const gatesShut = reachedFromSources(area, start, blockedTiles(area, isGuardianGate));
+  const everythingOpen = reachedFromSources(area, start, blockedTiles(area, () => false));
   const gates = new Set(
     area.interactables.filter(isGuardianGate).map((gate) => keyOf({ col: gate.body.minX, row: gate.body.minY })),
   );

@@ -130,6 +130,7 @@ function checkState(value: unknown, content: ContentDefinition): void {
     'hero',
     'arrows',
     'page',
+    'departure',
     'areas',
   ]);
   if (state['phase'] !== 'playing') {
@@ -147,6 +148,7 @@ function checkState(value: unknown, content: ContentDefinition): void {
   });
   checkArrows(state['arrows'], 'state.arrows', content);
   checkPage(state['page'], 'state.page');
+  checkDeparture(state['departure'], 'state.departure', area, state['areas'], content);
 }
 
 /** The world of every Adventure Area of the game, and of no other. Returns the ids of the keys marked taken in them. */
@@ -359,7 +361,7 @@ function checkMilestones(value: unknown, path: string, area: AreaDefinition): vo
 
 /**
  * What the hero can change about each interactable of the area: a chest is opened, a pickup or a key is taken, a door or
- * a gate is opened, a lever is pulled. Nothing about a sign changes, and its state is its kind alone.
+ * a gate is opened, a lever is pulled, a vessel is prepared. Nothing about a sign changes, and its state is its kind alone.
  */
 const FLAG_OF: Record<InteractableDefinition['kind'], string | null> = {
   chest: 'opened',
@@ -369,11 +371,13 @@ const FLAG_OF: Record<InteractableDefinition['kind'], string | null> = {
   gate: 'open',
   lever: 'pulled',
   sign: null,
+  vessel: 'prepared',
 };
 
 /**
  * The state of each interactable of the area. `defeated` is the ids of the monsters of the area that have fallen, which
- * the gates that a Guardian's fall opens must agree with. Returns the ids of the keys marked taken.
+ * the gates that a Guardian's fall opens must agree with, and so must a vessel that is prepared. Returns the ids of the
+ * keys marked taken.
  */
 function checkInteractables(
   value: unknown,
@@ -411,6 +415,9 @@ function checkInteractables(
     if (interactable.kind === 'gate' && interactable.opensWhenDefeated !== undefined) {
       expectOpenOnlyOnceFallen(set, at(statePath, flag), interactable.opensWhenDefeated, defeated);
     }
+    if (interactable.kind === 'vessel' && set) {
+      expectGuardiansFallen(at(statePath, flag), placed, defeated);
+    }
   }
   return keysTaken;
 }
@@ -423,6 +430,26 @@ function expectOpenOnlyOnceFallen(open: boolean, path: string, guardianId: strin
   }
   if (!open && fallen) {
     throw damaged(path, `is shut, but the Guardian "${guardianId}" has fallen`);
+  }
+}
+
+/**
+ * A vessel lies in the harbor behind the gate that its Guardian's fall opens: content that asks for a Guardian is made so,
+ * and the game refuses it when it is not. So the hero can prepare the vessel only once the Guardians whose gates are in its
+ * area have fallen, and a save in which it is prepared before is not one the game made.
+ */
+function expectGuardiansFallen(path: string, placed: readonly InteractableDefinition[], defeated: readonly string[]): void {
+  for (const interactable of placed) {
+    if (
+      interactable.kind === 'gate' &&
+      interactable.opensWhenDefeated !== undefined &&
+      !defeated.includes(interactable.opensWhenDefeated)
+    ) {
+      throw damaged(
+        path,
+        `is prepared, but the Guardian "${interactable.opensWhenDefeated}" has not fallen: the vessel is out of reach until it has`,
+      );
+    }
   }
 }
 
@@ -476,6 +503,43 @@ function checkPage(value: unknown, path: string): void {
   if (value !== null) {
     expectOneOf(value, PAGE_IDS, path);
   }
+}
+
+/**
+ * The question whether to sail home: not asked, or asked about the vessel that is prepared and in the area the hero is
+ * in, where it stood when it asked and where it stands still while the game waits for the answer. The worlds were checked
+ * against the areas before it, so a vessel the game does not place is a fault of this save, not a save of another adventure.
+ */
+function checkDeparture(
+  value: unknown,
+  path: string,
+  area: AreaDefinition,
+  worlds: unknown,
+  content: ContentDefinition,
+): void {
+  if (value === null) {
+    return;
+  }
+  const id = expectString(value, path);
+  if (!vesselIdsOf(content).includes(id)) {
+    throw damaged(path, `should be null or the id of a vessel of this game, not "${id}"`);
+  }
+  if (!(area.interactables ?? []).some((interactable) => interactable.kind === 'vessel' && interactable.id === id)) {
+    throw damaged(path, `is "${id}", but the hero is not in the area of that vessel`);
+  }
+  const worldPath = at('state.areas', area.id);
+  const world = expectRecord(expectRecord(worlds, 'state.areas')[area.id], worldPath);
+  const states = expectRecord(world['interactables'], at(worldPath, 'interactables'));
+  if (expectRecord(states[id], at(at(worldPath, 'interactables'), id))['prepared'] !== true) {
+    throw damaged(path, `is "${id}", but that vessel is not prepared`);
+  }
+}
+
+/** The ids of the vessels that the areas of the game place. */
+function vesselIdsOf(content: ContentDefinition): string[] {
+  return content.areas.flatMap((area) =>
+    (area.interactables ?? []).filter((interactable) => interactable.kind === 'vessel').map((vessel) => vessel.id),
+  );
 }
 
 /** The hero: where it is and what it has, in the area it is in. Returns the ids of the keys it holds. */

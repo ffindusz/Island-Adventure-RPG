@@ -15,6 +15,11 @@ const ATTACK_KEY = 'SPACE';
 /** The key that interacts with what the hero faces, such as opening a chest. */
 const INTERACT_KEY = 'E';
 
+/** The key that interacts with what the hero faces, as the player reads it. */
+export function interactKeyLabel(): string {
+  return INTERACT_KEY;
+}
+
 /** The key that takes the other weapon in hand, the sword or the bow. */
 const SWITCH_WEAPON_KEY = 'Q';
 
@@ -34,7 +39,7 @@ export function pageKeyLabel(page: PageId): string {
   return PAGE_KEYS[page];
 }
 
-/** The key that closes the page that is open. */
+/** The key that closes the page that is open, and declines the question whether to sail home. */
 const CLOSE_PAGE_KEY = 'ESC';
 
 /** The keys that assign a Stat Point to each stat, number row and keypad alike, and the label the player reads. */
@@ -61,10 +66,12 @@ export interface MenuInput {
 
 /**
  * Whether any of the keys went down again since the last check. Every key is checked, so a key pressed together
- * with its twin is not left over for the next frame.
+ * with its twin is not left over for the next frame. A key that is held down from the screen before is not pressed
+ * again: Phaser makes new keys for each screen, and a new key takes the first repeat of a held key for a press. So
+ * Enter held down to sail home does not turn the first page of the ending, nor does it go on to pick on the title.
  */
 function pressedAgain(keys: readonly Key[]): boolean {
-  return keys.filter((key) => Phaser.Input.Keyboard.JustDown(key)).length > 0;
+  return keys.filter((key) => Phaser.Input.Keyboard.JustDown(key) && !key.originalEvent.repeat).length > 0;
 }
 
 /**
@@ -126,7 +133,8 @@ export class PlayerInput {
 
   /**
    * The commands for the attack, interact, switch weapon, page and Stat Point keys that were pressed again since the
-   * last call. Holding a key down does not repeat its command.
+   * last call, and for Esc, which closes the page that is open and declines the question whether to sail home. Holding
+   * a key down does not repeat its command.
    */
   pollActions(): Command[] {
     const commands: Command[] = [];
@@ -148,6 +156,7 @@ export class PlayerInput {
       for (const page of PAGE_IDS) {
         commands.push({ type: 'close-page', page });
       }
+      commands.push({ type: 'cancel-departure' });
     }
     for (const { stat, keys } of this.statKeys) {
       if (pressedAgain(keys)) {
@@ -169,7 +178,8 @@ export class PlayerInput {
 
   /**
    * Whether Esc went down again since the last call, to turn down what a menu asks. Esc also closes the page that is
-   * open, and `pollActions` takes that press: so a screen asks only one of the two, as the title asks this.
+   * open and declines the question whether to sail home, and `pollActions` takes that press: so a screen asks only one
+   * of the two, as the title asks this.
    */
   pollCancel(): boolean {
     return pressedAgain([this.closePageKey]);

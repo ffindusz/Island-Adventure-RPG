@@ -32,6 +32,7 @@ import {
   walk,
 } from './fixtures';
 import { GUARDIAN, guardianAt, guardianGateAt } from './guardian-fixtures';
+import { HARBOR_CREDITS, HARBOR_ENDING, vesselAt } from './harbor-fixtures';
 
 // The saved adventure: one scripted game that visits every kind of state the Game core saves, and the content it is
 // played in. The tests of the save (save-round-trip.test.ts) restore the game after every chapter of the script and
@@ -71,6 +72,8 @@ import { GUARDIAN, guardianAt, guardianGateAt } from './guardian-fixtures';
 //                 its body and makes its sweep, its charge and its smite in turn (guardian-fixtures.ts), so the first
 //                 time the hero is noticed, in the row on (4.875, 3.5), it winds up a charge along the row for 36 steps
 //     gates       the keep gate on (12, 3), at the far end of the row, which opens when the warden falls
+//     vessels     the old vessel on (12, 2), above the gate's tile: the hero prepares it from there once the warden has
+//                 fallen, is asked whether to sail home, stays, and walks away with the vessel still prepared
 //     Checkpoint  the keep stone on (3, 5), which the hero never touches
 //     exit        on (1, 3), back to the arena
 //
@@ -113,7 +116,7 @@ const KEEP: AreaDefinition = {
   layout: FIELD_LAYOUT,
   text: 'Cold air hangs in the hall.',
   monsters: [guardianAt('warden', 11, 3)],
-  interactables: [guardianGateAt('keep-gate', 12, 3, 'warden')],
+  interactables: [guardianGateAt('keep-gate', 12, 3, 'warden'), vesselAt('old-vessel', 12, 2)],
   entrances: [{ id: 'from-arena', tile: { col: 2, row: 3 } }],
   exits: [
     { id: 'to-arena', zone: { col: 1, row: 3, width: 1, height: 1 }, to: { area: 'arena', entrance: 'from-keep' } },
@@ -128,6 +131,8 @@ export function adventureContent(): ContentDefinition {
     start: { area: 'arena', tile: { col: 6, row: 3 } },
     hero: { health: 8 },
     text: 'The wind drops.',
+    ending: HARBOR_ENDING,
+    credits: HARBOR_CREDITS,
     monsters: [dummyAt('dummy', 6, 5), { id: 'rat', type: 'rat', tile: { col: 3, row: 5 } }],
     monsterTypes: {
       rat: frailMonster(8),
@@ -356,6 +361,35 @@ export const CHAPTERS: readonly Chapter[] = [
       game.send({ type: 'assign-stat-point', stat: 'defense' });
       walk(game, 'down', 8);
       walk(game, 'right', 70);
+    },
+  },
+  {
+    id: 'prepare',
+    does: 'turns to the old vessel above the open gate and prepares it',
+    play(game) {
+      face(game, 'up');
+      game.send({ type: 'interact' });
+    },
+  },
+  {
+    id: 'ask',
+    does: 'interacts with the prepared vessel again, which asks whether to sail home and waits for the answer',
+    play(game) {
+      game.send({ type: 'interact' });
+    },
+  },
+  {
+    id: 'stay',
+    does: 'answers that the adventure is not over, and the vessel stays prepared',
+    play(game) {
+      game.send({ type: 'cancel-departure' });
+    },
+  },
+  {
+    id: 'away',
+    does: 'walks west along the keep and out by its exit to the arena, with the vessel still prepared behind it',
+    play(game) {
+      walk(game, 'left', 100);
     },
   },
 ];

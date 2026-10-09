@@ -1,4 +1,4 @@
-import type { Area } from './content';
+import type { Area, Interactable } from './content';
 import type { DoorDefinition, GateDefinition, KeyDefinition, LeverDefinition, SignDefinition } from './definitions';
 import type { Box, Tile } from './geometry';
 
@@ -68,6 +68,11 @@ export function loadGate(definition: GateDefinition): Gate {
     body: tileBox(definition.tile),
     opensWhenDefeated: definition.opensWhenDefeated ?? null,
   };
+}
+
+/** A gate that opens when a Guardian is defeated, which no lever moves. */
+export function isGuardianGate(interactable: Interactable): interactable is Gate & { readonly opensWhenDefeated: string } {
+  return interactable.kind === 'gate' && interactable.opensWhenDefeated !== null;
 }
 
 export function loadLever(areaId: string, definition: LeverDefinition): Lever {
