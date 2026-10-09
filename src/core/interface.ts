@@ -75,7 +75,12 @@ export type Command =
    * the Ranged Weapon back to the Melee Weapon. It takes no time: the attack cooldown is neither started nor waited
    * for. Ignored at the title and while the game is paused, like attack.
    */
-  | { readonly type: 'switch-weapon' };
+  | { readonly type: 'switch-weapon' }
+  /**
+   * Decline to sail home: the question the game asks when the hero uses Interact on a prepared vessel closes, and
+   * everything else stays as it was, the vessel prepared. Ignored when no question is open, and at the title.
+   */
+  | { readonly type: 'cancel-departure' };
 
 /** Something that happened, for the adapter to show or play. Events never carry rules; the state view is the truth. */
 export type GameEvent =

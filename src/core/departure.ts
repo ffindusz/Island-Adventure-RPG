@@ -18,3 +18,8 @@ export function useVessel(vessel: Vessel, vesselState: VesselState, state: PlayS
   state.departure = vessel.id;
   return [];
 }
+
+/** Declines to sail home: the question closes, and nothing else changes. The vessel stays prepared. */
+export function cancelDeparture(state: PlayState): void {
+  state.departure = null;
+}
