@@ -55,6 +55,9 @@ export class Feedback {
         case 'guardian-defeated':
           this.told = { content: { kind: 'gate-opened' }, msLeft: NOTICE_MS };
           break;
+        case 'vessel-prepared':
+          this.told = { content: { kind: 'vessel-prepared' }, msLeft: NOTICE_MS };
+          break;
         case 'area-changed':
           // After a defeat the return to another area is shown only when the fall is over: see endFall.
           if (!this.falling) {
@@ -109,7 +112,10 @@ export class Feedback {
     return this.flashes.has(monsterId);
   }
 
-  /** What the player is being told about: the latest of what the hero found, a Checkpoint touched, the empty bow, a door, a lever, or the fall of the Guardian. */
+  /**
+   * What the player is being told about: the latest of what the hero found, a Checkpoint touched, the empty bow, a door,
+   * a lever, the fall of the Guardian, or the vessel made ready.
+   */
   notice(): NoticeContent | null {
     return this.told === null ? null : this.told.content;
   }

@@ -4,19 +4,19 @@ import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { CONSUMABLE_NAMES, shown, STAT_NAMES } from './labels';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
-import { pageKeyLabel, switchWeaponKeyLabel } from './player-input';
+import { interactKeyLabel, pageKeyLabel, switchWeaponKeyLabel } from './player-input';
 import { INK, UiLayer } from './ui-layer';
 
 // The notice of what the hero just found, that the bow has nothing to shoot, that it touched a Checkpoint, that a door
-// is locked or has opened, that a lever moved, that the Guardian fell and its gate opened, or that the game could not
-// be saved, low on the screen where it covers neither the hero nor the HUD. It is drawn from what the Game core
-// reported and nothing else.
+// is locked or has opened, that a lever moved, that the Guardian fell and its gate opened, that the vessel is ready to
+// sail, or that the game could not be saved, low on the screen where it covers neither the hero nor the HUD. It is
+// drawn from what the Game core reported and nothing else.
 
 /**
  * What the notice tells the player: the item the hero picked up, that an arrow was asked for and there is none, that
  * the hero touched a Checkpoint, that a door is locked and which key it needs or that a key opened it, that a lever was
- * pulled or put back, that the Guardian fell and the gate it kept opened, or that the browser refused to keep the saved
- * game.
+ * pulled or put back, that the Guardian fell and the gate it kept opened, that the vessel is prepared and the key that
+ * sails it, or that the browser refused to keep the saved game.
  */
 export type NoticeContent =
   | { readonly kind: 'pickup'; readonly item: PickedUpItem }
@@ -26,6 +26,7 @@ export type NoticeContent =
   | { readonly kind: 'door-opened'; readonly keyName: string }
   | { readonly kind: 'lever-toggled'; readonly pulled: boolean }
   | { readonly kind: 'gate-opened' }
+  | { readonly kind: 'vessel-prepared' }
   | { readonly kind: 'save-failed' };
 
 /** Above the HUD, below the overlay: a page that opens covers the notice. */
@@ -51,8 +52,8 @@ interface Line {
 
 /**
  * Tells the player what the hero picked up, that the bow is out of Ammunition, that a Checkpoint is touched, that a door
- * is locked or has opened, that a lever moved, that the Guardian fell and its gate opened, or that the game could not
- * be saved.
+ * is locked or has opened, that a lever moved, that the Guardian fell and its gate opened, that the vessel is prepared,
+ * or that the game could not be saved.
  */
 export class Notice {
   private readonly layer: UiLayer;
@@ -90,6 +91,7 @@ function iconFor(content: NoticeContent): string | null {
       return KEY_ICON;
     case 'lever-toggled':
     case 'gate-opened':
+    case 'vessel-prepared':
     case 'save-failed':
       return null;
   }
@@ -106,7 +108,8 @@ function pickupIcon(item: PickedUpItem): string {
   }
 }
 
-function linesFor(content: NoticeContent): Line[] {
+/** The lines the notice says, from the top down. */
+export function linesFor(content: NoticeContent): Line[] {
   switch (content.kind) {
     case 'pickup':
       return pickupLines(content.item);
@@ -139,6 +142,11 @@ function linesFor(content: NoticeContent): Line[] {
       return [
         { text: 'GUARDIAN DEFEATED', colour: TITLE_COLOUR },
         { text: 'THE GATE OPENED', colour: HINT_COLOUR },
+      ];
+    case 'vessel-prepared':
+      return [
+        { text: 'THE VESSEL IS READY', colour: TITLE_COLOUR },
+        { text: `PRESS ${interactKeyLabel()} AGAIN TO SAIL`, colour: HINT_COLOUR },
       ];
     case 'save-failed':
       return [{ text: 'COULD NOT SAVE THE GAME', colour: WARNING_COLOUR }];

@@ -15,6 +15,11 @@ const ATTACK_KEY = 'SPACE';
 /** The key that interacts with what the hero faces, such as opening a chest. */
 const INTERACT_KEY = 'E';
 
+/** The key that interacts with what the hero faces, as the player reads it. */
+export function interactKeyLabel(): string {
+  return INTERACT_KEY;
+}
+
 /** The key that takes the other weapon in hand, the sword or the bow. */
 const SWITCH_WEAPON_KEY = 'Q';
 
