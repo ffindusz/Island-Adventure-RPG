@@ -1,13 +1,17 @@
 import type Phaser from 'phaser';
-import { VIEW_WIDTH } from './config';
+import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
+import type { Rect } from './pixel-font';
 import { INK, UiLayer } from './ui-layer';
 
-// The line that says what a key of the audio did: VOLUME 6/10, SOUND OFF or SOUND ON. It sits in the top right corner, where
-// nothing else of any screen is drawn, for a moment after the key. The keys work on every screen, so the line is above
-// everything, the pages and the card of the opening included, and, like the area banner, it is see-through and takes no
-// input. Each screen has a line of its own, which it gives the frame's time and what the keys said. The time is the
-// frames' and not a timer's, so that the line stays for as long as the game is shown and no longer.
+// The line that says what a key of the audio did: VOLUME 6/10, SOUND OFF or SOUND ON. It sits against a corner of the
+// screen for a moment after the key: the top right, where the play screen and the ending draw nothing, or the corner a
+// screen asks for when it draws something there (the title's name runs across the top, so the title asks for the bottom
+// right). A page that fills the screen, the Automap or the inventory, has something under every corner, and the line is
+// then over the page's frame for the moment it stays. The keys work on every screen, so the line is above everything,
+// the pages and the card of the opening included, and, like the area banner, it is see-through and takes no input. Each
+// screen has a line of its own, which it gives the frame's time and what the keys said. The time is the frames' and not
+// a timer's, so that the line stays for as long as the game is shown and no longer.
 
 /** Above the title and the ending (300) and above everything the play screen draws, its pages and the opening card (250) too. */
 const LINE_DEPTH = 400;
@@ -21,15 +25,32 @@ const PADDING = 6;
 
 const PANEL_ALPHA = 0.9;
 
+/** The corners of the screen the line may sit in, always against the right edge. */
+export type LineCorner = 'top-right' | 'bottom-right';
+
+/** Where the panel of a line that says this goes: against the corner, `MARGIN` from both of its edges of the screen. */
+export function audioLineBox(text: string, corner: LineCorner = 'top-right'): Rect {
+  const width = textWidthOf(text) + 2 * PADDING;
+  const height = TEXT_HEIGHT + 2 * PADDING;
+  return {
+    x: VIEW_WIDTH - MARGIN - width,
+    y: corner === 'top-right' ? MARGIN : VIEW_HEIGHT - MARGIN - height,
+    width,
+    height,
+  };
+}
+
 /** Shows what the keys of the audio did, for a moment. */
 export class AudioLine {
   private readonly layer: UiLayer;
+  private readonly corner: LineCorner;
   private text: string | null = null;
   private remaining = 0;
   private shown: string | null = null;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, corner: LineCorner = 'top-right') {
     this.layer = new UiLayer(scene, LINE_DEPTH);
+    this.corner = corner;
   }
 
   /**
@@ -57,14 +78,13 @@ export class AudioLine {
     this.shown = this.text;
     this.layer.clear();
     if (this.text !== null) {
-      drawPanel(this.layer, this.text);
+      drawPanel(this.layer, this.text, this.corner);
     }
   }
 }
 
-function drawPanel(layer: UiLayer, text: string): void {
-  const width = textWidthOf(text) + 2 * PADDING;
-  const left = VIEW_WIDTH - MARGIN - width;
-  layer.frame('panel', left, MARGIN, width, TEXT_HEIGHT + 2 * PADDING, PANEL_ALPHA);
-  layer.text(text, left + PADDING, MARGIN + PADDING, INK.text);
+function drawPanel(layer: UiLayer, text: string, corner: LineCorner): void {
+  const box = audioLineBox(text, corner);
+  layer.frame('panel', box.x, box.y, box.width, box.height, PANEL_ALPHA);
+  layer.text(text, box.x + PADDING, box.y + PADDING, INK.text);
 }
