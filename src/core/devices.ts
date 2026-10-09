@@ -67,6 +67,18 @@ export function useLever(lever: Lever, leverState: LeverState, state: PlayState,
 }
 
 /**
+ * The gates of the hero's Adventure Area that name this Guardian open, for good: the very step it falls. A gate that is
+ * open stays so, and the state is the same one that a lever and a defeat leave alone, so it is saved with the rest.
+ */
+export function openGatesOfGuardian(state: PlayState, content: Content, guardianId: string): void {
+  for (const interactable of areaOf(content, state.areaId).interactables) {
+    if (interactable.kind === 'gate' && interactable.opensWhenDefeated === guardianId) {
+      interactableStateOf(state, interactable).open = true;
+    }
+  }
+}
+
+/**
  * Interact on a sign. The hero reads it: its text shows as the text of an Adventure Area does, in place of any that was
  * showing, and for as long. The game does not pause, and nothing about the sign changes, so reading it again shows the
  * text again from the start.

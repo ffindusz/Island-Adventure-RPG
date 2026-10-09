@@ -31,13 +31,14 @@ import {
   throughStorage,
   walk,
 } from './fixtures';
+import { GUARDIAN, guardianAt, guardianGateAt } from './guardian-fixtures';
 
 // The saved adventure: one scripted game that visits every kind of state the Game core saves, and the content it is
 // played in. The tests of the save (save-round-trip.test.ts) restore the game after every chapter of the script and
 // check that nothing was lost. When a ticket adds state to the game, it extends this file in two places, so that the
 // round trip covers it: the content (a thing to find, open, pull or fight) and a chapter of the script that changes it.
 //
-// Two Adventure Areas, both the wide field of fixtures.ts (14 x 7 tiles, walkable in columns 1 to 12 and rows 1 to 5).
+// Three Adventure Areas, all the wide field of fixtures.ts (14 x 7 tiles, walkable in columns 1 to 12 and rows 1 to 5).
 // A hero tile is 8 steps of 0.125; the numbers below are worked out from the arena of fixtures.ts and the monsters of
 // enemy-fixtures.ts.
 //
@@ -58,14 +59,23 @@ import {
 //     milestones  the lookout on (5, 4), worth 2 Experience, which the hero reaches; the far point on (11, 1), which
 //                 it does not
 //     Checkpoint  the camp on (3, 3)
-//     exit        on (12, 3), to the ruins; the entrance from the ruins is on (11, 3)
+//     exits       on (12, 3), to the ruins, and on (1, 5), to the keep; the entrances from them are on (11, 3) and on
+//                 (1, 3), beside the door
 //   ruins  (the hero arrives on tile (2, 3), at (2.5, 3.5))
 //     monsters    a charger on (7, 3), in the arrival row, and a shooter on (2, 1), above the hero; both wind up for
 //                 30 steps from the first step after the arrival, so the charger dashes and the shooter fires on step 31
 //     chests      a cache on (12, 5), never opened; a potion on (11, 5), never taken
 //     exit        on (1, 3), back to the arena
+//   keep  (the hero arrives on tile (2, 3), at (2.5, 3.5), facing down; text shown on arrival)
+//     monsters    the warden, a Guardian of Health 8 on (11, 3), in the arrival row. It notices a hero within 6 tiles of
+//                 its body and makes its sweep, its charge and its smite in turn (guardian-fixtures.ts), so the first
+//                 time the hero is noticed, in the row on (4.875, 3.5), it winds up a charge along the row for 36 steps
+//     gates       the keep gate on (12, 3), at the far end of the row, which opens when the warden falls
+//     Checkpoint  the keep stone on (3, 5), which the hero never touches
+//     exit        on (1, 3), back to the arena
 //
-// The hero's Experience: 2 from the lookout and 8 from the rat make the 10 that raise it to Level 2.
+// The hero's Experience: 2 from the lookout and 8 from the rat make the 10 that raise it to Level 2. The warden's 20 take
+// it from 16 to 36, past the 25 of Level 3, which leaves another Stat Point to assign.
 
 const TO_RUINS: ExitDefinition = {
   id: 'to-ruins',
@@ -73,6 +83,12 @@ const TO_RUINS: ExitDefinition = {
   to: { area: 'ruins', entrance: 'from-arena' },
 };
 const FROM_RUINS: EntranceDefinition = { id: 'from-ruins', tile: { col: 11, row: 3 } };
+const TO_KEEP: ExitDefinition = {
+  id: 'to-keep',
+  zone: { col: 1, row: 5, width: 1, height: 1 },
+  to: { area: 'keep', entrance: 'from-arena' },
+};
+const FROM_KEEP: EntranceDefinition = { id: 'from-keep', tile: { col: 1, row: 3 } };
 
 /** What the notice of the arena says. */
 export const NOTICE_TEXT = 'The brass key fits the old door.';
@@ -91,6 +107,20 @@ const RUINS: AreaDefinition = {
   checkpoints: [{ id: 'ruins-stone', tile: { col: 12, row: 1 } }],
 };
 
+const KEEP: AreaDefinition = {
+  id: 'keep',
+  name: 'Keep',
+  layout: FIELD_LAYOUT,
+  text: 'Cold air hangs in the hall.',
+  monsters: [guardianAt('warden', 11, 3)],
+  interactables: [guardianGateAt('keep-gate', 12, 3, 'warden')],
+  entrances: [{ id: 'from-arena', tile: { col: 2, row: 3 } }],
+  exits: [
+    { id: 'to-arena', zone: { col: 1, row: 3, width: 1, height: 1 }, to: { area: 'arena', entrance: 'from-keep' } },
+  ],
+  checkpoints: [{ id: 'keep-stone', tile: { col: 3, row: 5 } }],
+};
+
 /** The content of the saved adventure. A fresh object each time, as a game is made from its own. */
 export function adventureContent(): ContentDefinition {
   return arena({
@@ -104,6 +134,7 @@ export function adventureContent(): ContentDefinition {
       charger: CHARGER,
       // A drop that the fixed random source always leaves, so that the rules ask it for a roll.
       shooter: { ...SHOOTER, drops: [{ consumable: 'ammunition', chance: 0.75, amount: 2 }] },
+      guardian: { ...GUARDIAN, health: 8 },
     },
     interactables: [
       chestAt('armor-chest', 5, 3, 'leather-armor'),
@@ -126,9 +157,9 @@ export function adventureContent(): ContentDefinition {
       milestone('far-point', { col: 11, row: 1, width: 1, height: 1 }, 3),
     ],
     checkpoints: [{ id: 'camp', tile: { col: 3, row: 3 } }],
-    entrances: [FROM_RUINS],
-    exits: [TO_RUINS],
-    otherAreas: [RUINS],
+    entrances: [FROM_RUINS, FROM_KEEP],
+    exits: [TO_RUINS, TO_KEEP],
+    otherAreas: [RUINS, KEEP],
   });
 }
 
@@ -272,6 +303,59 @@ export const CHAPTERS: readonly Chapter[] = [
     does: 'is defeated and sent back to the camp',
     play(game) {
       advanceUntil(game, 'hero-defeated');
+    },
+  },
+  {
+    id: 'keep',
+    does: 'goes back through the open door and down the west edge into the keep, where the text shows and the warden waits',
+    play(game) {
+      walk(game, 'left', 16);
+      walk(game, 'down', 11);
+    },
+  },
+  {
+    id: 'warden-wind-up',
+    does: 'walks along the warden\u2019s row until it winds up its charge, and waits 12 steps',
+    play(game) {
+      walk(game, 'right', 19);
+      advance(game, 12);
+    },
+  },
+  {
+    id: 'dodge',
+    does: 'steps up out of the charge\u2019s lane and watches the warden begin to dash',
+    play(game) {
+      walk(game, 'up', 8);
+      advance(game, 20);
+    },
+  },
+  {
+    id: 'warden-hit',
+    does: 'waits for the dash to end, and as the warden rests shoots it from above; the arrow lands',
+    play(game) {
+      advance(game, 20);
+      walk(game, 'right', 2);
+      face(game, 'down');
+      game.send({ type: 'attack' });
+      advance(game, 12);
+    },
+  },
+  {
+    id: 'victory',
+    does: 'shoots again as soon as the bow is ready and brings the warden down, which opens its gate and leaves a Stat Point to assign',
+    play(game) {
+      advance(game, 12);
+      game.send({ type: 'attack' });
+      advanceUntil(game, 'guardian-defeated');
+    },
+  },
+  {
+    id: 'open-gate',
+    does: 'spends the Stat Point on Defense and walks down and east along the keep, through the open gate to the wall',
+    play(game) {
+      game.send({ type: 'assign-stat-point', stat: 'defense' });
+      walk(game, 'down', 8);
+      walk(game, 'right', 70);
     },
   },
 ];

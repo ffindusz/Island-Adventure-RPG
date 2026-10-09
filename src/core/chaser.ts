@@ -44,11 +44,17 @@ export function stepChaser(
   return [];
 }
 
+/** What a strike needs of a monster type: the damage that lands, and how long the monster rests afterwards. */
+export interface StrikeNumbers {
+  readonly damage: number;
+  readonly recoverySteps: number;
+}
+
 /** The wind-up is over: the attack lands on what is in the zone that was telegraphed, which may be nothing. */
-function strike(
+export function strike(
   monster: MonsterState,
   windUp: WindingUp,
-  type: ChaserMonsterType,
+  type: StrikeNumbers,
   state: PlayState,
   content: Content,
 ): GameEvent[] {

@@ -299,7 +299,10 @@ describe('the Adventure Areas the game ships with', () => {
     const events = walkThroughExit(game, 'right');
 
     expect(events).toContainEqual({ type: 'checkpoint-activated', checkpointId: 'castle-checkpoint' });
-    expect(playingView(game).checkpoints).toEqual([expect.objectContaining({ id: 'castle-checkpoint', active: true })]);
+    expect(playingView(game).checkpoints).toEqual([
+      expect.objectContaining({ id: 'castle-checkpoint', active: true }),
+      expect.objectContaining({ id: 'guardian-checkpoint', active: false }),
+    ]);
   });
 
   it('puts every exit and milestone on tiles the hero can stand on, so that each can be reached', () => {

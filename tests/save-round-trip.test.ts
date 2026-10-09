@@ -79,6 +79,51 @@ describe('the saved adventure', () => {
     expect(afterHits?.find(({ id }) => id === 'charger')?.action.type).toBe('recovering');
   });
 
+  it('has a Guardian that is idle, winds up a charge, dashes, rests wounded and falls, with its turn and its gate', () => {
+    const warden = (chapter: string) => stateAfter(chapter).areas['keep']?.monsters[0];
+    const gate = (chapter: string) => stateAfter(chapter).areas['keep']?.interactables['keep-gate'];
+    const standing = { id: 'warden', type: 'guardian', position: { x: 11.5, y: 3.5 }, health: 8 };
+
+    expect(warden('defeat')).toEqual({ ...standing, action: { type: 'idle' }, nextPattern: 0 });
+    expect(warden('keep')).toEqual({ ...standing, action: { type: 'idle' }, nextPattern: 0 });
+    // The turn has gone on to the smite, so the pattern it winds up is the one before it: the charge, which has a direction.
+    expect(warden('warden-wind-up')).toEqual({
+      ...standing,
+      action: {
+        type: 'winding-up',
+        zone: { minX: 5, minY: 3, maxX: 11, maxY: 4 },
+        elapsed: 12,
+        length: 36,
+        direction: 'left',
+      },
+      nextPattern: 2,
+    });
+    expect(warden('dodge')).toEqual({
+      ...standing,
+      position: { x: 10.5, y: 3.5 },
+      action: { type: 'dashing', direction: 'left', rangeLeft: 5 },
+      nextPattern: 2,
+    });
+    expect(warden('warden-hit')).toEqual({
+      ...standing,
+      position: { x: 5.5, y: 3.5 },
+      health: 3,
+      action: { type: 'recovering', stepsLeft: 34 },
+      nextPattern: 2,
+    });
+    expect(warden('victory')).toMatchObject({ health: 0, nextPattern: 2 });
+    expect([gate('keep'), gate('dodge'), gate('warden-hit')]).toEqual(Array(3).fill({ kind: 'gate', open: false }));
+    expect([gate('victory'), gate('open-gate')]).toEqual(Array(2).fill({ kind: 'gate', open: true }));
+  });
+
+  it('has the Experience of a Guardian that fell, a Stat Point it leaves to assign, and the hero through its gate', () => {
+    expect(stateAfter('warden-hit').hero.experience).toBe(16);
+    expect(stateAfter('victory').hero.experience).toBe(36);
+    expect(playingView(adventureAfter('victory')).levelUp).toMatchObject({ level: 3, points: 1 });
+    expect(playingView(adventureAfter('open-gate')).levelUp).toBeNull();
+    expect(stateAfter('open-gate')).toMatchObject({ areaId: 'keep', hero: { position: { x: 12.75, y: 3.5 } } });
+  });
+
   it('has arrows in flight: the hero\u2019s, and a projectile with the monster that shot it, which outlives it', () => {
     const inFlight = stateAfter('volley').arrows;
     const outlived = stateAfter('shooter-down');

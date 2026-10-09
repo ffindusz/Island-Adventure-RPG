@@ -146,6 +146,9 @@ function* goneFields(saved: Saved): Generator<Damage> {
       } else if (/\.action\.direction$/.test(name) && (value as Saved).type === 'winding-up') {
         // Only a charger has a direction in its wind-up, and the game gave it one.
         wanted = { problem: 'incompatible', says: `${name} is missing` };
+      } else if (/\.monsters\[\d+\]\.nextPattern$/.test(name)) {
+        // Only a Guardian keeps the turn of its patterns, and the game gave it one.
+        wanted = { problem: 'incompatible', says: `${name} is missing` };
       }
       yield { done: `${name} taken away`, saved: changed(saved, steps, (node) => delete node[key]), wanted };
     }

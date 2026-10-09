@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
-import type { AreaDefinition, MonsterTypeDefinition } from '../src/core';
+import type { AreaDefinition, GuardianPatternDefinition, MonsterTypeDefinition } from '../src/core';
 
 // What must hold for the monsters the game ships with. The rules of the charger and the ranged attacker are tested on
 // purpose-built content (charger*.test.ts, ranged-*.test.ts, projectile.test.ts), so that changing what ships never
-// breaks them: these only guard the promises the placeholder content makes while it is tuned and replaced.
+// breaks them: these only guard the promises the placeholder content makes while it is tuned and replaced. The
+// Guardian's rules are tested on purpose-built content too (guardian-*.test.ts), and its numbers and its place in
+// the-guardian.test.ts.
 
-const BEHAVIORS = ['chaser', 'charger', 'ranged'] as const;
+const BEHAVIORS = ['chaser', 'charger', 'ranged', 'guardian'] as const;
 
 const { hero } = gameContent;
 
@@ -59,6 +61,20 @@ function awarenessOf(type: MonsterTypeDefinition): number {
     case 'charger':
     case 'ranged':
       return type.noticingDistance;
+    case 'guardian':
+      return Math.max(
+        type.noticingDistance,
+        ...type.patterns.map((pattern) => {
+          switch (pattern.kind) {
+            case 'sweep':
+              return pattern.reach;
+            case 'charge':
+              return pattern.dashRange;
+            case 'smite':
+              return pattern.range;
+          }
+        }),
+      );
   }
 }
 
@@ -83,6 +99,21 @@ const CHARGERS = Object.entries(gameContent.monsterTypes).flatMap(([name, type])
 const SHOOTERS = Object.entries(gameContent.monsterTypes).flatMap(([name, type]) =>
   type.behavior === 'ranged' ? [{ name, type }] : [],
 );
+const GUARDIAN_PATTERNS = Object.entries(gameContent.monsterTypes).flatMap(([name, type]) =>
+  type.behavior === 'guardian' ? type.patterns.map((pattern) => ({ name, kind: pattern.kind, size: type.size, pattern })) : [],
+);
+
+/** How long the hero takes to walk from the worst place in what a pattern is aimed at to just out of it. */
+function secondsToStepOutOfPattern(pattern: GuardianPatternDefinition, guardianSize: number): number {
+  switch (pattern.kind) {
+    case 'sweep':
+      return pattern.reach / hero.speedTilesPerSecond;
+    case 'charge':
+      return secondsToStepOutOf(guardianSize);
+    case 'smite':
+      return secondsToStepOutOf(pattern.size);
+  }
+}
 
 /** How long the hero takes to walk from the middle of a lane or line of fire of `width` to just out of it. */
 function secondsToStepOutOf(width: number): number {
@@ -126,4 +157,18 @@ describe('the monsters the game ships with', () => {
   it.each([...CHARGERS, ...SHOOTERS])('lets the hero hit a $name freely for a while after it has attacked', ({ type }) => {
     expect(type.recoveryMs).toBeGreaterThan(0);
   });
+
+  it.each(GUARDIAN_PATTERNS)(
+    'lets the hero step out of the $kind of the $name during the wind-up, with time to spare',
+    ({ pattern, size }) => {
+      expect(secondsToStepOutOfPattern(pattern, size)).toBeLessThanOrEqual(pattern.windUpMs / 1000 / 2);
+    },
+  );
+
+  it.each(GUARDIAN_PATTERNS)(
+    'lets the hero strike the $name twice at least, freely, after its $kind: the recovery lasts two cooldowns of an attack',
+    ({ pattern }) => {
+      expect(pattern.recoveryMs).toBeGreaterThanOrEqual(2 * hero.attackCooldownMs);
+    },
+  );
 });

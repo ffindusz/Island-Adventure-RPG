@@ -175,29 +175,31 @@ function checkWorld(value: unknown, path: string, area: AreaDefinition, content:
     'interactables',
     'revealed',
   ]);
-  checkMonsters(world['monsters'], at(path, 'monsters'), area, content);
+  const defeated = checkMonsters(world['monsters'], at(path, 'monsters'), area, content);
   checkMilestones(world['reachedMilestones'], at(path, 'reachedMilestones'), area);
   expectBoolean(world['visited'], at(path, 'visited'));
-  const keysTaken = checkInteractables(world['interactables'], at(path, 'interactables'), area);
+  const keysTaken = checkInteractables(world['interactables'], at(path, 'interactables'), area, defeated);
   checkRevealed(world['revealed'], at(path, 'revealed'), area);
   return keysTaken;
 }
 
-/** Every monster the area places, defeated ones too, in the order the area places them. */
-function checkMonsters(value: unknown, path: string, area: AreaDefinition, content: ContentDefinition): void {
+/**
+ * Every monster the area places, defeated ones too, in the order the area places them. Returns the ids of the defeated.
+ */
+function checkMonsters(value: unknown, path: string, area: AreaDefinition, content: ContentDefinition): string[] {
   const monsters = expectList(value, path);
   if (monsters.length !== area.monsters.length) {
     throw incompatible(path, `has ${monsters.length} monsters, but the area places ${area.monsters.length}`);
   }
+  const defeated: string[] = [];
   area.monsters.forEach((placed, i) => {
     const monsterPath = atIndex(path, i);
-    const monster = expectKeys(expectRecord(monsters[i], monsterPath), monsterPath, [
-      'id',
-      'type',
-      'position',
-      'health',
-      'action',
-    ]);
+    const monster = expectKeys(
+      expectRecord(monsters[i], monsterPath),
+      monsterPath,
+      ['id', 'type', 'position', 'health', 'action'],
+      ['nextPattern'],
+    );
     const id = expectString(monster['id'], at(monsterPath, 'id'));
     const type = expectString(monster['type'], at(monsterPath, 'type'));
     if (id !== placed.id) {
@@ -208,9 +210,37 @@ function checkMonsters(value: unknown, path: string, area: AreaDefinition, conte
       throw incompatible(at(monsterPath, 'type'), `is "${type}", but the area places a "${placed.type}" here`);
     }
     expectPositionIn(monster['position'], at(monsterPath, 'position'), area);
-    expectNonNegative(monster['health'], at(monsterPath, 'health'));
-    checkAction(monster['action'], at(monsterPath, 'action'), type, definition.behavior);
+    if (expectNonNegative(monster['health'], at(monsterPath, 'health')) === 0) {
+      defeated.push(id);
+    }
+    const attackDashes = checkNextPattern(monster, monsterPath, definition);
+    checkAction(monster['action'], at(monsterPath, 'action'), type, definition.behavior, attackDashes);
   });
+  return defeated;
+}
+
+/**
+ * The turn of a Guardian's patterns, which it keeps and no other monster does: the index of the pattern it makes next.
+ * Returns whether the attack the monster makes, or is making now, is a dash: a charger's is, and a Guardian's is while
+ * the pattern before the next is a charge.
+ */
+function checkNextPattern(monster: Record<string, unknown>, path: string, definition: MonsterTypeDefinition): boolean {
+  const kept = Object.hasOwn(monster, 'nextPattern');
+  if (definition.behavior !== 'guardian') {
+    if (kept) {
+      throw incompatible(at(path, 'nextPattern'), 'should not be there: only a Guardian keeps the turn of its patterns');
+    }
+    return definition.behavior === 'charger';
+  }
+  if (!kept) {
+    throw incompatible(at(path, 'nextPattern'), 'is missing: a Guardian keeps the turn of its patterns');
+  }
+  const next = expectCount(monster['nextPattern'], at(path, 'nextPattern'));
+  const count = definition.patterns.length;
+  if (next >= count) {
+    throw incompatible(at(path, 'nextPattern'), `is ${next}, but the Guardian has ${count} patterns`);
+  }
+  return definition.patterns[(next + count - 1) % count]?.kind === 'charge';
 }
 
 function monsterTypeIn(content: ContentDefinition, type: string, path: string): MonsterTypeDefinition {
@@ -222,7 +252,8 @@ function monsterTypeIn(content: ContentDefinition, type: string, path: string): 
 }
 
 type Behavior = MonsterTypeDefinition['behavior'];
-type ActionCheck = (action: Record<string, unknown>, path: string, behavior: Behavior) => void;
+/** `attackDashes` is whether the attack the monster makes, or is making now, is a dash (see checkNextPattern). */
+type ActionCheck = (action: Record<string, unknown>, path: string, attackDashes: boolean) => void;
 
 /** The kinds of action each behavior moves a monster through: the same few for all, but not every kind for each. */
 const ACTIONS_OF: Record<Behavior, readonly MonsterAction['type'][]> = {
@@ -230,6 +261,7 @@ const ACTIONS_OF: Record<Behavior, readonly MonsterAction['type'][]> = {
   chaser: ['idle', 'chasing', 'winding-up', 'recovering'],
   charger: ['idle', 'chasing', 'winding-up', 'dashing', 'recovering'],
   ranged: ['idle', 'chasing', 'winding-up', 'recovering'],
+  guardian: ['idle', 'chasing', 'winding-up', 'dashing', 'recovering'],
 };
 
 /** What each kind of action keeps with it, and how the fields are checked. A new kind of action must be added here. */
@@ -240,21 +272,23 @@ const ACTION_CHECKS: Record<MonsterAction['type'], ActionCheck> = {
   chasing: (action, path) => {
     expectKeys(action, path, ['type']);
   },
-  'winding-up': (action, path, behavior) => {
-    // Only a monster that dashes keeps the direction of its dash, which is fixed when the wind-up begins.
-    const dashes = behavior === 'charger';
-    if (Object.hasOwn(action, 'direction') !== dashes) {
-      throw incompatible(at(path, 'direction'), dashes ? 'is missing: a charger winds up to dash' : 'should not be there');
+  'winding-up': (action, path, attackDashes) => {
+    // Only a wind-up for a dash keeps the direction of the dash, which is fixed when the wind-up begins.
+    if (Object.hasOwn(action, 'direction') !== attackDashes) {
+      throw incompatible(at(path, 'direction'), attackDashes ? 'is missing: this wind-up is for a dash' : 'should not be there');
     }
-    expectKeys(action, path, ['type', 'zone', 'elapsed', 'length', ...(dashes ? ['direction'] : [])]);
+    expectKeys(action, path, ['type', 'zone', 'elapsed', 'length', ...(attackDashes ? ['direction'] : [])]);
     expectBox(action['zone'], at(path, 'zone'));
     expectCount(action['elapsed'], at(path, 'elapsed'));
     expectCount(action['length'], at(path, 'length'));
-    if (dashes) {
+    if (attackDashes) {
       expectOneOf(action['direction'], DIRECTIONS, at(path, 'direction'));
     }
   },
-  dashing: (action, path) => {
+  dashing: (action, path, attackDashes) => {
+    if (!attackDashes) {
+      throw incompatible(path, 'is "dashing", but the attack this monster is making is not a dash');
+    }
     expectKeys(action, path, ['type', 'direction', 'rangeLeft']);
     expectOneOf(action['direction'], DIRECTIONS, at(path, 'direction'));
     expectNonNegative(action['rangeLeft'], at(path, 'rangeLeft'));
@@ -265,13 +299,19 @@ const ACTION_CHECKS: Record<MonsterAction['type'], ActionCheck> = {
   },
 };
 
-function checkAction(value: unknown, path: string, monsterType: string, behavior: Behavior): void {
+function checkAction(
+  value: unknown,
+  path: string,
+  monsterType: string,
+  behavior: Behavior,
+  attackDashes: boolean,
+): void {
   const action = expectRecord(value, path);
   const type = expectOneOf(action['type'], Object.keys(ACTION_CHECKS) as MonsterAction['type'][], at(path, 'type'));
   if (!ACTIONS_OF[behavior].includes(type)) {
     throw incompatible(path, `is "${type}", which a ${behavior} monster ("${monsterType}") never does`);
   }
-  ACTION_CHECKS[type](action, path, behavior);
+  ACTION_CHECKS[type](action, path, attackDashes);
 }
 
 /** The arrows in flight: the hero's own, and the projectiles of ranged monsters. */
@@ -331,7 +371,16 @@ const FLAG_OF: Record<InteractableDefinition['kind'], string | null> = {
   sign: null,
 };
 
-function checkInteractables(value: unknown, path: string, area: AreaDefinition): string[] {
+/**
+ * The state of each interactable of the area. `defeated` is the ids of the monsters of the area that have fallen, which
+ * the gates that a Guardian's fall opens must agree with. Returns the ids of the keys marked taken.
+ */
+function checkInteractables(
+  value: unknown,
+  path: string,
+  area: AreaDefinition,
+  defeated: readonly string[],
+): string[] {
   const states = expectRecord(value, path);
   const placed = area.interactables ?? [];
   for (const id of Object.keys(states)) {
@@ -352,11 +401,29 @@ function checkInteractables(value: unknown, path: string, area: AreaDefinition):
     }
     const flag = FLAG_OF[interactable.kind];
     expectKeys(state, statePath, flag === null ? ['kind'] : ['kind', flag]);
-    if (flag !== null && expectBoolean(state[flag], at(statePath, flag)) && interactable.kind === 'key') {
+    if (flag === null) {
+      continue;
+    }
+    const set = expectBoolean(state[flag], at(statePath, flag));
+    if (set && interactable.kind === 'key') {
       keysTaken.push(interactable.id);
+    }
+    if (interactable.kind === 'gate' && interactable.opensWhenDefeated !== undefined) {
+      expectOpenOnlyOnceFallen(set, at(statePath, flag), interactable.opensWhenDefeated, defeated);
     }
   }
   return keysTaken;
+}
+
+/** A gate that a Guardian's fall opens is open when that Guardian has fallen and not before: nothing else moves it. */
+function expectOpenOnlyOnceFallen(open: boolean, path: string, guardianId: string, defeated: readonly string[]): void {
+  const fallen = defeated.includes(guardianId);
+  if (open && !fallen) {
+    throw damaged(path, `is open, but the Guardian "${guardianId}" has not fallen`);
+  }
+  if (!open && fallen) {
+    throw damaged(path, `is shut, but the Guardian "${guardianId}" has fallen`);
+  }
 }
 
 /** The Automap's grid: one yes or no for each tile of the area, indexed [row][col]. */

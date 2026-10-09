@@ -28,6 +28,8 @@ export interface Gate {
   readonly kind: 'gate';
   readonly id: string;
   readonly body: Box;
+  /** The id of the Guardian whose defeat opens it, which no lever then moves; null for a gate that levers move. */
+  readonly opensWhenDefeated: string | null;
 }
 
 /** A lever as the rules use it: its body is the box of the tile it fills, which always stops walkers. */
@@ -60,7 +62,12 @@ export function loadDoor(definition: DoorDefinition): Door {
 }
 
 export function loadGate(definition: GateDefinition): Gate {
-  return { kind: 'gate', id: definition.id, body: tileBox(definition.tile) };
+  return {
+    kind: 'gate',
+    id: definition.id,
+    body: tileBox(definition.tile),
+    opensWhenDefeated: definition.opensWhenDefeated ?? null,
+  };
 }
 
 export function loadLever(areaId: string, definition: LeverDefinition): Lever {
@@ -120,15 +127,16 @@ export function checkKeysAndDoors(areas: readonly Area[]): void {
 }
 
 /**
- * Every door and gate a lever moves stands in the lever's own Adventure Area. It is checked once the areas are loaded,
- * because the content may place the lever before the doors and gates it moves.
+ * Every door and gate a lever moves stands in the lever's own Adventure Area, and none of those gates is one that the
+ * defeat of a Guardian opens. It is checked once the areas are loaded, because the content may place the lever before
+ * the doors and gates it moves.
  */
 export function checkLeverTargets(areas: readonly Area[]): void {
   for (const area of areas) {
-    const movable = new Set<string>();
+    const movable = new Map<string, Door | Gate>();
     for (const interactable of area.interactables) {
       if (interactable.kind === 'door' || interactable.kind === 'gate') {
-        movable.add(interactable.id);
+        movable.set(interactable.id, interactable);
       }
     }
     for (const interactable of area.interactables) {
@@ -136,9 +144,15 @@ export function checkLeverTargets(areas: readonly Area[]): void {
         continue;
       }
       for (const target of interactable.targets) {
-        if (!movable.has(target)) {
+        const moved = movable.get(target);
+        if (moved === undefined) {
           throw new Error(
             `Area "${area.id}": lever "${interactable.id}" moves "${target}", but this area has no door or gate with that id`,
+          );
+        }
+        if (moved.kind === 'gate' && moved.opensWhenDefeated !== null) {
+          throw new Error(
+            `Area "${area.id}": lever "${interactable.id}" moves "${target}", which opens when the Guardian "${moved.opensWhenDefeated}" is defeated: no lever may move it`,
           );
         }
       }

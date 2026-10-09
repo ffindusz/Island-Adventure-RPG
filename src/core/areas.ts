@@ -2,6 +2,7 @@ import { revealAroundHero } from './automap';
 import { areaOf } from './content';
 import type { Area, Content, Entrance } from './content';
 import { centerOf, overlaps } from './geometry';
+import { resetGuardians } from './guardian-reset';
 import type { GameEvent } from './interface';
 import { currentAreaState, heroBody, livingMonsters } from './state';
 import type { PlayState } from './state';
@@ -10,7 +11,8 @@ import type { PlayState } from './state';
 
 /**
  * Takes the hero through an exit when its body overlaps one, to the entrance the exit leads to. When it overlaps
- * several at once the first one listed takes it. Returns what happened: nothing when the hero is not in an exit.
+ * several at once the first one listed takes it. A Guardian that has not fallen is put back as the hero leaves its area
+ * (see guardian-reset.ts). Returns what happened: nothing when the hero is not in an exit.
  */
 export function crossExits(state: PlayState, content: Content): GameEvent[] {
   const body = heroBody(state, content);
@@ -20,6 +22,7 @@ export function crossExits(state: PlayState, content: Content): GameEvent[] {
   }
   const destination = areaOf(content, exit.to.areaId);
   calmMonsters(state);
+  resetGuardians(state, content);
   // The arrows in the air were shot in the area the hero leaves, and an arrow flies only in its own area.
   state.arrows = [];
   state.areaId = destination.id;

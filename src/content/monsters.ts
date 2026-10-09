@@ -300,4 +300,47 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
     windUpMs: 900,
     recoveryMs: 1300,
   },
+  // The Guardian of the castle, the last fight of the game and the only monster of its kind. It is the biggest creature
+  // there is, 1.6 tiles wide where the knight is 0.9, and its width is the width of its charge. It has 100 Health, five
+  // times the knight's: twenty-five hits from a hero of Level 6 who put two Stat Points in Attack and carries the Steel
+  // Sword (twenty with the Katana, thirty-four from a hero of Level 4), and more than the quiver of the route can take
+  // off it. It leaves nothing behind. It is worth 30 Experience, which takes a hero of Level 5 to Level 6; a hero who is
+  // at the top Level already gets none, so it is no prize to wait for. It notices the hero from seven tiles away, as far
+  // as the hero's arrows fly, so that nobody shoots it from where it does not see, and walks at 2.2 tiles a second, less
+  // than half the hero's pace. It attacks with three patterns in turn: after each it takes the first of them that
+  // reaches the hero, starting from the one after the last it made, and when none does it walks toward the hero. Each is
+  // telegraphed for as long as it winds up, shows where it will land, and leaves the hero free to hit the Guardian
+  // while it rests; a hero's blow does not stop a wind-up.
+  //   The sweep lights up the ground within 1.4 tiles of its body, all around, when the hero is on it. It winds up for
+  //   0.9 s, hits for 8 and rests for 1.1 s.
+  //   The charge lights up the lane, as wide as the Guardian, that runs from it toward the hero, when the hero is in
+  //   that lane within seven tiles. It winds up for 1 s, then dashes down the lane at fourteen tiles a second, for
+  //   seven tiles at most or as far as the first wall, hits for 11 a hero who is still in the lane and rests for 2.2 s,
+  //   long enough for the hero to walk up to it from the end of the lane.
+  //   The smite lights up a square three tiles wide on the spot where the hero stands as the wind-up begins, when the
+  //   hero is within five tiles of the Guardian, however it stands. It winds up for 1.1 s, hits for 7 whatever is in
+  //   the square when the wind-up ends and rests for 1.4 s. That is the pattern that presses a hero who keeps away.
+  // A hero of Level 6 with 14 Health, Defense 2 and the Steel Sword takes 6, 9 and 5 from them: it survives two sweeps,
+  // one charge or two smites, and with the Knight Mail and the Katana, 3, 6 and 2. Stepping out of any of them takes
+  // under half of its wind-up. All of the numbers are guesses for the tuning pass.
+  'castle-guardian': {
+    behavior: 'guardian',
+    health: 100,
+    size: 1.6,
+    experience: 30,
+    speedTilesPerSecond: 2.2,
+    noticingDistance: 7,
+    patterns: [
+      { kind: 'sweep', damage: 8, windUpMs: 900, recoveryMs: 1100, reach: 1.4 },
+      {
+        kind: 'charge',
+        damage: 11,
+        windUpMs: 1000,
+        recoveryMs: 2200,
+        dashSpeedTilesPerSecond: 14,
+        dashRange: 7,
+      },
+      { kind: 'smite', damage: 7, windUpMs: 1100, recoveryMs: 1400, size: 3, range: 5 },
+    ],
+  },
 };

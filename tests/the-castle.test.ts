@@ -26,13 +26,16 @@ import {
   openTilesOf,
   routeBetween,
   walkRoute,
+  withoutOrdinaryMonsters,
 } from './routes';
 
 // The old castle, the fifth and last Adventure Area on the route of the adventure, up to the end of its route: what it
 // has to be to read as yards and buildings and not as a second cave, with undead that are not the cave's creatures,
-// supplies and an armor upgrade for the final fight, and a route that ends at a plain wall. Like the other tests of the
-// shipped content, these read the map and the lists of the content and walk the hero over them with the core's own
-// movement, so that moving a tile or a chest never breaks them unless the castle stops being what it is for.
+// supplies and an armor upgrade for the final fight, and a route that ends against the east wall of the last hall, where
+// the gateway to the Guardian begins. What lies beyond, the Guardian's own, is the part of the-guardian.test.ts. Like the
+// other tests of the shipped content, these read the map and the lists of the content and walk the hero over them with
+// the core's own movement, so that moving a tile or a chest never breaks them unless the castle stops being what it is
+// for.
 
 const COAST = 'shipwreck-coast';
 const WOODS = 'woods';
@@ -50,8 +53,8 @@ const SCREEN_TILES = { wide: 20, high: 12 };
 const BOTTOM_ROWS = 3;
 
 /**
- * Where the route of the castle ends for now: the middle of the plain east wall of the last hall. The ticket that adds
- * the Guardian's arena opens that wall and moves this tile.
+ * Where the route of the castle ends: the middle of the east wall of the last hall, against the tile where the gateway
+ * to the Guardian's arena begins, which the route does not go into.
  */
 const END_OF_ROUTE: Tile = { col: 62, row: 11 };
 
@@ -61,7 +64,7 @@ const SCREENS_OF_ROUTE = { least: 4, most: 5 };
 /** A stretch of the route is a courtyard or a hall when it runs over this many tiles of the same ground, at least. */
 const LEAST_STRETCH = 6;
 
-/** The last hall is the open ground within this many tiles of the end of the route. */
+/** The last hall is the open ground of the castle within this many tiles of the end of the route, not beyond it. */
 const LAST_HALL_REACH = 4;
 
 /** Two colours are set apart when they lie this far from each other, at least, in the cube of red, green and blue (0 to 255 each). */
@@ -87,9 +90,12 @@ function definitionOf(id: string): AreaDefinition {
   return area;
 }
 
-/** A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out. */
+/**
+ * A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the
+ * Guardian, which the content must keep.
+ */
 function quietGameAt(areaId: string, tile: Tile): Game {
-  const areas = gameContent.areas.map((area) => ({ ...area, monsters: [] }));
+  const areas = withoutOrdinaryMonsters(gameContent);
   return newGame({ ...gameContent, areas, start: { area: areaId, tile } });
 }
 
@@ -145,10 +151,13 @@ const placed = [
   ...castle.monsters.map(({ id, tile }) => ({ id, tiles: [tile] })),
 ];
 
-/** The types of monster in the castle, with their ids, and the tougher one among them: the one that takes most to defeat. */
+/**
+ * The types of undead in the castle, with their ids, and the tougher one among them: the one that takes most to defeat.
+ * The Guardian is no undead of the route and has the tests of its own.
+ */
 const undead = [...new Set(castle.monsters.map(({ type }) => type))].flatMap((id) => {
   const type = gameContent.monsterTypes[id];
-  return type === undefined ? [] : [{ id, type }];
+  return type === undefined || type.behavior === 'guardian' ? [] : [{ id, type }];
 });
 const tougher = [...undead].sort((one, other) => other.type.health - one.type.health)[0];
 const toughUndead = castle.monsters.filter(({ type }) => type === tougher?.id);
@@ -286,9 +295,10 @@ describe('the way through the castle', () => {
     expect(area.height).toBeGreaterThan(SCREEN_TILES.high);
   });
 
-  it('has one Checkpoint, where the hero comes in from the cave', () => {
+  it('has two Checkpoints: the one where the hero comes in from the cave, and the Guardian\'s', () => {
     expect(wayIn?.id).toBe('from-cave');
-    expect(castle.checkpoints).toEqual([expect.objectContaining({ id: 'castle-checkpoint', tile: wayInTile })]);
+    expect(castle.checkpoints).toHaveLength(2);
+    expect(castle.checkpoints).toContainEqual(expect.objectContaining({ id: 'castle-checkpoint', tile: wayInTile }));
   });
 
   it('has one way back, to the entrance of the cave that the hero who comes from the castle uses, and keeps it and the way in out of the bottom rows', () => {
@@ -328,19 +338,21 @@ describe('the way through the castle', () => {
   });
 });
 
-// The end of the route is a plain wall for now: the ticket that adds the Guardian's arena replaces the wall with the way
-// to it, and changes the tests of this part.
+// The route ends against the east wall of the last hall, which is solid but for the mouth of the gateway to the Guardian:
+// what lies beyond it is the Guardian's, and has the tests of the-guardian.test.ts.
 describe('the end of the route', () => {
-  const lastHall = tilesAround(END_OF_ROUTE, LAST_HALL_REACH).filter((tile) => !isSolidAt(tile));
+  /** The room: the open ground within reach of the end of the route, not the gateway beyond its wall. */
+  const lastHall = tilesAround(END_OF_ROUTE, LAST_HALL_REACH).filter(
+    (tile) => !isSolidAt(tile) && tile.col <= END_OF_ROUTE.col,
+  );
   /** Whether a block of open ground four tiles square has its corner on a tile: room for the hero to stand and step aside. */
   const hasBlockAt = ({ col, row }: Tile): boolean =>
     [0, 1, 2, 3].every((across) => [0, 1, 2, 3].every((down) => isOpen({ col: col + across, row: row + down })));
 
-  it('is a plain wall: the end of the route lies against the east edge of the map, which is solid along its whole length', () => {
-    const lastCol = (castle.layout[0]?.length ?? 0) - 1;
+  it('lies against the east wall of the last hall, which is solid along its whole length but for the mouth of the gateway to the Guardian, in the row of the end of the route', () => {
+    const wall = END_OF_ROUTE.col + 1;
 
-    expect(END_OF_ROUTE.col + 1).toBe(lastCol);
-    expect(castle.layout.map((_, row) => isSolidAt({ col: lastCol, row })).every(Boolean)).toBe(true);
+    expect(castle.layout.flatMap((_, row) => (isSolidAt({ col: wall, row }) ? [] : [row]))).toEqual([END_OF_ROUTE.row]);
   });
 
   it('lies in a last hall that has room to prepare in: a block of open ground four tiles square', () => {
