@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
-import type { AreaDefinition, ExitDefinition, Game, GameEvent, InteractableDefinition, Tile } from '../src/core';
+import type { AreaDefinition, ExitDefinition, InteractableDefinition, Tile } from '../src/core';
 import { playingView } from './fixtures';
-import { AREA_IDS, type AreaId, areaOf, routeOf, wayInOf } from './main-route';
-import { keyOf, neighboursOf, openTilesOf, quietGameOf, routeBetween, walkRoute } from './routes';
+import { AREA_IDS, type AreaId, areaOf, routeOf, walkAssigning, wayInOf } from './main-route';
+import { keyOf, neighboursOf, openTilesOf, quietGameOf, routeBetween } from './routes';
 
 // The criterion of whole-route validation, read in one place over the content the game ships with: five Adventure Areas
 // in order, exits both ways, an entrance Checkpoint in every area and one immediately before the Guardian, exactly one
@@ -113,16 +113,6 @@ function puzzlesOn(area: AreaDefinition, route: readonly Tile[]): string[] {
   return (area.interactables ?? [])
     .filter(({ kind, tile }) => PUZZLE_KINDS.includes(kind) && onRoute.has(keyOf(tile)))
     .map(({ id }) => id);
-}
-
-/** Walks a route, spending each Stat Point on Health as the game waits for it: the milestones give Experience too. */
-function walkAssigning(game: Game, route: readonly Tile[]): GameEvent[] {
-  return walkRoute(game, route, () => {
-    while (playingView(game).levelUp !== null) {
-      game.send({ type: 'assign-stat-point', stat: 'health' });
-    }
-    return true;
-  });
 }
 
 describe('the whole route of the adventure', () => {

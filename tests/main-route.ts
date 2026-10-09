@@ -3,11 +3,23 @@ import type {
   AreaDefinition,
   ConsumableId,
   ExitDefinition,
+  Game,
+  GameEvent,
   MilestoneDefinition,
   MonsterPlacement,
   Tile,
 } from '../src/core';
-import { experienceOfAll, isInZone, keyOf, metOn, neighboursOf, openTilesOf, routeBetween } from './routes';
+import { playingView } from './fixtures';
+import {
+  experienceOfAll,
+  isInZone,
+  keyOf,
+  metOn,
+  neighboursOf,
+  openTilesOf,
+  routeBetween,
+  walkRoute,
+} from './routes';
 
 // The intended route of the adventure, read from the shipped content, for the tests of the balance pass: the legs a
 // first-time player walks, from the start of the coast to the Guardian's Checkpoint, with every door and gate shut.
@@ -83,6 +95,16 @@ export function routeOf(id: AreaId): readonly Tile[] {
 /** The monsters a hero who walks the route of an area meets: each notices it from where it stands. */
 export function monstersOnRoute(id: AreaId): MonsterPlacement[] {
   return metOn(gameContent, areaOf(id), routeOf(id));
+}
+
+/** Walks a route, spending each Stat Point on Health as the game waits for it: the milestones give Experience too. */
+export function walkAssigning(game: Game, route: readonly Tile[]): GameEvent[] {
+  return walkRoute(game, route, () => {
+    while (playingView(game).levelUp !== null) {
+      game.send({ type: 'assign-stat-point', stat: 'health' });
+    }
+    return true;
+  });
 }
 
 /** The milestones the route of an area crosses. */
