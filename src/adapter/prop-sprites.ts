@@ -5,10 +5,11 @@ import { TILE_SIZE } from './config';
 import { DEPTH } from './depths';
 
 // What every area shares, as sprites: chests and caches, what lies on the ground, Checkpoints, the marks of the way out,
-// doors, gates, levers and signs. Each is a picture of one tile (the Checkpoint's is taller, and a gate's is taller and
-// wider, its arch standing over the way) that stands with its foot on the bottom of the tile the Game core says it is on,
-// so none of this knows which area it is in. The sheets are made by docs/assets/compose-art.py. All of it is cosmetic: it
-// runs on frame time from the Game core's view, and nothing the Game core decides depends on it.
+// doors, gates, levers and signs, and the old vessel of the harbor. Each is a picture of one tile (the Checkpoint's is
+// taller, a gate's is taller and wider, its arch standing over the way, and the vessel's lies in the water beside its tile)
+// that stands with its foot on the bottom of the tile the Game core says it is on, so none of this knows which area it is
+// in. The sheets are made by docs/assets/compose-art.py. All of it is cosmetic: it runs on frame time from the Game core's
+// view, and nothing the Game core decides depends on it.
 
 const CHEST = 'prop-chest' satisfies ArtName;
 const PICKUP = 'prop-pickup' satisfies ArtName;
@@ -18,6 +19,7 @@ const DOOR = 'prop-door' satisfies ArtName;
 const GATE = 'prop-gate' satisfies ArtName;
 const LEVER = 'prop-lever' satisfies ArtName;
 const SIGN = 'prop-sign' satisfies ArtName;
+const VESSEL = 'prop-vessel' satisfies ArtName;
 
 /** The frame of each chest while it is shut, in the sheet of chests: the frame after it is the same chest open. */
 const CHEST_FRAMES: Readonly<Record<ChestView['holds'], number>> = {
@@ -62,6 +64,15 @@ const GATE_REACH = 4;
 const LEVER_REST_FRAME = 0;
 const LEVER_PULLED_FRAME = 1;
 
+/** The vessel with its sail furled, as it is found, and with its sail hoisted once it is prepared. */
+const VESSEL_FURLED_FRAME = 0;
+const VESSEL_HOISTED_FRAME = 1;
+/**
+ * The picture of the vessel is seven tiles tall and lies in the water beside the vessel's own tile, at the left of it: that
+ * tile is the fifth from the top, so the picture reaches this many pixels below the bottom of the tile.
+ */
+const VESSEL_REACH_BELOW = 2 * TILE_SIZE;
+
 /** Where a prop stands: the left edge and the bottom edge of its tile, in canvas pixels. */
 interface Foot {
   readonly left: number;
@@ -74,6 +85,11 @@ function footOf(centre: Point, size: number): Foot {
     left: Math.round((centre.x - size / 2) * TILE_SIZE),
     bottom: Math.round((centre.y + size / 2) * TILE_SIZE),
   };
+}
+
+/** Where the picture of the vessel stands for the vessel on the tile with this foot: its fifth row is the tile's row. */
+export function vesselFoot(foot: Foot): Foot {
+  return { left: foot.left, bottom: foot.bottom + VESSEL_REACH_BELOW };
 }
 
 /** The way out of an exit, which is towards the nearest edge of the area: a tie goes to left, then right, then up. */
@@ -160,6 +176,9 @@ export class PropSprites {
         return;
       case 'lever':
         this.place(LEVER, DEPTH.prop, foot, interactable.pulled ? LEVER_PULLED_FRAME : LEVER_REST_FRAME);
+        return;
+      case 'vessel':
+        this.place(VESSEL, DEPTH.prop, vesselFoot(foot), interactable.prepared ? VESSEL_HOISTED_FRAME : VESSEL_FURLED_FRAME);
         return;
     }
   }

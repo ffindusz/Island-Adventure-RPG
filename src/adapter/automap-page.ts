@@ -1,8 +1,8 @@
 import type Phaser from 'phaser';
 import type { AutomapAreaView, AutomapPageView, PlayingView } from '../core';
-import { terrainColour } from './art';
 import { exitRect, fitLabel, layoutRoute, linkedWithNext, markerRect, routeLinks, tileRects } from './automap-layout';
 import type { Metrics, Place, Rect } from './automap-layout';
+import { automapColour, EXIT_COLOUR, MAP_COLOUR } from './automap-palette';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Graphics } from './pixel-font';
@@ -70,8 +70,8 @@ const UNKNOWN_NAME = 'UNKNOWN';
 
 const BACKDROP_COLOUR = 0x000000;
 const BACKDROP_ALPHA = 0.55;
-// The names, rings and links take the colours of the window they are in (ui-layer.ts); the terrain, the exits and the
-// hero's mark keep their own.
+// The names, rings and links take the colours of the window they are in (ui-layer.ts); the terrain and the exits take
+// those of automap-palette.ts, and the hero's mark keeps its own.
 const TITLE_COLOUR = INK.title;
 const TEXT_COLOUR = INK.text;
 const LINK_COLOUR = 0x5f7160;
@@ -79,10 +79,8 @@ const CURRENT_COLOUR = INK.title;
 const DISCOVERED_RING_COLOUR = INK.dim;
 const UNDISCOVERED_RING_COLOUR = 0x4d4a43;
 const UNDISCOVERED_TEXT_COLOUR = INK.dim;
-/** What a map shows where the hero has not looked yet, and what stands for an area the hero has not been in. */
-const MAP_COLOUR = 0x141b1b;
+/** What stands for an area the hero has not been in. */
 const UNDISCOVERED_COLOUR = 0x2a2824;
-const EXIT_COLOUR = 0xbfeaff;
 const MARK_COLOURS: readonly [number, number] = [0xf2c14e, 0xffffff];
 const MARK_OUTLINE_COLOUR = 0x141b1b;
 
@@ -246,7 +244,7 @@ function drawCard(graphics: Graphics, area: AutomapAreaView, label: string, plac
     return null;
   }
   for (const { kind, rect } of tileRects(area.terrain, map, scale)) {
-    fill(graphics, terrainColour(kind), rect);
+    fill(graphics, automapColour(area.id, kind), rect);
   }
   for (const exit of area.exits) {
     fill(graphics, EXIT_COLOUR, exitRect(exit.zone, map, scale, MIN_MARK));

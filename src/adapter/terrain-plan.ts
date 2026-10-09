@@ -10,7 +10,9 @@ import { terrainArt } from './artwork';
 // one across the corner, so that a bend, a corner and an inlet all join up with thirteen pieces for each.
 //
 // Sand, grass and rock are drawn in the look of the area (TerrainLook): the coast and the woods have the standard sheets,
-// the mountain and the cave sheets of their own, with the same frames.
+// the mountain and the cave sheets of their own, with the same frames. The castle has sheets of its own too, and a look
+// may add what the others do not have: water of its own, planks for the sand beside the water, and a fountain for a block
+// of rock of the right shape. Each of those is switched on by a field that only the look of the castle has.
 
 export type Quarter = 'nw' | 'ne' | 'sw' | 'se';
 
@@ -50,6 +52,12 @@ const WRECK_ART = terrainArt('wreckage');
 
 /** The boulders are a sheet of four frames, one tile each. */
 const BOULDER_VARIANTS = 4;
+/** The planks of a quay are a sheet of six frames: two plain, two with moss in their seams, one with weeds, one split. */
+const DOCK = { plain: [0, 1], moss: [2, 3], weeds: 4, split: 5 } as const;
+/** Sand within this many tiles of water, in a look with planks, is planks: the quay of a harbor, and nothing further inland. */
+const DOCK_REACH = 4;
+/** A fountain is a block of rock this many tiles on a side, and a sheet of that many pieces by that many. */
+const FOUNTAIN_SIDE = 3;
 
 /**
  * The sheets that dress the sand, the grass and the rock of an Adventure Area. Each is laid out like the standard one of
@@ -64,6 +72,18 @@ export interface TerrainLook {
    * a cliff; when there is none, it is a cliff like any other.
    */
   readonly boulders?: string;
+  /** The sheet of water, laid out like the standard one; the standard water when there is none. */
+  readonly water?: string;
+  /**
+   * The sheet of weathered planks. When there is one, sand within DOCK_REACH tiles of water is a quay of planks. The
+   * planks have no gap in them: a gap on a tile to walk on would read as a hole to avoid.
+   */
+  readonly dock?: string;
+  /**
+   * The sheet of a fountain, three pieces by three. When there is one, a block of rock exactly three tiles by three with
+   * no rock in the ring of tiles around it is a fountain, not a wall.
+   */
+  readonly fountain?: string;
 }
 
 /** The look of the coast and of the woods, and of every area that has no look of its own. */
@@ -72,15 +92,30 @@ export const STANDARD_LOOK: TerrainLook = { sand: SAND_ART, grass: GRASS_ART, ro
 const MOUNTAIN_LOOK: TerrainLook = { ...STANDARD_LOOK, rock: 'mountain-cliff', boulders: 'mountain-boulders' };
 /** Dark stone, and a floor of sand and grass in dim colours, so that the cave is dark in the ground and nowhere else. */
 const CAVE_LOOK: TerrainLook = { sand: 'cave-sand', grass: 'cave-grass', rock: 'cave-cliff' };
-const LOOKS: readonly TerrainLook[] = [STANDARD_LOOK, MOUNTAIN_LOOK, CAVE_LOOK];
+/**
+ * Walls of masonry, flagstones in the halls and moss in the courtyards; a pillar where a rock stands alone and a fountain
+ * where a block of rock stands free; and at the harbor water of grey-green and weathered planks on the sand beside it.
+ */
+const CASTLE_LOOK: TerrainLook = {
+  sand: 'castle-floor',
+  grass: 'castle-grass',
+  rock: 'castle-wall',
+  boulders: 'castle-pillars',
+  water: 'castle-water',
+  dock: 'castle-dock',
+  fountain: 'castle-fountain',
+};
+const LOOKS: readonly TerrainLook[] = [STANDARD_LOOK, MOUNTAIN_LOOK, CAVE_LOOK, CASTLE_LOOK];
 
-/** The look of the Adventure Area with this id: the standard one, unless it is the mountain or the cave. */
+/** The look of the Adventure Area with this id: the standard one, unless it is the mountain, the cave or the castle. */
 export function lookOf(areaId: string): TerrainLook {
   switch (areaId) {
     case 'mountain':
       return MOUNTAIN_LOOK;
     case 'cave':
       return CAVE_LOOK;
+    case 'castle':
+      return CASTLE_LOOK;
     default:
       return STANDARD_LOOK;
   }
@@ -158,18 +193,37 @@ function isLand(kind: string | undefined): boolean {
   return kind === 'sand' || kind === 'grass';
 }
 
-function waterTile(x: number, y: number, kindAt: KindAt): Stamp[] {
+function waterTile(x: number, y: number, kindAt: KindAt, art: string = WATER_ART): Stamp[] {
   const pieces = piecesFor(x, y, (nx, ny) => isLand(kindAt(nx, ny)));
   if (pieces.every((piece) => piece === 'C')) {
-    return [whole(WATER_ART, scatter(x, y, 1) % 7 === 0 ? WATER.glint : WATER.plain, x, y)];
+    return [whole(art, scatter(x, y, 1) % 7 === 0 ? WATER.glint : WATER.plain, x, y)];
   }
   return CORNERS.map((corner, index) => {
     const piece = pieces[index] ?? 'C';
-    if (piece === 'C') return quarterOf(WATER_ART, WATER.plain, x, y, corner.quarter);
+    if (piece === 'C') return quarterOf(art, WATER.plain, x, y, corner.quarter);
     // The shore is sand where any tile this quarter looks at is sand, and grass where it is grass alone.
     const sandy = [kindAt(x, y + corner.dy), kindAt(x + corner.dx, y), kindAt(x + corner.dx, y + corner.dy)].includes('sand');
-    return quarterOf(WATER_ART, (sandy ? WATER.sand : WATER.grass) + PIECES.indexOf(piece), x, y, corner.quarter);
+    return quarterOf(art, (sandy ? WATER.sand : WATER.grass) + PIECES.indexOf(piece), x, y, corner.quarter);
   });
+}
+
+/** Whether there is water within DOCK_REACH tiles of this one, in any direction. */
+function nearWater(x: number, y: number, kindAt: KindAt): boolean {
+  for (let dy = -DOCK_REACH; dy <= DOCK_REACH; dy += 1) {
+    for (let dx = -DOCK_REACH; dx <= DOCK_REACH; dx += 1) {
+      if (kindAt(x + dx, y + dy) === 'water') return true;
+    }
+  }
+  return false;
+}
+
+/** A plank tile of a quay: plain boards for the most part, with moss, weeds and a split board now and then, by where it is. */
+function dockFrame(x: number, y: number): number {
+  const roll = scatter(x, y, 10) % 12;
+  if (roll === 0) return DOCK.weeds;
+  if (roll === 1) return DOCK.split;
+  if (roll < 5) return DOCK.moss[roll % DOCK.moss.length] ?? DOCK.moss[0];
+  return DOCK.plain[scatter(x, y, 11) % DOCK.plain.length] ?? DOCK.plain[0];
 }
 
 function sandTile(x: number, y: number, kindAt: KindAt, art: string = SAND_ART): Stamp[] {
@@ -222,6 +276,45 @@ function rockTile(x: number, y: number, kindAt: KindAt, look: TerrainLook): Stam
   const right = !rock(x + 1, y) || alone(x + 1, y);
   const column = left && !right ? 0 : right && !left ? 2 : 1;
   return [whole(look.rock, row * ROCK_COLUMNS.length + column, x, y)];
+}
+
+interface FountainPart {
+  readonly column: number;
+  readonly row: number;
+  /** Whether more of the ring of tiles around the fountain is sand than grass: the ground it stands on. */
+  readonly sandy: boolean;
+}
+
+/**
+ * The fountains of a map: each block of rock exactly three tiles by three with no rock in the ring of tiles around it (the
+ * tiles beyond the edge of the map are not rock), each tile of it by its place in the block.
+ */
+function findFountains(terrain: readonly (readonly string[])[]): Map<string, FountainPart> {
+  const parts = new Map<string, FountainPart>();
+  const rock = (x: number, y: number): boolean => terrain[y]?.[x] === 'rock';
+  terrain.forEach((row, y) => {
+    row.forEach((_, x) => {
+      const ring: string[] = [];
+      for (let dy = -1; dy <= FOUNTAIN_SIDE; dy += 1) {
+        for (let dx = -1; dx <= FOUNTAIN_SIDE; dx += 1) {
+          const inside = dx >= 0 && dx < FOUNTAIN_SIDE && dy >= 0 && dy < FOUNTAIN_SIDE;
+          if (inside ? !rock(x + dx, y + dy) : rock(x + dx, y + dy)) return;
+          if (!inside) ring.push(terrain[y + dy]?.[x + dx] ?? '');
+        }
+      }
+      const sandy = ring.filter((kind) => kind === 'sand').length > ring.filter((kind) => kind === 'grass').length;
+      for (let row = 0; row < FOUNTAIN_SIDE; row += 1) {
+        for (let column = 0; column < FOUNTAIN_SIDE; column += 1) parts.set(`${x + column},${y + row}`, { column, row, sandy });
+      }
+    });
+  });
+  return parts;
+}
+
+/** A tile of a fountain: its piece of the picture, on the ground it stands on. */
+function fountainTile(x: number, y: number, look: TerrainLook, fountain: string, part: FountainPart): Stamp[] {
+  const ground = part.sandy ? whole(look.sand, SAND.plain, x, y) : whole(look.grass, GRASS.plain, x, y);
+  return [ground, whole(fountain, part.row * FOUNTAIN_SIDE + part.column, x, y)];
 }
 
 interface TreePart {
@@ -376,12 +469,13 @@ export function planTerrain(terrain: readonly (readonly string[])[], look: Terra
   const kindAt: KindAt = (x, y) => terrain[y]?.[x];
   const treeParts = findTreeBlocks(terrain);
   const wrecks = findWrecks(terrain, kindAt);
+  const fountains = look.fountain === undefined ? new Map<string, FountainPart>() : findFountains(terrain);
   const stamps: Stamp[] = [];
   terrain.forEach((row, y) => {
     row.forEach((kind, x) => {
       switch (kind) {
         case 'water':
-          stamps.push(...waterTile(x, y, kindAt));
+          stamps.push(...waterTile(x, y, kindAt, look.water));
           break;
         case 'wreckage': {
           const wreck = wrecks.get(`${x},${y}`);
@@ -389,14 +483,18 @@ export function planTerrain(terrain: readonly (readonly string[])[], look: Terra
           break;
         }
         case 'sand':
-          stamps.push(...sandTile(x, y, kindAt, look.sand));
+          if (look.dock !== undefined && nearWater(x, y, kindAt)) stamps.push(whole(look.dock, dockFrame(x, y), x, y));
+          else stamps.push(...sandTile(x, y, kindAt, look.sand));
           break;
         case 'grass':
           stamps.push(whole(look.grass, grassFrame(x, y), x, y));
           break;
-        case 'rock':
-          stamps.push(...rockTile(x, y, kindAt, look));
+        case 'rock': {
+          const part = fountains.get(`${x},${y}`);
+          if (part && look.fountain !== undefined) stamps.push(...fountainTile(x, y, look, look.fountain, part));
+          else stamps.push(...rockTile(x, y, kindAt, look));
           break;
+        }
         case 'tree':
           stamps.push(...treeTile(x, y, kindAt, treeParts.get(`${x},${y}`)));
           break;
@@ -429,12 +527,19 @@ export function describeStamp(stamp: Stamp): string {
   if (dresses('rock')) {
     return `rock.${ROCK_ROWS[Math.floor(frame / ROCK_COLUMNS.length)]}.${ROCK_COLUMNS[frame % ROCK_COLUMNS.length]}${at}`;
   }
+  if (art === CASTLE_LOOK.boulders) return `pillar.${frame}${at}`;
   if (LOOKS.some((look) => look.boulders === art)) return `boulder.${frame}${at}`;
+  if (LOOKS.some((look) => look.fountain === art)) return `fountain.${Math.floor(frame / FOUNTAIN_SIDE)}.${frame % FOUNTAIN_SIDE}${at}`;
+  if (LOOKS.some((look) => look.dock === art)) {
+    const kind = (DOCK.plain as readonly number[]).includes(frame) ? 'plain' : (DOCK.moss as readonly number[]).includes(frame) ? 'moss' : frame === DOCK.weeds ? 'weeds' : 'split';
+    return `dock.${kind}${at}`;
+  }
+  if (art === WATER_ART || LOOKS.some((look) => look.water === art)) {
+    if (frame === WATER.plain) return `water.plain${at}`;
+    if (frame === WATER.glint) return `water.glint${at}`;
+    return `water.${frame < WATER.grass ? 'sand' : 'grass'}.${edgeName(frame)}${at}`;
+  }
   switch (art) {
-    case WATER_ART:
-      if (frame === WATER.plain) return `water.plain${at}`;
-      if (frame === WATER.glint) return `water.glint${at}`;
-      return `water.${frame < WATER.grass ? 'sand' : 'grass'}.${edgeName(frame)}${at}`;
     case TREE_ART: {
       if ((TREE.floors as readonly number[]).includes(frame)) return `tree.floor${at}`;
       if ((TREE.small as readonly number[]).includes(frame)) return `tree.small${at}`;

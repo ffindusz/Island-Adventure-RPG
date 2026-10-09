@@ -46,6 +46,16 @@ export const ARTWORK = {
   'cave-cliff': sheet('cave-cliff.png', 16),
   'cave-sand': sheet('cave-sand.png', 16),
   'cave-grass': sheet('cave-grass.png', 16),
+  // The castle has a look of its own too (terrain-plan.ts): walls of masonry, flagstones, moss and pillars, in the frames of
+  // the standard sheets, and three sheets that no other look has: the fountain (nine pieces of one tile each), grey-green
+  // water for the harbor, and the planks of its quay.
+  'castle-wall': sheet('castle-wall.png', 16),
+  'castle-floor': sheet('castle-floor.png', 16),
+  'castle-grass': sheet('castle-grass.png', 16),
+  'castle-pillars': sheet('castle-pillars.png', 16),
+  'castle-fountain': sheet('castle-fountain.png', 16),
+  'castle-water': sheet('castle-water.png', 16),
+  'castle-dock': sheet('castle-dock.png', 16),
   // Monsters, a sheet for each type: four columns (down, up, left, right), the frames of its walk, then a white frame
   // for a hit and a red one for a wind-up; see monster-sprites.ts.
   'monster-crab': sheet('monster-crab.png', 16),
@@ -62,6 +72,13 @@ export const ARTWORK = {
   'monster-cave-lizard': sheet('monster-cave-lizard.png', 16),
   'monster-cave-eye': sheet('monster-cave-eye.png', 16),
   'monster-cave-bear': sheet('monster-cave-bear.png', 16),
+  // The undead of the castle, in sheets of the same make.
+  'monster-castle-skeleton': sheet('monster-castle-skeleton.png', 16),
+  'monster-castle-ghoul': sheet('monster-castle-ghoul.png', 16),
+  'monster-castle-wraith': sheet('monster-castle-wraith.png', 16),
+  'monster-castle-knight': sheet('monster-castle-knight.png', 16),
+  // The Guardian is the one monster of its picture's size: cells of 96 pixels, for it stands four tiles and a half wide.
+  'monster-castle-guardian': sheet('monster-castle-guardian.png', 96),
   // What monsters share: the orb that a ranged monster shoots (four frames of 16 pixels), and the puff left where one
   // fell (six frames of 32 pixels).
   'projectile-orb': sheet('projectile-orb.png', 16),
@@ -78,12 +95,22 @@ export const ARTWORK = {
   'prop-gate': sheet('prop-gate.png', 24, 25),
   'prop-lever': sheet('prop-lever.png', 16),
   'prop-sign': image('prop-sign.png'),
+  // The old vessel of the harbor, the one prop of one area: two frames (its sail furled, its sail hoisted) of 48 by 112
+  // pixels, three tiles by seven, for it lies in the water beside its tile and its mast and sail stand over the rock.
+  'prop-vessel': sheet('prop-vessel.png', 48, 112),
   // The pieces the HUD and the pages are built from, see ui-layer.ts: a dark panel, the orange frame of a window, the
   // orange button behind the line the cursor is on, and the heart of Health.
   'ui-panel': image('ui-panel.png'),
   'ui-window': image('ui-window.png'),
   'ui-button': image('ui-button.png'),
   'ui-heart': image('ui-heart.png'),
+  // The picture behind the title screen: the whole canvas (320 by 192 pixels), a morning on the coast, composed from the
+  // pack by docs/assets/compose-art.py. The name and the menu window are drawn over it (title-layout.ts).
+  'backdrop-title': image('backdrop-title.png'),
+  // The picture behind the ending and the credits: the whole canvas, the evening the hero sails home, composed the same
+  // way. The cards of the ending are drawn over its middle (opening-card.ts), so what shows is the sky above them and the sea
+  // and the quay at their foot and sides.
+  'backdrop-ending': image('backdrop-ending.png'),
 } as const satisfies ArtManifest;
 
 /** The name of a picture the adapter itself asks for. */
@@ -114,10 +141,10 @@ export function monsterArt(type: string): string {
 
 /**
  * The ids of the Adventure Areas whose terrain and monsters have their final art. Tickets that draw a new area add its id
- * here once its kinds and types have their pictures; until then it is drawn in colours, and the game still starts. The
- * castle is not in it: it stays in flat colours until its own art pass.
+ * here once its kinds and types have their pictures; until then it is drawn in colours, and the game still starts. Every
+ * area of the game is in it now; the colours stay as the way to draw an area that is added without its art.
  */
-export const FINAL_ART_AREAS: readonly string[] = ['shipwreck-coast', 'woods', 'mountain', 'cave'];
+export const FINAL_ART_AREAS: readonly string[] = ['shipwreck-coast', 'woods', 'mountain', 'cave', 'castle'];
 
 /** Whether the terrain and the monsters of the area with this id are drawn with their final art, and not in colours. */
 export function hasFinalArt(areaId: string): boolean {

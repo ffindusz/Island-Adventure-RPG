@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Composes pictures from pieces of the Ninja Adventure pack: the ground and the monsters of the shipwreck coast and the
-woods, the ground and the monsters of the mountain and of the cave, the props every area shares, and the icons of the
-two bows.
+woods, the ground and the monsters of the mountain and of the cave, the ground (the masonry, the flagstones, the moss, the
+pillars, the fountain, the harbor and its quay) and the undead and the Guardian of the castle, the old vessel of its harbor
+(the pack's boat and sail), the props every area shares, the icons of the two bows, and the backdrops of the title screen and of
+the ending (pictures of the size of the canvas, put together from the coast's own sea, sand and wreck, and from the quay of
+the castle's harbor).
 
 The pack (CC0, Pixel-Boy and AAA) is not in the repository. Pass the folder that holds `Backgrounds`, `Actor`, `Items`
 and `FX` as --pack; the pictures are written under public/art/ and are committed with it. Run it again to remake them:
@@ -9,10 +12,13 @@ and `FX` as --pack; the pictures are written under public/art/ and are committed
     python docs/assets/compose-art.py --pack "<path to Ninja Adventure - Asset Pack>"
     python docs/assets/compose-art.py --pack "<path>" terrain-water monster-crab    (only these)
 
-Every picture is cut from named pieces of the pack and put together here; nothing is drawn by hand except where a
-function says "small touch". docs/assets/licences.md lists each result and the pieces it was made from.
+Every picture is cut from named pieces of the pack and put together here; what is drawn by the recipe instead (a glint, the
+pillars and the fountain of the castle, the courses of its walls, the mast and the post of the vessel, the sky, the sun, the
+clouds, the gulls, the far castle and the far vessel of a backdrop) is said so by its function and by
+docs/assets/licences.md, which lists each result and the pieces it was made from.
 """
 import argparse
+import math
 import os
 import sys
 
@@ -429,6 +435,14 @@ SPITTER_CAP = {'#e0394c': '#a15fd8', '#8f3e56': '#5e3a8c'}
 VETERAN_STEEL = {'#8d977f': '#8aa0d0', '#5f7160': '#4c62a4', '#4e484a': '#3c4478', '#3b3643': '#2a2e5a'}
 CAVE_BEAR = {'#d14b34': '#8a6246', '#8f3e56': '#523a2c'}
 
+# The undead of the castle are the pack's creatures, drawn four ways like the others. The skeleton is the pack's, as it
+# is. The ghoul is the pack's red beast, a squat thing with a scowl, made the yellow-green of something long dead (it is
+# paler than the floors, so that it shows on them). The wraith is the pack's spirit made violet, the colour of the orb it
+# shoots. The knight is the pack's golden knight, tarnished: a gold, horned thing that no raider of the mountain is.
+GHOUL_FLESH = {'#d14b34': '#b9c28e', '#8f3e56': '#7c8650', '#ef914f': '#e8e6a8'}
+WRAITH_VIOLET = {'#79b8ce': '#a77ee0', '#9ba7aa': '#7c60b8'}
+KNIGHT_TARNISHED = {'#f1c471': '#d1a64e', '#d78b4a': '#9a6e36', '#d14b34': '#c0392b', '#8f3e56': '#5a2d4a'}
+
 
 def projectile_orb(pack):
     """The pack's energy ball in the colours of the spitter's cap, with the dark outline of the pack's creatures."""
@@ -443,6 +457,50 @@ def monster_side(pack, folder, name):
     right = [sprite.crop((i * width, 0, (i + 1) * width, sprite.height)) for i in range(2)]
     left = [frame.transpose(Image.FLIP_LEFT_RIGHT) for frame in right]
     return monster_sheet([[right[i], right[i], left[i], right[i]] for i in range(2)])
+
+
+# The Guardian of the castle is the pack's Giant Blue Samurai, a boss as wide as four tiles and a half, so its cells are
+# 96 by 96 pixels. The pack draws it from the front only, with the strips of its idle and walk 48 pixels tall and those of
+# its lunge 96 tall, so each frame is set in its cell so that the middle of the body is the middle of the cell, which is
+# where the monster stands. Its blue is made a pale teal, its gold crescent ivory and its orange and red knots the glow of
+# a lit lamp: the Guardian is armour with nothing in it. The pack has no back or side view, so up is the mirror of down,
+# and left and right lean three pixels each way. The wind-up row is the lunge of the pack, the blade raised high.
+GUARDIAN_PALE = {
+    '#79b8ce': '#b6e6d9', '#5f7160': '#5aa59b', '#3b3643': '#2b5560', '#f1c471': '#eef7e3',
+    '#ef914f': '#5ff0d6', '#d3a2c0': '#cfeee6', '#d14b34': '#3fd8c8',
+}
+BOSS_CELL = 96
+BOSS_WALK_FRAMES = 6
+BOSS_LIFT = 24
+BOSS_LUNGE_LIFT = {'ChargeLeft': -2, 'ChargeRight': -10}
+BOSS_LEAN = 3
+
+
+def boss_frame(strip, index, lift, lean=0):
+    """Frame `index` of a strip of the pack's boss, set in a cell of 96 by 96, `lift` pixels down and `lean` to the right."""
+    cell = Image.new('RGBA', (BOSS_CELL, BOSS_CELL), (0, 0, 0, 0))
+    cell.paste(strip.crop((index * BOSS_CELL, 0, (index + 1) * BOSS_CELL, strip.height)), (lean, lift))
+    return cell
+
+
+def guardian_sheet(pack):
+    colours = {hexrgb(old): hexrgb(new) for old, new in GUARDIAN_PALE.items()}
+    strip = {
+        name: recolour(pack.image('Actor', 'Boss', 'GiantBlueSamurai', name + '.png'), colours)
+        for name in ('Walk', 'ChargeLeft', 'ChargeRight')
+    }
+    ways = [
+        [boss_frame(strip['Walk'], f, BOSS_LIFT) for f in range(BOSS_WALK_FRAMES)],
+        [boss_frame(strip['Walk'], f, BOSS_LIFT).transpose(Image.FLIP_LEFT_RIGHT) for f in range(BOSS_WALK_FRAMES)],
+        [boss_frame(strip['Walk'], f, BOSS_LIFT, -BOSS_LEAN) for f in range(BOSS_WALK_FRAMES)],
+        [boss_frame(strip['Walk'], f, BOSS_LIFT, BOSS_LEAN).transpose(Image.FLIP_LEFT_RIGHT) for f in range(BOSS_WALK_FRAMES)],
+    ]
+    rows = [[way[f] for way in ways] for f in range(BOSS_WALK_FRAMES)]
+    lunge_left = boss_frame(strip['ChargeLeft'], 1, BOSS_LUNGE_LIFT['ChargeLeft'])
+    lunge_right = boss_frame(strip['ChargeRight'], 1, BOSS_LUNGE_LIFT['ChargeRight'])
+    rows.append([white_shape(frame) for frame in rows[0]])
+    rows.append([red_shape(frame) for frame in (lunge_right, lunge_left, lunge_left, lunge_right)])
+    return frames_sheet([frame for row in rows for frame in row], 4, (BOSS_CELL, BOSS_CELL))
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -635,6 +693,676 @@ def bow_icon(pack, folder, shorter_by=0):
     return out
 
 
+# ---------------------------------------------------------------------------------------------------------------------
+# The castle. Its ground has sheets of its own (the look of the castle in src/adapter/terrain-plan.ts names them): the
+# masonry of its walls, the flagstones of its halls, the moss of its courtyards and the grey-green water of its harbor,
+# each in the frames of the standard sheet of its kind; and three that no other look has: the pillars (four frames, one
+# tile each), the fountain (a picture of three tiles by three) and the planks of the quay (six frames).
+
+CASTLE_STONE = ('#8a8071', '#6f665a', '#3f3933', '#b0a695', '#ebe3d2', '#c4baa8')
+MORTAR = hexrgb('#4b443b')
+# A wall is courses of blocks. The pack's face is seven rows of stone and a joint of mortar under them (rows 4 and 12 of a
+# tile), so a tile is two courses; each block is eight pixels long and a course starts half a block along from the one
+# above, so the pattern is the same on every tile and the tiles of a long or a tall wall join. The blocks are shaded by
+# course and by place in the course, and a few pixels of each tile are lighter or darker.
+BLOCK_SHADES = (('#978d7c', '#857b6c'), ('#8a8071', '#9a907f'))
+BLOCK_SPECKS = ((3, 7, -16), (6, 14, 14), (11, 8, -16), (13, 1, 14), (9, 6, 14), (2, 2, -14))
+# The columns of a tile of the wall (left, middle, right) that are face; the rest is the side of the wall, shaded as the pack has it.
+WALL_FACE = {0: (5, 15), 1: (0, 15), 2: (0, 9)}
+# The grass of the coast and of the woods, as moss: darker and a little blue.
+CASTLE_MOSS = {'#adbc3a': '#6a9a3b', '#a8a129': '#477c48'}
+MOSS, MOSS_DARK = hexrgb('#74a334'), hexrgb('#4a7f4b')
+CRACK_COLOUR = hexrgb('#2a2630')
+# Chips of the stone of the wall, for the grass and the flagstones: a letter picture, light on top and dark below.
+CHIP_COLOURS = {'L': hexrgb('#b0a695'), 'M': hexrgb('#8a8071'), 'D': hexrgb('#3f3933')}
+CHIP = ['.LL.', 'LMMD', '.DDD']
+SMALL_CHIP = ['LM', '.D']
+
+
+def shifted(colour, amount):
+    """A colour lighter by `amount`, or darker when it is negative."""
+    return tuple(max(0, min(255, value + amount)) for value in colour)
+
+
+def wall_block(x, y):
+    """The colour of the masonry at x, y of a tile of wall."""
+    course = 0 if 5 <= y <= 11 else 1
+    along = x - 4 * course
+    if y in (4, 12) or along % 8 == 0:
+        return MORTAR
+    colour = hexrgb(BLOCK_SHADES[course][(along % 16) // 8])
+    for sx, sy, amount in BLOCK_SPECKS:
+        if (x, y) == (sx, sy):
+            return shifted(colour, amount)
+    if y == (5, 13)[course]:
+        return shifted(colour, 16)
+    if y == (11, 3)[course]:
+        return shifted(colour, -18)
+    return colour
+
+
+def castle_wall_tile(tile, column, row):
+    """A tile of the pack's relief in the stone of the castle, with the courses of blocks laid over its face."""
+    out = recolour(tile, stone(CASTLE_STONE))
+    face = {hexrgb(GREY_STONE[0]), hexrgb(GREY_STONE[1])}
+    first, last = WALL_FACE[column]
+    src, dst = tile.load(), out.load()
+    for y in range(5 if row == 0 else 0, TILE):
+        for x in range(TILE):
+            r, g, b, a = src[x, y]
+            if a == 0 or (r, g, b) not in face:
+                continue
+            if first <= x <= last:
+                dst[x, y] = (*wall_block(x, y), 255)
+            elif y in (4, 12):
+                dst[x, y] = (*shifted(MORTAR, -10), 255)
+    return out
+
+
+def castle_wall(pack):
+    """The face of a wall of masonry, three rows (the lip, the middle, the foot) by three columns (left, middle, right)."""
+    relief = pack.tileset('TilesetRelief')
+    return frames_sheet([castle_wall_tile(cut(relief, c, r), c - 4, r) for r in (0, 1, 2) for c in (4, 5, 6)], 3)
+
+
+def cobbles(pack):
+    """The dark cobbles of the pack's interior floor: the one tile of them that joins with itself on every side."""
+    return cut(pack.image('Backgrounds', 'Tilesets', 'Interior', 'TilesetInteriorFloor.png'), 12, 13)
+
+
+def weedy_cobbles(stones):
+    """The cobbles with a crack between two of them and grass growing out of it."""
+    out = stones.copy()
+    paint(out, [(3, 9), (4, 9), (5, 9), (6, 10), (7, 10), (8, 10), (9, 9), (10, 9)], CRACK_COLOUR)
+    paint(out, [(4, 8), (4, 7), (5, 8), (7, 9), (7, 8), (7, 7), (8, 9), (9, 8), (10, 8), (10, 7)], MOSS_DARK)
+    paint(out, [(4, 6), (7, 6), (8, 8), (10, 6), (5, 7)], MOSS)
+    return out
+
+
+def loose_cobbles(stones):
+    out = stones.copy()
+    for x, y, rows in ((9, 2, CHIP), (3, 9, CHIP), (12, 11, SMALL_CHIP), (6, 5, SMALL_CHIP)):
+        stamp(out, rows, CHIP_COLOURS, x, y)
+    return out
+
+
+def castle_floor(pack):
+    """Flagstones: the thirteen pieces of their edge against moss, then the plain ground, with weeds in a crack and with chips.
+    The edge is the pack's edge of dirt against grass with the cobbles in place of the dirt, each pixel of them the pixel of the
+    plain flagstones at the same place, so that edge and plain tiles join."""
+    stones = cobbles(pack)
+    under = stones.load()
+    dirt = {hexrgb('#d3865f'), hexrgb('#bd7959')}
+    moss = {hexrgb(old): hexrgb(new) for old, new in CASTLE_MOSS.items()}
+    edge = []
+    for piece in key_pieces(pack.tileset('TilesetFloor'), 7):
+        piece = recolour(piece, moss)
+        pixels = piece.load()
+        for y in range(TILE):
+            for x in range(TILE):
+                if pixels[x, y][:3] in dirt:
+                    pixels[x, y] = under[x, y]
+        edge.append(piece)
+    return frames_sheet(edge + [stones, weedy_cobbles(stones), loose_cobbles(stones)], KEY_COUNT)
+
+
+def castle_grass(pack):
+    """The grass of the woods as moss, with a few chips of stone on the two frames that have flecks."""
+    mossy = recolour(terrain_grass(pack), {hexrgb(old): hexrgb(new) for old, new in CASTLE_MOSS.items()})
+    for frame, chips in ((4, ((9, 9, CHIP), (3, 3, SMALL_CHIP))), (6, ((3, 10, CHIP), (11, 3, SMALL_CHIP)))):
+        for x, y, rows in chips:
+            stamp(mossy, rows, CHIP_COLOURS, frame * TILE + x, y)
+    return mossy
+
+
+# The water of the harbor: the sheet of the sea with its colours swapped, grey-green for the water and its foam, worn stone for
+# the bank where the sand of the coast was (the edge of the quay), and the stone of the walls for the bank where there is grass.
+CASTLE_WATER = {
+    '#71ddee': '#4a9aa6', '#8feff1': '#6fb8bd', '#79b8ce': '#3a7a88', '#ffffff': '#d4e6e2',
+    '#ffcb8d': '#a39886', '#ffad5d': '#8a7f6e', '#d78b4a': '#6b6254', '#965340': '#3f3933',
+    '#adbc3a': '#6f665a', '#a8a129': '#5a5348',
+}
+
+
+def castle_water(pack):
+    return recolour(terrain_water(pack), {hexrgb(old): hexrgb(new) for old, new in CASTLE_WATER.items()})
+
+
+# The planks of the quay are the pack's dock on its side, weathered as the deck of the wreck is, with the colours of old brown wood.
+DOCK_WOOD = {PLANK: hexrgb('#9a7b5c'), WALL: hexrgb('#4d3b2a'), SEAM: hexrgb('#6e553e')}
+
+
+def dock_planks(pack, variant):
+    return recolour(weathered_deck(pack, variant), DOCK_WOOD)
+
+
+def castle_dock(pack):
+    """The planks of the quay, six frames and not one with a gap in it: two plain, two with moss in the seams, one with weeds
+    growing through a seam and one with a board split."""
+    plain_a, plain_b = dock_planks(pack, 'a'), dock_planks(pack, 'b')
+    moss_a, moss_b, weeds, split = plain_a.copy(), plain_b.copy(), plain_a.copy(), plain_b.copy()
+    paint(moss_a, [(2, 3), (3, 3), (4, 3), (5, 3), (3, 4), (4, 4), (10, 9), (11, 9), (12, 9), (13, 9), (12, 10), (13, 10), (14, 10)], MOSS_DARK)
+    paint(moss_a, [(3, 2), (4, 2), (11, 8), (13, 8), (12, 11)], MOSS)
+    paint(moss_b, [(5, 14), (6, 14), (7, 14), (8, 14), (6, 13), (7, 13), (11, 3), (12, 3), (13, 3), (12, 4), (13, 4), (14, 4)], MOSS_DARK)
+    paint(moss_b, [(6, 12), (8, 13), (12, 2), (14, 3)], MOSS)
+    paint(weeds, [(9, 9), (9, 8), (10, 8), (10, 7), (8, 7), (9, 6), (11, 9)], MOSS_DARK)
+    paint(weeds, [(9, 7), (10, 6)], MOSS)
+    paint(split, [(4, 4), (5, 5), (5, 6), (6, 7), (7, 8), (8, 8)], CRACK_COLOUR)
+    paint(split, [(6, 5), (7, 7), (4, 5)], hexrgb('#b39878'))
+    return frames_sheet([plain_a, plain_b, moss_a, moss_b, weeds, split], 6)
+
+
+# The pillars stand where a rock stands alone: a column with a cap and a foot wider than its shaft, in the stone of the wall.
+PILLAR_COLOURS = {
+    'O': OUTLINE, 'h': hexrgb('#ebe3d2'), 'l': hexrgb('#c4baa8'), 'm': hexrgb('#a59b8a'), 'd': hexrgb('#7c7367'),
+}
+PILLAR_ROWS = [
+    '................',
+    '..OOOOOOOOOOOO..',
+    '..OhhhhhhhhhlO..',
+    '..OhlllllllmdO..',
+    '..OlmmmmmmmddO..',
+    '..OOOOOOOOOOOO..',
+    '...OmmmmddddO...',
+    '...OhhllmmddO...',
+    '...OhhllmmddO...',
+    '...OhhllmmddO...',
+    '...OhhllmmddO...',
+    '...OhhllmmddO...',
+    '...OhhllmmddO...',
+    '..OOOOOOOOOOOO..',
+    '..OlllllmmmddO..',
+    '..OOOOOOOOOOOO..',
+]
+# Where the shaft of the broken pillar ends, column by column from x = 3 to 12.
+STUMP_TOPS = (8, 8, 9, 9, 9, 10, 10, 10, 11, 11)
+
+
+def pillar_intact():
+    out = Image.new('RGBA', (TILE, TILE), (0, 0, 0, 0))
+    stamp(out, PILLAR_ROWS, PILLAR_COLOURS, 0, 0)
+    return out
+
+
+def pillar_mossy():
+    out = pillar_intact()
+    paint(out, [(4, 12), (5, 12), (4, 11), (10, 12), (11, 11), (11, 12), (3, 14), (4, 14), (12, 14), (9, 14)], MOSS_DARK)
+    paint(out, [(5, 11), (10, 11), (4, 14), (6, 12)], MOSS)
+    return out
+
+
+def pillar_cracked():
+    out = pillar_intact()
+    paint(out, [(9, 2), (9, 3), (10, 4), (8, 7), (8, 8), (7, 9), (7, 10), (8, 11)], CRACK_COLOUR)
+    return out
+
+
+def pillar_broken():
+    """The shaft broken off ragged at about the middle, rubble at its foot."""
+    whole = pillar_intact()
+    src = whole.load()
+    out = Image.new('RGBA', (TILE, TILE), (0, 0, 0, 0))
+    dst = out.load()
+    for x in range(TILE):
+        top = dict(zip(range(3, 13), STUMP_TOPS)).get(x)
+        for y in range(13, TILE):
+            dst[x, y] = src[x, y]
+        if top is None:
+            continue
+        for y in range(top, 13):
+            dst[x, y] = src[x, y]
+        dst[x, top - 1] = (*OUTLINE, 255)
+        if x not in (3, 12):
+            dst[x, top] = (*PILLAR_COLOURS['l'], 255)
+    for x, y in ((0, 11), (13, 11)):
+        stamp(out, SMALL_CHIP, CHIP_COLOURS, x, y)
+    return out
+
+
+def castle_pillars(pack):
+    return frames_sheet([pillar_intact(), pillar_mossy(), pillar_broken(), pillar_cracked()], 4)
+
+
+# The fountain is a round basin of the stone of the castle, mossy on its rim, with water in it, a round plinth of stone
+# standing in the middle with a jet of water rising from it. The picture is three tiles by three, drawn on the grass of the
+# courtyard, with nothing in the corners; the plan cuts it into its nine tiles. The water is the water of the harbor.
+FOUNTAIN_WATER = (hexrgb('#71ddee'), hexrgb('#8feff1'), hexrgb('#3da6bd'))
+FOUNTAIN_JET = {'F': hexrgb('#f2eaf1'), 'W': hexrgb('#8feff1'), 'D': hexrgb('#3da6bd'), 'B': hexrgb('#71ddee')}
+FOUNTAIN_JET_ROWS = [
+    '....FF....',
+    '..F.FF.F..',
+    '.F..FF..F.',
+    '.F.WFFD.F.',
+    'F..WFFD..F',
+    'W..WFFD..W',
+    '...WFFD...',
+    '..WWFFDD..',
+    '..WBFFDB..',
+]
+
+
+def fountain_plinth():
+    """The plinth: a squat round block of stone seen from a little above, its top lit from the upper left, with a bowl of water in it."""
+    layer = Image.new('RGBA', (3 * TILE, 3 * TILE), (0, 0, 0, 0))
+    pixels = layer.load()
+    centre = 23.5
+    light, mid, dark = hexrgb('#c4baa8'), hexrgb('#a59b8a'), hexrgb('#8a8071')
+    for y in range(14, 36):
+        for x in range(3 * TILE):
+            across = ((x - centre) / 6.0) ** 2
+            on_top = across + ((y - 22.0) / 4.4) ** 2 <= 1
+            in_body = across + ((y - 25.0) / 4.4) ** 2 <= 1
+            if on_top:
+                colour = light if x - centre < 2.5 else mid
+                if across + ((y - 22.0) / 2.4) ** 2 <= 0.6:
+                    colour = FOUNTAIN_WATER[2] if y < 22 and x < centre else FOUNTAIN_WATER[0]
+            elif in_body:
+                colour = mid if x < centre else dark
+                if y > 27:
+                    colour = shifted(colour, -14)
+            else:
+                continue
+            pixels[x, y] = (*colour, 255)
+    return outlined(layer)
+
+
+def castle_fountain(pack):
+    size = 3 * TILE
+    out = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    pixels = out.load()
+    centre_x, centre_y = size / 2 - 0.5, size / 2 + 1
+    base, glint, deep = FOUNTAIN_WATER
+    for y in range(size):
+        for x in range(size):
+            dx, dy = x - centre_x, y - centre_y
+            d = math.hypot(dx, dy)
+            light = (-dx - dy) / (d * math.sqrt(2) + 1e-9)
+            turn = ((math.atan2(dy, dx) + math.pi) / (2 * math.pi) * 20) % 1
+            if d > 23:
+                continue
+            if d > 22:
+                colour = OUTLINE
+            elif d > 17.5:
+                colour = hexrgb('#a59b8a')
+                if light > 0.35:
+                    colour = hexrgb('#c4baa8')
+                elif light < -0.35:
+                    colour = hexrgb('#8a8071')
+                if d > 21:
+                    colour = shifted(colour, 18)
+                if min(turn, 1 - turn) * (2 * math.pi * d / 20) < 0.7:
+                    colour = shifted(colour, -28)
+            elif d > 16.5:
+                colour = MORTAR
+            else:
+                colour = deep if d > 14.5 and light > 0 else base
+                if (11.5 < d < 12.5 or 7.5 < d < 8.5) and int((math.atan2(dy, dx) + math.pi) * 3) % 2 == 0:
+                    colour = glint
+            pixels[x, y] = (*colour, 255)
+    paint(out, [(5, 31), (6, 32), (7, 33), (6, 31), (5, 32), (38, 30), (39, 31), (40, 32), (39, 30)], MOSS_DARK)
+    paint(out, [(6, 30), (40, 31)], MOSS)
+    out.alpha_composite(fountain_plinth())
+    stamp(out, FOUNTAIN_JET_ROWS, FOUNTAIN_JET, 19, 12)
+    return out
+
+
+# The old vessel lies in the water at the end of the quay with its bow to the north and its side against the planks: the
+# pack's boat, a tile shorter so that water shows round it, turned and weathered, with a mast and the pack's sail. The
+# picture is three tiles wide and seven tall (src/adapter/prop-sprites.ts stands it so that the left tile of its fifth row
+# is the vessel's own, the last of the quay): that tile holds the post the vessel is moored to, the hull lies in the water of
+# the two columns beside it, which is five rows tall (two above the tile and two below), and the two tiles of rock above that
+# water are where the mast and the sail stand. Frame 0 is the vessel as it is found, its sail furled on the mast; frame 1 is
+# the vessel prepared, its sail hoisted.
+VESSEL_CELL = (3 * TILE, 7 * TILE)
+VESSEL_HULL_AT = (17, 40)
+VESSEL_MAST_AT = (30, 30)
+VESSEL_SAIL_REACH = 17
+VESSEL_COLOURS = {
+    'O': OUTLINE, 'L': hexrgb('#a98563'), 'M': hexrgb('#7d5f45'), 'S': hexrgb('#cdb892'), 'W': hexrgb('#f2eaf1'),
+}
+VESSEL_WOOD = {
+    hexrgb('#ffad5d'): VESSEL_COLOURS['L'], hexrgb('#f38c4c'): VESSEL_COLOURS['M'],
+    hexrgb('#eecf9b'): VESSEL_COLOURS['S'], hexrgb('#ffffff'): VESSEL_COLOURS['W'],
+}
+MAST_TOP = ['..OO..', '.OLLO.', '.OLLO.']
+MAST_SHAFT = '.OLMO.'
+FURLED_SAIL = [
+    '..OOOO..', '.OWSSSO.', 'OWWSSSSO', 'OWSSSSSO', 'OMMMMMMO', 'OWSSSSSO', 'OWSSSSSO', 'OWSSSSSO', 'OWSSSSSO', 'OMMMMMMO',
+    'OWSSSSSO', 'OWSSSSSO', 'OWSSSSSO', 'OWSSSSSO', 'OMMMMMMO', 'OWSSSSSO', 'OWSSSSSO', 'OWSSSSSO', '.OSSSSO.', '..OOOO..',
+]
+POST = ['.OOO.', 'OLLMO', 'OLLMO', '.OLMO', '.OLMO', 'OLLMO', 'OOOOO']
+PATCH = {'M': VESSEL_COLOURS['M'], 'P': hexrgb('#c4a074'), 'n': hexrgb('#4d3b2a')}
+PATCH_ROWS = ['MMMMMM', 'MPPPnM', 'MnPPPM', 'MMMMMM']
+HULL_MOSS = [(40, 63), (40, 64), (41, 64), (40, 75), (41, 75), (41, 76), (40, 76), (40, 77), (40, 88), (41, 88)]
+
+
+def vessel_hull(pack):
+    """The pack's boat, a tile of plain planking shorter, turned bow to the north, in old brown wood: a board of the stern
+    mended, and moss on the gunwale where the water splashes it."""
+    boat = pack.image('Backgrounds', 'Vehicles', 'Boat.png').crop((0, 0, 80, 30))
+    shorter = Image.new('RGBA', (64, 30), (0, 0, 0, 0))
+    shorter.paste(boat.crop((0, 0, 32, 30)), (0, 0))
+    shorter.paste(boat.crop((48, 0, 80, 30)), (32, 0))
+    hull = recolour(shorter, VESSEL_WOOD).rotate(90, expand=True)
+    stamp(hull, PATCH_ROWS, PATCH, 10, 53)
+    paint(hull, [(x - VESSEL_HULL_AT[0], y - VESSEL_HULL_AT[1]) for x, y in HULL_MOSS], MOSS_DARK)
+    return hull
+
+
+def vessel_sail(pack):
+    """The pack's sail in old canvas, without the thin spar that reaches out from it, outlined to stand out from the rock."""
+    sail = recolour(pack.image('Backgrounds', 'Vehicles', 'Sail.png'), VESSEL_WOOD).crop((0, 0, VESSEL_SAIL_REACH, 43))
+    padded = Image.new('RGBA', (sail.width + 2, sail.height + 2), (0, 0, 0, 0))
+    padded.paste(sail, (1, 1))
+    return outlined(padded)
+
+
+def vessel_frame(pack, hoisted):
+    out = Image.new('RGBA', VESSEL_CELL, (0, 0, 0, 0))
+    out.alpha_composite(vessel_hull(pack), VESSEL_HULL_AT)
+    mast_x, mast_y = VESSEL_MAST_AT
+    foot = VESSEL_HULL_AT[1] + 32
+    if hoisted:
+        sail = vessel_sail(pack)
+        out.alpha_composite(sail, (mast_x - 2, foot - sail.height + 1))
+    else:
+        stamp(out, MAST_TOP + [MAST_SHAFT] * (foot - mast_y - len(MAST_TOP)), VESSEL_COLOURS, mast_x - 1, mast_y)
+        stamp(out, FURLED_SAIL, VESSEL_COLOURS, mast_x - 3, foot - len(FURLED_SAIL) - 2)
+    stamp(out, POST, VESSEL_COLOURS, 9, 68)
+    paint(out, [(14, 70), (15, 70), (16, 70), (14, 71), (15, 71), (16, 71)], VESSEL_COLOURS['S'])
+    return out
+
+
+def vessel_sheet(pack):
+    return frames_sheet([vessel_frame(pack, False), vessel_frame(pack, True)], 2, VESSEL_CELL)
+
+
+# The backdrops of the screens. The title and the ending each have a picture of the size of the canvas (20 by 12 tiles,
+# src/adapter/config.ts) behind their window or their cards: a sky laid in bands of the pack's colours and, under it, the sea and
+# the sand of the coast in the tiles of terrain-water.png and terrain-sand.png, joined as src/adapter/terrain-plan.ts joins them.
+# Every pixel is a canvas pixel, so the screens show a backdrop as it is and never scale it. The window of the title and the cards
+# of the ending cover the middle of it, so what there is to see is the sky, the two sides and the foot, and the things of the
+# picture stand there.
+CANVAS = (20 * TILE, 12 * TILE)
+HORIZON = 4 * TILE
+BAYER = ((0, 8, 2, 10), (12, 4, 14, 6), (3, 11, 1, 9), (15, 7, 13, 5))
+BLEND_ROWS = 4
+PIECE_NAMES = DECK_PIECES
+# The four quarters of a tile as the planner takes them: where the quarter is, which neighbours it looks at (across, and up or
+# down), and its pieces when the one above or below, the one beside, both, or only the one across the corner is outside.
+QUARTERS = (
+    ((0, 0), -1, -1, 'T', 'L', 'TL', 'INW'),
+    ((8, 0), 1, -1, 'T', 'R', 'TR', 'INE'),
+    ((0, 8), -1, 1, 'B', 'L', 'BL', 'ISW'),
+    ((8, 8), 1, 1, 'B', 'R', 'BR', 'ISE'),
+)
+
+
+def scatter(x, y, salt):
+    """A number that depends only on where it is asked for: the planner's own, so the sand is dressed the way the coast's is."""
+    h = (((x + 1) * 374761393) ^ ((y + 1) * 668265263) ^ ((salt + 1) * 1103515245)) & 0xFFFFFFFF
+    h = ((h ^ (h >> 13)) * 1274126177) & 0xFFFFFFFF
+    return h ^ (h >> 16)
+
+
+def sky(bands, height=HORIZON):
+    """A sky from the top of the picture down: `bands` are (colour, first row), and each blends into the next over its last
+    BLEND_ROWS rows by an ordered dither, so that there is no smooth gradient, which the pack's pictures do not have."""
+    out = Image.new('RGBA', (CANVAS[0], height), (0, 0, 0, 255))
+    pixels = out.load()
+    colours = [(hexrgb(colour), row) for colour, row in bands]
+    for y in range(height):
+        index = max(i for i, (_, row) in enumerate(colours) if row <= y)
+        here = colours[index][0]
+        ahead = colours[index + 1][1] - y if index + 1 < len(colours) else BLEND_ROWS + 1
+        for x in range(CANVAS[0]):
+            blended = ahead <= BLEND_ROWS and BAYER[y % 4][x % 4] / 16 < (BLEND_ROWS - ahead + 0.5) / BLEND_ROWS
+            pixels[x, y] = (*(colours[index + 1][0] if blended else here), 255)
+    return out
+
+
+def corner_pieces(x, y, outside):
+    """The piece each quarter of the tile at x, y is cut from, by which of the neighbours it looks at are outside the tile's own
+    ground: the planner's choice, `outside(x, y)` saying it of a neighbour."""
+    pieces = []
+    for _, dx, dy, vertical, horizontal, both, inner in QUARTERS:
+        across, beside = outside(x, y + dy), outside(x + dx, y)
+        if across and beside:
+            pieces.append(both)
+        elif across:
+            pieces.append(vertical)
+        elif beside:
+            pieces.append(horizontal)
+        else:
+            pieces.append(inner if outside(x + dx, y + dy) else 'C')
+    return pieces
+
+
+def put_quarters(img, frames, x, y):
+    """Paints the tile at pixel x, y a quarter at a time, each cut from the same quarter of its own frame."""
+    for ((qx, qy), *_), frame in zip(QUARTERS, frames):
+        img.alpha_composite(frame.crop((qx, qy, qx + 8, qy + 8)), (x + qx, y + qy))
+
+
+def frames_of(sheet, columns, count):
+    return [cut(sheet, index % columns, index // columns) for index in range(count)]
+
+
+def paint_coast(img, pack, kinds, top):
+    """The sea and the sand of rows of letters (`~` water, `.` sand) from the pixel row `top`, the shore pieced together as the
+    planner does and the sand dressed by the planner's own scatter."""
+    water = frames_of(terrain_water(pack), KEY_COUNT, 2 * KEY_COUNT + 2)
+    sand = frames_of(terrain_sand(pack), KEY_COUNT, KEY_COUNT + 3)
+
+    def kind(x, y):
+        return kinds[y][x] if 0 <= y < len(kinds) and 0 <= x < len(kinds[y]) else None
+
+    for y, row in enumerate(kinds):
+        for x, letter in enumerate(row):
+            at = (x * TILE, top + y * TILE)
+            if letter == '.':
+                roll = scatter(x, y, 2) % 20
+                img.alpha_composite(sand[KEY_COUNT + (1 if roll == 0 else 2 if roll < 3 else 0)], at)
+                continue
+            pieces = corner_pieces(x, y, lambda nx, ny: kind(nx, ny) == '.')
+            if all(piece == 'C' for piece in pieces):
+                img.alpha_composite(water[2 * KEY_COUNT + (1 if scatter(x, y, 1) % 7 == 0 else 0)], at)
+            else:
+                put_quarters(img, [water[2 * KEY_COUNT] if piece == 'C' else water[PIECE_NAMES.index(piece)] for piece in pieces], *at)
+
+
+def paint_wreck(img, pack, left, top, columns, rows, mast, cargo):
+    """A hull of `columns` by `rows` tiles with its corner at left, top, its deck laid over what is under it as the planner lays
+    a wreck's, the cargo (`{(column, row): frame}`) on its deck and the mast standing on the tile `mast` (column, row)."""
+    sheet = terrain_wreckage(pack)
+    frames = frames_of(sheet, KEY_COUNT, 2 * KEY_COUNT)
+
+    def inside(column, row):
+        return 0 <= column < columns and 0 <= row < rows
+
+    for row in range(rows):
+        for column in range(columns):
+            pieces = corner_pieces(column, row, lambda nx, ny: not inside(nx, ny))
+            at = (left + column * TILE, top + row * TILE)
+            if all(piece == 'C' for piece in pieces):
+                img.alpha_composite(frames[cargo.get((column, row), KEY_COUNT)], at)
+            else:
+                put_quarters(img, [frames[PIECE_NAMES.index(piece)] for piece in pieces], *at)
+    foot_column, foot_row = mast
+    for row in range(3):
+        for column in range(3):
+            tile = cut(sheet, column, 2 + row)
+            img.alpha_composite(tile, (left + (foot_column - 1 + column) * TILE, top + (foot_row - 2 + row) * TILE))
+
+
+CLOUD_COLOURS = {'W': hexrgb('#ffffff'), 'S': hexrgb('#d3a2c0')}
+CLOUD_LONG = [
+    '.......WWWW.........', '...WWWWWWWWWW.WWW...', '.WWWWWWWWWWWWWWWWWW.', 'WWWWWWWWWWWWWWWWWWWW', '.SSSSSSSSSSSSSSSSSS.',
+]
+CLOUD_MEDIUM = ['...WWW......', '.WWWWWWWW...', 'WWWWWWWWWWW.', '.SSSSSSSSS..']
+CLOUD_SMALL = ['..WWW..', 'WWWWWWW', '.SSSSS.']
+GULL = ['XX.XX', '..X..']
+SHADOW_ROWS = ['..XXXXXX..', '.XXXXXXXX.']
+NATURE_COLUMNS = 24
+
+
+def far_island(img, left, base, width, height, colour):
+    """A low island on the horizon, a dome of `width` pixels that rises `height` pixels above `base`."""
+    paint(img, [(left + x, base - 1 - y) for x in range(width) for y in range(round(height * math.sin(math.pi * (x + 0.5) / width) ** 0.7))], colour)
+
+
+def far_castle(stone, shade, window):
+    """A castle seen from far away, a few blocks and no more: a keep between a low tower and a tall one under a pointed roof
+    and a pennant, the tops of the others notched, a gate, a few slits for windows."""
+    out = Image.new('RGBA', (34, 22), (0, 0, 0, 0))
+
+    def block(first, last, top, notched):
+        paint(out, [(x, y) for x in range(first, last + 1) for y in range(top, 22) if not (notched and y == top and (x - first) % 2)], stone)
+
+    block(0, 7, 5, True)
+    block(8, 25, 10, True)
+    block(26, 33, 8, False)
+    for index, width in enumerate((2, 4, 6, 8)):
+        paint(out, [(26 + (8 - width) // 2 + dx, 4 + index) for dx in range(width)], shade)
+    paint(out, [(29, 0), (29, 1), (29, 2), (29, 3), (30, 0), (31, 0), (30, 1)], shade)
+    paint(out, [(x, y) for x in range(13, 21) for y in range(16, 22)] + [(x, 15) for x in range(14, 20)], shade)
+    paint(out, [(3, 9), (3, 10), (29, 12), (29, 13), (11, 13), (22, 13)], window)
+    return out
+
+
+# The title: a morning on the coast. The wreck lies in the shallows at the right, the Hunter stands on the sand with his back
+# to the viewer looking out to sea, and on the horizon at the left there is a low island with a castle on it.
+TITLE_SKY = (('#548789', 0), ('#79b8ce', 12), ('#b8dce5', 26), ('#fce2ca', 40), ('#ffcba9', 54))
+TITLE_COAST = [
+    '~~~~~~~~~~~~~~~~~~~~',
+    '~~~~~~~~~~~~~~~~~~~~',
+    '~~~~~~~~~~~~~~~~~~~~',
+    '~~~~~~~~~~~~~~~~~~~~',
+    '..~~~~~~~~~~~~~~~~~~',
+    '....................',
+    '....................',
+    '....................',
+]
+# What lies on the sand: pieces of the pack's nature tileset (small rocks and tufts), by their frame in it and the pixel they are put at.
+TITLE_SAND_PROPS = ((329, (8, 172)), (331, (44, 178)), (244, (100, 170)), (246, (196, 176)), (330, (280, 150)))
+
+
+def title_backdrop(pack):
+    out = Image.new('RGBA', CANVAS, (0, 0, 0, 255))
+    out.alpha_composite(sky(TITLE_SKY), (0, 0))
+    for at, rows in (((92, 42), CLOUD_LONG), ((190, 46), CLOUD_MEDIUM), ((226, 40), CLOUD_SMALL)):
+        stamp(out, rows, CLOUD_COLOURS, *at)
+    for at in ((136, 50), (150, 45), (166, 53)):
+        stamp(out, GULL, {'X': hexrgb('#2d697b')}, *at)
+    far_island(out, 8, HORIZON, 50, 7, hexrgb('#548789'))
+    out.alpha_composite(far_castle(hexrgb('#b8dce5'), hexrgb('#79b8ce'), hexrgb('#2d697b')), (16, HORIZON - 25))
+    paint_coast(out, pack, TITLE_COAST, HORIZON)
+    paint_wreck(out, pack, 236, 96, 5, 3, (3, 1), {(1, 1): 17, (2, 1): 16})
+    nature = pack.tileset('TilesetNature')
+    for index, at in TITLE_SAND_PROPS:
+        out.alpha_composite(cut(nature, index % NATURE_COLUMNS, index // NATURE_COLUMNS), at)
+    out.alpha_composite(broken_mast_picture(pack), (230, 166))
+    out.alpha_composite(cut(monster_four_ways(pack, 'Mollusc', 'Mollusc.png'), 0, 0), (150, 164))
+    stamp(out, SHADOW_ROWS, {'X': hexrgb('#d2b37d')}, 29, 160)
+    out.alpha_composite(cut(pack.image('Actor', 'Character', 'Hunter', 'SpriteSheet.png'), 1, 0), (26, 146))
+    return out
+
+
+# The ending: the evening the hero sails home. The sun is low over the sea at the left and the old vessel crosses it under sail;
+# the island, with its castle, is a dark shape on the horizon at the right; the quay of the harbor runs along the foot. The cards
+# of the ending cover the middle of the picture, as the title's window does, so the horizon is high (the tallest card, the
+# credits, starts at row 29): the sky and the vessel stand in the strip above the cards, and the sea and the quay show at the
+# foot and at the two sides.
+ENDING_HORIZON = 25
+ENDING_SKY = (('#543c52', 0), ('#8f3e56', 5), ('#cf736d', 10), ('#ef914f', 15), ('#ffad5d', 20))
+ENDING_SEA = (('#ef914f', 0), ('#cf736d', 7), ('#8f3e56', 17), ('#543c52', 40), ('#4a5270', 80), ('#3b3643', 130))
+ENDING_SUN = (66, 12, 9)
+ENDING_QUAY = 164
+ENDING_CLOUDS = {'W': hexrgb('#ef9597'), 'S': hexrgb('#a5608b')}
+ENDING_DARK = hexrgb('#3b3643')
+GLITTER = ((0.78, '#ffe18d'), (0.0, '#ffbc75'))
+VESSEL_AFAR_AT = (64, 5)
+VESSEL_AFAR_CANVAS = {'W': hexrgb('#fce2ca'), 'S': hexrgb('#d3a2c0')}
+
+
+def sun(img, centre_x, radius, glow):
+    """A sun half set on the horizon: a disc with a lighter core and a halo of dithered light in the sky round it."""
+    surface = img.load()
+    for y in range(ENDING_HORIZON - radius - glow, ENDING_HORIZON):
+        for x in range(centre_x - radius - glow, centre_x + radius + glow + 1):
+            distance = math.hypot(x - centre_x, y + 0.5 - ENDING_HORIZON)
+            if distance <= radius * 0.55:
+                surface[x, y] = (*hexrgb('#fce2ca'), 255)
+            elif distance <= radius:
+                surface[x, y] = (*hexrgb('#ffe18d'), 255)
+            elif distance < radius + glow and BAYER[y % 4][x % 4] / 16 < 0.75 * (1 - (distance - radius) / glow):
+                surface[x, y] = (*hexrgb('#ffbc75'), 255)
+
+
+def ending_sea(height):
+    """The sea under the sunset: bands from the orange of the horizon down to the dark of the foot, a ripple on it here and
+    there in the colour of the band above, and the sun's path, a stripe of dashes of light that widens towards the viewer."""
+    out = sky(ENDING_SEA, height)
+    surface = out.load()
+    centre = ENDING_SUN[0]
+    for y in range(height):
+        band = max(i for i, (_, first) in enumerate(ENDING_SEA) if first <= y)
+        ripple = hexrgb(ENDING_SEA[max(band - 1, 0)][0])
+        half = 6 + y * 0.28
+        for segment in range(CANVAS[0] // 4):
+            x = segment * 4
+            reach = max(0.0, 1 - abs(x + 2 - centre) / half)
+            roll = scatter(segment, y, 7) % 100
+            length = 2 + scatter(segment, y, 9) % 3
+            if roll < 55 * reach:
+                colour = next(hexrgb(colour) for floor, colour in GLITTER if reach >= floor)
+                paint(out, [(x + dx, y) for dx in range(length)], colour)
+            elif reach < 0.5 and roll < 55 * reach + 14:
+                paint(out, [(x + dx, y) for dx in range(length)], ripple)
+    return out
+
+
+def vessel_afar():
+    """The old vessel seen from far away, under sail, bow to the left: the wood and the canvas of the vessel of the harbor in
+    the evening light, one square sail on one mast with a pennant, a hull with a raised bow. 28 by 24."""
+    art = Image.new('RGBA', (28, 24), (0, 0, 0, 0))
+    wood, light = VESSEL_COLOURS['M'], VESSEL_COLOURS['L']
+    canvas, shade = VESSEL_AFAR_CANVAS['W'], VESSEL_AFAR_CANVAS['S']
+    paint(art, [(14, y) for y in range(1, 18)], wood)
+    paint(art, [(15, 1), (16, 1), (17, 1), (15, 2), (16, 2), (15, 3)], hexrgb('#cf736d'))
+    paint(art, [(x, y) for x in range(7, 22) for y in range(4, 14)], canvas)
+    paint(art, [(x, y) for x in range(16, 22) for y in range(4, 14)], shade)
+    paint(art, [(x, 14) for x in range(7, 22)], wood)
+    paint(art, [(x, y) for y, (first, last) in {17: (2, 26), 18: (3, 25), 19: (4, 23), 20: (6, 21)}.items() for x in range(first, last + 1)], wood)
+    paint(art, [(x, 17) for x in range(3, 26)], light)
+    paint(art, [(1, 16), (2, 16), (2, 17)], light)
+    return outlined(art)
+
+
+def ending_backdrop(pack):
+    out = Image.new('RGBA', CANVAS, (0, 0, 0, 255))
+    out.alpha_composite(sky(ENDING_SKY, ENDING_HORIZON), (0, 0))
+    sun(out, ENDING_SUN[0], ENDING_SUN[1], ENDING_SUN[2])
+    for at, rows in (((22, 7), CLOUD_SMALL), ((112, 5), CLOUD_LONG), ((176, 12), CLOUD_MEDIUM), ((218, 4), CLOUD_SMALL)):
+        stamp(out, rows, ENDING_CLOUDS, *at)
+    for at in ((132, 17), (148, 12), (160, 18)):
+        stamp(out, GULL, {'X': ENDING_DARK}, *at)
+    far_island(out, 262, ENDING_HORIZON, 56, 6, ENDING_DARK)
+    out.alpha_composite(far_castle(ENDING_DARK, OUTLINE, hexrgb('#ffbc75')), (272, ENDING_HORIZON - 24))
+    out.alpha_composite(ending_sea(CANVAS[1] - ENDING_HORIZON), (0, ENDING_HORIZON))
+    out.alpha_composite(vessel_afar(), VESSEL_AFAR_AT)
+    paint(out, [(x, ENDING_HORIZON + 2) for x in range(92, 102)] + [(x, ENDING_HORIZON + 4) for x in range(95, 103)], hexrgb('#fce2ca'))
+    planks = frames_of(castle_dock(pack), 6, 6)
+    for row in range(2):
+        for column in range(CANVAS[0] // TILE):
+            roll = scatter(column, row, 5) % 8
+            frame = planks[column % 2 if roll < 5 else 2 + (roll - 5) + (column % 2 if roll == 5 else 0)]
+            out.alpha_composite(frame, (column * TILE, ENDING_QUAY + row * TILE))
+    for x in (34, 148, 268):
+        stamp(out, POST, VESSEL_COLOURS, x, ENDING_QUAY - 5)
+    return out
+
+
 BUILDERS = {
     'gear-short-bow': lambda pack: bow_icon(pack, 'Bow', shorter_by=2),
     'gear-long-bow': lambda pack: bow_icon(pack, 'Bow2'),
@@ -649,6 +1377,13 @@ BUILDERS = {
     'cave-cliff': lambda pack: stone_cliff(pack, CAVE_STONE),
     'cave-sand': lambda pack: cave_floor(pack, terrain_sand),
     'cave-grass': lambda pack: cave_floor(pack, terrain_grass),
+    'castle-wall': castle_wall,
+    'castle-floor': castle_floor,
+    'castle-grass': castle_grass,
+    'castle-pillars': castle_pillars,
+    'castle-fountain': castle_fountain,
+    'castle-water': castle_water,
+    'castle-dock': castle_dock,
     'monster-crab': lambda pack: monster_four_ways(pack, 'Mollusc', 'Mollusc.png'),
     'monster-slime': lambda pack: monster_four_ways(pack, 'Slime', 'Slime.png'),
     'monster-spitter': lambda pack: monster_four_ways(pack, 'Mushroom', 'mushroom.png', SPITTER_CAP),
@@ -664,6 +1399,11 @@ BUILDERS = {
     'monster-cave-lizard': lambda pack: monster_four_ways(pack, 'Lizard', 'Lizard.png'),
     'monster-cave-eye': lambda pack: monster_four_ways(pack, 'Eye', 'Eye.png'),
     'monster-cave-bear': lambda pack: monster_four_ways(pack, 'Bear', 'SpriteSheet.png', CAVE_BEAR),
+    'monster-castle-skeleton': lambda pack: monster_four_ways(pack, 'Skeleton', 'SpriteSheet.png', kind='Character'),
+    'monster-castle-ghoul': lambda pack: monster_four_ways(pack, 'Beast', 'Beast.png', GHOUL_FLESH),
+    'monster-castle-wraith': lambda pack: monster_four_ways(pack, 'Spirit', 'SpriteSheet.png', WRAITH_VIOLET, 'Character'),
+    'monster-castle-knight': lambda pack: monster_four_ways(pack, 'KnightGold', 'SpriteSheet.png', KNIGHT_TARNISHED, 'Character'),
+    'monster-castle-guardian': guardian_sheet,
     'prop-chest': chest_sheet,
     'prop-pickup': pickup_sheet,
     'prop-checkpoint': checkpoint_sheet,
@@ -672,6 +1412,9 @@ BUILDERS = {
     'prop-gate': gate_sheet,
     'prop-lever': lever_sheet,
     'prop-sign': lambda pack: cut(pack.tileset('TilesetElement'), 0, 2),
+    'prop-vessel': vessel_sheet,
+    'backdrop-title': title_backdrop,
+    'backdrop-ending': ending_backdrop,
 }
 
 
