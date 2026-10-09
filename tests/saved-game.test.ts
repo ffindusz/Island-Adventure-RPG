@@ -129,6 +129,18 @@ describe('a save of another version of the game', () => {
 
     expect(parseSave(text, content)).toMatchObject({ status: 'unusable', problem: 'incompatible' });
   });
+
+  it('is incompatible when it is of version 3, from before the question whether to sail home was part of the state', () => {
+    const saved: Saved = JSON.parse(textAfter('camp'));
+    saved.version = 3;
+    delete saved.state.departure;
+
+    expect(parseSave(JSON.stringify(saved), content)).toMatchObject({
+      status: 'unusable',
+      problem: 'incompatible',
+      detail: expect.stringContaining('version'),
+    });
+  });
 });
 
 describe('a save that does not fit the Adventure Areas of this game', () => {

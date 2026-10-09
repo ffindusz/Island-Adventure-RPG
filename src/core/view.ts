@@ -71,6 +71,7 @@ export function buildView(state: GameState, content: Content): GameView {
     interactables: area.interactables.flatMap((interactable) => interactableView(interactable, state) ?? []),
     page: pageView(state, content),
     levelUp: levelUpView(state, content),
+    departure: state.departure === null ? null : { vesselId: state.departure },
   };
 }
 

@@ -521,6 +521,14 @@ export interface PlayingView {
   readonly page: PageView | null;
   /** The Stat Point the hero has to assign, if any. While one waits the game is paused. */
   readonly levelUp: LevelUpView | null;
+  /** The question whether to sail home, if the game is asking it. While it is open the game is paused. */
+  readonly departure: DepartureView | null;
+}
+
+/** The question that the game asks before the hero sails home, the point of no return. */
+export interface DepartureView {
+  /** The id of the vessel the question is about. */
+  readonly vesselId: string;
 }
 
 export type GameView = TitleView | PlayingView;
@@ -530,7 +538,7 @@ export type GameView = TitleView | PlayingView;
  * It is not validated when restored: whoever reads one from storage must check it first.
  */
 export interface Snapshot {
-  readonly version: 3;
+  readonly version: 4;
   readonly state: PlayState;
 }
 

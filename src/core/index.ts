@@ -59,6 +59,7 @@ export type {
   CheckpointView,
   ChestView,
   Command,
+  DepartureView,
   DoorView,
   ExitView,
   Game,

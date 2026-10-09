@@ -130,6 +130,7 @@ function checkState(value: unknown, content: ContentDefinition): void {
     'hero',
     'arrows',
     'page',
+    'departure',
     'areas',
   ]);
   if (state['phase'] !== 'playing') {
@@ -147,6 +148,7 @@ function checkState(value: unknown, content: ContentDefinition): void {
   });
   checkArrows(state['arrows'], 'state.arrows', content);
   checkPage(state['page'], 'state.page');
+  checkDeparture(state['departure'], 'state.departure', content);
 }
 
 /** The world of every Adventure Area of the game, and of no other. Returns the ids of the keys marked taken in them. */
@@ -477,6 +479,27 @@ function checkPage(value: unknown, path: string): void {
   if (value !== null) {
     expectOneOf(value, PAGE_IDS, path);
   }
+}
+
+/**
+ * The question whether to sail home: not asked, or asked about a vessel of the game. The worlds were checked against the
+ * areas before it, so a vessel the game does not place is a fault of this save, not a save of another adventure.
+ */
+function checkDeparture(value: unknown, path: string, content: ContentDefinition): void {
+  if (value === null) {
+    return;
+  }
+  const id = expectString(value, path);
+  if (!vesselIdsOf(content).includes(id)) {
+    throw damaged(path, `should be null or the id of a vessel of this game, not "${id}"`);
+  }
+}
+
+/** The ids of the vessels that the areas of the game place. */
+function vesselIdsOf(content: ContentDefinition): string[] {
+  return content.areas.flatMap((area) =>
+    (area.interactables ?? []).filter((interactable) => interactable.kind === 'vessel').map((vessel) => vessel.id),
+  );
 }
 
 /** The hero: where it is and what it has, in the area it is in. Returns the ids of the keys it holds. */

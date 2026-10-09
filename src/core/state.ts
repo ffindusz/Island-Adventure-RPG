@@ -7,7 +7,7 @@ import { boxAround, centerOf } from './geometry';
 import { heroMaxHealth } from './stats';
 
 /** Bumped whenever the shape of a Snapshot changes in a way an older save cannot satisfy. */
-export const SNAPSHOT_VERSION = 3;
+export const SNAPSHOT_VERSION = 4;
 
 // The state of a running game, as plain data: numbers, strings, arrays and objects only, so it survives
 // JSON.stringify and JSON.parse unchanged. Anything that is not saved belongs elsewhere (see game.ts).
@@ -227,6 +227,11 @@ export interface PlayState {
   arrows: ArrowState[];
   /** The page that is open over the game, if any. While one is open the game is paused (see pages.ts). */
   page: PageId | null;
+  /**
+   * The id of the vessel that the game asks whether to sail home on, if the question is open. While it is the game is
+   * paused (see departure.ts), and the question is saved with it as an open page is.
+   */
+  departure: string | null;
   /** World state is kept per Adventure Area, by area id. */
   areas: Record<string, AreaState>;
 }
@@ -277,6 +282,7 @@ export function newPlayState(content: Content): PlayState {
     },
     arrows: [],
     page: null,
+    departure: null,
     areas,
   };
   // The most Health there is can only be worked out from the state, which is why it is set once the state exists.
