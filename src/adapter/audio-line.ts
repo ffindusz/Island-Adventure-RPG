@@ -3,7 +3,7 @@ import { VIEW_WIDTH } from './config';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import { INK, UiLayer } from './ui-layer';
 
-// The line that says what a key of the audio did: VOLUME 6, SOUND OFF or SOUND ON. It sits in the top right corner, where
+// The line that says what a key of the audio did: VOLUME 6/10, SOUND OFF or SOUND ON. It sits in the top right corner, where
 // nothing else of any screen is drawn, for a moment after the key. The keys work on every screen, so the line is above
 // everything, the pages and the card of the opening included, and, like the area banner, it is see-through and takes no
 // input. Each screen has a line of its own, which it gives the frame's time and what the keys said. The time is the
