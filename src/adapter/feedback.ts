@@ -52,6 +52,9 @@ export class Feedback {
         case 'lever-toggled':
           this.told = { content: { kind: 'lever-toggled', pulled: event.pulled }, msLeft: NOTICE_MS };
           break;
+        case 'guardian-defeated':
+          this.told = { content: { kind: 'gate-opened' }, msLeft: NOTICE_MS };
+          break;
         case 'area-changed':
           // After a defeat the return to another area is shown only when the fall is over: see endFall.
           if (!this.falling) {
@@ -106,7 +109,7 @@ export class Feedback {
     return this.flashes.has(monsterId);
   }
 
-  /** What the player is being told about: the latest of what the hero found, a Checkpoint touched, the empty bow, or a door. */
+  /** What the player is being told about: the latest of what the hero found, a Checkpoint touched, the empty bow, a door, a lever, or the fall of the Guardian. */
   notice(): NoticeContent | null {
     return this.told === null ? null : this.told.content;
   }
