@@ -52,8 +52,12 @@ function expectUnusable(bad: BadSave): void {
 }
 
 /** A change to the saved adventure that leaves a save the game can continue from, with what it holds as it is. */
-function expectUsable(change: (saved: Saved) => void, judgedBy: ContentDefinition = content): void {
-  const saved: Saved = JSON.parse(textAfter('volley'));
+function expectUsable(
+  change: (saved: Saved) => void,
+  judgedBy: ContentDefinition = content,
+  after = 'volley',
+): void {
+  const saved: Saved = JSON.parse(textAfter(after));
   change(saved);
 
   expect(parseSave(JSON.stringify(saved), judgedBy)).toEqual({ status: 'usable', snapshot: saved });
@@ -1169,6 +1173,73 @@ describe('a save whose Guardian and the gate that its fall opens do not agree', 
 
   it('is usable when the gate is shut and its Guardian has 1 Health left', () => {
     expectUsable((saved) => (warden(saved).health = 1));
+  });
+});
+
+describe('a save whose vessel and question whether to sail home this game could not have made', () => {
+  const warden = (saved: Saved): Saved => saved.state.areas['keep'].monsters[0];
+  const vessel = (saved: Saved): Saved => saved.state.areas['keep'].interactables['old-vessel'];
+  const PREPARED_TOO_SOON =
+    'state.areas.keep.interactables.old-vessel.prepared is prepared, but the Guardian "warden" has not fallen';
+
+  it.each<BadSave>([
+    {
+      fault: 'the vessel is prepared and its Guardian has not been touched',
+      after: 'keep',
+      damage: (saved) => (vessel(saved).prepared = true),
+      problem: 'damaged',
+      names: PREPARED_TOO_SOON,
+    },
+    {
+      fault: 'the vessel is prepared and its Guardian has 1 Health left',
+      after: 'warden-hit',
+      damage: (saved) => {
+        warden(saved).health = 1;
+        vessel(saved).prepared = true;
+      },
+      problem: 'damaged',
+      names: PREPARED_TOO_SOON,
+    },
+    {
+      fault: 'the question is open about the vessel, prepared, while its Guardian has not fallen',
+      after: 'warden-hit',
+      damage: (saved) => {
+        vessel(saved).prepared = true;
+        saved.state.departure = 'old-vessel';
+      },
+      problem: 'damaged',
+      names: PREPARED_TOO_SOON,
+    },
+    {
+      fault: 'the question is open about a vessel that is not prepared, though its Guardian has fallen',
+      after: 'open-gate',
+      damage: (saved) => (saved.state.departure = 'old-vessel'),
+      problem: 'damaged',
+      names: 'state.departure is "old-vessel", but that vessel is not prepared',
+    },
+    {
+      fault: 'the question is open about a vessel in another area than the one the hero is in',
+      after: 'away',
+      damage: (saved) => (saved.state.departure = 'old-vessel'),
+      problem: 'damaged',
+      names: 'state.departure is "old-vessel", but the hero is not in the area of that vessel',
+    },
+    {
+      fault: 'the question is open about a vessel that the game does not place',
+      after: 'ask',
+      damage: (saved) => (saved.state.departure = 'far-vessel'),
+      problem: 'damaged',
+      names: 'state.departure should be null or the id of a vessel of this game, not "far-vessel"',
+    },
+  ])('is $problem when $fault', expectUnusable);
+
+  it('is usable when the vessel is prepared and its Guardian has fallen, with the question open or not', () => {
+    expectUsable(() => {}, content, 'ask');
+    expectUsable(() => {}, content, 'stay');
+  });
+
+  it('is usable when the vessel is prepared and the hero has walked away from it', () => {
+    expectUsable(() => {}, content, 'away');
   });
 });
 
