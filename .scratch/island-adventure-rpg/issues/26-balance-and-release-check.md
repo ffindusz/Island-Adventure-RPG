@@ -20,3 +20,15 @@
 - [ ] Every screen and control, including the audio controls from ticket 21, matches the final interface style. Any leftover is brought in line (presentation only).
 - [ ] A short playtest checklist for the user is kept with the project documents. It covers the opening, each area, a defeat and its recovery, saving and Continue, optional puzzles, the Guardian, the ending and credits, and audio, and it lists the assumptions still waiting for the user's confirmation.
 - [ ] Reviewer play check (manual, in a browser): the user plays the whole game once using the checklist and reports pacing, difficulty, and anything that felt unfair or confusing.
+
+## Comments
+
+Work in progress on `ticket/26-balance-and-release-check`, from the integration tip 744154f ("Resolve ticket 25"). The Status line is untouched; the manual play check (criterion 12) is left unticked. This section is written early and refined as the slices land; each slice is one commit.
+
+### What was built
+
+- **Criterion 1 (Experience along the route).** `tests\main-route.ts` reads the intended route from the shipped content (the sand trail of the woods, the mountain and the cave, any open ground on the coast and in the castle, every door shut, the castle's route ending at the Guardian's Checkpoint) and what it meets and crosses; `tests\route-experience.test.ts` sums it against the thresholds: Level 2, 3, 4, 5, 6 at the exits of the coast, woods, mountain, cave and at the arena (the route's Experience, cumulative: 15, 33, 55, 75, 104; thresholds 10, 25, 45, 70, 100). The current data already met the targets, so **no number changed for this criterion**. The play-through that "feels right" is left to the manual check.
+
+### Decisions and defaults
+
+- **The intended route** is the shortest walk over the designed trail, as the area tests already take it, with every door and gate shut and no key held. The castle's leg ends at the Guardian's Checkpoint (65, 11), three tiles past the end of the castle test's route (62, 11); nothing is placed between them.
