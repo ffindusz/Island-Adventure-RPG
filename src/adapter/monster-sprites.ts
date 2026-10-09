@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import type { Direction, GameEvent, MonsterView, PlayingView, Point } from '../core';
 import { monsterArt } from './artwork';
+import { scrollFor } from './camera';
 import { TILE_SIZE } from './config';
 import { DEPTH } from './depths';
 
@@ -62,6 +63,37 @@ function px(tiles: number): number {
 /** Whether a wind-up that is `progress` of the way through is showing its red at this moment: on at the very end. */
 function warnsNow(progress: number): boolean {
   return Math.floor(progress * WARN_PARTS) % 2 === 0;
+}
+
+/** A Health bar's outline, in canvas pixels; the green lies inside it. */
+export interface BarBox {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * Where the Health bar of a monster goes: just above its picture, as wide as its body and in the middle of the picture.
+ * A picture that reaches above the top of the screen (the Guardian against the arena's north wall, the hero far south)
+ * has its bar at the top of the screen, so that it stays in view as long as the picture does; a picture wholly above the
+ * screen has none.
+ */
+export function healthBarBox(
+  corner: Point,
+  picture: { readonly width: number; readonly height: number },
+  bodyWidth: number,
+  screenTop: number,
+): BarBox | null {
+  if (corner.y + picture.height <= screenTop) {
+    return null;
+  }
+  return {
+    x: corner.x + Math.round((picture.width - bodyWidth) / 2),
+    y: Math.max(corner.y - BAR_HEIGHT - 1, screenTop),
+    width: bodyWidth,
+    height: BAR_HEIGHT,
+  };
 }
 
 interface Puff {
@@ -251,6 +283,8 @@ export class MonsterSprites {
   /** Puts a sprite on every monster of the view, and takes away the sprites of those that are no longer in it. */
   draw(view: PlayingView, isFlashing: (monsterId: string) => boolean): void {
     this.bars.clear();
+    // Where the camera has the top of the screen (the play scene scrolls to the same place), so that no bar leaves it.
+    const screenTop = scrollFor(view.hero.position, view.area).y;
     const present = new Set<string>();
     for (const monster of view.monsters) {
       present.add(monster.id);
@@ -260,7 +294,7 @@ export class MonsterSprites {
         this.figures.set(monster.id, figure);
       }
       const corner = figure.show(monster, view.hero.position, isFlashing(monster.id));
-      this.drawBar(monster, corner, figure.sprite.width);
+      this.drawBar(monster, figure, corner, screenTop);
     }
     for (const [id, figure] of this.figures) {
       if (!present.has(id)) {
@@ -271,17 +305,24 @@ export class MonsterSprites {
   }
 
   /** A monster that has lost some Health has a bar over its head, as wide as its body. */
-  private drawBar(monster: MonsterView, corner: Point, pictureWidth: number): void {
+  private drawBar(monster: MonsterView, figure: Figure, corner: Point, screenTop: number): void {
     if (monster.health >= monster.maxHealth) {
       return;
     }
-    const width = px(monster.size);
-    const x = corner.x + Math.round((pictureWidth - width) / 2);
-    const y = corner.y - BAR_HEIGHT - 1;
+    const { width: pictureWidth, height: pictureHeight } = figure.sprite;
+    const box = healthBarBox(corner, { width: pictureWidth, height: pictureHeight }, px(monster.size), screenTop);
+    if (box === null) {
+      return;
+    }
     this.bars.fillStyle(BAR_OUTLINE);
-    this.bars.fillRect(x, y, width, BAR_HEIGHT);
+    this.bars.fillRect(box.x, box.y, box.width, box.height);
     this.bars.fillStyle(BAR_HEALTH);
-    this.bars.fillRect(x + 1, y + 1, Math.max(1, Math.round(((width - 2) * monster.health) / monster.maxHealth)), BAR_HEIGHT - 2);
+    this.bars.fillRect(
+      box.x + 1,
+      box.y + 1,
+      Math.max(1, Math.round(((box.width - 2) * monster.health) / monster.maxHealth)),
+      box.height - 2,
+    );
   }
 
   /** Forgets every monster and puff, such as when the hero is in another area. */
