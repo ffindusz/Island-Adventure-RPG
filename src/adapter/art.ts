@@ -43,8 +43,8 @@ const MONSTER_COLOURS: Readonly<Record<string, number>> = {
   'castle-wraith': 0xc9b8ff,
   'castle-ghoul': 0x8c1c3c,
   'castle-knight': 0x7e22ce,
-  // A flat placeholder: the castle has no final art yet (it is not in FINAL_ART_AREAS). Gold, far from every other
-  // colour in the game.
+  // The Guardian has its pictures now, like the undead; this colour is for a castle drawn flat. Gold, far from every
+  // other colour in the game.
   'castle-guardian': 0xffd700,
 };
 

@@ -289,7 +289,8 @@ describe('the shipped castle', () => {
   });
 
   it('has a frame on disk for every stamp', () => {
-    const beyond = stamps.filter((stamp) => stamp.frame >= framesOnDisk(stamp.art));
+    const onDisk = new Map([...new Set(stamps.map((stamp) => stamp.art))].map((art) => [art, framesOnDisk(art)] as const));
+    const beyond = stamps.filter((stamp) => stamp.frame >= (onDisk.get(stamp.art) ?? 0));
 
     expect(beyond.map((stamp) => `${stamp.art} ${describeStamp(stamp)}`)).toEqual([]);
   });
