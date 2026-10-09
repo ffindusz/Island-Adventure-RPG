@@ -93,11 +93,24 @@ export function drawBitmap(graphics: Graphics, bitmap: Bitmap, x: number, y: num
   });
 }
 
+/** The letter the font has for the character, if it has one. Lower case is drawn as its capital. */
+function glyphFor(character: string): Bitmap | undefined {
+  return GLYPHS[character.toUpperCase()];
+}
+
+/**
+ * The characters of the text that `drawText` would leave blank, in the order they come. A space is not one of them: it
+ * has no letter on purpose, and is only a gap.
+ */
+export function undrawableIn(text: string): string[] {
+  return [...text].filter((character) => character !== ' ' && glyphFor(character) === undefined);
+}
+
 /** Draws letters (as capitals), digits and the few marks the font has. Any other character is left blank. */
 export function drawText(graphics: Graphics, text: string, x: number, y: number, colour: number): void {
   let left = x;
   for (const character of text) {
-    const glyph = GLYPHS[character.toUpperCase()];
+    const glyph = glyphFor(character);
     if (glyph !== undefined) {
       drawBitmap(graphics, glyph, left, y, colour);
     }
