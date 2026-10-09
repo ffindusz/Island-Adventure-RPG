@@ -48,10 +48,10 @@ export type Command =
   /**
    * Open a page over the game, such as the stat page. Ignored at the title and while the game is paused already: a
    * page is open, or a Stat Point waits to be assigned. While the game is paused step() advances nothing and attack
-   * does nothing; move and stop still keep track of the keys that are down.
+   * does nothing; move and stop still keep track of the keys that are down. The one event is `page-opened`.
    */
   | { readonly type: 'open-page'; readonly page: PageId }
-  /** Close the page, if it is the one that is open. */
+  /** Close the page, if it is the one that is open. The one event is `page-closed`; closing any other page tells nothing. */
   | { readonly type: 'close-page'; readonly page: PageId }
   /**
    * Spend a Stat Point on a stat, for good: there is no taking it back. Ignored when no Stat Point waits to be
@@ -171,6 +171,16 @@ export type GameEvent =
   | { readonly type: 'healing-potion-used'; readonly restored: number; readonly health: number }
   /** The hero took this weapon in hand. */
   | { readonly type: 'weapon-switched'; readonly weapon: WeaponSlot }
+  /**
+   * The hero opened this page over the game, which waits from now on. It is told only when a page opened: not when
+   * another page was open already, nor when the game was waiting for a Stat Point or an answer.
+   */
+  | { readonly type: 'page-opened'; readonly page: PageId }
+  /**
+   * The page that was open is closed and the game goes on. It is told only for the page that was open: closing a page
+   * that is not the open one, or when none is open, changes nothing and tells nothing.
+   */
+  | { readonly type: 'page-closed'; readonly page: PageId }
   /**
    * The hero came onto this Checkpoint. It is the one defeat sends the hero back to now, and the hero's Health is
    * restored to full. Nothing else changes: the Ammunition and the Healing Potions the hero has stay as they are, and
