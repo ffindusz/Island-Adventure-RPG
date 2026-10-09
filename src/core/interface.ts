@@ -113,6 +113,15 @@ export type GameEvent =
    * its defeat opens is open already in the view of that step. It is told once; a Guardian that has fallen stays fallen.
    */
   | { readonly type: 'guardian-defeated'; readonly monsterId: string }
+  /**
+   * A Guardian that was idle noticed the hero, and its fight begins: it winds up a pattern or walks toward the hero, and
+   * `monsterId` is the Guardian. It is told once for the fight, in the step in which the Guardian leaves its idleness,
+   * and not again while the fight goes on. A Guardian that is idle again, because the hero went out of its noticing
+   * distance, tells it again when it notices the hero again, and so does one that was put back by the hero's defeat or
+   * by the hero leaving its Adventure Area. A Guardian that has fallen tells nothing, and nor does one that was already
+   * fighting when a saved game was continued: nothing is saved of what was told.
+   */
+  | { readonly type: 'guardian-engaged'; readonly monsterId: string }
   /** A monster struck, or a charger launched its dash. `zone` is the area its attack covered, whether or not the hero was in it. */
   | { readonly type: 'monster-attacked'; readonly monsterId: string; readonly zone: Box }
   /** A ranged attacker fired. Its projectile flies on in the view, from the monster's centre, in `direction`. */
