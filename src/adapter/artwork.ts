@@ -95,6 +95,9 @@ export const ARTWORK = {
   'prop-gate': sheet('prop-gate.png', 24, 25),
   'prop-lever': sheet('prop-lever.png', 16),
   'prop-sign': image('prop-sign.png'),
+  // The old vessel of the harbor, the one prop of one area: two frames (its sail furled, its sail hoisted) of 48 by 112
+  // pixels, three tiles by seven, for it lies in the water beside its tile and its mast and sail stand over the rock.
+  'prop-vessel': sheet('prop-vessel.png', 48, 112),
   // The pieces the HUD and the pages are built from, see ui-layer.ts: a dark panel, the orange frame of a window, the
   // orange button behind the line the cursor is on, and the heart of Health.
   'ui-panel': image('ui-panel.png'),

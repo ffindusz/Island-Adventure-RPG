@@ -1,13 +1,13 @@
 import type Phaser from 'phaser';
-import type { AreaView, Box, Direction, InteractableView, MonsterView, Point, VesselView } from '../core';
+import type { AreaView, Box, Direction, InteractableView, MonsterView, Point } from '../core';
 import { TILE_SIZE } from './config';
 
 // The flat shapes of what has no picture yet, and the colours of every kind of terrain and type of monster. Drawn here
 // from the state view: the ground and the monsters of an area whose art is not final, and the telegraphs and the strikes
 // of the monster attacks, which stay flat shapes. The pictures are elsewhere: the baked ground (terrain-baker.ts), the
-// monsters of final art and what they shoot (monster-sprites.ts, projectile-sprites.ts), the props every area shares
-// (prop-sprites.ts), and the hero and its arrows (hero-sprite.ts). The rest of the adapter only calls the draw functions
-// below.
+// monsters of final art and what they shoot (monster-sprites.ts, projectile-sprites.ts), the props (prop-sprites.ts: what
+// every area shares, and the old vessel), and the hero and its arrows (hero-sprite.ts). The rest of the adapter only calls
+// the draw functions below.
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -57,11 +57,6 @@ const HEALTH_COLOUR = 0x7bd35f;
 const TELEGRAPH_COLOUR = 0xe0392e;
 const STRIKE_COLOUR = 0xff8a3d;
 const WIND_UP_COLOUR = 0xff6b5b;
-
-/** The flat vessel: a weathered brown hull, and a sail that is grey until the vessel is prepared and pale gold after. */
-const VESSEL_HULL_COLOUR = 0x8a5a2b;
-const VESSEL_SAIL_COLOUR = 0x9a9588;
-const VESSEL_PREPARED_SAIL_COLOUR = 0xfff0b8;
 
 /** A monster that warns by flashing alternates on and off over this many equal parts of its wind-up, ending on. */
 const WIND_UP_FLASH_PARTS = 7;
@@ -131,11 +126,11 @@ export function drawTerrain(graphics: Graphics, area: AreaView): void {
 }
 
 /**
- * Draws what the hero can interact with that has no picture yet, as flat shapes. Every kind has its picture
- * (prop-sprites.ts) for now, except the vessel, which is drawn here: a new kind of interactable does not compile until it
- * is listed here, and one that has no picture yet is drawn here until it has.
+ * Draws what the hero can interact with that has no picture, as flat shapes. Every kind has its picture now
+ * (prop-sprites.ts), so nothing is drawn here: a new kind of interactable does not compile until it is listed here, and
+ * one that has no picture yet is drawn here until it has.
  */
-export function drawInteractable(graphics: Graphics, interactable: InteractableView): void {
+export function drawInteractable(_graphics: Graphics, interactable: InteractableView): void {
   switch (interactable.kind) {
     case 'chest':
     case 'pickup':
@@ -144,26 +139,11 @@ export function drawInteractable(graphics: Graphics, interactable: InteractableV
     case 'gate':
     case 'lever':
     case 'sign':
-      return;
     case 'vessel':
-      drawVessel(graphics, interactable);
       return;
     default:
       interactable satisfies never;
   }
-}
-
-/** The old vessel as flat shapes: a brown hull with a mast and a sail, which is pale until the vessel is prepared. */
-function drawVessel(graphics: Graphics, vessel: VesselView): void {
-  const body = bodyRect(vessel.position, vessel.size);
-  graphics.fillStyle(OUTLINE_COLOUR);
-  graphics.fillRect(body.x + 7, body.y + 1, 2, 9);
-  fillWithOutline(
-    graphics,
-    { x: body.x + 9, y: body.y + 2, width: 6, height: 7 },
-    vessel.prepared ? VESSEL_PREPARED_SAIL_COLOUR : VESSEL_SAIL_COLOUR,
-  );
-  fillWithOutline(graphics, { x: body.x, y: body.y + 9, width: body.width, height: 6 }, VESSEL_HULL_COLOUR);
 }
 
 /**

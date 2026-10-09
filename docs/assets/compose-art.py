@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Composes pictures from pieces of the Ninja Adventure pack: the ground and the monsters of the shipwreck coast and the
 woods, the ground and the monsters of the mountain and of the cave, the ground (the masonry, the flagstones, the moss, the
-pillars, the fountain, the harbor and its quay) and the undead and the Guardian of the castle, the props every area
-shares, and the icons of the two bows.
+pillars, the fountain, the harbor and its quay) and the undead and the Guardian of the castle, the old vessel of its harbor
+(the pack's boat and sail), the props every area shares, and the icons of the two bows.
 
 The pack (CC0, Pixel-Boy and AAA) is not in the repository. Pass the folder that holds `Backgrounds`, `Actor`, `Items`
 and `FX` as --pack; the pictures are written under public/art/ and are committed with it. Run it again to remake them:
@@ -11,8 +11,8 @@ and `FX` as --pack; the pictures are written under public/art/ and are committed
     python docs/assets/compose-art.py --pack "<path>" terrain-water monster-crab    (only these)
 
 Every picture is cut from named pieces of the pack and put together here; what is drawn by the recipe instead (a glint, the
-pillars and the fountain of the castle, the courses of its walls) is said so by its function and by
-docs/assets/licences.md, which lists each result and the pieces it was made from.
+pillars and the fountain of the castle, the courses of its walls, the mast and the post of the vessel) is said so by its
+function and by docs/assets/licences.md, which lists each result and the pieces it was made from.
 """
 import argparse
 import math
@@ -1003,6 +1003,76 @@ def castle_fountain(pack):
     return out
 
 
+# The old vessel lies in the water at the end of the quay with its bow to the north and its side against the planks: the
+# pack's boat, a tile shorter so that water shows round it, turned and weathered, with a mast and the pack's sail. The
+# picture is three tiles wide and seven tall (src/adapter/prop-sprites.ts stands it so that its bottom left tile is the
+# vessel's own, the last of the quay): that tile with the post the vessel is moored to, then the two tiles of water, and the
+# two tiles of rock above them, over which the mast and the sail stand. Frame 0 is the vessel as it is found, its sail furled
+# on the mast; frame 1 is the vessel prepared, its sail hoisted.
+VESSEL_CELL = (3 * TILE, 7 * TILE)
+VESSEL_HULL_AT = (17, 40)
+VESSEL_MAST_AT = (30, 30)
+VESSEL_SAIL_REACH = 17
+VESSEL_COLOURS = {
+    'O': OUTLINE, 'L': hexrgb('#a98563'), 'M': hexrgb('#7d5f45'), 'S': hexrgb('#cdb892'), 'W': hexrgb('#f2eaf1'),
+}
+VESSEL_WOOD = {
+    hexrgb('#ffad5d'): VESSEL_COLOURS['L'], hexrgb('#f38c4c'): VESSEL_COLOURS['M'],
+    hexrgb('#eecf9b'): VESSEL_COLOURS['S'], hexrgb('#ffffff'): VESSEL_COLOURS['W'],
+}
+MAST_TOP = ['..OO..', '.OLLO.', '.OLLO.']
+MAST_SHAFT = '.OLMO.'
+FURLED_SAIL = [
+    '..OOOO..', '.OWSSSO.', 'OWWSSSSO', 'OWSSSSSO', 'OMMMMMMO', 'OWSSSSSO', 'OWSSSSSO', 'OWSSSSSO', 'OWSSSSSO', 'OMMMMMMO',
+    'OWSSSSSO', 'OWSSSSSO', 'OWSSSSSO', 'OWSSSSSO', 'OMMMMMMO', 'OWSSSSSO', 'OWSSSSSO', 'OWSSSSSO', '.OSSSSO.', '..OOOO..',
+]
+POST = ['.OOO.', 'OLLMO', 'OLLMO', '.OLMO', '.OLMO', 'OLLMO', 'OOOOO']
+PATCH = {'M': VESSEL_COLOURS['M'], 'P': hexrgb('#c4a074'), 'n': hexrgb('#4d3b2a')}
+PATCH_ROWS = ['MMMMMM', 'MPPPnM', 'MnPPPM', 'MMMMMM']
+HULL_MOSS = [(40, 63), (40, 64), (41, 64), (40, 75), (41, 75), (41, 76), (40, 76), (40, 77), (40, 88), (41, 88)]
+
+
+def vessel_hull(pack):
+    """The pack's boat, a tile of plain planking shorter, turned bow to the north, in old brown wood: a board of the stern
+    mended, and moss on the gunwale where the water splashes it."""
+    boat = pack.image('Backgrounds', 'Vehicles', 'Boat.png').crop((0, 0, 80, 30))
+    shorter = Image.new('RGBA', (64, 30), (0, 0, 0, 0))
+    shorter.paste(boat.crop((0, 0, 32, 30)), (0, 0))
+    shorter.paste(boat.crop((48, 0, 80, 30)), (32, 0))
+    hull = recolour(shorter, VESSEL_WOOD).rotate(90, expand=True)
+    stamp(hull, PATCH_ROWS, PATCH, 10, 53)
+    paint(hull, [(x - VESSEL_HULL_AT[0], y - VESSEL_HULL_AT[1]) for x, y in HULL_MOSS], MOSS_DARK)
+    return hull
+
+
+def vessel_sail(pack):
+    """The pack's sail in old canvas, without the thin spar that reaches out from it, outlined to stand out from the rock."""
+    sail = recolour(pack.image('Backgrounds', 'Vehicles', 'Sail.png'), VESSEL_WOOD).crop((0, 0, VESSEL_SAIL_REACH, 43))
+    padded = Image.new('RGBA', (sail.width + 2, sail.height + 2), (0, 0, 0, 0))
+    padded.paste(sail, (1, 1))
+    return outlined(padded)
+
+
+def vessel_frame(pack, hoisted):
+    out = Image.new('RGBA', VESSEL_CELL, (0, 0, 0, 0))
+    out.alpha_composite(vessel_hull(pack), VESSEL_HULL_AT)
+    mast_x, mast_y = VESSEL_MAST_AT
+    foot = VESSEL_HULL_AT[1] + 32
+    if hoisted:
+        sail = vessel_sail(pack)
+        out.alpha_composite(sail, (mast_x - 2, foot - sail.height + 1))
+    else:
+        stamp(out, MAST_TOP + [MAST_SHAFT] * (foot - mast_y - len(MAST_TOP)), VESSEL_COLOURS, mast_x - 1, mast_y)
+        stamp(out, FURLED_SAIL, VESSEL_COLOURS, mast_x - 3, foot - len(FURLED_SAIL) - 2)
+    stamp(out, POST, VESSEL_COLOURS, 9, 68)
+    paint(out, [(14, 70), (15, 70), (16, 70), (14, 71), (15, 71), (16, 71)], VESSEL_COLOURS['S'])
+    return out
+
+
+def vessel_sheet(pack):
+    return frames_sheet([vessel_frame(pack, False), vessel_frame(pack, True)], 2, VESSEL_CELL)
+
+
 BUILDERS = {
     'gear-short-bow': lambda pack: bow_icon(pack, 'Bow', shorter_by=2),
     'gear-long-bow': lambda pack: bow_icon(pack, 'Bow2'),
@@ -1052,6 +1122,7 @@ BUILDERS = {
     'prop-gate': gate_sheet,
     'prop-lever': lever_sheet,
     'prop-sign': lambda pack: cut(pack.tileset('TilesetElement'), 0, 2),
+    'prop-vessel': vessel_sheet,
 }
 
 
