@@ -55,7 +55,7 @@ export type Command =
   | { readonly type: 'close-page'; readonly page: PageId }
   /**
    * Spend a Stat Point on a stat, for good: there is no taking it back. Ignored when no Stat Point waits to be
-   * assigned. Until every Stat Point has been assigned the game is paused.
+   * assigned. Until every Stat Point has been assigned the game is paused. The one event is `stat-point-assigned`.
    */
   | { readonly type: 'assign-stat-point'; readonly stat: StatId }
   /**
@@ -181,6 +181,11 @@ export type GameEvent =
    * that is not the open one, or when none is open, changes nothing and tells nothing.
    */
   | { readonly type: 'page-closed'; readonly page: PageId }
+  /**
+   * The hero spent a Stat Point on this stat, for good. It is told once for each Stat Point spent: a Stat Point that
+   * does not wait to be assigned changes nothing and tells nothing.
+   */
+  | { readonly type: 'stat-point-assigned'; readonly stat: StatId }
   /**
    * The hero came onto this Checkpoint. It is the one defeat sends the hero back to now, and the hero's Health is
    * restored to full. Nothing else changes: the Ammunition and the Healing Potions the hero has stay as they are, and

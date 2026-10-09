@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { PAGE_IDS } from '../src/core';
-import type { PageId } from '../src/core';
+import { PAGE_IDS, STAT_IDS } from '../src/core';
+import type { PageId, StatId } from '../src/core';
 import { defeatPrize, gameAtTitle, gameWithPrizes, newGame, playingView } from './fixtures';
 import { askingGame } from './harbor-fixtures';
 
@@ -10,6 +10,7 @@ import { askingGame } from './harbor-fixtures';
 
 const open = (page: PageId) => ({ type: 'open-page', page }) as const;
 const close = (page: PageId) => ({ type: 'close-page', page }) as const;
+const assign = (stat: StatId) => ({ type: 'assign-stat-point', stat }) as const;
 
 describe('opening a page', () => {
   it.each(PAGE_IDS)('tells that the %s page opened, once', (page) => {
@@ -88,5 +89,43 @@ describe('closing a page', () => {
     const events = PAGE_IDS.flatMap((page) => game.send(close(page)));
 
     expect(events).toEqual([{ type: 'page-closed', page: 'automap' }]);
+  });
+});
+
+describe('assigning a Stat Point', () => {
+  it.each(STAT_IDS)('tells that the Stat Point went to %s, and the stat rose', (stat) => {
+    const game = gameWithPrizes(10);
+    defeatPrize(game, 1);
+    const before = game.snapshot().state.hero.statPoints[stat];
+
+    expect(game.send(assign(stat))).toEqual([{ type: 'stat-point-assigned', stat }]);
+
+    expect(game.snapshot().state.hero.statPoints[stat]).toBe(before + 1);
+  });
+
+  it('tells once for each Stat Point spent, and nothing once none waits', () => {
+    const game = gameWithPrizes(25);
+    defeatPrize(game, 1);
+
+    expect(game.send(assign('attack'))).toEqual([{ type: 'stat-point-assigned', stat: 'attack' }]);
+    expect(game.send(assign('health'))).toEqual([{ type: 'stat-point-assigned', stat: 'health' }]);
+    const before = game.snapshot();
+
+    expect(game.send(assign('defense'))).toEqual([]);
+
+    expect(game.snapshot()).toEqual(before);
+  });
+
+  it('tells nothing when no Stat Point waits: nothing changes', () => {
+    const game = newGame();
+    const before = game.snapshot();
+
+    expect(game.send(assign('attack'))).toEqual([]);
+
+    expect(game.snapshot()).toEqual(before);
+  });
+
+  it('tells nothing at the title', () => {
+    expect(gameAtTitle().send(assign('attack'))).toEqual([]);
   });
 });

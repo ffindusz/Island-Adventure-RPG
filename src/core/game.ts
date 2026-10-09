@@ -66,10 +66,7 @@ export function createGame(options: GameOptions): Game {
         case 'close-page':
           return state.phase === 'playing' ? closePage(state, command.page) : [];
         case 'assign-stat-point':
-          if (state.phase === 'playing') {
-            assignStatPoint(state, content, command.stat);
-          }
-          return [];
+          return state.phase === 'playing' ? assignStatPoint(state, content, command.stat) : [];
         case 'equip':
           return state.phase === 'playing' ? equipGear(state, content, command.gearId) : [];
         case 'use-healing-potion':

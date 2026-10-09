@@ -27,13 +27,15 @@ export function gainExperience(state: PlayState, content: Content, amount: numbe
 
 /**
  * The hero spends a Stat Point it has not assigned yet on a stat, for good. The current Health rises by as much as the
- * maximum does, so Health bought with a Stat Point is not left empty. Does nothing when no Stat Point waits.
+ * maximum does, so Health bought with a Stat Point is not left empty. Does nothing when no Stat Point waits. Returns
+ * what happened: the Stat Point spent, or nothing.
  */
-export function assignStatPoint(state: PlayState, content: Content, stat: StatId): void {
+export function assignStatPoint(state: PlayState, content: Content, stat: StatId): GameEvent[] {
   if (unassignedStatPoints(state, content) === 0) {
-    return;
+    return [];
   }
   const maxHealthBefore = heroMaxHealth(state, content);
   state.hero.statPoints[stat] += 1;
   state.hero.health += heroMaxHealth(state, content) - maxHealthBefore;
+  return [{ type: 'stat-point-assigned', stat }];
 }
