@@ -136,6 +136,14 @@ function interactableView(interactable: Interactable, state: PlayState): Interac
         position: centerOfBox(interactable.body),
         size: interactable.body.maxX - interactable.body.minX,
       };
+    case 'vessel':
+      return {
+        kind: 'vessel',
+        id: interactable.id,
+        position: centerOfBox(interactable.body),
+        size: interactable.body.maxX - interactable.body.minX,
+        prepared: interactableStateOf(state, interactable).prepared,
+      };
   }
 }
 

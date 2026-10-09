@@ -140,6 +140,11 @@ export type GameEvent =
    * that was showing. The game does not pause. Reading the sign again shows it again.
    */
   | { readonly type: 'sign-read'; readonly signId: string; readonly text: string }
+  /**
+   * The hero used Interact on a vessel that was not prepared, and now it is. It is told once: the next Interact on the
+   * vessel is what asks whether to sail home.
+   */
+  | { readonly type: 'vessel-prepared'; readonly vesselId: string }
   /** The hero took an item and now has it. */
   | { readonly type: 'pickup'; readonly item: PickedUpItem }
   /** The hero equipped this Gear in its slot, in place of the piece there. */
@@ -261,7 +266,15 @@ export interface ChestView {
 }
 
 /** Something placed in the Adventure Area, for the adapter to draw: one member for each kind. */
-export type InteractableView = ChestView | PickupView | KeyView | DoorView | GateView | LeverView | SignView;
+export type InteractableView =
+  | ChestView
+  | PickupView
+  | KeyView
+  | DoorView
+  | GateView
+  | LeverView
+  | SignView
+  | VesselView;
 
 /** A pickup lying on the ground, for the adapter to draw. One that the hero has taken is not listed any more. */
 export interface PickupView {
@@ -336,6 +349,17 @@ export interface SignView {
   readonly position: Point;
   /** Width and height of the tile it fills, in tiles. */
   readonly size: number;
+}
+
+/** The old vessel, for the adapter to draw. It is solid, whether the hero has prepared it or not. */
+export interface VesselView {
+  readonly kind: 'vessel';
+  readonly id: string;
+  /** The centre of the tile it fills. */
+  readonly position: Point;
+  /** Width and height of the tile it fills, in tiles. */
+  readonly size: number;
+  readonly prepared: boolean;
 }
 
 export interface AreaView {

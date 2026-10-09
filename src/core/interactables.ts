@@ -7,6 +7,7 @@ import type { Gate, Key } from './device-content';
 import { grantGear } from './gear';
 import { centerOfBox, overlaps, zoneInFront } from './geometry';
 import type { Box, Point } from './geometry';
+import { useVessel } from './departure';
 import type { GameEvent } from './interface';
 import { stopsWalkers } from './obstacles';
 import { interactableStateOf } from './state';
@@ -46,6 +47,7 @@ const INTERACTIONS: { readonly [K in InteractedWith['kind']]: Interaction<Extrac
   door: useDoor,
   lever: useLever,
   sign: readSign,
+  vessel: useVessel,
 };
 
 /**
@@ -58,6 +60,7 @@ function isInteractedWith(interactable: Interactable): interactable is Interacte
     case 'door':
     case 'lever':
     case 'sign':
+    case 'vessel':
       return true;
     case 'pickup':
     case 'key':

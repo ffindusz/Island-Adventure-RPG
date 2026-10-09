@@ -13,6 +13,8 @@ import {
 import type { Door, Gate, Key, Lever, Sign } from './device-content';
 import { checkRoutesStayOpen } from './device-routes';
 import { checkGuardianPlace, checkGuardians } from './guardian-content';
+import { loadVessel } from './vessel-content';
+import type { Vessel } from './vessel-content';
 import { CONSUMABLE_IDS, GEAR_SLOTS, STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
@@ -83,7 +85,7 @@ export interface Pickup {
 }
 
 /** An interactable as the rules use it, one member for each kind. */
-export type Interactable = Chest | Pickup | Key | Door | Gate | Lever | Sign;
+export type Interactable = Chest | Pickup | Key | Door | Gate | Lever | Sign | Vessel;
 
 /** An entrance as the rules use it: the hero arrives standing at the centre of its tile. */
 export interface Entrance {
@@ -897,6 +899,8 @@ function loadInteractable(
       return loadLever(areaId, definition);
     case 'sign':
       return loadSign(areaId, definition);
+    case 'vessel':
+      return loadVessel(definition);
     default:
       return refuseKind(areaId, id, kind);
   }

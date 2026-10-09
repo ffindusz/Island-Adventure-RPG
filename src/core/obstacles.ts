@@ -6,14 +6,15 @@ import type { Door, Gate } from './device-content';
 // of an Adventure Area in which every door and gate is shut, and of one in which every one is open (device-routes.ts).
 
 /**
- * Whether an interactable stops the hero and the monsters. A chest, a lever and a sign do, opened or pulled or not; a
- * door and a gate do while they are shut, which `isShut` says of each; a pickup and a key never do.
+ * Whether an interactable stops the hero and the monsters. A chest, a lever, a sign and a vessel do, opened or pulled or
+ * prepared or not; a door and a gate do while they are shut, which `isShut` says of each; a pickup and a key never do.
  */
 export function stopsWalkers(interactable: Interactable, isShut: (device: Door | Gate) => boolean): boolean {
   switch (interactable.kind) {
     case 'chest':
     case 'lever':
     case 'sign':
+    case 'vessel':
       return true;
     case 'door':
     case 'gate':

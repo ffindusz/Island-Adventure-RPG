@@ -359,7 +359,7 @@ function checkMilestones(value: unknown, path: string, area: AreaDefinition): vo
 
 /**
  * What the hero can change about each interactable of the area: a chest is opened, a pickup or a key is taken, a door or
- * a gate is opened, a lever is pulled. Nothing about a sign changes, and its state is its kind alone.
+ * a gate is opened, a lever is pulled, a vessel is prepared. Nothing about a sign changes, and its state is its kind alone.
  */
 const FLAG_OF: Record<InteractableDefinition['kind'], string | null> = {
   chest: 'opened',
@@ -369,6 +369,7 @@ const FLAG_OF: Record<InteractableDefinition['kind'], string | null> = {
   gate: 'open',
   lever: 'pulled',
   sign: null,
+  vessel: 'prepared',
 };
 
 /**

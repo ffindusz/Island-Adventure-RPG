@@ -47,6 +47,7 @@ export type {
   StationaryMonsterDefinition,
   TerrainDefinition,
   TileRect,
+  VesselDefinition,
   WeaponSlot,
 } from './definitions';
 export type { Box, Direction, Point, Tile } from './geometry';
@@ -90,6 +91,7 @@ export type {
   StatChoiceView,
   StatPageView,
   TitleView,
+  VesselView,
 } from './interface';
 export type {
   AreaState,
@@ -108,4 +110,5 @@ export type {
   PickupState,
   PlayState,
   SignState,
+  VesselState,
 } from './state';

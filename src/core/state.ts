@@ -108,6 +108,15 @@ export interface SignState {
   readonly kind: 'sign';
 }
 
+/**
+ * What changes about a vessel: whether the hero has prepared it. A vessel that is prepared stays so, defeat included (see
+ * consumable-rollback.ts), and the hero can walk away from it and come back.
+ */
+export interface VesselState {
+  readonly kind: 'vessel';
+  prepared: boolean;
+}
+
 /** What changes about an interactable during the game, one member for each kind. */
 export type InteractableState =
   | ChestState
@@ -116,7 +125,8 @@ export type InteractableState =
   | DoorState
   | GateState
   | LeverState
-  | SignState;
+  | SignState
+  | VesselState;
 
 export interface AreaState {
   /** Every monster placed in the Adventure Area, defeated ones included (at 0 Health), so that they stay defeated. */
@@ -325,6 +335,8 @@ function freshInteractable(interactable: Interactable): InteractableState {
       return { kind: 'lever', pulled: false };
     case 'sign':
       return { kind: 'sign' };
+    case 'vessel':
+      return { kind: 'vessel', prepared: false };
   }
 }
 

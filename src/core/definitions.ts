@@ -455,6 +455,20 @@ export interface SignDefinition {
 }
 
 /**
+ * The old vessel that sails the hero home, filling a tile. It is always solid. The hero prepares it with Interact, and
+ * with the next Interact it is asked whether to sail: the game waits for the answer, and only a yes ends the adventure
+ * (see departure.ts). There is one in the whole game, and the content that has one has an ending and credits to show.
+ * Whether it is prepared is kept like where a lever stands: defeat does not change it.
+ */
+export interface VesselDefinition {
+  readonly kind: 'vessel';
+  /** Unique across all interactables of all Adventure Areas: saves refer to the vessel by it. */
+  readonly id: string;
+  /** The tile it fills. It must not be solid, nor where the hero or a monster starts. */
+  readonly tile: Tile;
+}
+
+/**
  * Something in an Adventure Area that the hero acts on with Interact, or takes by walking onto it (a pickup, a key). Its
  * `kind` names the rules it follows (see interactables.ts); the other fields are what that kind needs. Adding a kind
  * means adding a member here and the cases the recipe in interactables.ts lists.
@@ -466,7 +480,8 @@ export type InteractableDefinition =
   | DoorDefinition
   | GateDefinition
   | LeverDefinition
-  | SignDefinition;
+  | SignDefinition
+  | VesselDefinition;
 
 /** Where the hero stands when it comes into an Adventure Area through an exit of another. */
 export interface EntranceDefinition {
