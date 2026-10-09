@@ -33,6 +33,10 @@ const MOORING_REACH = 17;
 const MOST_COVERED = 0.7;
 /** The last rows of the picture are water past the stern. */
 const BEYOND_THE_STERN = 8;
+/** The water of the picture begins at this row of it, two rows above the vessel's own: the rows over it lie over the rock above the harbor. */
+const WATER_TOP = (OWN_ROW + Math.min(...WATER_ROWS)) * TILE;
+/** Over the rock only the head of the mast and of the sail stand, and a row of them is no wider than this: the hull is wider. */
+const HEAD_WIDTH = 8;
 /** The most pixels a failure lists. */
 const SHOWN = 4;
 
@@ -108,6 +112,19 @@ describe('the picture of the old vessel', () => {
 
       expect(past, `the first pixels of frame ${index} past the stern`).toEqual([]);
       expect(covered, `the share of the water that frame ${index} covers`).toBeLessThan(MOST_COVERED);
+    }
+  });
+
+  it('keeps the hull in the water: over the rock above the harbor only the head of the mast and of the sail stand', () => {
+    for (const [index, frame] of frames.entries()) {
+      const widths = new Map<number, number>();
+      for (const key of where(frame, (_x, y) => y < WATER_TOP).keys()) {
+        const [, y = 0] = coordinates(key);
+        widths.set(y, (widths.get(y) ?? 0) + 1);
+      }
+      const [row = 0, widest = 0] = [...widths].sort(([, a], [, b]) => b - a)[0] ?? [];
+
+      expect(widest, `the widest row of frame ${index} over the rock, row ${row} of the picture`).toBeLessThanOrEqual(HEAD_WIDTH);
     }
   });
 
