@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Composes pictures from pieces of the Ninja Adventure pack: the ground and the monsters of the shipwreck coast and the
-woods, the props every area shares, and the icons of the two bows.
+woods, the ground and the monsters of the mountain and of the cave, the props every area shares, and the icons of the
+two bows.
 
 The pack (CC0, Pixel-Boy and AAA) is not in the repository. Pass the folder that holds `Backgrounds`, `Actor`, `Items`
 and `FX` as --pack; the pictures are written under public/art/ and are committed with it. Run it again to remake them:
@@ -277,6 +278,44 @@ def terrain_wreckage(pack):
     return sheet
 
 
+# The mountain and the cave. Their cliffs are the grey face of the pack's relief (the same nine pieces as terrain-rock, in
+# the order of its rows and columns) with its colours swapped: slate for the mountain, and for the cave a darker, bluer
+# stone. The boulders are the pack's small rocks in the slate. The cave's sand and grass are the sheets of the coast and
+# the woods with every colour darkened, so the cave is dim in the ground itself, with nothing laid over what stands on it.
+# src/adapter/terrain-plan.ts has the looks that name these sheets.
+GREY_STONE = ('#5f7160', '#56634d', '#46402e', '#8d977f', '#f2eaf1', '#b6beb0')
+SLATE = ('#6c7a8e', '#586579', '#3c4256', '#a3afc0', '#e4e9f1', '#c4ccd8')
+CAVE_STONE = ('#454a63', '#383c53', '#262a3f', '#6b7191', '#8a90b0', '#7f86a6')
+CAVE_FLOOR = {
+    '#ffcb8d': '#a58459', '#fce2ca': '#c4a688', '#ffbc75': '#8f6f47',  # the sand, its light pebbles, its darker twigs
+    '#adbc3a': '#5e7a38', '#a8a129': '#566e32',  # the grass
+}
+
+
+def stone(names):
+    return {hexrgb(old): hexrgb(new) for old, new in zip(GREY_STONE, names)}
+
+
+def stone_cliff(pack, names):
+    """The face of a cliff in grey stone recoloured, three rows (the lip, the middle, the foot) by three columns (left,
+    middle, right), as terrain-rock has them."""
+    relief = pack.tileset('TilesetRelief')
+    return frames_sheet([recolour(cut(relief, c, r), stone(names)) for r in (0, 1, 2) for c in (4, 5, 6)], 3)
+
+
+def mountain_boulders(pack):
+    """Four boulders, each on a tile of its own: the three small rocks of the nature set, and the round one of the relief's
+    details."""
+    nature, detail = pack.tileset('TilesetNature'), pack.tileset('TilesetReliefDetail')
+    rocks = [cut(nature, col, 17) for col in (17, 18, 19)] + [cut(detail, 4, 0)]
+    return frames_sheet([recolour(rock, stone(SLATE)) for rock in rocks], len(rocks))
+
+
+def cave_floor(pack, make):
+    """The ground of the coast or of the woods, in the dim colours of the cave: every colour of the sheet is in CAVE_FLOOR."""
+    return recolour(make(pack), {hexrgb(old): hexrgb(new) for old, new in CAVE_FLOOR.items()})
+
+
 def paint(img, pixels, colour):
     surface = img.load()
     for x, y in pixels:
@@ -372,8 +411,9 @@ def monster_sheet(walk):
     return frames_sheet([f for row in rows for f in row], 4, cell)
 
 
-def monster_four_ways(pack, folder, name, colours=None):
-    sprite = pack.image('Actor', 'Monster', folder, name)
+def monster_four_ways(pack, folder, name, colours=None, kind='Monster'):
+    """A creature of the pack's `Actor/<kind>/<folder>`: four ways, four frames of a walk (a character's first four rows)."""
+    sprite = pack.image('Actor', kind, folder, name)
     if colours:
         sprite = recolour(sprite, {hexrgb(old): hexrgb(new) for old, new in colours.items()})
     return monster_sheet([[cut(sprite, d, f) for d in range(4)] for f in range(4)])
@@ -382,6 +422,12 @@ def monster_four_ways(pack, folder, name, colours=None):
 # The pack's mushroom has a red cap, as red as the crab and as the flash of a wind-up, so its cap is made purple: the red
 # flash then shows on it, and the spitter has the colour its orbs have.
 SPITTER_CAP = {'#e0394c': '#a15fd8', '#8f3e56': '#5e3a8c'}
+
+# The raiders of the mountain are the pack's ninjas and its knight, drawn four ways like its monsters. The knight, the
+# veteran, is the grey-green of the dark ninja, the raider, so its steel is made a navy blue to tell the two apart. The
+# pack's bear is red too, so the cave's bear is made brown.
+VETERAN_STEEL = {'#8d977f': '#8aa0d0', '#5f7160': '#4c62a4', '#4e484a': '#3c4478', '#3b3643': '#2a2e5a'}
+CAVE_BEAR = {'#d14b34': '#8a6246', '#8f3e56': '#523a2c'}
 
 
 def projectile_orb(pack):
@@ -400,8 +446,9 @@ def monster_side(pack, folder, name):
 
 
 # ---------------------------------------------------------------------------------------------------------------------
-# What every area shares (src/adapter/prop-sprites.ts): chests and caches, pickups, Checkpoints, exits, signs and doors.
-# The cell of each is one tile with the picture standing at the foot of it; the Checkpoint's cell is taller.
+# What every area shares (src/adapter/prop-sprites.ts): chests and caches, pickups, Checkpoints, exits, signs, doors, gates
+# and levers. The cell of each is one tile with the picture standing at the foot of it; the Checkpoint's cell is taller,
+# and a gate's is taller and wider, for its arch stands over the way and on the rock beside it.
 
 POLE = hexrgb('#8f3e56')
 CHECKPOINT_HEIGHT = 26
@@ -507,6 +554,75 @@ def door_sheet(pack):
     return frames_sheet([shut, cut(house, 9, 3)], 2)
 
 
+# The pack's iron arch (TilesetHouse) is 24 by 25 pixels: legs of four pixels, nine rows of arch, and an opening of exactly
+# one tile. Its fence is 14 rows high, so a strip of it is made two rows taller by repeating a row of its stem.
+GATE_ARCH = (172, 183, 196, 208)
+GATE_WAY = (4, 9)
+FENCE_TOP, FENCE_STEM, FENCE_FOOT = 194, 200, 208
+FENCE_STRIPS = ((155, 159), (159, 161), (155, 159), (159, 161), (155, 159))
+IRON, IRON_SHADE = hexrgb('#f2eaf1'), hexrgb('#abc2bc')
+REST_KNOB = (hexrgb('#d14b34'), hexrgb('#ffcba9'))
+PULLED_KNOB = (hexrgb('#79b8ce'), IRON)
+KNOB_ROUND = [(dx, dy) for dx in range(-2, 2) for dy in range(-3, 1) if dx in (-1, 0) or dy in (-2, -1)]
+
+
+def fence_strip(house, x0, x1):
+    """The strip of the pack's iron fence between x0 and x1, a tile high: the stem of its pickets is stretched by two rows."""
+    rows = [*range(FENCE_TOP, FENCE_STEM), FENCE_STEM, FENCE_STEM, *range(FENCE_STEM, FENCE_FOOT)]
+    out = Image.new('RGBA', (x1 - x0, TILE), (0, 0, 0, 0))
+    for y, source in enumerate(rows):
+        out.paste(house.crop((x0, source, x1, source + 1)), (0, y))
+    return out
+
+
+def gate_sheet(pack):
+    """Two frames, the gate shut and the gate open: the pack's iron arch, which stands over the way and on the rock on each
+    side of it, and, shut, the pack's fence of three pickets between its legs, a small touch (the fence is stretched two
+    rows to fill the opening). Open, it is the arch alone, and the way through it is clear."""
+    house = pack.tileset('TilesetHouse')
+    arch = house.crop(GATE_ARCH)
+    fence = Image.new('RGBA', (TILE, TILE), (0, 0, 0, 0))
+    x = 0
+    for x0, x1 in FENCE_STRIPS:
+        strip = fence_strip(house, x0, x1)
+        fence.paste(strip, (x, 0))
+        x += strip.width
+    shut = arch.copy()
+    shut.alpha_composite(fence, GATE_WAY)
+    return frames_sheet([shut, arch], 2, arch.size)
+
+
+def line(start, end):
+    """The pixels of a straight line from start to end."""
+    (x0, y0), (x1, y1) = start, end
+    steps = max(abs(x1 - x0), abs(y1 - y0))
+    return [(round(x0 + (x1 - x0) * i / steps), round(y0 + (y1 - y0) * i / steps)) for i in range(steps + 1)]
+
+
+def lever_frame(dungeon, lean, knob):
+    """A lever set in the rock, filling its tile: a near-black niche, the lower rows of the pack's stone block that the
+    dungeon tileset uses as a socket, and a white stick that stands on it leaning `lean` (-1 left, 1 right) with a ball of
+    colour on its end. The stick and the ball are a small touch: the pack has no lever."""
+    colour, glint = knob
+    out = Image.new('RGBA', (TILE, TILE), (*OUTLINE, 255))
+    out.alpha_composite(cut(dungeon, 2, 3).crop((0, 9, TILE, TILE)), (0, 9))
+    layer = Image.new('RGBA', (TILE, TILE), (0, 0, 0, 0))
+    stick = line((8, 9), (8 + lean * 4, 4))
+    paint(layer, [*stick, *((x + 1, y) for x, y in stick)], IRON)
+    paint(layer, [(x + 1, y) for x, y in stick], IRON_SHADE)
+    tip_x, tip_y = stick[-1]
+    paint(layer, [(tip_x + dx, tip_y + dy) for dx, dy in KNOB_ROUND], colour)
+    paint(layer, [(tip_x - 1, tip_y - 2)], glint)
+    out.alpha_composite(outlined(layer))
+    return out
+
+
+def lever_sheet(pack):
+    """Two frames, the lever at rest, its stick leaning left with a red ball, and the lever pulled, leaning right with a blue one."""
+    dungeon = pack.tileset('TilesetDungeon')
+    return frames_sheet([lever_frame(dungeon, -1, REST_KNOB), lever_frame(dungeon, 1, PULLED_KNOB)], 2)
+
+
 def bow_icon(pack, folder, shorter_by=0):
     """A bow of the pack turned a quarter, to stand upright like the icons of the swords: its string on the left, its belly
     on the right. Lying down, as the hero holds it, it reads as a bowl in the HUD and the inventory. A shorter bow has that
@@ -528,6 +644,11 @@ BUILDERS = {
     'terrain-rock': terrain_rock,
     'terrain-tree': terrain_tree,
     'terrain-wreckage': terrain_wreckage,
+    'mountain-cliff': lambda pack: stone_cliff(pack, SLATE),
+    'mountain-boulders': mountain_boulders,
+    'cave-cliff': lambda pack: stone_cliff(pack, CAVE_STONE),
+    'cave-sand': lambda pack: cave_floor(pack, terrain_sand),
+    'cave-grass': lambda pack: cave_floor(pack, terrain_grass),
     'monster-crab': lambda pack: monster_four_ways(pack, 'Mollusc', 'Mollusc.png'),
     'monster-slime': lambda pack: monster_four_ways(pack, 'Slime', 'Slime.png'),
     'monster-spitter': lambda pack: monster_four_ways(pack, 'Mushroom', 'mushroom.png', SPITTER_CAP),
@@ -535,11 +656,21 @@ BUILDERS = {
     'fx-puff': lambda pack: pack.image('FX', 'Smoke', 'Smoke', 'SpriteSheet.png'),
     'monster-wolf': lambda pack: monster_side(pack, 'DogBlack', 'SpriteSheet.png'),
     'monster-boar': lambda pack: monster_side(pack, 'WildBoar', 'SpriteSheet.png'),
+    'monster-raider': lambda pack: monster_four_ways(pack, 'NinjaDark', 'SpriteSheet.png', kind='Character'),
+    'monster-raider-charger': lambda pack: monster_four_ways(pack, 'NinjaYellow', 'SpriteSheet.png', kind='Character'),
+    'monster-raider-archer': lambda pack: monster_four_ways(pack, 'NinjaBlue', 'SpriteSheet.png', kind='Character'),
+    'monster-raider-veteran': lambda pack: monster_four_ways(pack, 'Knight', 'SpriteSheet.png', VETERAN_STEEL, 'Character'),
+    'monster-cave-bat': lambda pack: monster_four_ways(pack, 'BlueBat', 'SpriteSheet.png'),
+    'monster-cave-lizard': lambda pack: monster_four_ways(pack, 'Lizard', 'Lizard.png'),
+    'monster-cave-eye': lambda pack: monster_four_ways(pack, 'Eye', 'Eye.png'),
+    'monster-cave-bear': lambda pack: monster_four_ways(pack, 'Bear', 'SpriteSheet.png', CAVE_BEAR),
     'prop-chest': chest_sheet,
     'prop-pickup': pickup_sheet,
     'prop-checkpoint': checkpoint_sheet,
     'prop-exit': exit_sheet,
     'prop-door': door_sheet,
+    'prop-gate': gate_sheet,
+    'prop-lever': lever_sheet,
     'prop-sign': lambda pack: cut(pack.tileset('TilesetElement'), 0, 2),
 }
 

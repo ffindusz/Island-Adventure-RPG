@@ -8,6 +8,9 @@ import { terrainArt } from './artwork';
 // The shore, the edge of the sand and the faces of the cliffs are drawn the way a tile map with edge tiles would, but a
 // quarter of a tile at a time: each quarter looks at the neighbour beside it, the neighbour above or below it, and the
 // one across the corner, so that a bend, a corner and an inlet all join up with thirteen pieces for each.
+//
+// Sand, grass and rock are drawn in the look of the area (TerrainLook): the coast and the woods have the standard sheets,
+// the mountain and the cave sheets of their own, with the same frames.
 
 export type Quarter = 'nw' | 'ne' | 'sw' | 'se';
 
@@ -44,6 +47,44 @@ const GRASS_ART = terrainArt('grass');
 const ROCK_ART = terrainArt('rock');
 const TREE_ART = terrainArt('tree');
 const WRECK_ART = terrainArt('wreckage');
+
+/** The boulders are a sheet of four frames, one tile each. */
+const BOULDER_VARIANTS = 4;
+
+/**
+ * The sheets that dress the sand, the grass and the rock of an Adventure Area. Each is laid out like the standard one of
+ * its kind, so the frames are the same: a look changes the picture of a frame and never which frame goes where.
+ */
+export interface TerrainLook {
+  readonly sand: string;
+  readonly grass: string;
+  readonly rock: string;
+  /**
+   * The sheet of boulders. When there is one, a rock with no rock above it and none below it is a boulder, not the face of
+   * a cliff; when there is none, it is a cliff like any other.
+   */
+  readonly boulders?: string;
+}
+
+/** The look of the coast and of the woods, and of every area that has no look of its own. */
+export const STANDARD_LOOK: TerrainLook = { sand: SAND_ART, grass: GRASS_ART, rock: ROCK_ART };
+/** Cliffs of slate, and boulders; the sand of the trail and the grass of the ledges are the standard ones. */
+const MOUNTAIN_LOOK: TerrainLook = { ...STANDARD_LOOK, rock: 'mountain-cliff', boulders: 'mountain-boulders' };
+/** Dark stone, and a floor of sand and grass in dim colours, so that the cave is dark in the ground and nowhere else. */
+const CAVE_LOOK: TerrainLook = { sand: 'cave-sand', grass: 'cave-grass', rock: 'cave-cliff' };
+const LOOKS: readonly TerrainLook[] = [STANDARD_LOOK, MOUNTAIN_LOOK, CAVE_LOOK];
+
+/** The look of the Adventure Area with this id: the standard one, unless it is the mountain or the cave. */
+export function lookOf(areaId: string): TerrainLook {
+  switch (areaId) {
+    case 'mountain':
+      return MOUNTAIN_LOOK;
+    case 'cave':
+      return CAVE_LOOK;
+    default:
+      return STANDARD_LOOK;
+  }
+}
 
 /**
  * The sheet of the wreck is rows of thirteen: the deck as an edge on the first row; on the second its plain planks, a
@@ -131,18 +172,18 @@ function waterTile(x: number, y: number, kindAt: KindAt): Stamp[] {
   });
 }
 
-function sandTile(x: number, y: number, kindAt: KindAt): Stamp[] {
+function sandTile(x: number, y: number, kindAt: KindAt, art: string = SAND_ART): Stamp[] {
   const pieces = piecesFor(x, y, (nx, ny) => {
     const kind = kindAt(nx, ny);
     return kind === 'grass' || kind === 'tree';
   });
   if (pieces.every((piece) => piece === 'C')) {
     const roll = scatter(x, y, 2) % 20;
-    return [whole(SAND_ART, roll === 0 ? SAND.twig : roll < 3 ? SAND.pebble : SAND.plain, x, y)];
+    return [whole(art, roll === 0 ? SAND.twig : roll < 3 ? SAND.pebble : SAND.plain, x, y)];
   }
   return CORNERS.map((corner, index) => {
     const piece = pieces[index] ?? 'C';
-    return quarterOf(SAND_ART, piece === 'C' ? SAND.plain : SAND.edge + PIECES.indexOf(piece), x, y, corner.quarter);
+    return quarterOf(art, piece === 'C' ? SAND.plain : SAND.edge + PIECES.indexOf(piece), x, y, corner.quarter);
   });
 }
 
@@ -153,17 +194,34 @@ function grassFrame(x: number, y: number): number {
   return GRASS.tufts[scatter(x, y, 4) % GRASS.tufts.length] ?? GRASS.plain;
 }
 
-/** The face of a cliff: its lip on the top of a mass of rock, its foot on the bottom, and outlined at the sides. */
-function rockTile(x: number, y: number, kindAt: KindAt): Stamp[] {
+/**
+ * A boulder: a rock that stands alone, on the ground that most of the tiles around it are (the grass, when there is no
+ * more sand than grass). Its variant is by where it stands, and the ground under it is always the plain one.
+ */
+function boulderTile(x: number, y: number, kindAt: KindAt, look: TerrainLook, boulders: string): Stamp[] {
+  const around = AROUND.map(([dx, dy]) => kindAt(x + dx, y + dy));
+  const sandy = around.filter((kind) => kind === 'sand').length > around.filter((kind) => kind === 'grass').length;
+  const ground = sandy ? whole(look.sand, SAND.plain, x, y) : whole(look.grass, GRASS.plain, x, y);
+  return [ground, whole(boulders, scatter(x, y, 9) % BOULDER_VARIANTS, x, y)];
+}
+
+/**
+ * The face of a cliff: its lip on the top of a mass of rock, its foot on the bottom, and outlined at the sides. In a look
+ * with boulders, a rock with no rock above it and none below it is a boulder instead.
+ */
+function rockTile(x: number, y: number, kindAt: KindAt, look: TerrainLook): Stamp[] {
   const rock = (nx: number, ny: number): boolean => kindAt(nx, ny) === 'rock';
+  const alone = (nx: number, ny: number): boolean => look.boulders !== undefined && rock(nx, ny) && !rock(nx, ny - 1) && !rock(nx, ny + 1);
+  if (look.boulders !== undefined && alone(x, y)) return boulderTile(x, y, kindAt, look, look.boulders);
   const top = !rock(x, y - 1);
   const bottom = !rock(x, y + 1);
   // A wall one tile high has neither a lip nor a foot.
   const row = top && !bottom ? 0 : bottom && !top ? 2 : 1;
-  const left = !rock(x - 1, y);
-  const right = !rock(x + 1, y);
+  // A boulder beside the cliff is ground to it, so the cliff is outlined on that side.
+  const left = !rock(x - 1, y) || alone(x - 1, y);
+  const right = !rock(x + 1, y) || alone(x + 1, y);
   const column = left && !right ? 0 : right && !left ? 2 : 1;
-  return [whole(ROCK_ART, row * ROCK_COLUMNS.length + column, x, y)];
+  return [whole(look.rock, row * ROCK_COLUMNS.length + column, x, y)];
 }
 
 interface TreePart {
@@ -314,7 +372,7 @@ function mastStamps(wreck: Wreck, kindAt: KindAt): Stamp[] {
 }
 
 /** The stamps for the ground of a whole map: `terrain[row][column]` holds the kind of terrain of each tile. */
-export function planTerrain(terrain: readonly (readonly string[])[]): Stamp[] {
+export function planTerrain(terrain: readonly (readonly string[])[], look: TerrainLook = STANDARD_LOOK): Stamp[] {
   const kindAt: KindAt = (x, y) => terrain[y]?.[x];
   const treeParts = findTreeBlocks(terrain);
   const wrecks = findWrecks(terrain, kindAt);
@@ -331,13 +389,13 @@ export function planTerrain(terrain: readonly (readonly string[])[]): Stamp[] {
           break;
         }
         case 'sand':
-          stamps.push(...sandTile(x, y, kindAt));
+          stamps.push(...sandTile(x, y, kindAt, look.sand));
           break;
         case 'grass':
-          stamps.push(whole(GRASS_ART, grassFrame(x, y), x, y));
+          stamps.push(whole(look.grass, grassFrame(x, y), x, y));
           break;
         case 'rock':
-          stamps.push(...rockTile(x, y, kindAt));
+          stamps.push(...rockTile(x, y, kindAt, look));
           break;
         case 'tree':
           stamps.push(...treeTile(x, y, kindAt, treeParts.get(`${x},${y}`)));
@@ -357,20 +415,26 @@ function edgeName(frame: number): string {
 export function describeStamp(stamp: Stamp): string {
   const { art, frame } = stamp;
   const at = stamp.quarter ? `@${stamp.quarter}` : '';
+  // A sheet of the mountain or of the cave is named for what it holds, as the standard sheet of it is.
+  const dresses = (family: 'sand' | 'grass' | 'rock'): boolean => LOOKS.some((look) => look[family] === art);
+  if (dresses('sand')) {
+    if (frame === SAND.plain) return `sand.plain${at}`;
+    if (frame === SAND.twig) return `sand.twig${at}`;
+    if (frame === SAND.pebble) return `sand.pebble${at}`;
+    return `sand.edge.${edgeName(frame)}${at}`;
+  }
+  if (dresses('grass')) {
+    return `grass.${(GRASS.flecks as readonly number[]).includes(frame) ? 'flecks' : frame === GRASS.plain ? 'plain' : 'tuft'}${at}`;
+  }
+  if (dresses('rock')) {
+    return `rock.${ROCK_ROWS[Math.floor(frame / ROCK_COLUMNS.length)]}.${ROCK_COLUMNS[frame % ROCK_COLUMNS.length]}${at}`;
+  }
+  if (LOOKS.some((look) => look.boulders === art)) return `boulder.${frame}${at}`;
   switch (art) {
     case WATER_ART:
       if (frame === WATER.plain) return `water.plain${at}`;
       if (frame === WATER.glint) return `water.glint${at}`;
       return `water.${frame < WATER.grass ? 'sand' : 'grass'}.${edgeName(frame)}${at}`;
-    case SAND_ART:
-      if (frame === SAND.plain) return `sand.plain${at}`;
-      if (frame === SAND.twig) return `sand.twig${at}`;
-      if (frame === SAND.pebble) return `sand.pebble${at}`;
-      return `sand.edge.${edgeName(frame)}${at}`;
-    case GRASS_ART:
-      return `grass.${(GRASS.flecks as readonly number[]).includes(frame) ? 'flecks' : frame === GRASS.plain ? 'plain' : 'tuft'}${at}`;
-    case ROCK_ART:
-      return `rock.${ROCK_ROWS[Math.floor(frame / ROCK_COLUMNS.length)]}.${ROCK_COLUMNS[frame % ROCK_COLUMNS.length]}${at}`;
     case TREE_ART: {
       if ((TREE.floors as readonly number[]).includes(frame)) return `tree.floor${at}`;
       if ((TREE.small as readonly number[]).includes(frame)) return `tree.small${at}`;
