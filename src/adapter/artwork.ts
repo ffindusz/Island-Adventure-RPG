@@ -46,6 +46,16 @@ export const ARTWORK = {
   'cave-cliff': sheet('cave-cliff.png', 16),
   'cave-sand': sheet('cave-sand.png', 16),
   'cave-grass': sheet('cave-grass.png', 16),
+  // The castle has a look of its own too (terrain-plan.ts): walls of masonry, flagstones, moss and pillars, in the frames of
+  // the standard sheets, and three sheets that no other look has: the fountain (nine pieces of one tile each), grey-green
+  // water for the harbor, and the planks of its quay.
+  'castle-wall': sheet('castle-wall.png', 16),
+  'castle-floor': sheet('castle-floor.png', 16),
+  'castle-grass': sheet('castle-grass.png', 16),
+  'castle-pillars': sheet('castle-pillars.png', 16),
+  'castle-fountain': sheet('castle-fountain.png', 16),
+  'castle-water': sheet('castle-water.png', 16),
+  'castle-dock': sheet('castle-dock.png', 16),
   // Monsters, a sheet for each type: four columns (down, up, left, right), the frames of its walk, then a white frame
   // for a hit and a red one for a wind-up; see monster-sprites.ts.
   'monster-crab': sheet('monster-crab.png', 16),

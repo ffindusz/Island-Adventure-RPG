@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Composes pictures from pieces of the Ninja Adventure pack: the ground and the monsters of the shipwreck coast and the
-woods, the ground and the monsters of the mountain and of the cave, the props every area shares, and the icons of the
-two bows.
+woods, the ground and the monsters of the mountain and of the cave, the ground (the masonry, the flagstones, the moss, the
+pillars, the fountain, the harbor and its quay) of the castle, the props every area shares, and the icons of the two bows.
 
 The pack (CC0, Pixel-Boy and AAA) is not in the repository. Pass the folder that holds `Backgrounds`, `Actor`, `Items`
 and `FX` as --pack; the pictures are written under public/art/ and are committed with it. Run it again to remake them:
@@ -9,10 +9,12 @@ and `FX` as --pack; the pictures are written under public/art/ and are committed
     python docs/assets/compose-art.py --pack "<path to Ninja Adventure - Asset Pack>"
     python docs/assets/compose-art.py --pack "<path>" terrain-water monster-crab    (only these)
 
-Every picture is cut from named pieces of the pack and put together here; nothing is drawn by hand except where a
-function says "small touch". docs/assets/licences.md lists each result and the pieces it was made from.
+Every picture is cut from named pieces of the pack and put together here; what is drawn by the recipe instead (a glint, the
+pillars and the fountain of the castle, the courses of its walls) is said so by its function and by
+docs/assets/licences.md, which lists each result and the pieces it was made from.
 """
 import argparse
+import math
 import os
 import sys
 
@@ -635,6 +637,319 @@ def bow_icon(pack, folder, shorter_by=0):
     return out
 
 
+# ---------------------------------------------------------------------------------------------------------------------
+# The castle. Its ground has sheets of its own (the look of the castle in src/adapter/terrain-plan.ts names them): the
+# masonry of its walls, the flagstones of its halls, the moss of its courtyards and the grey-green water of its harbor,
+# each in the frames of the standard sheet of its kind; and three that no other look has: the pillars (four frames, one
+# tile each), the fountain (a picture of three tiles by three) and the planks of the quay (six frames).
+
+CASTLE_STONE = ('#8a8071', '#6f665a', '#3f3933', '#b0a695', '#ebe3d2', '#c4baa8')
+MORTAR = hexrgb('#4b443b')
+# A wall is courses of blocks. The pack's face is seven rows of stone and a joint of mortar under them (rows 4 and 12 of a
+# tile), so a tile is two courses; each block is eight pixels long and a course starts half a block along from the one
+# above, so the pattern is the same on every tile and the tiles of a long or a tall wall join. The blocks are shaded by
+# course and by place in the course, and a few pixels of each tile are lighter or darker.
+BLOCK_SHADES = (('#978d7c', '#857b6c'), ('#8a8071', '#9a907f'))
+BLOCK_SPECKS = ((3, 7, -16), (6, 14, 14), (11, 8, -16), (13, 1, 14), (9, 6, 14), (2, 2, -14))
+# The columns of a tile of the wall (left, middle, right) that are face; the rest is the side of the wall, shaded as the pack has it.
+WALL_FACE = {0: (5, 15), 1: (0, 15), 2: (0, 9)}
+# The grass of the coast and of the woods, as moss: darker and a little blue.
+CASTLE_MOSS = {'#adbc3a': '#6a9a3b', '#a8a129': '#477c48'}
+MOSS, MOSS_DARK = hexrgb('#74a334'), hexrgb('#4a7f4b')
+CRACK_COLOUR = hexrgb('#2a2630')
+# Chips of the stone of the wall, for the grass and the flagstones: a letter picture, light on top and dark below.
+CHIP_COLOURS = {'L': hexrgb('#b0a695'), 'M': hexrgb('#8a8071'), 'D': hexrgb('#3f3933')}
+CHIP = ['.LL.', 'LMMD', '.DDD']
+SMALL_CHIP = ['LM', '.D']
+
+
+def shifted(colour, amount):
+    """A colour lighter by `amount`, or darker when it is negative."""
+    return tuple(max(0, min(255, value + amount)) for value in colour)
+
+
+def wall_block(x, y):
+    """The colour of the masonry at x, y of a tile of wall."""
+    course = 0 if 5 <= y <= 11 else 1
+    along = x - 4 * course
+    if y in (4, 12) or along % 8 == 0:
+        return MORTAR
+    colour = hexrgb(BLOCK_SHADES[course][(along % 16) // 8])
+    for sx, sy, amount in BLOCK_SPECKS:
+        if (x, y) == (sx, sy):
+            return shifted(colour, amount)
+    if y == (5, 13)[course]:
+        return shifted(colour, 16)
+    if y == (11, 3)[course]:
+        return shifted(colour, -18)
+    return colour
+
+
+def castle_wall_tile(tile, column, row):
+    """A tile of the pack's relief in the stone of the castle, with the courses of blocks laid over its face."""
+    out = recolour(tile, stone(CASTLE_STONE))
+    face = {hexrgb(GREY_STONE[0]), hexrgb(GREY_STONE[1])}
+    first, last = WALL_FACE[column]
+    src, dst = tile.load(), out.load()
+    for y in range(5 if row == 0 else 0, TILE):
+        for x in range(TILE):
+            r, g, b, a = src[x, y]
+            if a == 0 or (r, g, b) not in face:
+                continue
+            if first <= x <= last:
+                dst[x, y] = (*wall_block(x, y), 255)
+            elif y in (4, 12):
+                dst[x, y] = (*shifted(MORTAR, -10), 255)
+    return out
+
+
+def castle_wall(pack):
+    """The face of a wall of masonry, three rows (the lip, the middle, the foot) by three columns (left, middle, right)."""
+    relief = pack.tileset('TilesetRelief')
+    return frames_sheet([castle_wall_tile(cut(relief, c, r), c - 4, r) for r in (0, 1, 2) for c in (4, 5, 6)], 3)
+
+
+def cobbles(pack):
+    """The dark cobbles of the pack's interior floor: the one tile of them that joins with itself on every side."""
+    return cut(pack.image('Backgrounds', 'Tilesets', 'Interior', 'TilesetInteriorFloor.png'), 12, 13)
+
+
+def weedy_cobbles(stones):
+    """The cobbles with a crack between two of them and grass growing out of it."""
+    out = stones.copy()
+    paint(out, [(3, 9), (4, 9), (5, 9), (6, 10), (7, 10), (8, 10), (9, 9), (10, 9)], CRACK_COLOUR)
+    paint(out, [(4, 8), (4, 7), (5, 8), (7, 9), (7, 8), (7, 7), (8, 9), (9, 8), (10, 8), (10, 7)], MOSS_DARK)
+    paint(out, [(4, 6), (7, 6), (8, 8), (10, 6), (5, 7)], MOSS)
+    return out
+
+
+def loose_cobbles(stones):
+    out = stones.copy()
+    for x, y, rows in ((9, 2, CHIP), (3, 9, CHIP), (12, 11, SMALL_CHIP), (6, 5, SMALL_CHIP)):
+        stamp(out, rows, CHIP_COLOURS, x, y)
+    return out
+
+
+def castle_floor(pack):
+    """Flagstones: the thirteen pieces of their edge against moss, then the plain ground, with weeds in a crack and with chips.
+    The edge is the pack's edge of dirt against grass with the cobbles in place of the dirt, each pixel of them the pixel of the
+    plain flagstones at the same place, so that edge and plain tiles join."""
+    stones = cobbles(pack)
+    under = stones.load()
+    dirt = {hexrgb('#d3865f'), hexrgb('#bd7959')}
+    moss = {hexrgb(old): hexrgb(new) for old, new in CASTLE_MOSS.items()}
+    edge = []
+    for piece in key_pieces(pack.tileset('TilesetFloor'), 7):
+        piece = recolour(piece, moss)
+        pixels = piece.load()
+        for y in range(TILE):
+            for x in range(TILE):
+                if pixels[x, y][:3] in dirt:
+                    pixels[x, y] = under[x, y]
+        edge.append(piece)
+    return frames_sheet(edge + [stones, weedy_cobbles(stones), loose_cobbles(stones)], KEY_COUNT)
+
+
+def castle_grass(pack):
+    """The grass of the woods as moss, with a few chips of stone on the two frames that have flecks."""
+    mossy = recolour(terrain_grass(pack), {hexrgb(old): hexrgb(new) for old, new in CASTLE_MOSS.items()})
+    for frame, chips in ((4, ((9, 9, CHIP), (3, 3, SMALL_CHIP))), (6, ((3, 10, CHIP), (11, 3, SMALL_CHIP)))):
+        for x, y, rows in chips:
+            stamp(mossy, rows, CHIP_COLOURS, frame * TILE + x, y)
+    return mossy
+
+
+# The water of the harbor: the sheet of the sea with its colours swapped, grey-green for the water and its foam, worn stone for
+# the bank where the sand of the coast was (the edge of the quay), and the stone of the walls for the bank where there is grass.
+CASTLE_WATER = {
+    '#71ddee': '#4a9aa6', '#8feff1': '#6fb8bd', '#79b8ce': '#3a7a88', '#ffffff': '#d4e6e2',
+    '#ffcb8d': '#a39886', '#ffad5d': '#8a7f6e', '#d78b4a': '#6b6254', '#965340': '#3f3933',
+    '#adbc3a': '#6f665a', '#a8a129': '#5a5348',
+}
+
+
+def castle_water(pack):
+    return recolour(terrain_water(pack), {hexrgb(old): hexrgb(new) for old, new in CASTLE_WATER.items()})
+
+
+# The planks of the quay are the pack's dock on its side, weathered as the deck of the wreck is, with the colours of old brown wood.
+DOCK_WOOD = {PLANK: hexrgb('#9a7b5c'), WALL: hexrgb('#4d3b2a'), SEAM: hexrgb('#6e553e')}
+
+
+def dock_planks(pack, variant):
+    return recolour(weathered_deck(pack, variant), DOCK_WOOD)
+
+
+def castle_dock(pack):
+    """The planks of the quay, six frames and not one with a gap in it: two plain, two with moss in the seams, one with weeds
+    growing through a seam and one with a board split."""
+    plain_a, plain_b = dock_planks(pack, 'a'), dock_planks(pack, 'b')
+    moss_a, moss_b, weeds, split = plain_a.copy(), plain_b.copy(), plain_a.copy(), plain_b.copy()
+    paint(moss_a, [(2, 3), (3, 3), (4, 3), (5, 3), (3, 4), (4, 4), (10, 9), (11, 9), (12, 9), (13, 9), (12, 10), (13, 10), (14, 10)], MOSS_DARK)
+    paint(moss_a, [(3, 2), (4, 2), (11, 8), (13, 8), (12, 11)], MOSS)
+    paint(moss_b, [(5, 14), (6, 14), (7, 14), (8, 14), (6, 13), (7, 13), (11, 3), (12, 3), (13, 3), (12, 4), (13, 4), (14, 4)], MOSS_DARK)
+    paint(moss_b, [(6, 12), (8, 13), (12, 2), (14, 3)], MOSS)
+    paint(weeds, [(9, 9), (9, 8), (10, 8), (10, 7), (8, 7), (9, 6), (11, 9)], MOSS_DARK)
+    paint(weeds, [(9, 7), (10, 6)], MOSS)
+    paint(split, [(4, 4), (5, 5), (5, 6), (6, 7), (7, 8), (8, 8)], CRACK_COLOUR)
+    paint(split, [(6, 5), (7, 7), (4, 5)], hexrgb('#b39878'))
+    return frames_sheet([plain_a, plain_b, moss_a, moss_b, weeds, split], 6)
+
+
+# The pillars stand where a rock stands alone: a column with a cap and a foot wider than its shaft, in the stone of the wall.
+PILLAR_COLOURS = {
+    'O': OUTLINE, 'h': hexrgb('#ebe3d2'), 'l': hexrgb('#c4baa8'), 'm': hexrgb('#a59b8a'), 'd': hexrgb('#7c7367'),
+}
+PILLAR_ROWS = [
+    '................',
+    '..OOOOOOOOOOOO..',
+    '..OhhhhhhhhhlO..',
+    '..OhlllllllmdO..',
+    '..OlmmmmmmmddO..',
+    '..OOOOOOOOOOOO..',
+    '...OmmmmddddO...',
+    '...OhhllmmddO...',
+    '...OhhllmmddO...',
+    '...OhhllmmddO...',
+    '...OhhllmmddO...',
+    '...OhhllmmddO...',
+    '...OhhllmmddO...',
+    '..OOOOOOOOOOOO..',
+    '..OlllllmmmddO..',
+    '..OOOOOOOOOOOO..',
+]
+# Where the shaft of the broken pillar ends, column by column from x = 3 to 12.
+STUMP_TOPS = (8, 8, 9, 9, 9, 10, 10, 10, 11, 11)
+
+
+def pillar_intact():
+    out = Image.new('RGBA', (TILE, TILE), (0, 0, 0, 0))
+    stamp(out, PILLAR_ROWS, PILLAR_COLOURS, 0, 0)
+    return out
+
+
+def pillar_mossy():
+    out = pillar_intact()
+    paint(out, [(4, 12), (5, 12), (4, 11), (10, 12), (11, 11), (11, 12), (3, 14), (4, 14), (12, 14), (9, 14)], MOSS_DARK)
+    paint(out, [(5, 11), (10, 11), (4, 14), (6, 12)], MOSS)
+    return out
+
+
+def pillar_cracked():
+    out = pillar_intact()
+    paint(out, [(9, 2), (9, 3), (10, 4), (8, 7), (8, 8), (7, 9), (7, 10), (8, 11)], CRACK_COLOUR)
+    return out
+
+
+def pillar_broken():
+    """The shaft broken off ragged at about the middle, rubble at its foot."""
+    whole = pillar_intact()
+    src = whole.load()
+    out = Image.new('RGBA', (TILE, TILE), (0, 0, 0, 0))
+    dst = out.load()
+    for x in range(TILE):
+        top = dict(zip(range(3, 13), STUMP_TOPS)).get(x)
+        for y in range(13, TILE):
+            dst[x, y] = src[x, y]
+        if top is None:
+            continue
+        for y in range(top, 13):
+            dst[x, y] = src[x, y]
+        dst[x, top - 1] = (*OUTLINE, 255)
+        if x not in (3, 12):
+            dst[x, top] = (*PILLAR_COLOURS['l'], 255)
+    for x, y in ((0, 11), (13, 11)):
+        stamp(out, SMALL_CHIP, CHIP_COLOURS, x, y)
+    return out
+
+
+def castle_pillars(pack):
+    return frames_sheet([pillar_intact(), pillar_mossy(), pillar_broken(), pillar_cracked()], 4)
+
+
+# The fountain is a round basin of the stone of the castle, mossy on its rim, with water in it, a round plinth of stone
+# standing in the middle with a jet of water rising from it. The picture is three tiles by three, drawn on the grass of the
+# courtyard, with nothing in the corners; the plan cuts it into its nine tiles. The water is the water of the harbor.
+FOUNTAIN_WATER = (hexrgb('#71ddee'), hexrgb('#8feff1'), hexrgb('#3da6bd'))
+FOUNTAIN_JET = {'F': hexrgb('#f2eaf1'), 'W': hexrgb('#8feff1'), 'D': hexrgb('#3da6bd'), 'B': hexrgb('#71ddee')}
+FOUNTAIN_JET_ROWS = [
+    '....FF....',
+    '..F.FF.F..',
+    '.F..FF..F.',
+    '.F.WFFD.F.',
+    'F..WFFD..F',
+    'W..WFFD..W',
+    '...WFFD...',
+    '..WWFFDD..',
+    '..WBFFDB..',
+]
+
+
+def fountain_plinth():
+    """The plinth: a squat round block of stone seen from a little above, its top lit from the upper left, with a bowl of water in it."""
+    layer = Image.new('RGBA', (3 * TILE, 3 * TILE), (0, 0, 0, 0))
+    pixels = layer.load()
+    centre = 23.5
+    light, mid, dark = hexrgb('#c4baa8'), hexrgb('#a59b8a'), hexrgb('#8a8071')
+    for y in range(14, 36):
+        for x in range(3 * TILE):
+            across = ((x - centre) / 6.0) ** 2
+            on_top = across + ((y - 22.0) / 4.4) ** 2 <= 1
+            in_body = across + ((y - 25.0) / 4.4) ** 2 <= 1
+            if on_top:
+                colour = light if x - centre < 2.5 else mid
+                if across + ((y - 22.0) / 2.4) ** 2 <= 0.6:
+                    colour = FOUNTAIN_WATER[2] if y < 22 and x < centre else FOUNTAIN_WATER[0]
+            elif in_body:
+                colour = mid if x < centre else dark
+                if y > 27:
+                    colour = shifted(colour, -14)
+            else:
+                continue
+            pixels[x, y] = (*colour, 255)
+    return outlined(layer)
+
+
+def castle_fountain(pack):
+    size = 3 * TILE
+    out = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    pixels = out.load()
+    centre_x, centre_y = size / 2 - 0.5, size / 2 + 1
+    base, glint, deep = FOUNTAIN_WATER
+    for y in range(size):
+        for x in range(size):
+            dx, dy = x - centre_x, y - centre_y
+            d = math.hypot(dx, dy)
+            light = (-dx - dy) / (d * math.sqrt(2) + 1e-9)
+            turn = ((math.atan2(dy, dx) + math.pi) / (2 * math.pi) * 20) % 1
+            if d > 23:
+                continue
+            if d > 22:
+                colour = OUTLINE
+            elif d > 17.5:
+                colour = hexrgb('#a59b8a')
+                if light > 0.35:
+                    colour = hexrgb('#c4baa8')
+                elif light < -0.35:
+                    colour = hexrgb('#8a8071')
+                if d > 21:
+                    colour = shifted(colour, 18)
+                if min(turn, 1 - turn) * (2 * math.pi * d / 20) < 0.7:
+                    colour = shifted(colour, -28)
+            elif d > 16.5:
+                colour = MORTAR
+            else:
+                colour = deep if d > 14.5 and light > 0 else base
+                if (11.5 < d < 12.5 or 7.5 < d < 8.5) and int((math.atan2(dy, dx) + math.pi) * 3) % 2 == 0:
+                    colour = glint
+            pixels[x, y] = (*colour, 255)
+    paint(out, [(5, 31), (6, 32), (7, 33), (6, 31), (5, 32), (38, 30), (39, 31), (40, 32), (39, 30)], MOSS_DARK)
+    paint(out, [(6, 30), (40, 31)], MOSS)
+    out.alpha_composite(fountain_plinth())
+    stamp(out, FOUNTAIN_JET_ROWS, FOUNTAIN_JET, 19, 12)
+    return out
+
+
 BUILDERS = {
     'gear-short-bow': lambda pack: bow_icon(pack, 'Bow', shorter_by=2),
     'gear-long-bow': lambda pack: bow_icon(pack, 'Bow2'),
@@ -649,6 +964,13 @@ BUILDERS = {
     'cave-cliff': lambda pack: stone_cliff(pack, CAVE_STONE),
     'cave-sand': lambda pack: cave_floor(pack, terrain_sand),
     'cave-grass': lambda pack: cave_floor(pack, terrain_grass),
+    'castle-wall': castle_wall,
+    'castle-floor': castle_floor,
+    'castle-grass': castle_grass,
+    'castle-pillars': castle_pillars,
+    'castle-fountain': castle_fountain,
+    'castle-water': castle_water,
+    'castle-dock': castle_dock,
     'monster-crab': lambda pack: monster_four_ways(pack, 'Mollusc', 'Mollusc.png'),
     'monster-slime': lambda pack: monster_four_ways(pack, 'Slime', 'Slime.png'),
     'monster-spitter': lambda pack: monster_four_ways(pack, 'Mushroom', 'mushroom.png', SPITTER_CAP),
