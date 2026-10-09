@@ -4,7 +4,7 @@
 
 **Blocked by:** 18: The old castle
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 16, 17, 54-56, 77, 86
 
@@ -20,6 +20,8 @@
 - [ ] Reviewer play check (manual, in a browser): lose to the Guardian and confirm the return and reset, then win and confirm the harbor gate opens.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 24bbee9
 
 ### What was built
 
