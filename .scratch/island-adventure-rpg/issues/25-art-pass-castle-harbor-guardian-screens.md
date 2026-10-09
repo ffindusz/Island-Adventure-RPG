@@ -4,7 +4,7 @@
 
 **Blocked by:** 20: The forgotten harbor and the ending; 24: Art pass: the mountain and the cave
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 19, 94, 95, 102
 
@@ -17,6 +17,8 @@
 - [ ] Reviewer play check (manual, in a browser): go from the title screen through the castle, the Guardian fight, and the ending and credits, and confirm one consistent look, readable Guardian telegraphs, and legible credits.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 3958450
 
 Built on `ticket/25-art-pass-castle-harbor-guardian-screens`, from the integration tip f70cddf ("Resolve ticket 20"). The tip moved while I worked (ticket 21, the audio, merged: 5ad0f26, its merge 17eed74). I merged it as ae8d6f0 and read the merge both ways (`git diff` of each parent against the result): `src\adapter\title-scene.ts`, `src\adapter\ending-scene.ts`, `README.md` and `docs\assets\licences.md` had word-level conflicts, each resolved by keeping both sides' lines and sentences (21's two hint rows, its audio line, its `GameAudio` argument and its calls, beside my backdrop, my logo and `DEPTH.backdrop`); `src\adapter\index.ts` I never touched. The Status is untouched. Criteria 1 to 6 are ticked on what I verified (below); criterion 7, the manual play check, is left unticked. Nothing under `src\core` or `src\content` changed, no existing test was edited, and none had to be: there is **no forced change to an earlier test**. The slices, each committed when green: ground `ab2820a`, undead `e8dc466`, Guardian `08fdc55`, the castle goes live `81f5b7d`, vessel and harbor `45bedd5`, title `d30048b`, ending and credits `a964a5c`, the merge `ae8d6f0`, Automap `0f220cf`, two of my own tests made stronger `769be6e` and `87f75ab`, and a corrected sentence about where the vessel's picture stands `f86c7f1`.
 
