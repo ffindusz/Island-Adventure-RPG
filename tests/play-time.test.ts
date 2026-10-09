@@ -1,5 +1,20 @@
-import { describe, expect, it } from 'vitest';
-import { estimate, type Guesses, type Measured } from './play-time';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { gameContent } from '../src/content';
+import { STEP_MS } from '../src/core';
+import { AREA_IDS, routeOf, wayInOf } from './main-route';
+import {
+  estimate,
+  guardianAttempt,
+  type Guesses,
+  measureAdventure,
+  type Measured,
+  offRouteFights,
+  routeFights,
+  routeSecondsOf,
+  wordsIn,
+} from './play-time';
+import { FIRST_GEAR, gameWithHero, heroAt, QUIET } from './profile-heroes';
+import { walkRoute } from './routes';
 
 // A small adventure of round numbers, so that every figure below is worked out by hand and not by the code it checks.
 const SMALL: Measured = {
@@ -52,5 +67,80 @@ describe('the estimate of the play time', () => {
 
   it('adds up the parts and leaves nothing out', () => {
     expect(total).toBe(1018);
+  });
+});
+
+describe('the basis measured from the content', () => {
+  let measured: Measured;
+  beforeAll(() => {
+    measured = measureAdventure();
+  }, 60_000);
+  const cooldownSeconds = gameContent.hero.attackCooldownMs / 1000;
+
+  it('walks each route in the time that the core takes, to within a tile', () => {
+    // A walk ends when the hero crosses into the next area, up to a tile before the centre of the last tile.
+    const oneTileSeconds = 1 / gameContent.hero.speedTilesPerSecond;
+    for (const id of AREA_IDS) {
+      const wayIn = wayInOf(id);
+      const hero = heroAt(1, { health: 0, attack: 0, defense: 0 }, FIRST_GEAR, 0);
+      const game = gameWithHero(QUIET, hero, {
+        areaId: id,
+        position: { x: wayIn.col + 0.5, y: wayIn.row + 0.5 },
+        facing: 'right',
+      });
+      let steps = 0;
+      walkRoute(game, routeOf(id), () => {
+        steps += 1;
+        return true;
+      });
+      expect(Math.abs(routeSecondsOf(id) - (steps * STEP_MS) / 1000), id).toBeLessThanOrEqual(oneTileSeconds);
+    }
+  });
+
+  it('sums the walk of the five routes', () => {
+    expect(measured.routeSeconds).toBeCloseTo(AREA_IDS.reduce((sum, id) => sum + routeSecondsOf(id), 0), 9);
+  });
+
+  it('lets a plain fight last at least as long as the blows that win it take', () => {
+    const fights = [...routeFights(), ...offRouteFights()];
+    expect(fights.length).toBeGreaterThan(0);
+    for (const fight of fights) {
+      expect(fight.seconds, `${fight.type} in ${fight.area}`).toBeGreaterThanOrEqual(
+        (fight.hitsToKill - 1) * cooldownSeconds,
+      );
+    }
+  });
+
+  it('adds up the fights of the route and those off it', () => {
+    const seconds = (fights: readonly { readonly seconds: number }[]): number =>
+      fights.reduce((sum, fight) => sum + fight.seconds, 0);
+    expect(measured.fightSeconds).toBeCloseTo(seconds(routeFights()), 9);
+    expect(measured.offRouteFightSeconds).toBeCloseTo(seconds(offRouteFights()), 9);
+  });
+
+  it('takes the Guardian as one fight that is won, and lasts as long as its blows take', () => {
+    const attempt = guardianAttempt();
+    expect(attempt.outcome).toBe('won');
+    expect((attempt.steps * STEP_MS) / 1000).toBeGreaterThanOrEqual((attempt.blows - 1) * cooldownSeconds);
+    expect(measured.guardian.fightSeconds).toBeCloseTo((attempt.steps * STEP_MS) / 1000, 9);
+  });
+
+  it('counts what the content has: the level-ups, the areas, the Gear and the puzzles', () => {
+    const interactables = gameContent.areas.flatMap((area) => area.interactables ?? []);
+    expect(measured.levelUps).toBe(gameContent.progression.levelThresholds.length);
+    expect(measured.areas).toBe(gameContent.areas.length);
+    expect(measured.nearGear + measured.farGear).toBe(
+      Object.keys(gameContent.gear).length - Object.keys(gameContent.hero.startingGear).length,
+    );
+    expect(measured.puzzles).toBe(interactables.filter(({ kind }) => kind === 'key' || kind === 'lever').length);
+  });
+
+  it('counts the words by their spaces, so that a link is one word', () => {
+    expect(wordsIn(['A storm broke the ship.', 'Go on!'])).toBe(7);
+    expect(wordsIn(['See https://example.org/a-b now', '  '])).toBe(3);
+  });
+
+  it('shows the player some words to read', () => {
+    expect(measured.words).toBeGreaterThan(wordsIn(gameContent.opening ?? []) + wordsIn(gameContent.ending ?? []));
   });
 });

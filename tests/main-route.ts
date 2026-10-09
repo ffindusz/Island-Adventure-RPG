@@ -112,15 +112,19 @@ export function experienceBefore(id: AreaId): number {
 /** As in the area tests: something this many steps from the route or fewer is on it, for a hero who looks around. */
 export const MOST_NEARBY = 4;
 
-const detours = new Map<AreaId, Map<string, number>>();
+const detours = new Map<string, Map<string, number>>();
 
-/** How far every tile of open ground an area is from its route, in steps with every door and gate shut. */
-function detoursOf(id: AreaId): Map<string, number> {
-  const known = detours.get(id);
+/**
+ * How far every tile of open ground an area is from its route, in steps: with every door and gate shut, or with them
+ * all open, for what a hero reaches once the puzzles are solved.
+ */
+function detoursOf(id: AreaId, doorsOpen: boolean): Map<string, number> {
+  const cacheKey = `${id}/${doorsOpen ? 'open' : 'shut'}`;
+  const known = detours.get(cacheKey);
   if (known !== undefined) {
     return known;
   }
-  const isOpen = openTilesOf(gameContent, areaOf(id));
+  const isOpen = openTilesOf(gameContent, areaOf(id), doorsOpen);
   const distances = new Map<string, number>(routeOf(id).map((tile) => [keyOf(tile), 0]));
   const frontier = [...routeOf(id)];
   for (const tile of frontier) {
@@ -132,16 +136,17 @@ function detoursOf(id: AreaId): Map<string, number> {
       }
     }
   }
-  detours.set(id, distances);
+  detours.set(cacheKey, distances);
   return distances;
 }
 
 /**
  * How many steps off the route a hero goes to take or open what lies on a tile: to the tile itself for a pickup, and to
- * the nearest open tile beside it for a chest, which is solid. Undefined when a shut door or gate is in the way.
+ * the nearest open tile beside it for a chest, which is solid. Undefined when a shut door or gate is in the way, unless
+ * `doorsOpen` says that the hero has opened them all.
  */
-export function detourTo(id: AreaId, tile: Tile): number | undefined {
-  const distances = detoursOf(id);
+export function detourTo(id: AreaId, tile: Tile, doorsOpen = false): number | undefined {
+  const distances = detoursOf(id, doorsOpen);
   const reached = [tile, ...neighboursOf(tile)].flatMap((candidate) => distances.get(keyOf(candidate)) ?? []);
   return reached.length === 0 ? undefined : Math.min(...reached);
 }

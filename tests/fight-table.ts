@@ -85,6 +85,8 @@ export interface Build {
   readonly damageTaken: number;
   /** The Healing Potions that hero drinks. */
   readonly potionsDrunk: number;
+  /** How long that fight lasts, in steps: the one the hero wins, with potions to spare. */
+  readonly fightSteps: number;
 }
 
 const builds = new Map<string, Build>();
@@ -117,6 +119,7 @@ export function buildAt(typeId: string, area: AreaId, spend: Spend): Build {
     lostShare: result.healthLost / result.maxHealth,
     damageTaken: supplied.healthLost,
     potionsDrunk: supplied.potionsUsed,
+    fightSteps: supplied.steps,
   };
   builds.set(key, build);
   return build;
