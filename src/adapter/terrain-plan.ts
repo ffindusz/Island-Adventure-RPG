@@ -1,4 +1,5 @@
 import { terrainArt } from './artwork';
+import type { ArtName } from './artwork';
 
 // Which picture goes where on the ground of an Adventure Area. This is pure planning, with no Phaser in it: it turns the
 // kinds of terrain on the map into a list of stamps, each a frame of a terrain sheet (see docs/assets/compose-art.py for
@@ -64,26 +65,26 @@ const FOUNTAIN_SIDE = 3;
  * its kind, so the frames are the same: a look changes the picture of a frame and never which frame goes where.
  */
 export interface TerrainLook {
-  readonly sand: string;
-  readonly grass: string;
-  readonly rock: string;
+  readonly sand: ArtName;
+  readonly grass: ArtName;
+  readonly rock: ArtName;
   /**
    * The sheet of boulders. When there is one, a rock with no rock above it and none below it is a boulder, not the face of
    * a cliff; when there is none, it is a cliff like any other.
    */
-  readonly boulders?: string;
+  readonly boulders?: ArtName;
   /** The sheet of water, laid out like the standard one; the standard water when there is none. */
-  readonly water?: string;
+  readonly water?: ArtName;
   /**
    * The sheet of weathered planks. When there is one, sand within DOCK_REACH tiles of water is a quay of planks. The
    * planks have no gap in them: a gap on a tile to walk on would read as a hole to avoid.
    */
-  readonly dock?: string;
+  readonly dock?: ArtName;
   /**
    * The sheet of a fountain, three pieces by three. When there is one, a block of rock exactly three tiles by three with
    * no rock in the ring of tiles around it is a fountain, not a wall.
    */
-  readonly fountain?: string;
+  readonly fountain?: ArtName;
 }
 
 /** The look of the coast and of the woods, and of every area that has no look of its own. */

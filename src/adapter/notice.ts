@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { PickedUpItem } from '../core';
-import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
+import { consumableIcon, gearIcon, HEART, KEY_ICON } from './artwork';
 import { ChangeGuard } from './change-guard';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { interactKeyLabel, pageKeyLabel, switchWeaponKeyLabel } from './controls';
@@ -82,7 +82,7 @@ function iconFor(content: NoticeContent): string | null {
     case 'out-of-ammunition':
       return consumableIcon('ammunition');
     case 'checkpoint':
-      return 'ui-heart';
+      return HEART;
     case 'door-locked':
     case 'door-opened':
       return KEY_ICON;

@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import type { ArtName } from './artwork';
 import { drawBitmap, drawScaledBitmap, drawText, textBitmap } from './pixel-font';
 import type { Bitmap, Graphics } from './pixel-font';
 
@@ -30,7 +31,7 @@ const BAR_TRACK = 0x5f7160;
 
 /** How a frame is cut from its picture: the width of each edge keeps its size, and the middle stretches. */
 interface Cut {
-  readonly texture: string;
+  readonly texture: ArtName;
   readonly left: number;
   readonly right: number;
   readonly top: number;

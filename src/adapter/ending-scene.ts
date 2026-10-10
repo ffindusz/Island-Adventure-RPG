@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ARTWORK } from './artwork';
+import type { ArtName } from './artwork';
 import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import type { GameAudio } from './audio';
 import { AudioLine } from './audio-line';
@@ -18,6 +19,8 @@ import { UiLayer } from './ui-layer';
 // the hero sailed home. The core is at the title by then and has written nothing, so the saved game is as it was; what the
 // cards say and what Enter does are in ending-pages.ts. The scene decides nothing about the game. The music of the ending
 // is the audio service's.
+
+const BACKDROP = 'backdrop-ending' satisfies ArtName;
 
 /** The ending and the credits. */
 export class EndingScene extends Phaser.Scene {
@@ -50,7 +53,7 @@ export class EndingScene extends Phaser.Scene {
     buildDrawnArt(this.textures, ARTWORK);
     requireLoadedArt(this.textures, ARTWORK);
     this.audio.requireLoaded();
-    this.add.image(0, 0, 'backdrop-ending').setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.backdrop);
+    this.add.image(0, 0, BACKDROP).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.backdrop);
     this.layer = new UiLayer(this, DEPTH.ending);
     this.audioLine = new AudioLine(this);
     const keyboard = this.input.keyboard;

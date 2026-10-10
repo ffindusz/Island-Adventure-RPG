@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { COVERED_CORNER } from '../core';
 import type { PlayingView, WeaponSlot } from '../core';
-import { consumableIcon, gearIcon } from './artwork';
+import { ARROW, consumableIcon, gearIcon, HEART, SWORD_HELD } from './artwork';
 import { ChangeGuard } from './change-guard';
 import { TILE_SIZE } from './config';
 import { DEPTH } from './depths';
@@ -62,7 +62,7 @@ const COUNT_ROOM = textWidthOf('00');
  * flat and read as a bowl here.
  */
 const WEAPON_ICONS: Readonly<Record<WeaponSlot, { readonly texture: string; readonly flipped: boolean }>> = {
-  'melee-weapon': { texture: 'sword-held', flipped: true },
+  'melee-weapon': { texture: SWORD_HELD, flipped: true },
   'ranged-weapon': { texture: gearIcon('short-bow'), flipped: false },
 };
 
@@ -106,7 +106,7 @@ export class Hud {
     layer.clear();
     layer.frame('panel', MARGIN, MARGIN, HUD_WIDTH, HUD_HEIGHT);
 
-    layer.icon('ui-heart', LEFT, MARGIN + PADDING);
+    layer.icon(HEART, LEFT, MARGIN + PADDING);
     const textTop = MARGIN + PADDING + Math.ceil((HEALTH_ROW_HEIGHT - TEXT_HEIGHT) / 2);
     layer.text(healthText(health, maxHealth), LEFT + HEART_ROOM, textTop, INK.text);
     const level = `LV ${progress.level}`;
@@ -121,7 +121,7 @@ export class Hud {
     const weapon = WEAPON_ICONS[activeWeapon];
     layer.icon(weapon.texture, LEFT, SUPPLY_TOP, WEAPON_ROOM, SUPPLY_HEIGHT, weapon.flipped);
     const arrowLeft = LEFT + WEAPON_ROOM + 4;
-    layer.icon('arrow', arrowLeft, SUPPLY_TOP, ARROW_ROOM, SUPPLY_HEIGHT);
+    layer.icon(ARROW, arrowLeft, SUPPLY_TOP, ARROW_ROOM, SUPPLY_HEIGHT);
     const ammunition = String(consumables.ammunition);
     const ammunitionLeft = arrowLeft + ARROW_ROOM + GAP;
     layer.text(ammunition, ammunitionLeft, countTop, countColour(consumables.ammunition));

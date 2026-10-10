@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import type { ArrowView, Direction, GameEvent, HeroView, Point } from '../core';
+import { ARROW, SWORD_HELD } from './artwork';
+import type { ArtName } from './artwork';
 import { FACING_STEP, px, TILE_SIZE } from './config';
 import { DEPTH } from './depths';
 import { byShooter } from './projectiles';
@@ -8,6 +10,10 @@ import { byShooter } from './projectiles';
 // sheet has one attack pose for each direction and nothing for being hit, so the weapon, the slash and the flash of a
 // hit are added here. It is all cosmetic: it runs on frame time from the Game core's view and events, and nothing the
 // Game core decides depends on it.
+
+const HERO = 'hero' satisfies ArtName;
+const BOW_HELD = 'bow-held' satisfies ArtName;
+const SLASH = 'slash' satisfies ArtName;
 
 /** The column of each direction, the same in every row of the hero's sheet. */
 const COLUMN: Readonly<Record<Direction, number>> = { down: 0, up: 1, left: 2, right: 3 };
@@ -73,11 +79,11 @@ export class HeroSprite {
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
-    this.figure = scene.add.sprite(0, 0, 'hero', 0).setDepth(DEPTH.hero).setVisible(false);
+    this.figure = scene.add.sprite(0, 0, HERO, 0).setDepth(DEPTH.hero).setVisible(false);
     // The sword is held by the top of its guard, so it turns about the hand.
-    this.sword = scene.add.image(0, 0, 'sword-held').setOrigin(0.5, 1 / 11).setVisible(false);
-    this.bow = scene.add.image(0, 0, 'bow-held').setVisible(false);
-    this.slash = scene.add.sprite(0, 0, 'slash', 0).setDepth(DEPTH.slash).setVisible(false);
+    this.sword = scene.add.image(0, 0, SWORD_HELD).setOrigin(0.5, 1 / 11).setVisible(false);
+    this.bow = scene.add.image(0, 0, BOW_HELD).setVisible(false);
+    this.slash = scene.add.sprite(0, 0, SLASH, 0).setDepth(DEPTH.slash).setVisible(false);
   }
 
   /** Starts what the events the Game core just reported look like on the hero. */
@@ -244,7 +250,7 @@ export class HeroSprite {
   private arrowSprite(index: number): Phaser.GameObjects.Image {
     let sprite = this.arrows[index];
     if (sprite === undefined) {
-      sprite = this.scene.add.image(0, 0, 'arrow').setDepth(DEPTH.arrow);
+      sprite = this.scene.add.image(0, 0, ARROW).setDepth(DEPTH.arrow);
       this.arrows[index] = sprite;
     }
     return sprite;

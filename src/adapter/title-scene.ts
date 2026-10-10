@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { Game } from '../core';
 import { ARTWORK } from './artwork';
+import type { ArtName } from './artwork';
 import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import type { GameAudio } from './audio';
 import { AudioLine } from './audio-line';
@@ -35,6 +36,7 @@ import { INK, UiLayer, WINDOW_PADDING } from './ui-layer';
 // of the game across the top in big letters and the menu in a window under it; where the name and the window go is
 // title-layout.ts's.
 
+const BACKDROP = 'backdrop-title' satisfies ArtName;
 const WINDOW_WIDTH = 200;
 const ROW_GAP = 4;
 /** A line of the menu is as high as the button behind the line the cursor is on, which is as wide as the line. */
@@ -79,7 +81,7 @@ export class TitleScene extends Phaser.Scene {
     buildDrawnArt(this.textures, ARTWORK);
     requireLoadedArt(this.textures, ARTWORK);
     this.audio.requireLoaded();
-    this.add.image(0, 0, 'backdrop-title').setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.backdrop);
+    this.add.image(0, 0, BACKDROP).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.backdrop);
     this.layer = new UiLayer(this, DEPTH.title);
     this.audioLine = new AudioLine(this, TITLE_LINE_CORNER);
     const keyboard = this.input.keyboard;

@@ -129,8 +129,17 @@ export function consumableIcon(id: ConsumableId): string {
 /** The name of the icon of a key. Every key has the same one: the keys differ in their names. */
 export const KEY_ICON = 'key' satisfies ArtName;
 
-/** The name of the picture that terrain of this kind is drawn with. */
-export function terrainArt(kind: string): string {
+// The pictures that more than one part of the adapter draws, named once: the sword and the arrow, which the hero's
+// sprites and the HUD both show, and the heart, which the HUD and the notice both show.
+export const SWORD_HELD = 'sword-held' satisfies ArtName;
+export const ARROW = 'arrow' satisfies ArtName;
+export const HEART = 'ui-heart' satisfies ArtName;
+
+/**
+ * The name of the picture that terrain of this kind is drawn with. For a kind written out its type is the name itself, so
+ * that a look which asks for a sheet the manifest lacks does not compile (terrain-plan.ts).
+ */
+export function terrainArt<Kind extends string>(kind: Kind): `terrain-${Kind}` {
   return `terrain-${kind}`;
 }
 

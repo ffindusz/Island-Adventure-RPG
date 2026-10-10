@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import type { Direction, GameEvent, MonsterView, PlayingView, Point } from '../core';
 import { monsterArt } from './artwork';
+import type { ArtName } from './artwork';
 import { scrollFor } from './camera';
 import { FACING_STEP, px } from './config';
 import { DEPTH } from './depths';
@@ -30,6 +31,7 @@ const RESTING_TINT = 0xa8a8a8;
 /** The faded copies of a dashing monster left behind it, nearest first, by how much of the picture shows. */
 const DASH_TRAIL_ALPHAS: readonly number[] = [0.5, 0.3, 0.15];
 
+const PUFF_ART = 'fx-puff' satisfies ArtName;
 const PUFF_FRAMES = 6;
 const PUFF_FRAME_MS = 55;
 const PUFF_CELL = 32;
@@ -232,7 +234,7 @@ export class MonsterSprites {
     const middleX = x + figure.sprite.width / 2;
     const middleY = y + figure.sprite.height / 2;
     const puff = this.scene.add
-      .sprite(Math.round(middleX - PUFF_CELL / 2), Math.round(middleY - PUFF_LIFT), 'fx-puff', 0)
+      .sprite(Math.round(middleX - PUFF_CELL / 2), Math.round(middleY - PUFF_LIFT), PUFF_ART, 0)
       .setOrigin(0, 0)
       .setDepth(DEPTH.puff);
     const shape = this.scene.add
