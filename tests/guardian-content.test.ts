@@ -1,12 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { createGame } from '../src/core';
-import type { ContentDefinition, GuardianMonsterDefinition, GuardianPatternDefinition } from '../src/core';
-import { fixedRandom } from './fixtures';
+import { describe, it } from 'vitest';
+import type { GuardianMonsterDefinition, GuardianPatternDefinition } from '../src/core';
+import { expectAccepted, expectRefused } from './fixtures';
 import { CHARGE, GUARDIAN, guardianContent, SMITE, SWEEP } from './guardian-fixtures';
-
-function expectRefused(content: ContentDefinition, message: string): void {
-  expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
-}
 
 describe('a Guardian the rules cannot work with is refused when the game is created', () => {
   const guardianWith = (changes: Partial<GuardianMonsterDefinition>) =>
@@ -146,7 +141,7 @@ describe('a Guardian the rules cannot work with is refused when the game is crea
       },
     });
 
-    expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
+    expectAccepted(content);
   });
 
   it.each([
@@ -155,6 +150,6 @@ describe('a Guardian the rules cannot work with is refused when the game is crea
   ])('$what', ({ patterns }) => {
     const content = guardianContent([], { monsterTypes: { guardian: { ...GUARDIAN, patterns } } });
 
-    expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
+    expectAccepted(content);
   });
 });

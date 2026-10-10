@@ -1,5 +1,4 @@
-import { describe, expect, it } from 'vitest';
-import { createGame } from '../src/core';
+import { describe, it } from 'vitest';
 import type {
   ChaserMonsterDefinition,
   ContentDefinition,
@@ -9,13 +8,9 @@ import type {
   MonsterTypeDefinition,
   TileRect,
 } from '../src/core';
-import { ARENA_LAYOUT, arena, BITER, chestAt, dummyAt, fixedRandom, frailMonster, milestone } from './fixtures';
+import { ARENA_LAYOUT, arena, BITER, chestAt, dummyAt, expectAccepted, expectRefused, frailMonster, milestone } from './fixtures';
 import { CHARGER, SHOOTER } from './enemy-fixtures';
 import { GUARDIAN } from './guardian-fixtures';
-
-function expectRefused(content: ContentDefinition, message: string): void {
-  expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
-}
 
 /** A milestone in the arena, whose map is 7 tiles wide and 6 high. */
 function arenaWithMilestone(zone: TileRect, experience = 4): ContentDefinition {
@@ -330,7 +325,7 @@ describe('numbers the rules cannot work with are refused when the game is create
       },
     });
 
-    expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
+    expectAccepted(content);
   });
 });
 
@@ -504,6 +499,6 @@ describe('Gear and interactables that do not make sense are refused when the gam
       ],
     });
 
-    expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
+    expectAccepted(content);
   });
 });

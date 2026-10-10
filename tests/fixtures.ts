@@ -1,3 +1,4 @@
+import { expect } from 'vitest';
 import { createGame } from '../src/core';
 import type {
   AreaDefinition,
@@ -417,6 +418,16 @@ export function newGame(content: ContentDefinition = arena(), random: RandomSour
 /** A game that has not begun: it shows the title until it gets a session command. */
 export function gameAtTitle(content: ContentDefinition = arena(), random: RandomSource = fixedRandom): Game {
   return createGame({ content, random });
+}
+
+/** The game refuses to be created from this content, and the error says why. */
+export function expectRefused(content: ContentDefinition, message: string): void {
+  expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
+}
+
+/** The game is created from this content without complaint. */
+export function expectAccepted(content: ContentDefinition): void {
+  expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
 }
 
 export function newGameWithMonsters(...monsters: MonsterPlacement[]): Game {

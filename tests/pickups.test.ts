@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { createGame } from '../src/core';
 import type { ContentDefinition, Game, InteractableDefinition } from '../src/core';
 import {
   advance,
   arena,
   chestAt,
+  expectAccepted,
+  expectRefused,
   face,
-  fixedRandom,
   gameAtTitle,
   newGame,
   pickupAt,
@@ -133,10 +133,6 @@ describe('a pickup that does not make sense is refused when the game is created'
       ...fields,
     }) as unknown as InteractableDefinition;
 
-  function expectRefused(content: ContentDefinition, message: string): void {
-    expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
-  }
-
   it.each([
     {
       what: 'a pickup of a consumable that does not exist',
@@ -175,6 +171,6 @@ describe('a pickup that does not make sense is refused when the game is created'
   it('pickups of the same consumable are accepted: unlike Gear, there can be many', () => {
     const content = arena({ interactables: [pickupAt('potion-1', 1, 1, 1), pickupAt('potion-2', 5, 1, 1)] });
 
-    expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
+    expectAccepted(content);
   });
 });

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { createGame } from '../src/core';
 import type {
   AreaDefinition,
   CheckpointDefinition,
@@ -19,8 +18,8 @@ import {
   chestAt,
   chestViews,
   dummyAt,
+  expectRefused,
   face,
-  fixedRandom,
   frailMonster,
   gameAtTitle,
   milestone,
@@ -62,10 +61,6 @@ const CELLAR: AreaDefinition = {
   exits: [TO_ARENA],
   checkpoints: [{ id: 'cellar-checkpoint', tile: { col: 1, row: 1 } }],
 };
-
-function expectRefused(content: ContentDefinition, message: string): void {
-  expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
-}
 
 /** The arena and the cellar, with the hero in the arena. `cellar` replaces parts of the cellar. */
 function world(arenaOptions: ArenaOptions = {}, cellar: Partial<AreaDefinition> = {}): ContentDefinition {

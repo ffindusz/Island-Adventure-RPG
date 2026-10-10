@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { createGame } from '../src/core';
 import type {
   AreaDefinition,
   ContentDefinition,
@@ -19,8 +18,9 @@ import {
   chestAt,
   chestViews,
   dummyAt,
+  expectAccepted,
+  expectRefused,
   face,
-  fixedRandom,
   frailMonster,
   gameAtTitle,
   monsterNamed,
@@ -64,10 +64,6 @@ const CELLAR: AreaDefinition = {
   entrances: [FROM_ARENA],
   exits: [TO_ARENA],
 };
-
-function expectRefused(content: ContentDefinition, message: string): void {
-  expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
-}
 
 /** The arena and the cellar, with the hero in the arena at (3.5, 3.5). `cellar` replaces parts of the cellar. */
 function world(arenaOptions: ArenaOptions = {}, cellar: Partial<AreaDefinition> = {}): ContentDefinition {
@@ -711,7 +707,7 @@ describe('Content validation of connected Adventure Areas', () => {
   it('accepts two Adventure Areas that each have an exit into the other', () => {
     const content = arena({ entrances: [FROM_CELLAR], exits: [TO_CELLAR], otherAreas: [CELLAR] });
 
-    expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
+    expectAccepted(content);
   });
 
   it('refuses an entrance on solid terrain or outside the map', () => {

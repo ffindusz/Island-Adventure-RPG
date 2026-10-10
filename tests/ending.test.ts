@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createGame } from '../src/core';
-import type { Command, ContentDefinition } from '../src/core';
-import { arena, face, fixedRandom, gameAtTitle, newGame, playingView, throughStorage } from './fixtures';
+import type { Command } from '../src/core';
+import { arena, expectAccepted, expectRefused, face, gameAtTitle, newGame, playingView, throughStorage } from './fixtures';
 import {
   askingGame,
   harborContent,
@@ -135,17 +134,13 @@ describe('after the ending', () => {
   });
 });
 
-function expectRefused(content: ContentDefinition, message: string): void {
-  expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
-}
-
 describe('the ending in the content', () => {
   it('may have one line, or as many as four, and the credits as many as they need', () => {
     for (const ending of [['One.'], ['One.', 'Two.', 'Three.', 'Four.']]) {
-      expect(() => createGame({ content: harborContent({ ending }), random: fixedRandom })).not.toThrow();
+      expectAccepted(harborContent({ ending }));
     }
     const credits = Array.from({ length: 40 }, (_, index) => `Line ${index + 1}.`);
-    expect(() => createGame({ content: harborContent({ credits }), random: fixedRandom })).not.toThrow();
+    expectAccepted(harborContent({ credits }));
   });
 
   it('is refused with no line at all: leave it out for none', () => {
@@ -178,9 +173,7 @@ describe('the ending in the content', () => {
   });
 
   it('is not needed by content without a vessel', () => {
-    expect(() => createGame({ content: arena(), random: fixedRandom })).not.toThrow();
-    expect(() =>
-      createGame({ content: arena({ ending: HARBOR_ENDING, credits: HARBOR_CREDITS }), random: fixedRandom }),
-    ).not.toThrow();
+    expectAccepted(arena());
+    expectAccepted(arena({ ending: HARBOR_ENDING, credits: HARBOR_CREDITS }));
   });
 });

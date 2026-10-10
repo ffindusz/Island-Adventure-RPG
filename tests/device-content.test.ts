@@ -1,20 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { createGame } from '../src/core';
-import type { ContentDefinition } from '../src/core';
-import { ARENA_LAYOUT, arena, chestAt, doorAt, fixedRandom, gateAt, keyAt, leverAt, signAt } from './fixtures';
+import { describe, it } from 'vitest';
+import { ARENA_LAYOUT, arena, chestAt, doorAt, expectAccepted, expectRefused, gateAt, keyAt, leverAt, signAt } from './fixtures';
 
 // The devices are the keys, the doors, the gates, the levers and the signs. Content that makes no sense to them is
 // refused when the game is created, with a message that names the area and the device, so that whoever writes the
 // content knows where to look. The arena is 7 tiles wide and 6 high, and its walkable tiles are in columns 1 to 5 and
 // rows 1 to 4 (see fixtures.ts).
-
-function expectRefused(content: ContentDefinition, message: string): void {
-  expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
-}
-
-function expectAccepted(content: ContentDefinition): void {
-  expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
-}
 
 describe('keys and doors that do not make sense are refused when the game is created', () => {
   it.each([

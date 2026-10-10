@@ -1,5 +1,4 @@
-import { describe, expect, it } from 'vitest';
-import { createGame } from '../src/core';
+import { describe, it } from 'vitest';
 import type {
   AreaDefinition,
   CheckpointDefinition,
@@ -9,7 +8,7 @@ import type {
   InteractableDefinition,
   Tile,
 } from '../src/core';
-import { ARENA_LAYOUT, arena, chestAt, doorAt, fixedRandom, gateAt, keyAt, leverAt } from './fixtures';
+import { ARENA_LAYOUT, arena, chestAt, doorAt, expectAccepted, expectRefused, gateAt, keyAt, leverAt } from './fixtures';
 
 // The light puzzles are optional: the way along the route never needs a key, a lever or a door. The hero finds every
 // door and gate shut, so content is refused when, with all of them shut, the hero cannot get from where it comes into
@@ -19,14 +18,6 @@ import { ARENA_LAYOUT, arena, chestAt, doorAt, fixedRandom, gateAt, keyAt, lever
 // The tests build small halls. Each is drawn with its columns 0 to 8 across; the hero comes in at the west end, at
 // (1, 1), where the game starts. A chest, a lever and a sign always stand in the way, so one is put in a nook, off
 // the hall, or it would shut the hall itself.
-
-function expectRefused(content: ContentDefinition, message: string): void {
-  expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
-}
-
-function expectAccepted(content: ContentDefinition): void {
-  expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
-}
 
 //   #########      A hall: walkable in row 1, columns 1 to 7, with a nook at (2, 2).
 //   #.......#

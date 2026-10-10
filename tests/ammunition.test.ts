@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { createGame } from '../src/core';
-import type { ContentDefinition, InteractableDefinition } from '../src/core';
+import type { InteractableDefinition } from '../src/core';
 import {
   advance,
   arena,
   cacheAt,
   chestAt,
   chestViews,
+  expectAccepted,
+  expectRefused,
   face,
-  fixedRandom,
   gameAtTitle,
   newGame,
   playingView,
@@ -119,13 +119,9 @@ describe('Ammunition', () => {
 describe('a cache that does not make sense is refused when the game is created', () => {
   // Content read from a file could say these, and the compiler would not notice.
   const cacheHolding = (contents: object) =>
-    ({ kind: 'chest', id: 'cache-1', tile: { col: 1, row: 1 }, contents }) as unknown as InteractableDefinition;
+    ({ kind: 'chest', id: 'cache-1', tile: { col: 1, row: 1 }, contents })     as unknown as InteractableDefinition;
 
-  function expectRefused(content: ContentDefinition, message: string): void {
-    expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
-  }
-
-  it.each([
+      it.each([
     {
       what: 'a cache that holds a consumable that does not exist',
       contents: { kind: 'consumable', consumable: 'gold', amount: 3 },
@@ -153,6 +149,6 @@ describe('a cache that does not make sense is refused when the game is created',
   it('caches that hold the same consumable are accepted: unlike Gear, there can be many', () => {
     const content = arena({ interactables: [cacheAt('cache-1', 1, 1, 6), cacheAt('cache-2', 5, 1, 6)] });
 
-    expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
+    expectAccepted(content);
   });
 });
