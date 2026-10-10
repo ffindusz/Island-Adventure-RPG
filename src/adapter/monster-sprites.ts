@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { Direction, GameEvent, MonsterView, PlayingView, Point } from '../core';
-import { monsterArt } from './artwork';
+import { frameSize, monsterArt } from './artwork';
 import type { ArtName } from './artwork';
 import { scrollFor } from './camera';
 import { FACING_STEP, px } from './config';
@@ -34,7 +34,7 @@ const DASH_TRAIL_ALPHAS: readonly number[] = [0.5, 0.3, 0.15];
 const PUFF_ART = 'fx-puff' satisfies ArtName;
 const PUFF_FRAMES = 6;
 const PUFF_FRAME_MS = 55;
-const PUFF_CELL = 32;
+const PUFF_CELL = frameSize(PUFF_ART).width;
 /** The puff's smoke starts low in its cell and rises as it spreads, so its cell sits this far above the body's middle. */
 const PUFF_LIFT = 18;
 /** The monster that fell stays as a white shape over its puff for this long, fading out. */

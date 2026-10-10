@@ -7,7 +7,7 @@
 import { CONSUMABLE_IDS } from '../core';
 import type { ConsumableId, ContentDefinition } from '../core';
 import { drawn, image, sheet } from './asset-manifest';
-import type { ArtManifest } from './asset-manifest';
+import type { ArtEntry, ArtManifest } from './asset-manifest';
 import { KNIGHT_ROWS, MAIL_ROWS, PACK_PALETTE, PLATE_ROWS, TUNIC_ROWS } from './drawn-icons';
 
 export const ARTWORK = {
@@ -115,6 +115,13 @@ export const ARTWORK = {
 
 /** The name of a picture the adapter itself asks for. */
 export type ArtName = keyof typeof ARTWORK;
+
+/** How big one frame of a sheet is, in pixels, so that what places a picture by its size reads the size from here. */
+export function frameSize(name: ArtName): { readonly width: number; readonly height: number } {
+  const entry: ArtEntry = ARTWORK[name];
+  if (entry.kind !== 'sheet') throw new Error(`The picture "${name}" is not a sheet, so it has no frames`);
+  return { width: entry.frameWidth, height: entry.frameHeight };
+}
 
 /** The name of the icon of the Gear with this id. */
 export function gearIcon(id: string): string {

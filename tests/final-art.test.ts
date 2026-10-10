@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { ARTWORK, FINAL_ART_AREAS, hasFinalArt, neededArt } from '../src/adapter/artwork';
+import { ARTWORK, FINAL_ART_AREAS, frameSize, hasFinalArt, neededArt } from '../src/adapter/artwork';
 import { manifestLookup, missingArt, requireArt } from '../src/adapter/asset-manifest';
 import type { ArtManifest } from '../src/adapter/asset-manifest';
 import { describeStamp, planTerrain } from '../src/adapter/terrain-plan';
@@ -144,6 +144,20 @@ describe('the pictures of the manifest on disk', () => {
     if (entry?.kind === 'sheet') expect(framesOnDisk(art)).toBeGreaterThan(0);
     else if (entry?.kind === 'image') expect(sizeOnDisk(entry.file).width).toBeGreaterThan(0);
     else throw new Error(`"${art}" is not a picture of the manifest`);
+  });
+});
+
+describe('the size of a frame of a sheet', () => {
+  it('is the one in the manifest, square unless the sheet says otherwise', () => {
+    expect(frameSize('hero')).toEqual({ width: 16, height: 16 });
+    expect(frameSize('fx-puff')).toEqual({ width: 32, height: 32 });
+    expect(frameSize('monster-wolf')).toEqual({ width: 18, height: 17 });
+    expect(frameSize('prop-gate')).toEqual({ width: 24, height: 25 });
+  });
+
+  it('is refused for a picture that is not a sheet, naming it', () => {
+    expect(() => frameSize('sword-held')).toThrow('"sword-held" is not a sheet');
+    expect(() => frameSize('gear-chain-mail')).toThrow('"gear-chain-mail" is not a sheet');
   });
 });
 

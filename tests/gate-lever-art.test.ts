@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ARTWORK } from '../src/adapter/artwork';
 import type { ArtManifest } from '../src/adapter/asset-manifest';
+import { gateFoot } from '../src/adapter/prop-sprites';
 import { fileOf, frameOf, readPicture } from './pictures';
 import type { Pixel } from './pictures';
 
@@ -99,6 +100,17 @@ describe('a gate', () => {
 
     expect(barred).toBeGreaterThanOrEqual(tiles / 3);
     expect(barred).toBeLessThanOrEqual((tiles * 9) / 10);
+  });
+});
+
+describe('where the picture of a gate stands', () => {
+  it('has its way on the gate\'s own tile: the foot of the frame is the tile\'s, and the way begins where the tile does', () => {
+    const foot = { left: 5 * TILE, bottom: 7 * TILE };
+
+    const placed = gateFoot(foot);
+
+    expect(placed.left + WAY.left).toBe(foot.left);
+    expect(placed.bottom).toBe(foot.bottom);
   });
 });
 
