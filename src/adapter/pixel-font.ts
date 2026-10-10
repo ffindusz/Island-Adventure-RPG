@@ -118,10 +118,10 @@ export function drawText(graphics: Graphics, text: string, x: number, y: number,
   }
 }
 
-/** A rectangle of canvas pixels. */
+/** A rectangle of canvas pixels: the corner at its top left, and its size. */
 export interface Rect {
-  readonly x: number;
-  readonly y: number;
+  readonly left: number;
+  readonly top: number;
   readonly width: number;
   readonly height: number;
 }
@@ -129,7 +129,7 @@ export interface Rect {
 const BLANK_ROW = '.'.repeat(GLYPH_WIDTH);
 
 /** A rectangle that `scaledRects` is still making taller. */
-type Growing = { x: number; y: number; width: number; height: number };
+type Growing = { -readonly [Field in keyof Rect]: Rect[Field] };
 
 /** The text as one bitmap, its letters one advance apart as `drawText` lays them out: blank where the font has no letter. */
 export function textBitmap(text: string): Bitmap {
@@ -154,7 +154,7 @@ export function scaledRects(bitmap: Bitmap, scale: number): Rect[] {
       const key = `${run.index}:${run[0].length}`;
       let rect = open.get(key);
       if (rect === undefined) {
-        rect = { x: run.index * scale, y: rowIndex * scale, width: run[0].length * scale, height: 0 };
+        rect = { left: run.index * scale, top: rowIndex * scale, width: run[0].length * scale, height: 0 };
         rects.push(rect);
       }
       rect.height += scale;
@@ -169,6 +169,6 @@ export function scaledRects(bitmap: Bitmap, scale: number): Rect[] {
 export function drawScaledBitmap(graphics: Graphics, bitmap: Bitmap, x: number, y: number, colour: number, scale: number): void {
   graphics.fillStyle(colour);
   for (const rect of scaledRects(bitmap, scale)) {
-    graphics.fillRect(x + rect.x, y + rect.y, rect.width, rect.height);
+    graphics.fillRect(x + rect.left, y + rect.top, rect.width, rect.height);
   }
 }

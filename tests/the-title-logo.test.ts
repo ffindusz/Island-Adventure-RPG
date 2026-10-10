@@ -24,8 +24,8 @@ function pixelsOf(rects: readonly Rect[]): Pixel[] {
   const seen = new Set<string>();
   const pixels: Pixel[] = [];
   for (const rect of rects) {
-    for (let y = rect.y; y < rect.y + rect.height; y += 1) {
-      for (let x = rect.x; x < rect.x + rect.width; x += 1) {
+    for (let y = rect.top; y < rect.top + rect.height; y += 1) {
+      for (let x = rect.left; x < rect.left + rect.width; x += 1) {
         const at = `${x},${y}`;
         if (seen.has(at)) {
           throw new Error(`The pixel ${at} is covered by two rectangles.`);
@@ -97,13 +97,13 @@ describe('scaling a bitmap into rectangles', () => {
   });
 
   it('draws a vertical bar as one rectangle', () => {
-    expect(scaledRects(['#', '#', '#'], 2)).toEqual([{ x: 0, y: 0, width: 2, height: 6 }]);
+    expect(scaledRects(['#', '#', '#'], 2)).toEqual([{ left: 0, top: 0, width: 2, height: 6 }]);
   });
 
   it('keeps two bars that are not one under the other apart', () => {
     expect(scaledRects(['#.', '.#'], 3)).toEqual([
-      { x: 0, y: 0, width: 3, height: 3 },
-      { x: 3, y: 3, width: 3, height: 3 },
+      { left: 0, top: 0, width: 3, height: 3 },
+      { left: 3, top: 3, width: 3, height: 3 },
     ]);
   });
 

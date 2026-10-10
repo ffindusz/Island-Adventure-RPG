@@ -3,7 +3,7 @@ import { wrapText } from './area-banner';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { confirmKeyLabel } from './controls';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
-import type { Graphics } from './pixel-font';
+import type { Graphics, Rect } from './pixel-font';
 import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
 
 // The opening of a New Game, which the Game core gives as lines of text and the play screen shows as a card: a window in
@@ -41,7 +41,7 @@ export interface Placed {
 }
 
 export interface CardLayout {
-  readonly window: { readonly left: number; readonly top: number; readonly width: number; readonly height: number };
+  readonly window: Rect;
   /** The lines of the opening, broken into the rows that fit the window, one under the other, each in the middle. */
   readonly rows: readonly Placed[];
   readonly hint: Placed;

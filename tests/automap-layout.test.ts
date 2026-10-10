@@ -11,7 +11,8 @@ import {
   routeLinks,
   tileRects,
 } from '../src/adapter/automap-layout';
-import type { LinkEnds, Metrics, Place, Rect, RouteArea, RouteLayout } from '../src/adapter/automap-layout';
+import type { LinkEnds, Metrics, Place, RouteArea, RouteLayout } from '../src/adapter/automap-layout';
+import type { Rect } from '../src/adapter/pixel-font';
 import { gameContent } from '../src/content';
 import type { AreaDefinition } from '../src/core';
 

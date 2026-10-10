@@ -10,12 +10,12 @@ import {
   routeLinks,
   tileRects,
 } from './automap-layout';
-import type { Metrics, Place, Rect } from './automap-layout';
+import type { Metrics, Place } from './automap-layout';
 import { automapColour, EXIT_COLOUR, MAP_COLOUR } from './automap-palette';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { closePageKeyLabel } from './controls';
 import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
-import type { Graphics } from './pixel-font';
+import type { Graphics, Rect } from './pixel-font';
 import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
 
 // The Automap page: the route of Adventure Areas drawn as a map, from the Game core's view and from the exits that the

@@ -4,6 +4,7 @@ import { monsterArt } from './artwork';
 import { scrollFor } from './camera';
 import { TILE_SIZE } from './config';
 import { DEPTH } from './depths';
+import type { Rect } from './pixel-font';
 
 // The monsters of the areas whose art is final, as sprites. Each sheet has four columns, the way the monster faces
 // (down, up, left, right), and the rows are the frames of its walk, then one of a white shape for a hit and one of a red
@@ -65,32 +66,24 @@ function warnsNow(progress: number): boolean {
   return Math.floor(progress * WARN_PARTS) % 2 === 0;
 }
 
-/** A Health bar's outline, in canvas pixels; the green lies inside it. */
-export interface BarBox {
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
-}
-
 /**
  * Where the Health bar of a monster goes: just above its picture, as wide as its body and in the middle of the picture.
- * A picture that reaches above the top of the screen (the Guardian against the arena's north wall, the hero far south)
- * has its bar at the top of the screen, so that it stays in view as long as the picture does; a picture wholly above the
- * screen has none.
+ * The box is the bar's outline, in canvas pixels; the green lies inside it. A picture that reaches above the top of the
+ * screen (the Guardian against the arena's north wall, the hero far south) has its bar at the top of the screen, so that
+ * it stays in view as long as the picture does; a picture wholly above the screen has none.
  */
 export function healthBarBox(
   corner: Point,
   picture: { readonly width: number; readonly height: number },
   bodyWidth: number,
   screenTop: number,
-): BarBox | null {
+): Rect | null {
   if (corner.y + picture.height <= screenTop) {
     return null;
   }
   return {
-    x: corner.x + Math.round((picture.width - bodyWidth) / 2),
-    y: Math.max(corner.y - BAR_HEIGHT - 1, screenTop),
+    left: corner.x + Math.round((picture.width - bodyWidth) / 2),
+    top: Math.max(corner.y - BAR_HEIGHT - 1, screenTop),
     width: bodyWidth,
     height: BAR_HEIGHT,
   };
@@ -315,11 +308,11 @@ export class MonsterSprites {
       return;
     }
     this.bars.fillStyle(BAR_OUTLINE);
-    this.bars.fillRect(box.x, box.y, box.width, box.height);
+    this.bars.fillRect(box.left, box.top, box.width, box.height);
     this.bars.fillStyle(BAR_HEALTH);
     this.bars.fillRect(
-      box.x + 1,
-      box.y + 1,
+      box.left + 1,
+      box.top + 1,
       Math.max(1, Math.round(((box.width - 2) * monster.health) / monster.maxHealth)),
       box.height - 2,
     );

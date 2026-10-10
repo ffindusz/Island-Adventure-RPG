@@ -33,8 +33,8 @@ export function audioLineBox(text: string, corner: LineCorner = 'top-right'): Re
   const width = textWidthOf(text) + 2 * PADDING;
   const height = TEXT_HEIGHT + 2 * PADDING;
   return {
-    x: VIEW_WIDTH - MARGIN - width,
-    y: corner === 'top-right' ? MARGIN : VIEW_HEIGHT - MARGIN - height,
+    left: VIEW_WIDTH - MARGIN - width,
+    top: corner === 'top-right' ? MARGIN : VIEW_HEIGHT - MARGIN - height,
     width,
     height,
   };
@@ -85,6 +85,6 @@ export class AudioLine {
 
 function drawPanel(layer: UiLayer, text: string, corner: LineCorner): void {
   const box = audioLineBox(text, corner);
-  layer.frame('panel', box.x, box.y, box.width, box.height, PANEL_ALPHA);
-  layer.text(text, box.x + PADDING, box.y + PADDING, INK.text);
+  layer.frame('panel', box.left, box.top, box.width, box.height, PANEL_ALPHA);
+  layer.text(text, box.left + PADDING, box.top + PADDING, INK.text);
 }

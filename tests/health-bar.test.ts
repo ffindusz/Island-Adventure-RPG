@@ -23,8 +23,8 @@ const pictureTopAt = (row: number): number => Math.round(row * TILE_SIZE) - GUAR
 describe("a monster's Health bar", () => {
   it('goes just above its picture, as wide as its body and in the middle of the picture', () => {
     expect(healthBarBox({ x: 100, y: 50 }, { width: 32, height: 32 }, 12, 0)).toEqual({
-      x: 110,
-      y: 45,
+      left: 110,
+      top: 45,
       width: 12,
       height: BAR_HEIGHT,
     });
@@ -35,17 +35,17 @@ describe("a monster's Health bar", () => {
     expect(screenTopWith(12.5)).toBe(104);
     expect(pictureTopAt(7.8)).toBe(77);
     const box = healthBarBox({ x: 1168, y: 77 }, GUARDIAN_PICTURE, GUARDIAN_BODY, 104);
-    expect(box).toEqual({ x: 1168 + 35, y: 104, width: GUARDIAN_BODY, height: BAR_HEIGHT });
+    expect(box).toEqual({ left: 1168 + 35, top: 104, width: GUARDIAN_BODY, height: BAR_HEIGHT });
   });
 
   it('is clamped from the first pixel that would put it above the screen, and not before', () => {
     const picture = { width: 32, height: 32 };
     // Just room for the bar and a pixel of air between it and the picture, with the bar's top row at the screen's top row: where it always was.
-    expect(healthBarBox({ x: 0, y: 105 }, picture, 12, 100)?.y).toBe(100);
-    expect(healthBarBox({ x: 0, y: 106 }, picture, 12, 100)?.y).toBe(101);
+    expect(healthBarBox({ x: 0, y: 105 }, picture, 12, 100)?.top).toBe(100);
+    expect(healthBarBox({ x: 0, y: 106 }, picture, 12, 100)?.top).toBe(101);
     // One pixel less and the bar would be above the screen: it is at the top instead.
-    expect(healthBarBox({ x: 0, y: 104 }, picture, 12, 100)?.y).toBe(100);
-    expect(healthBarBox({ x: 0, y: 90 }, picture, 12, 100)?.y).toBe(100);
+    expect(healthBarBox({ x: 0, y: 104 }, picture, 12, 100)?.top).toBe(100);
+    expect(healthBarBox({ x: 0, y: 90 }, picture, 12, 100)?.top).toBe(100);
   });
 
   it('is not drawn at all once the whole picture is above the screen', () => {
@@ -71,8 +71,8 @@ describe("a monster's Health bar", () => {
         }
         shown += 1;
         expect(box, `hero ${heroRow}, Guardian ${guardianRow}`).not.toBeNull();
-        expect(box?.y ?? -1, `hero ${heroRow}, Guardian ${guardianRow}`).toBeGreaterThanOrEqual(top);
-        expect((box?.y ?? 0) + BAR_HEIGHT, `hero ${heroRow}, Guardian ${guardianRow}`).toBeLessThanOrEqual(top + VIEW_HEIGHT);
+        expect(box?.top ?? -1, `hero ${heroRow}, Guardian ${guardianRow}`).toBeGreaterThanOrEqual(top);
+        expect((box?.top ?? 0) + BAR_HEIGHT, `hero ${heroRow}, Guardian ${guardianRow}`).toBeLessThanOrEqual(top + VIEW_HEIGHT);
       }
     }
     expect(shown).toBeGreaterThan(4000);

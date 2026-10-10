@@ -33,24 +33,24 @@ const TITLE_WINDOW_HEIGHTS = {
 describe('the line of the audio', () => {
   it('sits against the top right corner by default, 4 pixels from both edges, as wide as its words and 6 pixels of air round them', () => {
     // 'SOUND ON' is 8 letters of 5 pixels with 1 between: 47 wide, and 59 with the air; 'VOLUME 10/10' is 12 letters: 71 and 83.
-    expect(audioLineBox('SOUND ON')).toEqual({ x: 257, y: 4, width: 59, height: 19 });
-    expect(audioLineBox('VOLUME 10/10')).toEqual({ x: 233, y: 4, width: 83, height: 19 });
+    expect(audioLineBox('SOUND ON')).toEqual({ left: 257, top: 4, width: 59, height: 19 });
+    expect(audioLineBox('VOLUME 10/10')).toEqual({ left: 233, top: 4, width: 83, height: 19 });
     expect(audioLineBox('SOUND ON', 'top-right')).toEqual(audioLineBox('SOUND ON'));
   });
 
   it('sits against the bottom right corner for a screen that asks for it, 4 pixels from both edges', () => {
-    expect(audioLineBox('SOUND ON', 'bottom-right')).toEqual({ x: 257, y: 169, width: 59, height: 19 });
-    expect(audioLineBox('VOLUME 10/10', 'bottom-right')).toEqual({ x: 233, y: 169, width: 83, height: 19 });
+    expect(audioLineBox('SOUND ON', 'bottom-right')).toEqual({ left: 257, top: 169, width: 59, height: 19 });
+    expect(audioLineBox('VOLUME 10/10', 'bottom-right')).toEqual({ left: 233, top: 169, width: 83, height: 19 });
   });
 
   it('stays inside the screen, whatever the keys say and in whichever corner', () => {
     for (const said of SAID) {
       for (const corner of ['top-right', 'bottom-right'] as const) {
         const box = audioLineBox(said, corner);
-        expect(box.x, said).toBeGreaterThanOrEqual(4);
-        expect(box.x + box.width, said).toBe(VIEW_WIDTH - 4);
-        expect(box.y, said).toBeGreaterThanOrEqual(4);
-        expect(box.y + box.height, said).toBeLessThanOrEqual(VIEW_HEIGHT - 4);
+        expect(box.left, said).toBeGreaterThanOrEqual(4);
+        expect(box.left + box.width, said).toBe(VIEW_WIDTH - 4);
+        expect(box.top, said).toBeGreaterThanOrEqual(4);
+        expect(box.top + box.height, said).toBeLessThanOrEqual(VIEW_HEIGHT - 4);
       }
     }
   });
@@ -59,7 +59,7 @@ describe('the line of the audio', () => {
     const name = paintedBounds(logoLayout());
     for (const said of SAID) {
       const box = audioLineBox(said, TITLE_LINE_CORNER);
-      expect(box.y, said).toBeGreaterThanOrEqual(name.bottom);
+      expect(box.top, said).toBeGreaterThanOrEqual(name.bottom);
     }
   });
 
@@ -68,7 +68,7 @@ describe('the line of the audio', () => {
       const rowsEnd = windowTop(height) + height - TITLE_WINDOW_FOOT;
       for (const said of SAID) {
         const box = audioLineBox(said, TITLE_LINE_CORNER);
-        expect(box.y, `${said} in the state: ${state}`).toBeGreaterThanOrEqual(rowsEnd);
+        expect(box.top, `${said} in the state: ${state}`).toBeGreaterThanOrEqual(rowsEnd);
       }
     }
   });
@@ -79,7 +79,7 @@ describe('the line of the audio', () => {
     for (const said of SAID) {
       const box = audioLineBox(said);
       for (const { window } of cards) {
-        expect(window.top, said).toBeGreaterThanOrEqual(box.y + box.height);
+        expect(window.top, said).toBeGreaterThanOrEqual(box.top + box.height);
       }
     }
   });

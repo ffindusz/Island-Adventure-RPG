@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import type { AreaView, Box, Direction, MonsterView, Point } from '../core';
 import { TILE_SIZE } from './config';
+import type { Rect } from './pixel-font';
 
 // The flat shapes of what has no picture yet, and the colours of every kind of terrain and type of monster. Drawn here
 // from the state view: the ground and the monsters of an area whose art is not final, and the telegraphs and the strikes
@@ -74,13 +75,6 @@ const FACING_STEP: Readonly<Record<Direction, Point>> = {
   right: { x: 1, y: 0 },
 };
 
-interface Rect {
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
-}
-
 /** Tiles to whole canvas pixels, so every shape lands exactly on pixels and stays crisp. */
 function px(tiles: number): number {
   return Math.round(tiles * TILE_SIZE);
@@ -88,14 +82,14 @@ function px(tiles: number): number {
 
 /** A body's rectangle in pixels. Its size is fixed, so it never flickers between sizes as it moves. */
 function bodyRect(position: Point, size: number): Rect {
-  return { x: px(position.x - size / 2), y: px(position.y - size / 2), width: px(size), height: px(size) };
+  return { left: px(position.x - size / 2), top: px(position.y - size / 2), width: px(size), height: px(size) };
 }
 
 function fillWithOutline(graphics: Graphics, rect: Rect, fill: number, outline: number = OUTLINE_COLOUR): void {
   graphics.fillStyle(outline);
-  graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
+  graphics.fillRect(rect.left, rect.top, rect.width, rect.height);
   graphics.fillStyle(fill);
-  graphics.fillRect(rect.x + 1, rect.y + 1, rect.width - 2, rect.height - 2);
+  graphics.fillRect(rect.left + 1, rect.top + 1, rect.width - 2, rect.height - 2);
 }
 
 /** The flat colour of a kind of terrain: the ground of an area with no art, and what the Automap (automap-palette.ts) uses for a kind its palette lacks. */
@@ -143,9 +137,9 @@ export function drawMonster(graphics: Graphics, monster: MonsterView, flashing: 
   if (monster.health < monster.maxHealth) {
     const innerWidth = body.width - 2;
     graphics.fillStyle(OUTLINE_COLOUR);
-    graphics.fillRect(body.x, body.y - 5, body.width, 4);
+    graphics.fillRect(body.left, body.top - 5, body.width, 4);
     graphics.fillStyle(HEALTH_COLOUR);
-    graphics.fillRect(body.x + 1, body.y - 4, Math.max(1, Math.round((innerWidth * monster.health) / monster.maxHealth)), 2);
+    graphics.fillRect(body.left + 1, body.top - 4, Math.max(1, Math.round((innerWidth * monster.health) / monster.maxHealth)), 2);
   }
 }
 
@@ -177,7 +171,7 @@ function drawDashTrail(graphics: Graphics, body: Rect, direction: Direction, col
   DASH_TRAIL_ALPHAS.forEach((alpha, index) => {
     const behind = gap * (index + 1);
     graphics.fillStyle(colour, alpha);
-    graphics.fillRect(body.x - step.x * behind, body.y - step.y * behind, body.width, body.height);
+    graphics.fillRect(body.left - step.x * behind, body.top - step.y * behind, body.width, body.height);
   });
 }
 
@@ -190,28 +184,28 @@ export function drawTelegraph(graphics: Graphics, zone: Box, progress: number): 
   const rect = zoneRect(zone);
   const done = Math.min(1, Math.max(0, progress));
   graphics.fillStyle(TELEGRAPH_COLOUR, 0.18);
-  graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
+  graphics.fillRect(rect.left, rect.top, rect.width, rect.height);
   const inset = Math.round(((1 - done) * Math.min(rect.width, rect.height)) / 2);
   graphics.fillStyle(TELEGRAPH_COLOUR, 0.55);
-  graphics.fillRect(rect.x + inset, rect.y + inset, rect.width - 2 * inset, rect.height - 2 * inset);
+  graphics.fillRect(rect.left + inset, rect.top + inset, rect.width - 2 * inset, rect.height - 2 * inset);
   graphics.fillStyle(TELEGRAPH_COLOUR, 1);
-  graphics.fillRect(rect.x, rect.y, rect.width, 1);
-  graphics.fillRect(rect.x, rect.y + rect.height - 1, rect.width, 1);
-  graphics.fillRect(rect.x, rect.y + 1, 1, rect.height - 2);
-  graphics.fillRect(rect.x + rect.width - 1, rect.y + 1, 1, rect.height - 2);
+  graphics.fillRect(rect.left, rect.top, rect.width, 1);
+  graphics.fillRect(rect.left, rect.top + rect.height - 1, rect.width, 1);
+  graphics.fillRect(rect.left, rect.top + 1, 1, rect.height - 2);
+  graphics.fillRect(rect.left + rect.width - 1, rect.top + 1, 1, rect.height - 2);
 }
 
 /** Shows where a monster's attack landed, for the moment of impact: the zone the Game core says it covered. */
 export function drawStrike(graphics: Graphics, zone: Box): void {
   const rect = zoneRect(zone);
   graphics.fillStyle(STRIKE_COLOUR, 0.7);
-  graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
+  graphics.fillRect(rect.left, rect.top, rect.width, rect.height);
 }
 
 function zoneRect(zone: Box): Rect {
-  const x = px(zone.minX);
-  const y = px(zone.minY);
-  return { x, y, width: px(zone.maxX) - x, height: px(zone.maxY) - y };
+  const left = px(zone.minX);
+  const top = px(zone.minY);
+  return { left, top, width: px(zone.maxX) - left, height: px(zone.maxY) - top };
 }
 
 /** The colour at half the brightness. */

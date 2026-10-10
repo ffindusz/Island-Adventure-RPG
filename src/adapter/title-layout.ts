@@ -1,6 +1,7 @@
 import type { LineCorner } from './audio-line';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
+import type { Rect } from './pixel-font';
 
 // Where the title screen puts its big name and its menu window, in canvas pixels, and nothing else: the title scene
 // draws them where this says, and the rules about room are here so that they can be tested without a screen. The name
@@ -48,12 +49,8 @@ export const LOGO_OUTLINE_OFFSETS: readonly Offset[] = Array.from(
 );
 
 /** The name as the title screen draws it: the letters' own box, with the whole-number scale they are drawn at. */
-export interface Logo {
+export interface Logo extends Rect {
   readonly scale: number;
-  readonly left: number;
-  readonly top: number;
-  readonly width: number;
-  readonly height: number;
 }
 
 /** Where the name goes: the biggest whole scale that leaves room at both sides, in the middle of the screen's width. */

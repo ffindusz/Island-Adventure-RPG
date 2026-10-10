@@ -1,4 +1,5 @@
 import type { AreaDefinition, AutomapAreaView, Box, Point } from '../core';
+import type { Rect } from './pixel-font';
 
 // Where the Automap page puts the areas of the route, and the shapes it draws in them, as plain numbers in canvas
 // pixels, so that the arithmetic can be tested without Phaser. The page draws what this module works out.
@@ -7,13 +8,6 @@ import type { AreaDefinition, AutomapAreaView, Box, Point } from '../core';
 // turn back along the next row when the row is full, like a path on a board, so that each area is next to the one that
 // comes after it. Every map is drawn at the same scale: the largest of 8, 7 ... 1 pixels per tile that makes the
 // whole route fit, or else a fraction of a pixel per tile.
-
-export interface Rect {
-  readonly left: number;
-  readonly top: number;
-  readonly width: number;
-  readonly height: number;
-}
 
 /** What the layout needs to know of an area: the size of its map in tiles, and how wide its name is in pixels. */
 export interface RouteArea {
