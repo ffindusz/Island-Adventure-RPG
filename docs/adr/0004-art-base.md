@@ -44,7 +44,7 @@ The first implementer agent for ticket 02 scripted the download with curl on 202
 
 ## For the user
 
-Everything below is outside the repository, under `C:\Users\A1432734\Workspace\learning\Home\Fantasy-Lite\.worktrees\_assets\`.
+Everything below is outside the repository, in the download folder `.worktrees\_assets\` (the folder that `art-base-inventory.md` and `licences.md` name too).
 
 Look at:
 
