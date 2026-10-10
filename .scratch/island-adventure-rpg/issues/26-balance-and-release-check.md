@@ -4,7 +4,7 @@
 
 **Blocked by:** 21: Audio; 25: Art pass: the castle, the harbor, the Guardian, and the screens
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 20, 52, 59, 60, 66, 99, 105, 107
 
@@ -22,6 +22,8 @@
 - [ ] Reviewer play check (manual, in a browser): the user plays the whole game once using the checklist and reports pacing, difficulty, and anything that felt unfair or confusing.
 
 ## Comments
+
+Resolved on integration/island-adventure-rpg at 59f3f2e
 
 Done on `ticket/26-balance-and-release-check`, from the integration tip 744154f ("Resolve ticket 25"), except for two criteria that are left unticked on purpose: **criterion 4** (the play-time estimate lands at 14 minutes, under the spec's 45 to 60, and no factor was chosen to move it) and **criterion 12** (the user's own play check). The Status line is untouched. Each slice is one commit (`git log 744154f..HEAD` lists them). The work was done in two stretches: the first implementer was stopped when the machine went to sleep, with everything it had built committed, and a second took over from the log and the files. The first stretch did criteria 1 to 4, 7 and 8, the tests half of 9, the Guardian's Health bar and the audio line; the second did criterion 6, the browser half of 9, the review for 10, criterion 11, the README and the sections from "Left for manual review" on. Where a paragraph below says "I", it is whichever of the two did it.
 
