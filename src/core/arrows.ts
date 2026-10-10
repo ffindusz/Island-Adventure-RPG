@@ -1,6 +1,6 @@
 import { areaOf, monsterTypeOf } from './content';
 import type { Area, Content, MonsterProjectile } from './content';
-import { boxAround, EPSILON, overlaps } from './geometry';
+import { boxAround, EPSILON, overlaps, travelledBetween } from './geometry';
 import type { Box, Direction, Point } from './geometry';
 import { hurtHero } from './hero-damage';
 import { interactableObstacles } from './interactables';
@@ -100,7 +100,7 @@ function flyHeroArrow(
   const { arrowSpeedPerStep, arrowSize } = content.hero.rangedWeapon;
   const distance = Math.min(arrowSpeedPerStep, arrow.rangeLeft);
   const end = moveBody(area, arrow.position, arrowSize, arrow.direction, distance, obstacles);
-  const travelled = Math.abs(end.x - arrow.position.x) + Math.abs(end.y - arrow.position.y);
+  const travelled = travelledBetween(arrow.position, end);
   const body = boxAround(arrow.position, arrowSize);
   const target = firstMonsterReached(state, content, body, arrow.direction, travelled);
   if (target !== undefined) {

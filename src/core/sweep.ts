@@ -1,5 +1,5 @@
 import type { Area } from './content';
-import { boxAround, EPSILON, overlaps, unitVector } from './geometry';
+import { boxAround, EPSILON, overlaps, travelledBetween, unitVector } from './geometry';
 import type { Box, Direction, Point } from './geometry';
 import { gapAhead, moveBody } from './movement';
 
@@ -27,7 +27,7 @@ export function sweepToward(
 ): Sweep {
   const body = boxAround(position, size);
   const unblocked = moveBody(area, position, size, direction, distance, blockers);
-  const clear = Math.abs(unblocked.x - position.x) + Math.abs(unblocked.y - position.y);
+  const clear = travelledBetween(position, unblocked);
   const gap = overlaps(body, target) ? 0 : (gapAhead(body, direction, target) ?? Infinity);
   const travelled = Math.min(clear, gap);
   const vector = unitVector(direction);

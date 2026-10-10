@@ -56,6 +56,11 @@ export function centerOfBox(box: Box): Point {
   return { x: (box.minX + box.maxX) / 2, y: (box.minY + box.maxY) / 2 };
 }
 
+/** How far a body went that moved straight from one position to another: along one axis, so the differences add up. */
+export function travelledBetween(from: Point, to: Point): number {
+  return Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
+}
+
 /**
  * The ground right in front of a body of `size` centred on `position`, facing a direction: `reach` deep beyond the
  * body and `width` wide, centred on the body.
