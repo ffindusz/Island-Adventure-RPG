@@ -1,8 +1,15 @@
+import type { Direction, Point } from '../core';
+
 /**
  * The tile size, in canvas pixels. It is the only place the number lives: the Game core measures everything in
  * tiles, and the adapter multiplies by this to draw.
  */
 export const TILE_SIZE = 16;
+
+/** Tiles to whole canvas pixels, so every shape lands exactly on pixels and stays crisp. */
+export function px(tiles: number): number {
+  return Math.round(tiles * TILE_SIZE);
+}
 
 /**
  * The canvas shows this many tiles. An area exactly this size is all on screen; a larger one scrolls with the camera
@@ -14,3 +21,14 @@ export const VIEW_TILES_HIGH = 12;
 
 export const VIEW_WIDTH = VIEW_TILES_WIDE * TILE_SIZE;
 export const VIEW_HEIGHT = VIEW_TILES_HIGH * TILE_SIZE;
+
+/**
+ * One step in each direction on the screen: up is towards the smaller y. The Game core has the same table, but its index
+ * exports only types, so the adapter has this one, and tests/config.test.ts walks the Game core to keep the two the same.
+ */
+export const FACING_STEP: Readonly<Record<Direction, Point>> = {
+  up: { x: 0, y: -1 },
+  down: { x: 0, y: 1 },
+  left: { x: -1, y: 0 },
+  right: { x: 1, y: 0 },
+};

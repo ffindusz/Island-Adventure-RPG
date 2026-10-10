@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { Point } from '../core';
-import { TILE_SIZE } from './config';
+import { px } from './config';
 import { DEPTH } from './depths';
 import type { PickupRise } from './feedback';
 import { pickupIcon } from './notice';
@@ -32,8 +32,8 @@ interface Placement {
 export function placementOf(rise: PickupRise, hero: Point, width: number): Placement {
   const lift = Math.round(RISE_PX * (1 - (1 - rise.progress) ** 2));
   return {
-    left: Math.round(hero.x * TILE_SIZE) + rise.lane * LANE_PX - Math.floor(width / 2),
-    bottom: Math.round(hero.y * TILE_SIZE) - HEAD_PX - lift,
+    left: px(hero.x) + rise.lane * LANE_PX - Math.floor(width / 2),
+    bottom: px(hero.y) - HEAD_PX - lift,
     alpha: rise.progress <= WHOLE_UNTIL ? 1 : (1 - rise.progress) / (1 - WHOLE_UNTIL),
   };
 }

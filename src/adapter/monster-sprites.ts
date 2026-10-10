@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import type { Direction, GameEvent, MonsterView, PlayingView, Point } from '../core';
 import { monsterArt } from './artwork';
 import { scrollFor } from './camera';
-import { TILE_SIZE } from './config';
+import { FACING_STEP, px } from './config';
 import { DEPTH } from './depths';
 import type { Rect } from './pixel-font';
 
@@ -42,23 +42,12 @@ const BAR_OUTLINE = 0x1b1b24;
 const BAR_HEALTH = 0x7bd35f;
 const BAR_HEIGHT = 4;
 
-const STEP: Readonly<Record<Direction, Point>> = {
-  up: { x: 0, y: -1 },
-  down: { x: 0, y: 1 },
-  left: { x: -1, y: 0 },
-  right: { x: 1, y: 0 },
-};
-
 /** Which way a step of (dx, dy) goes: along the longer of the two. */
 function directionOf(dx: number, dy: number): Direction {
   if (Math.abs(dx) > Math.abs(dy)) {
     return dx < 0 ? 'left' : 'right';
   }
   return dy < 0 ? 'up' : 'down';
-}
-
-function px(tiles: number): number {
-  return Math.round(tiles * TILE_SIZE);
 }
 
 /** Whether a wind-up that is `progress` of the way through is showing its red at this moment: on at the very end. */
@@ -189,7 +178,7 @@ class Figure {
       this.trail.forEach((copy) => copy.setVisible(false));
       return;
     }
-    const step = STEP[direction];
+    const step = FACING_STEP[direction];
     const gap = Math.max(2, Math.round(Math.min(this.width, this.height) / 2));
     DASH_TRAIL_ALPHAS.forEach((alpha, index) => {
       let copy = this.trail[index];

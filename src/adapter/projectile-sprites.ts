@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { ArrowView, Direction } from '../core';
-import { TILE_SIZE } from './config';
+import { px } from './config';
 import { DEPTH } from './depths';
 
 // What the monsters shoot, as sprites: the energy orb of the pack, in purple, four frames that pulse. It is a round
@@ -32,7 +32,7 @@ export class ProjectileSprites {
     const frame = Math.floor(this.ageMs / FRAME_MS) % FRAMES;
     shots.forEach((shot, index) => {
       this.spriteAt(index)
-        .setPosition(Math.round(shot.position.x * TILE_SIZE), Math.round(shot.position.y * TILE_SIZE))
+        .setPosition(px(shot.position.x), px(shot.position.y))
         .setFrame(frame)
         .setRotation((TURN_DEGREES[shot.direction] * Math.PI) / 180)
         .setVisible(true);

@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import type { AreaView, Box, ChestView, ConsumableId, Direction, InteractableView, PlayingView, Point } from '../core';
 import type { ArtName } from './artwork';
-import { TILE_SIZE } from './config';
+import { px, TILE_SIZE } from './config';
 import { DEPTH } from './depths';
 
 // What every area shares, as sprites: chests and caches, what lies on the ground, Checkpoints, the marks of the way out,
@@ -82,8 +82,8 @@ interface Foot {
 /** The tile a body of this size is centred on. A tile's size is in tiles, and a prop's tile is as big as the grid's. */
 function footOf(centre: Point, size: number): Foot {
   return {
-    left: Math.round((centre.x - size / 2) * TILE_SIZE),
-    bottom: Math.round((centre.y + size / 2) * TILE_SIZE),
+    left: px(centre.x - size / 2),
+    bottom: px(centre.y + size / 2),
   };
 }
 

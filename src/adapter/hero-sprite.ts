@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { ArrowView, Direction, GameEvent, HeroView, Point } from '../core';
-import { TILE_SIZE } from './config';
+import { FACING_STEP, px, TILE_SIZE } from './config';
 import { DEPTH } from './depths';
 import { byShooter } from './projectiles';
 
@@ -42,12 +42,6 @@ const SWORD_SWEEP_DEGREES: readonly number[] = [45, 0, -45];
 const SLASH_REACH = 8;
 const BOW_REACH = 10;
 
-const STEP: Readonly<Record<Direction, Point>> = {
-  up: { x: 0, y: -1 },
-  down: { x: 0, y: 1 },
-  left: { x: -1, y: 0 },
-  right: { x: 1, y: 0 },
-};
 /** The way each direction points on the screen, clockwise from the right, in degrees. */
 const FACING_DEGREES: Readonly<Record<Direction, number>> = { right: 0, down: 90, left: 180, up: 270 };
 
@@ -61,10 +55,6 @@ interface Pose {
 
 function radians(degrees: number): number {
   return (degrees * Math.PI) / 180;
-}
-
-function px(tiles: number): number {
-  return Math.round(tiles * TILE_SIZE);
 }
 
 export class HeroSprite {
@@ -211,7 +201,7 @@ export class HeroSprite {
       .setRotation(radians(blade - 90))
       .setDepth(DEPTH.heroWeapon)
       .setVisible(true);
-    const front = STEP[direction];
+    const front = FACING_STEP[direction];
     this.slash
       .setPosition(middle.x + front.x * SLASH_REACH, middle.y + front.y * SLASH_REACH)
       .setFrame(Math.min(SLASH_FRAMES - 1, Math.floor(msIn / SLASH_FRAME_MS)))
@@ -222,7 +212,7 @@ export class HeroSprite {
   /** The bow is held out in front, its belly towards where the arrow goes. */
   private drawBow(middle: Point, pose: Pose): void {
     const { direction } = pose;
-    const front = STEP[direction];
+    const front = FACING_STEP[direction];
     // The bow is 15 by 7 pixels, odd both ways, so its middle sits on the middle of a pixel to keep its edges whole.
     this.bow
       .setPosition(middle.x + front.x * BOW_REACH + 0.5, middle.y + front.y * BOW_REACH + 0.5)
@@ -235,7 +225,7 @@ export class HeroSprite {
   private drawArrows(arrows: readonly ArrowView[]): void {
     arrows.forEach((arrow, index) => {
       const sprite = this.arrowSprite(index);
-      const front = STEP[arrow.direction];
+      const front = FACING_STEP[arrow.direction];
       const back = sprite.width / 2 - (arrow.size * TILE_SIZE) / 2;
       // The picture is 13 by 5 pixels, odd both ways, so its middle sits on the middle of a pixel to keep its edges whole.
       sprite

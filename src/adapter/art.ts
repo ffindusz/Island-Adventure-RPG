@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { AreaView, Box, Direction, MonsterView, Point } from '../core';
-import { TILE_SIZE } from './config';
+import { FACING_STEP, px, TILE_SIZE } from './config';
 import type { Rect } from './pixel-font';
 
 // The flat shapes of what has no picture yet, and the colours of every kind of terrain and type of monster. Drawn here
@@ -67,18 +67,6 @@ const EDGE_TOLERANCE = 1e-6;
 
 /** The faded copies of a dashing monster's body left behind it, nearest first, by how much of its colour shows. */
 const DASH_TRAIL_ALPHAS: readonly number[] = [0.5, 0.3, 0.15];
-
-const FACING_STEP: Readonly<Record<Direction, Point>> = {
-  up: { x: 0, y: -1 },
-  down: { x: 0, y: 1 },
-  left: { x: -1, y: 0 },
-  right: { x: 1, y: 0 },
-};
-
-/** Tiles to whole canvas pixels, so every shape lands exactly on pixels and stays crisp. */
-function px(tiles: number): number {
-  return Math.round(tiles * TILE_SIZE);
-}
 
 /** A body's rectangle in pixels. Its size is fixed, so it never flickers between sizes as it moves. */
 function bodyRect(position: Point, size: number): Rect {
