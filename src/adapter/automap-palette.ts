@@ -24,8 +24,9 @@ const STANDARD: Palette = {
 
 const MOUNTAIN: Palette = { ...STANDARD, rock: 0x4a5270 };
 
+// The water of the cave is the standard one.
 const CAVE: Palette = {
-  water: 0x2d697b,
+  ...STANDARD,
   rock: 0x543c52,
   sand: 0xc8966b,
   grass: 0x56864c,
@@ -35,14 +36,7 @@ const CAVE: Palette = {
 
 // The castle's walls and its flagstones are the brown stone and the paler stone of its ground. The harbor's planks and
 // its quay share the flagstone: the page knows kinds of terrain, not which of the sand is the dock.
-const CASTLE: Palette = {
-  water: 0x548789,
-  rock: 0x695953,
-  sand: 0xd2b37d,
-  grass: 0xadbc3a,
-  wreckage: 0x965340,
-  tree: 0x56864c,
-};
+const CASTLE: Palette = { ...STANDARD, water: 0x548789, sand: 0xd2b37d };
 
 const PALETTES: ReadonlyMap<string, Palette> = new Map([
   ['mountain', MOUNTAIN],
