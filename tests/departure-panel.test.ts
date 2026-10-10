@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { PADDING, panelFor } from '../src/adapter/overlay';
+import { panelFor } from '../src/adapter/overlay';
 import type { Panel } from '../src/adapter/overlay';
 import { textWidthOf } from '../src/adapter/pixel-font';
+import { WINDOW_PADDING } from '../src/adapter/ui-layer';
 import { charactersTheFontLacks } from './drawn-text';
 import { playingView } from './fixtures';
 import { askingGame, harborGame, preparedGame, VESSEL_ID } from './harbor-fixtures';
@@ -32,7 +33,7 @@ describe('the question whether to sail home, on the overlay', () => {
   it('is made of lines that fit its window', () => {
     expect(question).not.toBeNull();
     for (const text of textsOf(question)) {
-      expect(textWidthOf(text), text).toBeLessThanOrEqual((question?.width ?? 0) - 2 * PADDING);
+      expect(textWidthOf(text), text).toBeLessThanOrEqual((question?.width ?? 0) - 2 * WINDOW_PADDING);
     }
   });
 

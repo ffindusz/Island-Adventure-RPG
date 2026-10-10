@@ -22,7 +22,7 @@ import {
 } from './title-layout';
 import { MENU_ENTRIES, openMenu, pressMenu, selectableEntries } from './title-menu';
 import type { MenuEntry, TitleMenu } from './title-menu';
-import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
+import { INK, UiLayer, WINDOW_PADDING } from './ui-layer';
 
 // The title screen: what the game opens on, and the way into it. It offers New Game and Continue, tells the player why
 // a saved game cannot be continued from, and starts the play screen. It decides nothing about the game: the rules of
@@ -33,8 +33,6 @@ import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
 // title-layout.ts's.
 
 const WINDOW_WIDTH = 200;
-/** From a window's edge to what it holds, the window's frame being the first 4 pixels of it. */
-const PADDING = 12;
 const ROW_GAP = 4;
 /** A line of the menu is as high as the button behind the line the cursor is on, which is as wide as the line. */
 const ENTRY_HEIGHT = 15;
@@ -236,14 +234,12 @@ function drawLogo(layer: UiLayer): void {
 
 /** Draws the window with the rows one under the other, under the name of the game. */
 function drawWindow(layer: UiLayer, rows: readonly Row[]): void {
-  const height = stackHeight(rows) + 2 * PADDING;
+  const height = stackHeight(rows) + 2 * WINDOW_PADDING;
   const left = Math.floor((VIEW_WIDTH - WINDOW_WIDTH) / 2);
   const top = windowTop(height);
-  const inside = { left: left + WINDOW_FRAME, top: top + WINDOW_FRAME };
-  layer.frame('window', left, top, WINDOW_WIDTH, height);
-  layer.frame('panel', inside.left, inside.top, WINDOW_WIDTH - 2 * WINDOW_FRAME, height - 2 * WINDOW_FRAME);
+  layer.window(left, top, WINDOW_WIDTH, height);
   const centred = (width: number): number => left + Math.floor((WINDOW_WIDTH - width) / 2);
-  let rowTop = top + PADDING;
+  let rowTop = top + WINDOW_PADDING;
   let above: Row | null = null;
   for (const row of rows) {
     if (above !== null) {

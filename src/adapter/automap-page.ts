@@ -16,7 +16,7 @@ import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { closePageKeyLabel } from './controls';
 import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Graphics, Rect } from './pixel-font';
-import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
+import { INK, UiLayer, WINDOW_PADDING } from './ui-layer';
 
 // The Automap page: the route of Adventure Areas drawn as a map, from the Game core's view and from the exits that the
 // content gives its areas, which say at which side of a map a link meets it. It is a window like the panels of the
@@ -30,11 +30,9 @@ import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
  */
 const PAGE_DEPTH = 200;
 
-/** The window, in canvas pixels: in the middle of the screen, with the padding of the overlay's windows. */
+/** The window, in canvas pixels: in the middle of the screen, with the padding of every window (ui-layer.ts). */
 const PANEL_WIDTH = 300;
 const PANEL_HEIGHT = 172;
-/** From the window's edge to what it holds, the window's frame being the first 4 pixels of it. */
-const PADDING = 12;
 /** The space between the title, or the hint, and the route. */
 const TITLE_GAP = 6;
 
@@ -45,10 +43,10 @@ const PANEL: Rect = {
   height: PANEL_HEIGHT,
 };
 const CONTENT: Rect = {
-  left: PANEL.left + PADDING,
-  top: PANEL.top + PADDING,
-  width: PANEL.width - 2 * PADDING,
-  height: PANEL.height - 2 * PADDING,
+  left: PANEL.left + WINDOW_PADDING,
+  top: PANEL.top + WINDOW_PADDING,
+  width: PANEL.width - 2 * WINDOW_PADDING,
+  height: PANEL.height - 2 * WINDOW_PADDING,
 };
 /** What the title and the hint leave of the window for the route. */
 const ROUTE_SPACE: Rect = {
@@ -188,14 +186,7 @@ function drawWindow(backdrop: Graphics, layer: UiLayer): void {
   backdrop.fillStyle(BACKDROP_COLOUR, BACKDROP_ALPHA);
   backdrop.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
   layer.clear();
-  layer.frame('window', PANEL.left, PANEL.top, PANEL.width, PANEL.height);
-  layer.frame(
-    'panel',
-    PANEL.left + WINDOW_FRAME,
-    PANEL.top + WINDOW_FRAME,
-    PANEL.width - 2 * WINDOW_FRAME,
-    PANEL.height - 2 * WINDOW_FRAME,
-  );
+  layer.window(PANEL.left, PANEL.top, PANEL.width, PANEL.height);
   drawCentred(layer, 'AUTOMAP', CONTENT.top, INK.title);
   drawCentred(layer, `${closePageKeyLabel()} TO CLOSE`, CONTENT.top + CONTENT.height - TEXT_HEIGHT, INK.hint);
 }

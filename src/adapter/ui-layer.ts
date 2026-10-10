@@ -50,7 +50,10 @@ export const FRAMES = {
 export type FrameName = keyof typeof FRAMES;
 
 /** The width of a window's frame: what a panel inside it is inset by, so that the two sit flush. */
-export const WINDOW_FRAME = 4;
+const WINDOW_FRAME = 4;
+
+/** From a window's edge to what it holds, the window's frame being the first `WINDOW_FRAME` pixels of it. */
+export const WINDOW_PADDING = 12;
 
 /** What a layer keeps of one kind: the objects made so far, and how many of them this drawing has used. */
 interface Pool<T> {
@@ -132,6 +135,12 @@ export class UiLayer {
       .setAlpha(alpha)
       .setDepth(this.depth + this.framesTaken / 1000)
       .setVisible(true);
+  }
+
+  /** A window: the orange frame, and the dark panel that fills it inside the frame. The two sit flush. */
+  window(left: number, top: number, width: number, height: number): void {
+    this.frame('window', left, top, width, height);
+    this.frame('panel', left + WINDOW_FRAME, top + WINDOW_FRAME, width - 2 * WINDOW_FRAME, height - 2 * WINDOW_FRAME);
   }
 
   /**

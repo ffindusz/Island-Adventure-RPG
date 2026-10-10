@@ -16,7 +16,7 @@ import { potionLineOf } from './inventory-menu';
 import { CONSUMABLE_NAMES, GEAR_STAT_ABBREVIATIONS, shown, STAT_NAMES } from './labels';
 import { bitmapHeight, bitmapWidth, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Bitmap, Graphics } from './pixel-font';
-import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
+import { INK, UiLayer, WINDOW_PADDING } from './ui-layer';
 
 // The overlay: what covers the game while it waits for the player. It shows the level-up choice, the page that is open
 // or the question whether to sail home, or says the game is paused when the window has lost focus. It is drawn from
@@ -29,8 +29,6 @@ const OVERLAY_DEPTH = 200;
 
 const WIDE_WINDOW = 160;
 const NARROW_WINDOW = 96;
-/** From a window's edge to what it holds, the window's frame being the first 4 pixels of it. */
-export const PADDING = 12;
 /** The space between rows, the height of a bar, and the space between a stat's value and its gain. */
 const ROW_GAP = 4;
 const BAR_HEIGHT = 5;
@@ -43,7 +41,7 @@ const COLUMN_GAP = 8;
 const GEAR_COLUMN = 144;
 const SUPPLY_COLUMN = 122;
 const COLUMN_SPACING = 8;
-const INVENTORY_WINDOW = GEAR_COLUMN + COLUMN_SPACING + SUPPLY_COLUMN + 2 * PADDING;
+const INVENTORY_WINDOW = GEAR_COLUMN + COLUMN_SPACING + SUPPLY_COLUMN + 2 * WINDOW_PADDING;
 
 /** How many pieces of Gear the inventory page lists at once. A longer list scrolls to keep the cursor in view. */
 const VISIBLE_GEAR = 5;
@@ -370,12 +368,15 @@ function stackHeight(rows: readonly Row[]): number {
 
 function drawPanel(layer: UiLayer, panel: Panel): void {
   const { width, rows } = panel;
-  const height = stackHeight(rows) + 2 * PADDING;
+  const height = stackHeight(rows) + 2 * WINDOW_PADDING;
   const left = Math.floor((VIEW_WIDTH - width) / 2);
   const top = Math.floor((VIEW_HEIGHT - height) / 2);
-  layer.frame('window', left, top, width, height);
-  layer.frame('panel', left + WINDOW_FRAME, top + WINDOW_FRAME, width - 2 * WINDOW_FRAME, height - 2 * WINDOW_FRAME);
-  drawStack(layer, rows, { left: left + PADDING, right: left + width - PADDING, top: top + PADDING });
+  layer.window(left, top, width, height);
+  drawStack(layer, rows, {
+    left: left + WINDOW_PADDING,
+    right: left + width - WINDOW_PADDING,
+    top: top + WINDOW_PADDING,
+  });
 }
 
 interface RowSpace {

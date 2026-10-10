@@ -4,7 +4,7 @@ import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { confirmKeyLabel } from './controls';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Graphics, Rect } from './pixel-font';
-import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
+import { INK, UiLayer, WINDOW_PADDING } from './ui-layer';
 
 // The opening of a New Game, which the Game core gives as lines of text and the play screen shows as a card: a window in
 // the middle of a black screen, with the lines in it and a hint under them. The play screen holds the game while the
@@ -16,8 +16,6 @@ const OPENING_DEPTH = 250;
 
 /** The air between the screen's edge and the window at its widest, which a card keeps above and below it as well. */
 export const SIDE_MARGIN = 12;
-/** From a window's edge to what it holds, the window's frame being the first 4 pixels of it. */
-const PADDING = 12;
 /** Between the rows of one line of the opening that was too wide for the window. */
 const ROW_GAP = 4;
 /** Between one line of the opening and the next. */
@@ -28,7 +26,7 @@ const HINT_GAP = 14;
 export const OPENING_HINT = `${confirmKeyLabel()} TO BEGIN`;
 
 /** The widest a row of text can be and still sit in the card, which is as wide as the screen allows. */
-export const CARD_TEXT_WIDTH = VIEW_WIDTH - 2 * (SIDE_MARGIN + PADDING);
+export const CARD_TEXT_WIDTH = VIEW_WIDTH - 2 * (SIDE_MARGIN + WINDOW_PADDING);
 
 /** The tallest a card can be and still keep as much air from the top and bottom of the screen as from its sides. */
 export const CARD_MAX_HEIGHT = VIEW_HEIGHT - 2 * SIDE_MARGIN;
@@ -71,14 +69,14 @@ export function layoutRows(lines: readonly (readonly string[])[], hint: string):
     });
   }
   const hintTop = rows.length === 0 ? 0 : top + TEXT_HEIGHT + HINT_GAP;
-  const width = Math.max(textWidthOf(hint), ...rows.map((row) => textWidthOf(row.text))) + 2 * PADDING;
-  const height = hintTop + TEXT_HEIGHT + 2 * PADDING;
+  const width = Math.max(textWidthOf(hint), ...rows.map((row) => textWidthOf(row.text))) + 2 * WINDOW_PADDING;
+  const height = hintTop + TEXT_HEIGHT + 2 * WINDOW_PADDING;
   const left = Math.floor((VIEW_WIDTH - width) / 2);
   const windowTop = Math.floor((VIEW_HEIGHT - height) / 2);
   const placed = (text: string, textTop: number): Placed => ({
     text,
     left: left + Math.floor((width - textWidthOf(text)) / 2),
-    top: windowTop + PADDING + textTop,
+    top: windowTop + WINDOW_PADDING + textTop,
   });
   return {
     window: { left, top: windowTop, width, height },
@@ -89,14 +87,7 @@ export function layoutRows(lines: readonly (readonly string[])[], hint: string):
 
 /** Draws the card: its window, the rows in it, and the hint. The layer is cleared by whoever owns it. */
 export function drawCard(layer: UiLayer, { window, rows, hint }: CardLayout): void {
-  layer.frame('window', window.left, window.top, window.width, window.height);
-  layer.frame(
-    'panel',
-    window.left + WINDOW_FRAME,
-    window.top + WINDOW_FRAME,
-    window.width - 2 * WINDOW_FRAME,
-    window.height - 2 * WINDOW_FRAME,
-  );
+  layer.window(window.left, window.top, window.width, window.height);
   for (const row of rows) {
     layer.text(row.text, row.left, row.top, INK.text);
   }
