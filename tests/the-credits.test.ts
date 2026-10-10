@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { layoutCard } from '../src/adapter/opening-card';
+import { GAME_TITLE } from '../src/adapter/title-layout';
 import { gameContent } from '../src/content';
 import { charactersTheFontLacks } from './drawn-text';
 import { creditsOwedBy, recordOnDisk } from './licence-record';
@@ -10,9 +11,6 @@ import { creditsOwedBy, recordOnDisk } from './licence-record';
 
 const ENDING = gameContent.ending ?? [];
 const CREDITS = gameContent.credits ?? [];
-
-/** What the title screen calls the game, which the credits begin with. */
-const TITLE = 'ISLAND ADVENTURE';
 
 /** The tools the game is made with, which one line of the credits names. */
 const TOOLS = ['Phaser', 'TypeScript', 'Vite'];
@@ -53,7 +51,7 @@ describe('the credits of the game', () => {
   });
 
   it('begin with the title of the game, as the title screen shows it', () => {
-    expect(CREDITS[0]).toBe(TITLE);
+    expect(CREDITS[0]).toBe(GAME_TITLE);
   });
 
   it('name the tools the game is made with, Phaser, TypeScript and Vite, in one line', () => {

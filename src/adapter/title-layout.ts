@@ -8,7 +8,11 @@ import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 // inside a canvas pixel and blur it), and the window is in the middle of the room that is left under it, so that a
 // window with more rows (a message about the saved game, the hints) grows upward and never over the name.
 
-/** What the screen is called. */
+/**
+ * What the game is called: the name across the top of the title screen. The credits begin with it too
+ * (src/content/ending.ts). The content and the adapter import nothing of each other, so tests/the-credits.test.ts keeps
+ * the two the same.
+ */
 export const GAME_TITLE = 'ISLAND ADVENTURE';
 
 /** How many times the font's own size the name may be, the biggest that fits first. */
