@@ -15,7 +15,14 @@ import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { closePageKeyLabel, confirmKeyLabel, statKeyLabel } from './controls';
 import { DEPTH } from './depths';
 import { potionLineOf } from './inventory-menu';
-import { CONSUMABLE_NAMES, GEAR_STAT_ABBREVIATIONS, numberText, STAT_NAMES } from './labels';
+import {
+  CONSUMABLE_NAMES,
+  experienceShare,
+  GEAR_STAT_ABBREVIATIONS,
+  healthText,
+  numberText,
+  STAT_NAMES,
+} from './labels';
 import { bitmapHeight, bitmapWidth, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Bitmap, Graphics } from './pixel-font';
 import { stackHeight, stackRows } from './row-stack';
@@ -270,15 +277,7 @@ function inventoryPagePanel(page: InventoryPageView, hero: HeroView, cursor: num
     ...CONSUMABLE_IDS.map((id): Row => consumableRow(id, page, cursor)),
     ...keyRows,
     { kind: 'space', height: 0 },
-    // Health is rounded up, as on the HUD, so a hero that is still standing never reads as 0.
-    {
-      kind: 'stat',
-      label: STAT_NAMES.health,
-      value: `${Math.ceil(hero.health)}/${Math.ceil(hero.maxHealth)}`,
-      gain: null,
-    },
-    { kind: 'stat', label: STAT_NAMES.attack, value: numberText(page.attack), gain: null },
-    { kind: 'stat', label: STAT_NAMES.defense, value: numberText(page.defense), gain: null },
+    ...statRows({ health: hero.health, maxHealth: hero.maxHealth, attack: page.attack, defense: page.defense }),
   ];
   const rows: Row[] = [
     { kind: 'text', text: inventoryTitle(gear.length, cursor), colour: INK.title },
@@ -295,6 +294,15 @@ function inventoryPagePanel(page: InventoryPageView, hero: HeroView, cursor: num
   return { width: INVENTORY_WINDOW, rows };
 }
 
+/** The three stats as the inventory and the stat page both show them: Health, then Attack, then Defense. */
+function statRows(stats: Pick<StatPageView, 'health' | 'maxHealth' | 'attack' | 'defense'>): Row[] {
+  return [
+    { kind: 'stat', label: STAT_NAMES.health, value: healthText(stats.health, stats.maxHealth), gain: null },
+    { kind: 'stat', label: STAT_NAMES.attack, value: numberText(stats.attack), gain: null },
+    { kind: 'stat', label: STAT_NAMES.defense, value: numberText(stats.defense), gain: null },
+  ];
+}
+
 function statPagePanel(page: StatPageView): Panel {
   const { experience } = page;
   return {
@@ -309,11 +317,8 @@ function statPagePanel(page: StatPageView): Panel {
         value: experience === null ? 'MAX' : `${numberText(experience.earned)}/${numberText(experience.needed)}`,
         gain: null,
       },
-      { kind: 'bar', share: experience === null ? 1 : experience.earned / experience.needed },
-      // Health is rounded up, as on the HUD, so a hero that is still standing never reads as 0.
-      { kind: 'stat', label: 'HEALTH', value: `${Math.ceil(page.health)}/${Math.ceil(page.maxHealth)}`, gain: null },
-      { kind: 'stat', label: 'ATTACK', value: numberText(page.attack), gain: null },
-      { kind: 'stat', label: 'DEFENSE', value: numberText(page.defense), gain: null },
+      { kind: 'bar', share: experienceShare(experience) },
+      ...statRows(page),
       { kind: 'space', height: 0 },
       { kind: 'text', text: `${closePageKeyLabel()} TO CLOSE`, colour: INK.hint },
     ],

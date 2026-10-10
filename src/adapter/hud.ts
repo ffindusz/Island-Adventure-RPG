@@ -5,6 +5,7 @@ import { consumableIcon, gearIcon } from './artwork';
 import { ChangeGuard } from './change-guard';
 import { TILE_SIZE } from './config';
 import { DEPTH } from './depths';
+import { experienceShare, healthText } from './labels';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import { INK, UiLayer } from './ui-layer';
 
@@ -106,18 +107,15 @@ export class Hud {
     layer.frame('panel', MARGIN, MARGIN, HUD_WIDTH, HUD_HEIGHT);
 
     layer.icon('ui-heart', LEFT, MARGIN + PADDING);
-    // Health is rounded up, so a hero that is still standing never reads as 0.
     const textTop = MARGIN + PADDING + Math.ceil((HEALTH_ROW_HEIGHT - TEXT_HEIGHT) / 2);
-    layer.text(`${Math.ceil(health)}/${Math.ceil(maxHealth)}`, LEFT + HEART_ROOM, textTop, INK.text);
+    layer.text(healthText(health, maxHealth), LEFT + HEART_ROOM, textTop, INK.text);
     const level = `LV ${progress.level}`;
     layer.text(level, INSIDE_RIGHT - textWidthOf(level), textTop, INK.title);
 
     const barWidth = INSIDE_RIGHT - LEFT;
     layer.bar(LEFT, HEALTH_BAR_TOP, barWidth, BAR_HEIGHT, health / maxHealth, INK.health);
-    // At the highest Level there is no next one, and the bar stays full.
-    const experience = progress.experience;
-    const experienceShare = experience === null ? 1 : experience.earned / experience.needed;
-    layer.bar(LEFT, EXPERIENCE_BAR_TOP, barWidth, EXPERIENCE_BAR_HEIGHT, experienceShare, INK.experience);
+    const toNextLevel = experienceShare(progress.experience);
+    layer.bar(LEFT, EXPERIENCE_BAR_TOP, barWidth, EXPERIENCE_BAR_HEIGHT, toNextLevel, INK.experience);
 
     const countTop = SUPPLY_TOP + Math.floor((SUPPLY_HEIGHT - TEXT_HEIGHT) / 2);
     const weapon = WEAPON_ICONS[activeWeapon];
