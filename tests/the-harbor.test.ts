@@ -3,16 +3,8 @@ import { gameContent } from '../src/content';
 import { createGame } from '../src/core';
 import type { AreaDefinition, Game, Tile } from '../src/core';
 import { face, fixedRandom, gameAtTitle, interactableViews, newGame, playingView, walk } from './fixtures';
-import {
-  directionBetween,
-  isInZone,
-  keyOf,
-  neighboursOf,
-  openTilesOf,
-  routeBetween,
-  walkRoute,
-  withoutOrdinaryMonsters,
-} from './routes';
+import { FIRST_GEAR, gameWithHero, heroAt, INTENDED_LEVEL, QUIET } from './profile-heroes';
+import { directionBetween, isInZone, keyOf, neighboursOf, openTilesOf, routeBetween, walkRoute } from './routes';
 
 // The old vessel in the forgotten harbor, at the east end of the castle, behind the Guardian's gate: the hero prepares it
 // there, and sails home. Like the other tests of the shipped content, these read the map and the lists of the content and
@@ -137,29 +129,31 @@ describe('the way to the vessel', () => {
 // The hero who has defeated the Guardian. The scene is the game's own doing: it puts the hero beside the Guardian with one
 // Health left, which one strike takes, and plays the strike, so that the Guardian falls and its gate opens as they do in
 // play. The saved game of that moment is then taken up again with the hero back at the way in of the castle, as a hero
-// who has walked back would be. Every ordinary monster is taken out, for the walk is not about them. The hero is of
-// Level 6, the cap, with its five Stat Points spent, as one who has come this far is: the Experience of the Guardian then
-// raises no Level, so that no Stat Point waits to be assigned, which would hold the game.
-
-const QUIET = { ...gameContent, areas: withoutOrdinaryMonsters(gameContent) };
+// who has walked back would be. The core has no command to set the Health of a monster or to put the hero somewhere, so
+// the scene changes the saved game in two things: the Guardian's Health, and the hero's place after the fall. Every
+// ordinary monster is taken out, for the walk is not about them. The hero is of Level 6, the cap, with its five Stat
+// Points spent, as one who has come this far is: the Experience of the Guardian then raises no Level, so that no Stat
+// Point waits to be assigned, which would hold the game.
 
 /** Next to the Guardian, to its west, in reach of a strike to the right. */
 const BESIDE_GUARDIAN = { x: guardianTile.col - 1, y: guardianTile.row + 0.5 };
 
+/** The hero at the cap, with its five Stat Points spent as 2 Health, 2 Attack and 1 Defense, and the Gear it began with. */
+const HERO_AT_THE_CAP = heroAt(INTENDED_LEVEL, { health: 2, attack: 2, defense: 1 }, FIRST_GEAR, 0);
+
 function afterTheFall(): Game {
-  const scene = newGame(QUIET).snapshot();
-  scene.state.areaId = CASTLE;
-  scene.state.hero.position = BESIDE_GUARDIAN;
-  scene.state.hero.facing = 'right';
-  scene.state.hero.experience = 100;
-  scene.state.hero.statPoints = { health: 2, attack: 2, defense: 1 };
-  const monster = scene.state.areas[CASTLE]?.monsters.find(({ id }) => id === GUARDIAN_ID);
-  if (monster === undefined) {
-    throw new Error('The saved game has no Guardian in the castle');
-  }
-  monster.health = 1;
-  const fighting = gameAtTitle(QUIET);
-  fighting.send({ type: 'continue', snapshot: scene });
+  const fighting = gameWithHero(
+    QUIET,
+    HERO_AT_THE_CAP,
+    { areaId: CASTLE, position: BESIDE_GUARDIAN, facing: 'right' },
+    ({ state }) => {
+      const monster = state.areas[CASTLE]?.monsters.find(({ id }) => id === GUARDIAN_ID);
+      if (monster === undefined) {
+        throw new Error('The saved game has no Guardian in the castle');
+      }
+      monster.health = 1;
+    },
+  );
   expect(fighting.send({ type: 'attack' })).toContainEqual({ type: 'guardian-defeated', monsterId: GUARDIAN_ID });
 
   const fallen = fighting.snapshot();

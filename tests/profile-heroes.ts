@@ -142,9 +142,15 @@ export function maxHealthOf(points: Points, content: ContentDefinition = gameCon
 
 /**
  * A game of this content with the hero as the profile says, at full Health and in the place: a game continued from a
- * save, which is how a hero of any make is built through the core's own interface.
+ * save, which is how a hero of any make is built through the core's own interface. `adjust` changes the save before the
+ * game continues from it, for what the core has no command for, such as the Health of a monster.
  */
-export function gameWithHero(content: ContentDefinition, profile: HeroProfile, place: Place): Game {
+export function gameWithHero(
+  content: ContentDefinition,
+  profile: HeroProfile,
+  place: Place,
+  adjust?: (save: Snapshot) => void,
+): Game {
   const snapshot = savedNewGame(content);
   const { hero } = snapshot.state;
   snapshot.state.areaId = place.areaId;
@@ -158,6 +164,7 @@ export function gameWithHero(content: ContentDefinition, profile: HeroProfile, p
   hero.activeWeapon = 'melee-weapon';
   hero.consumables = { ...profile.consumables };
   hero.health = maxHealthOf(profile.points, content);
+  adjust?.(snapshot);
   const game = gameAtTitle(content);
   game.send({ type: 'continue', snapshot });
   return game;
