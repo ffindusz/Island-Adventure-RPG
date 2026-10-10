@@ -157,9 +157,12 @@ Tick one when you accept it as it is; otherwise write what to change.
       ninjas and a knight, the bat reads as a droplet or a crab, and one violet orb is every monster's shot. The
       castle's skeleton, ghoul, wraith and knight, and the Guardian, are recoloured figures of the pack (no strike
       pose and no glow; the Guardian's back view is its front mirrored).
-- [ ] **Composed pictures:** the wreck, the vessel, the quay, the pillars, the fountain, the two backdrops and the
-      logo are made from the pack's pieces; the ship of the ending is a recipe drawing, and the Knight Mail's icon is
-      drawn in code. A real side-view ship (candidate S4 in `docs/assets/licences.md`) needs your permission: take it?
+- [ ] **Composed pictures:** the wreck, the vessel and the quay are made from the pack's pieces, with what the pack lacks
+      drawn by the recipe. The two backdrops are put together from pack pieces too (the title's has the pack's sea, sand,
+      wreck, crab and Hunter, the ending's the pack's quay planks) under skies, a sun, gulls and a sea that the recipe
+      draws. The pillars and the fountain are drawn entirely by the recipe; the logo is the project's own pixel font,
+      drawn by code; the ship of the ending is a recipe drawing, and the Knight Mail's icon is drawn in code. A real
+      side-view ship (candidate S4 in `docs/assets/licences.md`) needs your permission: take it?
 - [ ] **Words:** the credits name no person; the four lines of the ending are a first draft; the Knight Mail was
       renamed from "Knight's Armor" so that its name fits the inventory.
 - [ ] **Sound:** the music and effects were chosen by name, size and loudness, not by ear; the loop seams were not
