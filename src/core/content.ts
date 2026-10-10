@@ -319,7 +319,7 @@ export function loadContent(definition: ContentDefinition): Content {
   requireMoreThanZero("The hero's interaction reach", definition.hero.interactionReach);
   const rangedWeapon = loadRangedWeapon(definition.hero.rangedWeapon, definition.hero.size);
   const minimumDamage = definition.minimumDamage ?? DEFAULT_MINIMUM_DAMAGE;
-  requireZeroOrMore('The minimum damage', minimumDamage);
+  requireOneOrMore('The minimum damage', minimumDamage);
   const areaTextMs = definition.areaTextMs ?? DEFAULT_AREA_TEXT_MS;
   if (!(areaTextMs >= STEP_MS)) {
     throw new Error(
@@ -683,6 +683,13 @@ function requireMoreThanZero(what: string, value: number): void {
 function requireZeroOrMore(what: string, value: number): void {
   if (!(value >= 0)) {
     throw new Error(`${what} must be 0 or more, but it is ${value}`);
+  }
+}
+
+/** Defense can never reduce a hit to nothing, so the floor under the damage the hero takes is a whole Health or more. */
+function requireOneOrMore(what: string, value: number): void {
+  if (!(value >= 1)) {
+    throw new Error(`${what} must be 1 or more, but it is ${value}`);
   }
 }
 

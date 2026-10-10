@@ -43,7 +43,7 @@ describe('the minimum damage', () => {
     { defense: 3, minimum: 2, damage: 2 }, // damage exactly at the minimum is left alone
     { defense: 4, minimum: 2, damage: 2 },
     { defense: 8, minimum: 3, damage: 3 },
-    { defense: 8, minimum: 0, damage: 0 }, // a designer who wants Defense to absorb a hit completely can set 0
+    { defense: 8, minimum: 1, damage: 1 }, // the lowest floor there is, set outright, holds when Defense would take it all
   ])('is a floor the content can tune: a minimum of $minimum gives $damage at Defense $defense', ({ defense, minimum, damage }) => {
     const game = gameWithDefense(defense, minimum);
 

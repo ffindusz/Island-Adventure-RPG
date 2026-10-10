@@ -178,7 +178,22 @@ describe('numbers the rules cannot work with are refused when the game is create
     {
       what: 'a negative minimum damage',
       content: arena({ minimumDamage: -1 }),
-      message: 'The minimum damage must be 0 or more, but it is -1',
+      message: 'The minimum damage must be 1 or more, but it is -1',
+    },
+    {
+      what: 'a minimum damage of 0, which would let Defense take a whole hit away',
+      content: arena({ minimumDamage: 0 }),
+      message: 'The minimum damage must be 1 or more, but it is 0',
+    },
+    {
+      what: 'a minimum damage between 0 and 1, which would let Defense take most of a hit away',
+      content: arena({ minimumDamage: 0.5 }),
+      message: 'The minimum damage must be 1 or more, but it is 0.5',
+    },
+    {
+      what: 'a minimum damage that is not a number',
+      content: arena({ minimumDamage: Number.NaN }),
+      message: 'The minimum damage must be 1 or more, but it is NaN',
     },
     {
       what: 'a monster whose hits do no damage',
@@ -293,9 +308,10 @@ describe('numbers the rules cannot work with are refused when the game is create
 
   it('the lowest numbers that still make sense are accepted', () => {
     const content = arena({
-      // A hero with no Attack of its own relies on Gear and Stat Points, and one with no cooldown strikes every step.
+      // A hero with no Attack of its own relies on Gear and Stat Points, and one with no cooldown strikes every step. A
+      // hit takes 1 Health at the least, so that Defense can never take it away whole.
       hero: { defense: 0, attack: 0, attackCooldownMs: 0 },
-      minimumDamage: 0,
+      minimumDamage: 1,
       progression: { levelThresholds: [1], statPointValue: { health: 1, attack: 1, defense: 1 } },
       milestones: [
         milestone('whole-map', { col: 0, row: 0, width: 7, height: 6 }, 0),
