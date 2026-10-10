@@ -64,6 +64,32 @@ const BACKDROP_ALPHA = 0.55;
 /** The tick behind a piece of Gear that is equipped. */
 const TICK: Bitmap = ['......#', '.....#.', '#...#..', '.#.#...', '..#....'];
 
+/** Where the parts of a piece of Gear's line start: its name, its bonus and its tick, and the room the name has. */
+interface GearLine {
+  readonly nameLeft: number;
+  readonly nameRoom: number;
+  readonly bonusLeft: number;
+  readonly tickLeft: number;
+}
+
+/**
+ * The line of a piece of Gear between two edges: the picture and the name from the left, and from the right edge the
+ * tick, the bonus before it and the room for the name before that, with a gap in front of each.
+ */
+function gearLineOf(left: number, right: number, bonus: string): GearLine {
+  const tickLeft = right - TEXT_OUTDENT - bitmapWidth(TICK);
+  const bonusLeft = tickLeft - TEXT_OUTDENT - textWidthOf(bonus);
+  const nameLeft = left + TEXT_INDENT;
+  return { nameLeft, nameRoom: bonusLeft - TEXT_OUTDENT - nameLeft, bonusLeft, tickLeft };
+}
+
+/**
+ * The most characters that a piece of Gear's name can have to be shown whole on the inventory page: on its line in the
+ * Gear column it has what the picture, a bonus of one digit such as "+2 ATK" and the tick leave. `fitted` cuts a longer
+ * name off at the end without a word, so every piece of Gear in the content must keep to this.
+ */
+export const LONGEST_GEAR_NAME = fitted('W'.repeat(GEAR_COLUMN), gearLineOf(0, GEAR_COLUMN, '+9 ATK').nameRoom).length;
+
 type Row =
   /** Centred. */
   | { readonly kind: 'text'; readonly text: string; readonly colour: number }
@@ -402,13 +428,12 @@ function drawRow(layer: UiLayer, row: Row, space: RowSpace, gainColumn: number):
       drawItemBase(layer, row.icon, row.highlighted, space);
       const ink = row.highlighted ? INK.onButton : row.equipped ? INK.gain : INK.text;
       const textTop = top + Math.floor((ITEM_HEIGHT - TEXT_HEIGHT) / 2);
-      const tickLeft = right - TEXT_OUTDENT - bitmapWidth(TICK);
+      const line = gearLineOf(left, right, row.bonus);
       if (row.equipped) {
-        layer.bitmap(TICK, tickLeft, top + Math.floor((ITEM_HEIGHT - bitmapHeight(TICK)) / 2), ink);
+        layer.bitmap(TICK, line.tickLeft, top + Math.floor((ITEM_HEIGHT - bitmapHeight(TICK)) / 2), ink);
       }
-      const bonusLeft = tickLeft - TEXT_OUTDENT - textWidthOf(row.bonus);
-      layer.text(row.bonus, bonusLeft, textTop, ink);
-      layer.text(fitted(row.name, bonusLeft - TEXT_OUTDENT - (left + TEXT_INDENT)), left + TEXT_INDENT, textTop, ink);
+      layer.text(row.bonus, line.bonusLeft, textTop, ink);
+      layer.text(fitted(row.name, line.nameRoom), line.nameLeft, textTop, ink);
       return;
     }
     case 'consumable': {
