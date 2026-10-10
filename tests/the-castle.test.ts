@@ -629,7 +629,7 @@ describe('what the hero finds in the castle', () => {
     expect(cutOff.map(({ id }) => id)).toEqual([]);
   });
 
-  it('keeps every chest and pickup out of the bottom rows, where the notice is drawn over the hero', () => {
+  it('keeps every interactable out of the bottom rows, where the notice is drawn over the hero', () => {
     const lowest = castle.layout.length - 1 - BOTTOM_ROWS;
 
     expect((castle.interactables ?? []).filter(({ tile }) => tile.row > lowest).map(({ id }) => id)).toEqual([]);

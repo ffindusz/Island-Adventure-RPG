@@ -470,7 +470,7 @@ describe('what the hero finds on the mountain', () => {
     expect(guards.filter(({ id }) => metOnTrail.has(id))).toEqual([]);
   });
 
-  it('keeps every chest and pickup out of the bottom rows, where the notice is drawn over the hero', () => {
+  it('keeps every interactable out of the bottom rows, where the notice is drawn over the hero', () => {
     const lowest = mountain.layout.length - 1 - BOTTOM_ROWS;
 
     expect(interactables.filter(({ tile }) => tile.row > lowest).map(({ id }) => id)).toEqual([]);

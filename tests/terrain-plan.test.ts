@@ -191,8 +191,14 @@ describe('the ground of woodland', () => {
     expect(onTile(meadow, 2, 2)).toEqual([expect.stringMatching(/^grass\./), expect.stringMatching(/^tree\.small/)]);
   });
 
-  it('gives the same trees to the same map every time, and others to a map that differs', () => {
+  it('gives the same trees to the same map every time, and not the same tree to every block of a forest', () => {
     expect(plan('TTTT', 'TTTT')).toEqual(plan('TTTT', 'TTTT'));
+
+    const wood = plan(...Array.from({ length: 8 }, () => 'TTTTTTTT'));
+    const bigTrees = wood.map(describeStamp).filter((name) => /^tree\.\d\.nw$/.test(name));
+
+    expect(bigTrees).toHaveLength(16);
+    expect(new Set(bigTrees).size).toBeGreaterThan(1);
   });
 });
 
@@ -244,6 +250,10 @@ describe('the ground of a wreck', () => {
     expect(deckOn(stamps, 8, 3)).toEqual(['wreck.deck.C@nw', 'wreck.deck.INE@ne', 'wreck.deck.C@sw', 'wreck.deck.C@se']);
     expect(deckOn(stamps, 9, 4)).toEqual(['wreck.deck.C@nw', 'wreck.deck.INE@ne', 'wreck.deck.C@sw', 'wreck.deck.ISE@se']);
     expect(deckOn(stamps, 10, 4)).toEqual(['wreck.deck.T@nw', 'wreck.deck.TR@ne', 'wreck.deck.B@sw', 'wreck.deck.BR@se']);
+
+    // The thirteenth piece, the inner corner at the south west, is where the south side of the hull is notched.
+    const notched = plan('~~~~~~~~', '~~~~~~~~', '~~WWWWW~', '~~~WWWWW', '~~~~~~~~');
+    expect(deckOn(notched, 3, 2)).toEqual(['wreck.deck.T@nw', 'wreck.deck.T@ne', 'wreck.deck.ISW@sw', 'wreck.deck.C@se']);
   });
 
   it('is plain planks, a hole or a piece of cargo on a tile with no edge, one picture for the tile', () => {
