@@ -29,7 +29,7 @@ import {
 export const AREA_IDS = ['shipwreck-coast', 'woods', 'mountain', 'cave', 'castle'] as const;
 export type AreaId = (typeof AREA_IDS)[number];
 
-/** The areas whose route is the path of sand: the trail, as the area tests of the woods, the mountain and the cave take it. */
+/** The areas whose route is the path of sand: the trail, which the area tests of the woods, the mountain and the cave take from here. */
 const TRAIL_OF_SAND: readonly AreaId[] = ['woods', 'mountain', 'cave'];
 
 /** The Checkpoint where the route of the castle ends: the Guardian's, in the gateway to the arena. */

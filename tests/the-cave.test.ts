@@ -14,6 +14,7 @@ import type {
   TileRect,
 } from '../src/core';
 import { STEPS_PER_TILE, face, fixedRandom, interactableViews, newGame, playingView, walk } from './fixtures';
+import { routeOf } from './main-route';
 import {
   directionBetween,
   distanceBetween,
@@ -89,7 +90,7 @@ const isOpen = openTilesOf(gameContent, cave);
 const isWayForward = (tile: Tile): boolean => wayForward !== undefined && isInZone(wayForward.zone, tile);
 const kindAt = ({ col, row }: Tile): string | undefined => gameContent.terrain[cave.layout[row]?.[col] ?? '']?.kind;
 /** The trail: the path of sand from the way in to the exit forward, over open ground, every door and gate shut and no key held. */
-const trail = routeBetween((tile) => isOpen(tile) && kindAt(tile) === 'sand', wayInTile, isWayForward);
+const trail = routeOf(CAVE);
 /** The shortest way over any open ground, sand or not. */
 const shortestWay = routeBetween(isOpen, wayInTile, isWayForward);
 
@@ -123,7 +124,7 @@ const gates = interactables.flatMap((item) => (item.kind === 'gate' ? [item] : [
 const levers = interactables.flatMap((item) => (item.kind === 'lever' ? [item] : []));
 const signs = interactables.flatMap((item) => (item.kind === 'sign' ? [item] : []));
 const pickups = interactables.flatMap((item) => (item.kind === 'pickup' ? [item] : []));
-const onTrail = new Set((trail ?? []).map(keyOf));
+const onTrail = new Set(trail.map(keyOf));
 
 function holdsAmmunition(item: InteractableDefinition): boolean {
   return item.kind === 'chest'
@@ -255,13 +256,15 @@ describe('the way through the cave', () => {
     expect(wayIn?.id).toBe('from-mountain');
     expect(wayForward, 'the cave has an exit to the castle').toBeDefined();
     expect(wayForward?.to.entrance).toBe('from-cave');
-    expect(trail).not.toBeNull();
+    expect(trail[0]).toEqual(wayInTile);
+    expect(isWayForward(trail.at(-1) ?? wayInTile)).toBe(true);
+    expect(trail.slice(1).filter((tile) => !isOpen(tile) || kindAt(tile) !== 'sand')).toEqual([]);
   });
 
   it('lets the hero walk it into the castle, where it touches the Checkpoint of the castle', () => {
     const game = quietGameAt(CAVE, wayInTile);
 
-    const events = walkRoute(game, trail ?? []);
+    const events = walkRoute(game, trail);
 
     expect(events).toContainEqual({ type: 'area-changed', areaId: CASTLE });
     expect(playingView(game).area.id).toBe(CASTLE);
@@ -275,7 +278,7 @@ describe('the way through the cave', () => {
     const straight = Math.min(...forwardTiles.map((tile) => straightLine(wayInTile, tile)));
 
     expect(forwardTiles.length).toBeGreaterThan(0);
-    expect((trail?.length ?? 0) - 1).toBeGreaterThanOrEqual(LEAST_WINDING * straight);
+    expect(trail.length - 1).toBeGreaterThanOrEqual(LEAST_WINDING * straight);
     expect((shortestWay?.length ?? 0) - 1).toBeGreaterThanOrEqual(LEAST_WINDING * straight);
   });
 
@@ -415,9 +418,8 @@ describe('the side path behind the gate', () => {
   });
 
   it('keeps the gate in sight of the trail: within a few tiles of the sand that the hero follows', () => {
-    const nearest = Math.min(...(trail ?? []).map((tile) => distanceBetween(tile, theGate().tile)));
+    const nearest = Math.min(...trail.map((tile) => distanceBetween(tile, theGate().tile)));
 
-    expect(trail).not.toBeNull();
     expect(nearest).toBeLessThanOrEqual(IN_SIGHT);
   });
 
@@ -626,7 +628,7 @@ describe('the milestone of the cave', () => {
   it('is given to a hero who walks the trail', () => {
     const [milestone] = cave.milestones ?? [];
 
-    const events = walkRoute(quietGameAt(CAVE, wayInTile), trail ?? []);
+    const events = walkRoute(quietGameAt(CAVE, wayInTile), trail);
 
     expect(events).toContainEqual({ type: 'milestone-reached', milestoneId: milestone?.id });
   });
@@ -638,29 +640,13 @@ describe('the Experience on the way through the cave', () => {
   const woods = definitionOf(WOODS);
   const mountain = definitionOf(MOUNTAIN);
 
-  /** The trail of an area: the path of sand from its way in to its exit to the next area, over open ground, every door and gate shut. */
-  function trailOf(area: AreaDefinition, next: string): Tile[] | null {
-    const isOpenIn = openTilesOf(gameContent, area);
-    const forward = (area.exits ?? []).find(({ to }) => to.area === next);
-    return routeBetween(
-      (tile) => isOpenIn(tile) && gameContent.terrain[area.layout[tile.row]?.[tile.col] ?? '']?.kind === 'sand',
-      (area.entrances ?? [])[0]?.tile ?? { col: 0, row: 0 },
-      (tile) => forward !== undefined && isInZone(forward.zone, tile),
-    );
-  }
-
-  /** The way from where the adventure begins to the exit of the coast, over open ground. */
-  const coastRoute = routeBetween(openTilesOf(gameContent, coast), gameContent.start.tile, (tile) =>
-    (coast.exits ?? []).some(({ zone }) => isInZone(zone, tile)),
-  );
-
   it('gives a hero who fights what it meets from the start to the exit of the cave, and passes the milestones, the Experience of Level 5', () => {
     const earned =
-      experienceOfAll(gameContent, metOn(gameContent, coast, coastRoute)) +
+      experienceOfAll(gameContent, metOn(gameContent, coast, routeOf(COAST))) +
       milestonesOf(coast) +
-      experienceOfAll(gameContent, metOn(gameContent, woods, trailOf(woods, MOUNTAIN))) +
+      experienceOfAll(gameContent, metOn(gameContent, woods, routeOf(WOODS))) +
       milestonesOf(woods) +
-      experienceOfAll(gameContent, metOn(gameContent, mountain, trailOf(mountain, CAVE))) +
+      experienceOfAll(gameContent, metOn(gameContent, mountain, routeOf(MOUNTAIN))) +
       milestonesOf(mountain) +
       experienceOfAll(gameContent, metOn(gameContent, cave, trail)) +
       milestonesOf(cave);

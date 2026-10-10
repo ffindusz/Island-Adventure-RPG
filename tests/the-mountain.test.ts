@@ -12,6 +12,7 @@ import type {
   Tile,
 } from '../src/core';
 import { face, fixedRandom, newGame, playingView } from './fixtures';
+import { routeOf } from './main-route';
 import {
   directionBetween,
   distanceBetween,
@@ -78,8 +79,8 @@ const isOpen = openTilesOf(gameContent, mountain);
 const isWayForward = (tile: Tile): boolean => wayForward !== undefined && isInZone(wayForward.zone, tile);
 const kindAt = ({ col, row }: Tile): string | undefined => gameContent.terrain[mountain.layout[row]?.[col] ?? '']?.kind;
 /** The trail: the path of sand from the way in to the exit forward, over open ground, every door shut and no key held. */
-const trail = routeBetween((tile) => isOpen(tile) && kindAt(tile) === 'sand', wayInTile, isWayForward);
-const onTrail = new Set((trail ?? []).map(keyOf));
+const trail = routeOf(MOUNTAIN);
+const onTrail = new Set(trail.map(keyOf));
 
 const interactables = mountain.interactables ?? [];
 const chests = interactables.flatMap((item) => (item.kind === 'chest' ? [item] : []));
@@ -126,7 +127,7 @@ function walkToTrail(spot: Tile): Tile[] | null {
 /** How far along the trail a spot lies: the place of the trail tile that is the shortest walk from it, or null when it cannot be walked to. */
 function placeOnTrail(spot: Tile): number | null {
   const reached = walkToTrail(spot)?.at(-1);
-  return reached === undefined ? null : (trail ?? []).findIndex((tile) => keyOf(tile) === keyOf(reached));
+  return reached === undefined ? null : trail.findIndex((tile) => keyOf(tile) === keyOf(reached));
 }
 
 /** How many tiles of walking lie between the trail and a spot, or null when the spot cannot be walked to. */
@@ -217,13 +218,15 @@ describe('the way through the mountain', () => {
     expect(wayIn?.id).toBe('from-woods');
     expect(wayForward, 'the mountain has an exit to the cave').toBeDefined();
     expect(wayForward?.to.entrance).toBe('from-mountain');
-    expect(trail).not.toBeNull();
+    expect(trail[0]).toEqual(wayInTile);
+    expect(isWayForward(trail.at(-1) ?? wayInTile)).toBe(true);
+    expect(trail.slice(1).filter((tile) => !isOpen(tile) || kindAt(tile) !== 'sand')).toEqual([]);
   });
 
   it('lets the hero walk it into the cave, where it touches the Checkpoint of the cave', () => {
     const game = quietGameAt(MOUNTAIN, wayInTile);
 
-    const events = walkRoute(game, trail ?? []);
+    const events = walkRoute(game, trail);
 
     expect(events).toContainEqual({ type: 'area-changed', areaId: CAVE });
     expect(playingView(game).area.id).toBe(CAVE);
@@ -231,7 +234,7 @@ describe('the way through the mountain', () => {
   });
 
   it('climbs through a narrow pass: three tiles in a row of the trail where the way is two tiles wide at most', () => {
-    const narrow = (trail ?? []).map((tile) => widthAt(tile) <= NARROW);
+    const narrow = trail.map((tile) => widthAt(tile) <= NARROW);
 
     const passes = narrow.filter((_, place) => narrow.slice(place, place + PASS_LENGTH).filter(Boolean).length === PASS_LENGTH);
 
@@ -267,7 +270,7 @@ describe('the way through the mountain', () => {
   it('gives the milestone to a hero who walks the trail', () => {
     const [milestone] = mountain.milestones ?? [];
 
-    const events = walkRoute(quietGameAt(MOUNTAIN, wayInTile), trail ?? []);
+    const events = walkRoute(quietGameAt(MOUNTAIN, wayInTile), trail);
 
     expect(events).toContainEqual({ type: 'milestone-reached', milestoneId: milestone?.id });
   });
@@ -374,7 +377,7 @@ describe('the armor of the mountain', () => {
   });
 
   it('is found before the tougher raider is met: the chest lies on the way before the first place where that raider notices the hero', () => {
-    const firstMet = (trail ?? []).findIndex((tile) =>
+    const firstMet = trail.findIndex((tile) =>
       toughRaiders.some((raider) => distanceBetween(tile, raider.tile) <= noticingOf(gameContent, raider)),
     );
 
@@ -477,24 +480,12 @@ describe('the Experience on the way through the mountain', () => {
   const [, , levelFour = 0, levelFive = 0] = gameContent.progression.levelThresholds;
   const coast = definitionOf(COAST);
   const woods = definitionOf(WOODS);
-  const woodsOpen = openTilesOf(gameContent, woods);
-  const woodsForward = (woods.exits ?? []).find(({ to }) => to.area === MOUNTAIN);
-  /** The way from where the adventure begins to the exit of the coast, over open ground. */
-  const coastRoute = routeBetween(openTilesOf(gameContent, coast), gameContent.start.tile, (tile) =>
-    (coast.exits ?? []).some(({ zone }) => isInZone(zone, tile)),
-  );
-  /** The trail of the woods, the path of sand from the way in to the exit to the mountain. */
-  const woodsTrail = routeBetween(
-    (tile) => woodsOpen(tile) && gameContent.terrain[woods.layout[tile.row]?.[tile.col] ?? '']?.kind === 'sand',
-    (woods.entrances ?? [])[0]?.tile ?? { col: 0, row: 0 },
-    (tile) => woodsForward !== undefined && isInZone(woodsForward.zone, tile),
-  );
 
   it('gives a hero who fights what it meets from the start to the exit of the mountain, and passes the milestones, the Experience of Level 4', () => {
     const earned =
-      experienceOfAll(gameContent, metOn(gameContent, coast, coastRoute)) +
+      experienceOfAll(gameContent, metOn(gameContent, coast, routeOf(COAST))) +
       milestonesOf(coast) +
-      experienceOfAll(gameContent, metOn(gameContent, woods, woodsTrail)) +
+      experienceOfAll(gameContent, metOn(gameContent, woods, routeOf(WOODS))) +
       milestonesOf(woods) +
       experienceOfAll(gameContent, metOn(gameContent, mountain, trail)) +
       milestonesOf(mountain);

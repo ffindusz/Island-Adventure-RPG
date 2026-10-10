@@ -14,6 +14,7 @@ import type {
   TileRect,
 } from '../src/core';
 import { FIELD_LAYOUT, arena, face, fixedRandom, newGame, playingView } from './fixtures';
+import { routeOf } from './main-route';
 import {
   directionBetween,
   distanceBetween,
@@ -668,31 +669,15 @@ describe('the Experience on the way through the castle', () => {
   const mountain = definitionOf(MOUNTAIN);
   const cave = definitionOf(CAVE);
 
-  /** The trail of an area: the path of sand from its way in to its exit to the next area, over open ground, every door and gate shut. */
-  function trailOf(area: AreaDefinition, next: string): Tile[] | null {
-    const isOpenIn = openTilesOf(gameContent, area);
-    const forward = (area.exits ?? []).find(({ to }) => to.area === next);
-    return routeBetween(
-      (tile) => isOpenIn(tile) && gameContent.terrain[area.layout[tile.row]?.[tile.col] ?? '']?.kind === 'sand',
-      (area.entrances ?? [])[0]?.tile ?? { col: 0, row: 0 },
-      (tile) => forward !== undefined && isInZone(forward.zone, tile),
-    );
-  }
-
-  /** The way from where the adventure begins to the exit of the coast, over open ground. */
-  const coastRoute = routeBetween(openTilesOf(gameContent, coast), gameContent.start.tile, (tile) =>
-    (coast.exits ?? []).some(({ zone }) => isInZone(zone, tile)),
-  );
-
   it('gives a hero who fights what it meets from the start to the end of the route of the castle, and passes the milestones, the Experience of Level 6', () => {
     const earned =
-      experienceOfAll(gameContent, metOn(gameContent, coast, coastRoute)) +
+      experienceOfAll(gameContent, metOn(gameContent, coast, routeOf(COAST))) +
       milestonesOf(coast) +
-      experienceOfAll(gameContent, metOn(gameContent, woods, trailOf(woods, MOUNTAIN))) +
+      experienceOfAll(gameContent, metOn(gameContent, woods, routeOf(WOODS))) +
       milestonesOf(woods) +
-      experienceOfAll(gameContent, metOn(gameContent, mountain, trailOf(mountain, CAVE))) +
+      experienceOfAll(gameContent, metOn(gameContent, mountain, routeOf(MOUNTAIN))) +
       milestonesOf(mountain) +
-      experienceOfAll(gameContent, metOn(gameContent, cave, trailOf(cave, CASTLE))) +
+      experienceOfAll(gameContent, metOn(gameContent, cave, routeOf(CAVE))) +
       milestonesOf(cave) +
       experienceOfAll(gameContent, metOn(gameContent, castle, route)) +
       milestonesOf(castle);
