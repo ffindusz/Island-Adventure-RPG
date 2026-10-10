@@ -149,6 +149,40 @@ describe('the content the game ships with', () => {
   });
 });
 
+/** The lines of the card that a new game begins with, as the core hands them out. */
+function openingOf(): readonly string[] {
+  const events = createGame({ content: gameContent, random: fixedRandom }).send({ type: 'new-game' });
+  for (const event of events) {
+    if (event.type === 'opening') {
+      return event.lines;
+    }
+  }
+  throw new Error('A new game did not begin with the opening');
+}
+
+/** The line of the opening that speaks of home, where the hero is told what to do. */
+function goalOf(lines: readonly string[]): string {
+  const goal = lines.find((line) => /\bhome\b/i.test(line));
+  if (goal === undefined) {
+    throw new Error(`No line of the opening speaks of home: ${lines.join(' / ')}`);
+  }
+  return goal;
+}
+
+describe('the opening the game ships with', () => {
+  // Story 7: it tells the player why the hero is stranded and what the hero must do.
+  it('tells the hero what to do as well as why it is stranded: a line says that there is a way home to find', () => {
+    const goal = goalOf(openingOf());
+
+    expect(goal).toMatch(/\bway home\b/i);
+    expect(goal).toMatch(/\bfind\b/i);
+  });
+
+  it('leaves what the hero has yet to discover to be discovered: the goal names no Guardian, castle, harbor or ship', () => {
+    expect(goalOf(openingOf())).not.toMatch(/guardian|castle|harbou?r|ship/i);
+  });
+});
+
 describe('what the hero can find in the content the game ships with', () => {
   const interactables = gameContent.areas.flatMap((area) => area.interactables ?? []);
   const gearInChests = interactables.flatMap((item) => {
