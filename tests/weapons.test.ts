@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PAGE_IDS } from '../src/core';
 import type { MonsterTypeDefinition } from '../src/core';
 import {
   COOLDOWN_STEPS,
@@ -148,7 +149,7 @@ describe('the weapon in hand', () => {
     expect(game.send(SWITCH)).toEqual([{ type: 'weapon-switched', weapon: 'ranged-weapon' }]);
   });
 
-  it.each(['stats', 'inventory'] as const)('is not switched while the %s page is open', (page) => {
+  it.each(PAGE_IDS)('is not switched while the %s page is open', (page) => {
     const game = gameWithBow();
     game.send({ type: 'open-page', page });
 

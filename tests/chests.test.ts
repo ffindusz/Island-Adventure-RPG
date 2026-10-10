@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PAGE_IDS } from '../src/core';
 import type { AreaDefinition, Direction, InteractableDefinition, Snapshot } from '../src/core';
 import {
   ARENA_LAYOUT,
@@ -174,7 +175,7 @@ describe('the chest Interact acts on when several are in reach', () => {
 });
 
 describe('Interact while the game waits', () => {
-  it.each(['stats', 'inventory'] as const)(
+  it.each(PAGE_IDS)(
     'does nothing while the %s page is open, and works once it is closed',
     (page) => {
       const game = gameWithChestBelow();

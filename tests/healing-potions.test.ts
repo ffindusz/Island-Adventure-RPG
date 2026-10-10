@@ -219,6 +219,7 @@ describe('using a Healing Potion', () => {
   const notFromTheInventory: { when: string; prepare: (game: Game) => void }[] = [
     { when: 'no page is open', prepare: () => undefined },
     { when: 'the stat page is open', prepare: (game) => void game.send({ type: 'open-page', page: 'stats' }) },
+    { when: 'the Automap page is open', prepare: (game) => void game.send({ type: 'open-page', page: 'automap' }) },
     {
       when: 'the inventory page has been closed',
       prepare: (game) => {
