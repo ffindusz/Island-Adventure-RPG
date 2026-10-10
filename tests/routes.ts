@@ -5,6 +5,7 @@ import type {
   Game,
   GameEvent,
   MonsterPlacement,
+  MonsterTypeDefinition,
   Tile,
   TileRect,
 } from '../src/core';
@@ -177,6 +178,46 @@ export function noticingOf(content: ContentDefinition, monster: { readonly type:
 /** How far apart two tiles are: the farther of the columns and the rows between them, so a diagonal step is one. */
 export function distanceBetween(one: Tile, other: Tile): number {
   return Math.max(Math.abs(one.col - other.col), Math.abs(one.row - other.row));
+}
+
+/**
+ * How far from its body a monster of a type takes the hero in, in tiles, before it acts on it: how far it notices, or
+ * how far its farthest attack reaches when that is farther. A stationary monster never does.
+ */
+export function awarenessOf(type: MonsterTypeDefinition): number {
+  switch (type.behavior) {
+    case 'stationary':
+      return 0;
+    case 'chaser':
+      return Math.max(type.noticingDistance, type.reach);
+    case 'charger':
+    case 'ranged':
+      return type.noticingDistance;
+    case 'guardian':
+      return Math.max(
+        type.noticingDistance,
+        ...type.patterns.map((pattern) => {
+          switch (pattern.kind) {
+            case 'sweep':
+              return pattern.reach;
+            case 'charge':
+              return pattern.dashRange;
+            case 'smite':
+              return pattern.range;
+          }
+        }),
+      );
+  }
+}
+
+/**
+ * Whether a hero of `heroSize` standing in the middle of `tile` is within the awareness of a monster of a type standing
+ * in the middle of `monsterTile`: the body of the monster, grown by its awareness on every side, overlaps the hero's.
+ * Bodies that only touch do not overlap, as in the rules.
+ */
+export function isWithinAwareness(type: MonsterTypeDefinition, monsterTile: Tile, heroSize: number, tile: Tile): boolean {
+  const apart = (type.size + heroSize) / 2 + awarenessOf(type);
+  return Math.abs(tile.col - monsterTile.col) < apart && Math.abs(tile.row - monsterTile.row) < apart;
 }
 
 /**

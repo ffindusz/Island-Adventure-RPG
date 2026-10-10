@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { AreaDefinition, Tile } from '../src/core';
+import type { AreaDefinition, MonsterTypeDefinition, Tile } from '../src/core';
+import { CHARGER, SHOOTER } from './enemy-fixtures';
 import {
+  BITER,
   FIELD_LAYOUT,
   arena,
   biterAt,
@@ -14,7 +16,18 @@ import {
   pickupAt,
   signAt,
 } from './fixtures';
-import { distanceBetween, experienceOf, experienceOfAll, metOn, milestonesOf, noticingOf, openTilesOf } from './routes';
+import { CHARGE, GUARDIAN, SMITE, SWEEP } from './guardian-fixtures';
+import {
+  awarenessOf,
+  distanceBetween,
+  experienceOf,
+  experienceOfAll,
+  isWithinAwareness,
+  metOn,
+  milestonesOf,
+  noticingOf,
+  openTilesOf,
+} from './routes';
 
 // The tests of the shipped content walk the hero over the tiles that `openTilesOf` counts as open, so what it counts as
 // solid is what no route they find goes through. The hero begins with every door and gate shut.
@@ -132,6 +145,62 @@ describe('the Experience of a stretch of the adventure, for the tests that tune 
 
   it('meets nothing on a route that is not there', () => {
     expect(metOn(field, fieldArea, null)).toEqual([]);
+  });
+});
+
+// The tests that keep the shipped layout clear of the monsters ask where a monster takes the hero in. The numbers are
+// worked by hand from the fixtures: a biter (size 0.5) notices within 2 tiles and its attack reaches 0.75; the charger
+// notices within 5 and dashes 6; the shooter notices within 6 and shoots 5; the Guardian's sweep reaches 1, its charge 6
+// and its smite 4.
+
+describe('where a monster takes the hero in, for the tests that keep the layout clear of it', () => {
+  const stationary: MonsterTypeDefinition = { behavior: 'stationary', health: 3, size: 0.5, experience: 5 };
+  const guardianOf = (noticingDistance: number, ...patterns: (typeof GUARDIAN)['patterns']): MonsterTypeDefinition => ({
+    ...GUARDIAN,
+    noticingDistance,
+    patterns,
+  });
+
+  it.each([
+    ['none for a stationary monster', stationary, 0],
+    ['how far a chaser notices', BITER, 2],
+    ['how far a chaser reaches, when that is farther than it notices', { ...BITER, noticingDistance: 1, reach: 1.5 }, 1.5],
+    ['how far a charger notices, and not how far it dashes', CHARGER, 5],
+    ['how far a ranged attacker notices, and not how far it shoots', SHOOTER, 6],
+    ['how far a Guardian notices, when that is the farthest', guardianOf(7, SWEEP, CHARGE, SMITE), 7],
+    ['how far the sweep of a Guardian reaches, when that is the farthest', guardianOf(0.5, SWEEP), 1],
+    ['how far the charge of a Guardian dashes, when that is the farthest', guardianOf(0.5, SWEEP, CHARGE, SMITE), 6],
+    ['how far the smite of a Guardian reaches, when that is the farthest', guardianOf(0.5, SWEEP, SMITE), 4],
+  ])('makes the awareness of a monster %s', (_what, type, tiles) => {
+    expect(awarenessOf(type)).toBe(tiles);
+  });
+
+  it('takes the hero in when the two bodies are closer than the awareness in the columns and in the rows both, and not when they only touch it', () => {
+    // A biter of size 1 that notices within 2, and a hero of size 1: their bodies are 3 tiles apart where it stops.
+    const biter: MonsterTypeDefinition = { ...BITER, size: 1 };
+    const at: Tile = { col: 10, row: 10 };
+
+    expect(isWithinAwareness(biter, at, 1, at)).toBe(true);
+    expect(isWithinAwareness(biter, at, 1, { col: 12, row: 10 })).toBe(true);
+    expect(isWithinAwareness(biter, at, 1, { col: 8, row: 10 })).toBe(true);
+    expect(isWithinAwareness(biter, at, 1, { col: 10, row: 12 })).toBe(true);
+    expect(isWithinAwareness(biter, at, 1, { col: 10, row: 8 })).toBe(true);
+    expect(isWithinAwareness(biter, at, 1, { col: 12, row: 12 })).toBe(true);
+    expect(isWithinAwareness(biter, at, 1, { col: 13, row: 10 })).toBe(false);
+    expect(isWithinAwareness(biter, at, 1, { col: 7, row: 10 })).toBe(false);
+    expect(isWithinAwareness(biter, at, 1, { col: 10, row: 13 })).toBe(false);
+    expect(isWithinAwareness(biter, at, 1, { col: 10, row: 7 })).toBe(false);
+    expect(isWithinAwareness(biter, at, 1, { col: 13, row: 12 })).toBe(false);
+    expect(isWithinAwareness(biter, at, 1, { col: 12, row: 13 })).toBe(false);
+  });
+
+  it('counts the size of the hero: a hero of size 2 is taken in from half a tile farther than one of size 1', () => {
+    const biter: MonsterTypeDefinition = { ...BITER, size: 1 };
+    const at: Tile = { col: 10, row: 10 };
+
+    expect(isWithinAwareness(biter, at, 2, { col: 13, row: 10 })).toBe(true);
+    expect(isWithinAwareness(biter, at, 2, { col: 14, row: 10 })).toBe(false);
+    expect(isWithinAwareness(biter, at, 1, { col: 13, row: 10 })).toBe(false);
   });
 });
 

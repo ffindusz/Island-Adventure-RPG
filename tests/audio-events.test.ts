@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { gameContent } from '../src/content';
 import { PAGE_IDS, STAT_IDS } from '../src/core';
 import type {
   AreaDefinition,
@@ -29,7 +28,6 @@ import {
 import type { ArenaOptions } from './fixtures';
 import { askingGame } from './harbor-fixtures';
 import { GUARDIAN, guardianAt, guardianContent, guardianInOrder } from './guardian-fixtures';
-import { withoutOrdinaryMonsters } from './routes';
 
 // Four things the player does or meets that the core did not tell by an event, though the adapter has a use for each:
 // a page opened, a page closed, a Stat Point spent, and the Guardian's fight begun. The core tells only that they
@@ -294,34 +292,5 @@ describe('the Guardian engaged', () => {
 
     expect(monsterAction(game, 'biter').type).not.toBe('idle');
     expect(engagements(events)).toEqual([]);
-  });
-});
-
-describe('the Guardian of the castle', () => {
-  const QUIET = { ...gameContent, areas: withoutOrdinaryMonsters(gameContent) };
-
-  // The Guardian's arena is the columns 68 to 83 of the castle, and the gateway before it, with the Checkpoint in it, the
-  // columns 63 to 67. The Guardian stands at (76, 11), so that all it notices lies within the arena: the fight must not
-  // begin while the hero is still in the gateway, where it comes back to after a defeat.
-  const ARENA_WEST = 68;
-
-  it('is engaged when the hero has walked into its arena, and not while it is in the gateway', () => {
-    const snapshot = structuredClone(newGame(QUIET).snapshot());
-    snapshot.state.areaId = 'castle';
-    snapshot.state.hero.position = { x: 65.5, y: 11.5 };
-    const game = gameAtTitle(QUIET);
-    game.send({ type: 'continue', snapshot });
-    game.send({ type: 'move', direction: 'right' });
-
-    const steps = Array.from({ length: 40 }, () => ({
-      events: game.step(),
-      heroX: playingView(game).hero.position.x,
-    }));
-
-    const engagedSteps = steps.filter(({ events }) => engagements(events).length > 0);
-    expect(engagedSteps.map(({ events }) => engagements(events))).toEqual([
-      [{ type: 'guardian-engaged', monsterId: 'arena-guardian' }],
-    ]);
-    expect(engagedSteps[0]!.heroX).toBeGreaterThanOrEqual(ARENA_WEST);
   });
 });

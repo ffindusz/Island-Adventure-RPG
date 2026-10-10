@@ -19,7 +19,7 @@ import type {
   TileRect,
 } from '../src/core';
 import { fixedRandom, gameAtTitle, interactableViews, monsterNamed, newGame, playingView, walk } from './fixtures';
-import { isInZone, keyOf, neighboursOf, openTilesOf, routeBetween, walkRoute, withoutOrdinaryMonsters } from './routes';
+import { isInZone, isWithinAwareness, keyOf, neighboursOf, openTilesOf, routeBetween, walkRoute, withoutOrdinaryMonsters } from './routes';
 
 // The Guardian of the island, the one monster that the game ships with besides the creatures of the five Adventure Areas,
 // and what lies around it at the east end of the castle: the gateway that leads to it, the Checkpoint in the gateway,
@@ -196,22 +196,7 @@ describe('the Guardian of the castle', () => {
 
   it('takes notice of nobody outside the arena: no open ground of the castle but the arena lies where it can notice a hero, or reach one', () => {
     const type = guardianTypeOf(guardian);
-    const awareness = Math.max(
-      type.noticingDistance,
-      ...type.patterns.map((pattern) => {
-        switch (pattern.kind) {
-          case 'sweep':
-            return pattern.reach;
-          case 'charge':
-            return pattern.dashRange;
-          case 'smite':
-            return pattern.range;
-        }
-      }),
-    );
-    const inAwareness = ({ col, row }: Tile): boolean =>
-      Math.abs(col - guardianTile.col) < (type.size + hero.size) / 2 + awareness &&
-      Math.abs(row - guardianTile.row) < (type.size + hero.size) / 2 + awareness;
+    const inAwareness = (tile: Tile): boolean => isWithinAwareness(type, guardianTile, hero.size, tile);
 
     const outside = castle.layout.flatMap((symbols, row) =>
       [...symbols].flatMap((_, col) => {
@@ -296,7 +281,7 @@ describe('the way to the Guardian', () => {
     expect(castle.monsters.filter(({ id, tile }) => id !== GUARDIAN_ID && beyond.includes(keyOf(tile))).map(({ id }) => id)).toEqual([]);
   });
 
-  it('lets the hero walk it with nothing opened: the Checkpoint is touched on the way, and the Guardian takes notice of the hero only once it is in the arena', () => {
+  it('lets the hero walk it with nothing opened: the Checkpoint is touched on the way, and the Guardian takes notice of the hero only once it is in the arena, which the core tells once', () => {
     const game = quietGameAt(CASTLE, wayInTile);
     const route = routeBetween(isOpen, wayInTile, (tile) => keyOf(tile) === keyOf(guardianTile));
 
@@ -305,6 +290,9 @@ describe('the way to the Guardian', () => {
     expect(events).toContainEqual({ type: 'checkpoint-activated', checkpointId: CHECKPOINT_ID });
     expect(isInZone(ARENA, tileOf(playingView(game).hero.position))).toBe(true);
     expect(monsterNamed(game, GUARDIAN_ID).action.type).not.toBe('idle');
+    expect(events.filter(({ type }) => type === 'guardian-engaged')).toEqual([
+      { type: 'guardian-engaged', monsterId: GUARDIAN_ID },
+    ]);
     expect(events.filter(({ type }) => type === 'hero-hit')).toEqual([]);
   });
 });

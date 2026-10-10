@@ -2,20 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { scrollFor } from '../src/adapter/camera';
 import { TILE_SIZE, VIEW_HEIGHT } from '../src/adapter/config';
 import { healthBarBox } from '../src/adapter/monster-sprites';
-import { areaOf } from './main-route';
 
 // Where a monster's Health bar goes, as a pure rule of the adapter's (the Phaser drawing of it is looked at in the real
 // game). Seam drift, like the other adapter-pure tests: it imports from src/adapter, not the Game core.
 
-const castle = areaOf('castle');
-const CASTLE_SIZE = { width: castle.layout[0]?.length ?? 0, height: castle.layout.length };
+/** A map taller than the screen, so that the camera follows the hero up and down in every row the tests use. */
+const MAP_SIZE = { width: 40, height: 30 };
 const BAR_HEIGHT = 4;
 /** The castle Guardian's picture, 96 by 96, and its body, 1.6 tiles across: 26 pixels. */
 const GUARDIAN_PICTURE = { width: 96, height: 96 };
 const GUARDIAN_BODY = 26;
 
-/** The top of the screen, in the castle's pixels, with the hero at this row of the arena's middle column. */
-const screenTopWith = (heroRow: number): number => scrollFor({ x: 76, y: heroRow }, CASTLE_SIZE).y;
+/** The top of the screen, in the map's pixels, with the hero at this row. */
+const screenTopWith = (heroRow: number): number => scrollFor({ x: 20, y: heroRow }, MAP_SIZE).y;
 
 /** The top of the Guardian's picture with it at this row: its middle is rounded to a pixel, then half the picture is taken off. */
 const pictureTopAt = (row: number): number => Math.round(row * TILE_SIZE) - GUARDIAN_PICTURE.height / 2;

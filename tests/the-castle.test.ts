@@ -13,7 +13,7 @@ import type {
   Tile,
   TileRect,
 } from '../src/core';
-import { face, fixedRandom, newGame, playingView } from './fixtures';
+import { FIELD_LAYOUT, arena, face, fixedRandom, newGame, playingView } from './fixtures';
 import {
   directionBetween,
   distanceBetween,
@@ -171,6 +171,37 @@ function hitOf(type: MonsterTypeDefinition): number {
     return type.damage;
   }
   return 'projectile' in type ? type.projectile.damage : 0;
+}
+
+/** The most steps that a monster takes to land its first blow on a hero who stands still four tiles from it: over six seconds. */
+const BLOW_STEP_LIMIT = 400;
+
+/**
+ * The first blow that a monster of a type lands on a rested hero of the shipped content, who stands still four tiles
+ * from it in an empty field: the `hero-hit` of the core, with what the blow took after Defense and what it left.
+ */
+function firstBlowOf(typeId: string): Extract<GameEvent, { type: 'hero-hit' }> {
+  const game = newGame(
+    arena({
+      layout: FIELD_LAYOUT,
+      start: { area: 'arena', tile: { col: 3, row: 3 } },
+      monsters: [{ id: 'undead', type: typeId, tile: { col: 7, row: 3 } }],
+      hero: gameContent.hero,
+      progression: gameContent.progression,
+      gear: gameContent.gear,
+      healingPotion: gameContent.healingPotion,
+      minimumDamage: gameContent.minimumDamage,
+      monsterTypes: gameContent.monsterTypes,
+    }),
+  );
+  for (let step = 0; step < BLOW_STEP_LIMIT; step += 1) {
+    for (const event of game.step()) {
+      if (event.type === 'hero-hit') {
+        return event;
+      }
+    }
+  }
+  throw new Error(`The ${typeId} did not land a blow within ${BLOW_STEP_LIMIT} steps`);
 }
 
 /** Whether a tile lies in a block of open ground two tiles wide and two high: a place to step aside in either way. */
@@ -459,10 +490,8 @@ describe('the undead of the castle', () => {
     expect(tooClose).toEqual([]);
   });
 
-  it('cannot take the whole Health of a rested hero with one blow: the hit less the Defense that the hero begins with is less than its Health', () => {
-    const { health, defense } = gameContent.hero;
-
-    const killing = undead.filter(({ type }) => hitOf(type) - defense >= health).map(({ id }) => id);
+  it('cannot take the whole Health of a rested hero with one blow: the first blow of each undead, as the game works it out with the Defense that the hero begins with, leaves some', () => {
+    const killing = undead.filter(({ id }) => firstBlowOf(id).health === 0).map(({ id }) => id);
 
     expect(undead.length).toBeGreaterThan(0);
     expect(killing).toEqual([]);
