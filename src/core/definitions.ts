@@ -250,7 +250,10 @@ export interface GuardianSmiteDefinition extends GuardianPatternBase {
   readonly range: number;
 }
 
-/** One attack of a Guardian. Adding a pattern means adding a member here and a case in guardian.ts and in content.ts. */
+/**
+ * One attack of a Guardian. Adding a pattern means adding a member here and a case in guardian.ts and in
+ * monster-content.ts.
+ */
 export type GuardianPatternDefinition =
   | GuardianSweepDefinition
   | GuardianChargeDefinition

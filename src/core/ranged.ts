@@ -1,7 +1,8 @@
-import type { Content, RangedMonsterType } from './content';
+import type { Content } from './content';
 import { EPSILON } from './geometry';
 import type { Direction } from './geometry';
 import type { GameEvent } from './interface';
+import type { RangedMonsterType } from './monster-content';
 import { directionToward, noticesHero, stillRecovering, walkMonster, windUpEnds } from './monster-movement';
 import { monsterBody } from './state';
 import type { MonsterState, PlayState } from './state';

@@ -1,7 +1,8 @@
-import type { Content, ChaserMonsterType } from './content';
+import type { Content } from './content';
 import { expandBox, overlaps } from './geometry';
 import { hurtHero } from './hero-damage';
 import type { GameEvent } from './interface';
+import type { ChaserMonsterType } from './monster-content';
 import { directionToward, noticesHero, stillRecovering, walkMonster, windUpEnds } from './monster-movement';
 import { heroBody, monsterBody } from './state';
 import type { MonsterState, PlayState, WindingUp } from './state';

@@ -1,9 +1,10 @@
 import { strike } from './chaser';
 import { dash, launchDash } from './charger';
-import type { Content, GuardianMonsterType, GuardianPattern } from './content';
+import type { Content } from './content';
 import { boxAround, expandBox, overlaps } from './geometry';
 import type { GameEvent } from './interface';
 import { laneAhead } from './lanes';
+import type { GuardianMonsterType, GuardianPattern } from './monster-content';
 import { directionToward, noticesHero, stillRecovering, walkMonster, windUpEnds } from './monster-movement';
 import { heroBody, monsterBody } from './state';
 import type { MonsterState, PlayState, WindingUp } from './state';

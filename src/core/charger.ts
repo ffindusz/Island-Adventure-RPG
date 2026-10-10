@@ -1,10 +1,11 @@
 import { areaOf } from './content';
-import type { Content, ChargerMonsterType } from './content';
+import type { Content } from './content';
 import { EPSILON, overlaps } from './geometry';
 import type { Direction } from './geometry';
 import { hurtHero } from './hero-damage';
 import type { GameEvent } from './interface';
 import { laneAhead, laneLength } from './lanes';
+import type { ChargerMonsterType } from './monster-content';
 import { blockersOf, directionToward, noticesHero, stillRecovering, walkMonster, windUpEnds } from './monster-movement';
 import { heroBody } from './state';
 import type { MonsterAction, MonsterState, PlayState, WindingUp } from './state';
