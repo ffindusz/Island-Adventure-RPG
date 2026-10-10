@@ -25,6 +25,21 @@ export function centerOf(tile: Tile): Point {
   return { x: tile.col + 0.5, y: tile.row + 0.5 };
 }
 
+/** The box of a tile, in tile units like the other bodies. */
+export function tileBox({ col, row }: Tile): Box {
+  return { minX: col, minY: row, maxX: col + 1, maxY: row + 1 };
+}
+
+/** A tile as an error message names it. */
+export function describeTile(tile: Tile): string {
+  return `(col ${tile.col}, row ${tile.row})`;
+}
+
+/** A tile as the key of a Set or a Map. */
+export function tileKey(tile: Tile): string {
+  return `${tile.col},${tile.row}`;
+}
+
 /** A square body of the given width, centred on a point. */
 export function boxAround(center: Point, size: number): Box {
   const half = size / 2;

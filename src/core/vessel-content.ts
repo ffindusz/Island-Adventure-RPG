@@ -1,6 +1,7 @@
 import type { VesselDefinition } from './definitions';
 import type { Area } from './content';
 import type { Place } from './device-routes';
+import { tileBox } from './geometry';
 import type { Box, Tile } from './geometry';
 
 // Loading the vessel, the old ship that sails the hero home. content.ts calls loadVessel while it loads each
@@ -64,9 +65,4 @@ function tilesBeside(vessel: Vessel): Tile[] {
     { col, row: row + 1 },
     { col, row: row - 1 },
   ];
-}
-
-/** The box of a tile, in tile units like the other bodies. */
-function tileBox({ col, row }: Tile): Box {
-  return { minX: col, minY: row, maxX: col + 1, maxY: row + 1 };
 }

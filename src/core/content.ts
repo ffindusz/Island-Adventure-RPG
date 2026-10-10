@@ -41,6 +41,7 @@ import type {
   RangedMonsterDefinition,
   RangedWeaponDefinition,
 } from './definitions';
+import { describeTile, tileBox, tileKey } from './geometry';
 import type { Box, Tile } from './geometry';
 import { msToSteps, STEP_MS, STEPS_PER_SECOND } from './time';
 import { zoneBox } from './zones';
@@ -920,10 +921,6 @@ function loadInteractables(
   });
 }
 
-function tileKey(tile: Tile): string {
-  return `${tile.col},${tile.row}`;
-}
-
 /** One case for each kind of interactable: it checks the definition and converts it into the form the rules use. */
 function loadInteractable(
   areaId: string,
@@ -988,11 +985,6 @@ function loadPickup(areaId: string, definition: PickupDefinition): Pickup {
   };
 }
 
-/** The box of a tile, in tile units like the other bodies. */
-function tileBox({ col, row }: Tile): Box {
-  return { minX: col, minY: row, maxX: col + 1, maxY: row + 1 };
-}
-
 /** One case for each kind of chest contents. */
 function loadChestContents(
   areaId: string,
@@ -1031,10 +1023,6 @@ function refuseContents(what: string, kind: never): never {
 }
 
 const NOT_WALKABLE = 'solid terrain or outside the map';
-
-function describeTile(tile: Tile): string {
-  return `(col ${tile.col}, row ${tile.row})`;
-}
 
 /** Whether a tile blocks movement. Tiles beyond the map count as solid. */
 export function isSolid(area: Pick<Area, 'solid'>, tile: Tile): boolean {
