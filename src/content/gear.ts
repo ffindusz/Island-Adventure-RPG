@@ -8,7 +8,8 @@ import type { GearDefinition } from '../core';
  * Chain Mail, in an alcove of the mountain a few steps off the trail. In the cave it may find the Katana, which adds
  * one more Attack than the Steel Sword, in the pocket behind the gate that a lever opens. In the old castle it may find
  * the Knight Mail, which adds one more Defense than the Plate Armor, in the armory beside the long hall, a few steps
- * off the route. The upgrades are placeholders until the tuning pass.
+ * off the route. The tuning pass kept the upgrades: each is a step of at least a fifth of the stat it raises, at the
+ * Level where it lies (docs/balance.md).
  */
 export const gear: Readonly<Record<string, GearDefinition>> = {
   'basic-sword': { name: 'Basic Sword', slot: 'melee-weapon', bonus: 0 },

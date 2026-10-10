@@ -1,3 +1,4 @@
+import type { LineCorner } from './audio-line';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 
@@ -70,6 +71,15 @@ export function paintedBounds(logo: Logo): { left: number; top: number; right: n
     bottom: logo.top + logo.height + LOGO_EXTRUSION + LOGO_OUTLINE,
   };
 }
+
+/**
+ * The corner the line of the audio sits in on the title: the bottom right. The name runs across the top of the screen, so
+ * the top right, where the other screens have room for the line, is under the last letters of it. The window's rows end
+ * above the line in each of its states, at the very row it begins at in the tallest, which is the one that says that the
+ * saved game is from another version; in that one and the one before it, the line covers a corner of the window's frame
+ * and some of its empty air.
+ */
+export const TITLE_LINE_CORNER: LineCorner = 'bottom-right';
 
 /**
  * The top of a menu window of this height: in the middle of the room between the name and the foot of the screen, never

@@ -1,8 +1,9 @@
 import type { ProgressionDefinition } from '../core';
 
 /**
- * How the hero grows. Placeholder numbers, to be tuned so that the intended route gives about five level-ups: the
- * total Experience for Levels 2 to 6, which is the highest Level, and what a Stat Point adds to each stat.
+ * How the hero grows. The numbers were tuned so that the intended route gives five level-ups
+ * (tests/route-experience.test.ts, docs/balance.md): the total Experience for Levels 2 to 6, which is the highest
+ * Level, and what a Stat Point adds to each stat.
  */
 export const progression: ProgressionDefinition = {
   levelThresholds: [10, 25, 45, 70, 100],

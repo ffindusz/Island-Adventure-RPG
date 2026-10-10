@@ -2,9 +2,9 @@ import type { MonsterTypeDefinition } from '../core';
 
 /** Every kind of monster, by type id. Speeds are in tiles per second, distances in tiles, times in milliseconds. */
 export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
-  // A placeholder chaser: slow enough to outrun, it takes three hits from the hero's basic sword. It notices the hero
+  // The basic chaser: slow enough to outrun, it takes three hits from the hero's basic sword. It notices the hero
   // from four tiles away, winds up for half a second, hits for 4 (3 after the hero's Defense) and rests before the next.
-  // It is worth 5 Experience, a placeholder like the rest of the numbers until the tuning pass. Now and then it leaves
+  // It is worth 5 Experience. Now and then it leaves
   // a Healing Potion behind when it is defeated. It leaves no arrows: the crabs of the shipwreck coast meet a hero who
   // has no bow yet, and a spitter, which shoots them, carries them instead.
   crab: {
@@ -20,10 +20,10 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
     windUpMs: 500,
     recoveryMs: 900,
   },
-  // A placeholder forest beast, the basic one: a chaser quicker than a crab, though still far slower than the hero, and
+  // The basic forest beast: a chaser quicker than a crab, though still far slower than the hero, and
   // frailer: two hits from the hero's basic sword. It notices the hero from five tiles away, winds up for under half a
-  // second, hits for 4 (3 after the hero's Defense) and rests before the next. It is worth 3 Experience, a placeholder
-  // like the rest of the numbers until the tuning pass, and leaves nothing behind.
+  // second, hits for 4 (3 after the hero's Defense) and rests before the next. It is worth 3 Experience, and leaves
+  // nothing behind.
   wolf: {
     behavior: 'chaser',
     health: 2,
@@ -36,7 +36,7 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
     windUpMs: 450,
     recoveryMs: 800,
   },
-  // A placeholder slime: a chaser that is slower and sturdier than a crab, and hits more lightly. It notices the hero
+  // The slime: a chaser that is slower and sturdier than a crab, and hits more lightly. It notices the hero
   // only from three tiles away, takes six hits from the hero's basic sword, and hits for 3 (2 after the hero's Defense)
   // after a wind-up of 0.6 s. It is worth 2 Experience: a long fight for little, there to be avoided or shot from afar.
   slime: {
@@ -51,7 +51,7 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
     windUpMs: 600,
     recoveryMs: 1000,
   },
-  // A placeholder charger: it notices the hero from four tiles away and walks, slower than the hero, to where its lane
+  // The basic charger: it notices the hero from four tiles away and walks, slower than the hero, to where its lane
   // takes in the hero. It then winds up for 0.7 s while the lane lights up, dashes down the lane at more than twice the
   // hero's walking speed, for six tiles at most, and rests for a second before it looks for the hero again. It hits for
   // 6 (5 after the hero's Defense) only a hero who is still in the lane: stepping out during the wind-up avoids it, and
@@ -69,7 +69,7 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
     dashRange: 6,
     recoveryMs: 1000,
   },
-  // A placeholder ranged attacker: it notices the hero from five tiles away and walks to three tiles from it, backing
+  // The basic ranged attacker: it notices the hero from five tiles away and walks to three tiles from it, backing
   // away when the hero comes nearer, until a wall is at its back. It winds up for 0.8 s with a flash on its body, then
   // fires along the row or column that the hero stood in, a projectile slower than the hero's walk that hits for 4 (3
   // after Defense) and falls six tiles on. It rests for 1.5 s. It is frail: two hits from the sword, one arrow of the
@@ -106,14 +106,15 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   },
   // The raider that charges, like the boar: it notices the hero from four tiles away, walks to where its lane takes in
   // the hero, winds up for 0.7 s while the lane lights up, dashes six tiles at most at twelve tiles a second and rests
-  // for a second. It hits for 7 (6 after the hero's Defense) only a hero who is still in the lane. It takes five hits
-  // from the hero's basic sword and three from the Steel Sword, and is worth 4 Experience.
+  // for a second. It hits for 6 (5 after the hero's Defense) only a hero who is still in the lane: the tuning pass took
+  // one off, so that a hero who never leaves the lane loses under half of its Health (docs/balance.md). It takes five
+  // hits from the hero's basic sword and three from the Steel Sword, and is worth 4 Experience.
   'raider-charger': {
     behavior: 'charger',
     health: 5,
     size: 0.85,
     experience: 4,
-    damage: 7,
+    damage: 6,
     speedTilesPerSecond: 2.2,
     noticingDistance: 4,
     windUpMs: 700,
@@ -177,14 +178,15 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // The lizard of the cave charges, like the boar and the raider that charges: it notices the hero from five tiles away
   // and walks, slower than the hero, to where its lane takes in the hero. It then winds up for 0.65 s while the lane
   // lights up, dashes down the lane at thirteen tiles a second, for seven tiles at most, and rests for 1.1 s before it
-  // looks for the hero again. It hits for 7 (6 after the hero's Defense) only a hero who is still in the lane. It takes
-  // six hits from the hero's basic sword and three from the Steel Sword, and is worth 4 Experience.
+  // looks for the hero again. It hits for 6 (5 after the hero's Defense) only a hero who is still in the lane: the
+  // tuning pass took one off, so that a hero who never leaves the lane loses under half of its Health (docs/balance.md).
+  // It takes six hits from the hero's basic sword and three from the Steel Sword, and is worth 4 Experience.
   'cave-lizard': {
     behavior: 'charger',
     health: 6,
     size: 0.8,
     experience: 4,
-    damage: 7,
+    damage: 6,
     speedTilesPerSecond: 2.4,
     noticingDistance: 5,
     windUpMs: 650,
@@ -248,14 +250,15 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // The ghoul charges, like the boar and the lizard of the cave: it notices the hero from five tiles away and walks,
   // slower than the hero, to where its lane takes in the hero. It then winds up for 0.7 s while the lane lights up,
   // dashes down the lane at fourteen tiles a second, for eight tiles at most, and rests for 1.3 s before it looks for the
-  // hero again. It hits for 9 (8 after the hero's Defense) only a hero who is still in the lane. It takes eight hits from
-  // the hero's basic sword and four from the Steel Sword, and is worth 5 Experience.
+  // hero again. It hits for 7 (6 after the hero's Defense) only a hero who is still in the lane: the tuning pass took two
+  // off, so that a hero who never leaves the lane loses under half of its Health (docs/balance.md). It takes eight hits
+  // from the hero's basic sword and four from the Steel Sword, and is worth 5 Experience.
   'castle-ghoul': {
     behavior: 'charger',
     health: 8,
     size: 0.85,
     experience: 5,
-    damage: 9,
+    damage: 7,
     speedTilesPerSecond: 2.1,
     noticingDistance: 5,
     windUpMs: 700,
@@ -303,14 +306,15 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // The Guardian of the castle, the last fight of the game and the only monster of its kind. It is the biggest creature
   // there is, 1.6 tiles wide where the knight is 0.9, and its width is the width of its charge. It has 100 Health, five
   // times the knight's: twenty-five hits from a hero of Level 6 who put two Stat Points in Attack and carries the Steel
-  // Sword (twenty with the Katana, thirty-four from a hero of Level 4), and more than the quiver of the route can take
-  // off it. It leaves nothing behind. It is worth 30 Experience, which takes a hero of Level 5 to Level 6; a hero who is
-  // at the top Level already gets none, so it is no prize to wait for. It notices the hero from seven tiles away, as far
-  // as the hero's arrows fly, so that nobody shoots it from where it does not see, and walks at 2.2 tiles a second, less
-  // than half the hero's pace. It attacks with three patterns in turn: after each it takes the first of them that
-  // reaches the hero, starting from the one after the last it made, and when none does it walks toward the hero. Each is
-  // telegraphed for as long as it winds up, shows where it will land, and leaves the hero free to hit the Guardian
-  // while it rests; a hero's blow does not stop a wind-up.
+  // Sword (twenty with the Katana, thirty-four from a hero of Level 4), or as many arrows of the short bow, which the
+  // arrows that lie near the route cover twice over (docs/balance.md). It leaves nothing behind. It is worth 30
+  // Experience, which takes a hero of Level 5 to Level 6; a hero who is at the top Level already gets none, so it is no
+  // prize to wait for. It notices the hero from seven tiles away, as far as the hero's arrows fly, so that nobody shoots
+  // it from where it does not see, and walks at 2.2 tiles a second, less than half the hero's pace. It attacks with
+  // three patterns in turn: after each it takes the first of them that reaches the hero, starting from the one after
+  // the last it made, and when none does it walks toward the hero. Each is telegraphed for as long as it winds up,
+  // shows where it will land, and leaves the hero free to hit the Guardian while it rests; a hero's blow does not stop
+  // a wind-up.
   //   The sweep lights up the ground within 1.4 tiles of its body, all around, when the hero is on it. It winds up for
   //   0.9 s, hits for 8 and rests for 1.1 s.
   //   The charge lights up the lane, as wide as the Guardian, that runs from it toward the hero, when the hero is in
@@ -322,7 +326,8 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   //   the square when the wind-up ends and rests for 1.4 s. That is the pattern that presses a hero who keeps away.
   // A hero of Level 6 with 14 Health, Defense 2 and the Steel Sword takes 6, 9 and 5 from them: it survives two sweeps,
   // one charge or two smites, and with the Knight Mail and the Katana, 3, 6 and 2. Stepping out of any of them takes
-  // under half of its wind-up. All of the numbers are guesses for the tuning pass.
+  // under half of its wind-up. The tuning pass kept the numbers (docs/balance.md): a hero that answers each telegraph
+  // within 600 ms is not hit at all, and one that misses one in three still wins with the potions the route spares.
   'castle-guardian': {
     behavior: 'guardian',
     health: 100,

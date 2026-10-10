@@ -11,7 +11,14 @@ import { audioKeyLabel, PlayerInput } from './player-input';
 import type { SavedGame, SaveStore } from './save-store';
 import { SCENE_KEYS, startOfNewGame } from './scene-keys';
 import type { PlayStart } from './scene-keys';
-import { GAME_TITLE, LOGO_EXTRUSION_OFFSETS, LOGO_OUTLINE_OFFSETS, logoLayout, windowTop } from './title-layout';
+import {
+  GAME_TITLE,
+  LOGO_EXTRUSION_OFFSETS,
+  LOGO_OUTLINE_OFFSETS,
+  TITLE_LINE_CORNER,
+  logoLayout,
+  windowTop,
+} from './title-layout';
 import { MENU_ENTRIES, openMenu, pressMenu, selectableEntries } from './title-menu';
 import type { MenuEntry, TitleMenu } from './title-menu';
 import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
@@ -72,7 +79,7 @@ export class TitleScene extends Phaser.Scene {
     this.audio.requireLoaded();
     this.add.image(0, 0, 'backdrop-title').setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.backdrop);
     this.layer = new UiLayer(this, DEPTH.title);
-    this.audioLine = new AudioLine(this);
+    this.audioLine = new AudioLine(this, TITLE_LINE_CORNER);
     const keyboard = this.input.keyboard;
     if (keyboard === null) {
       throw new Error('The keyboard plugin is not available, so nothing could choose from the title.');
