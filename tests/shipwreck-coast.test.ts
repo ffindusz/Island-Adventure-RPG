@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BANNER_TEXT_WIDTH, wrapText } from '../src/adapter/area-banner';
 import { gameContent } from '../src/content';
 import { createGame } from '../src/core';
 import type { AreaDefinition, Tile } from '../src/core';
@@ -207,6 +208,10 @@ describe('the text of the shipwreck coast', () => {
   it('is a short line, not a page', () => {
     expect(coast.text).toBeTypeOf('string');
     expect(coast.text?.length).toBeLessThanOrEqual(60);
+  });
+
+  it('fits one line of the banner that shows it, so that no word is left alone on a second line', () => {
+    expect(wrapText(coast.text ?? '', BANNER_TEXT_WIDTH)).toHaveLength(1);
   });
 });
 

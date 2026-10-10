@@ -22,6 +22,9 @@ const TOP = HUD_BOTTOM + BELOW_HUD;
 
 const PANEL_ALPHA = 0.9;
 
+/** The widest a line of the text may be, in canvas pixels: the screen less the margin and the padding at both sides. */
+export const BANNER_TEXT_WIDTH = VIEW_WIDTH - 2 * (SIDE_MARGIN + PADDING);
+
 /** Shows the text of the Adventure Area the hero has just come into. */
 export class AreaBanner {
   private readonly layer: UiLayer;
@@ -39,7 +42,7 @@ export class AreaBanner {
     this.shown = text;
     this.layer.clear();
     if (text !== null) {
-      drawPanel(this.layer, wrapText(text, VIEW_WIDTH - 2 * (SIDE_MARGIN + PADDING)));
+      drawPanel(this.layer, wrapText(text, BANNER_TEXT_WIDTH));
     }
   }
 }

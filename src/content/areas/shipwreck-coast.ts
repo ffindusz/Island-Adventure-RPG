@@ -14,7 +14,7 @@ import type { AreaDefinition } from '../../core';
 export const shipwreckCoast: AreaDefinition = {
   id: 'shipwreck-coast',
   name: 'Shipwreck Coast',
-  text: 'Wreckage litters the shore. Follow the beach east.',
+  text: 'Wreckage lines the shore. Follow the beach east.',
   entrances: [{ id: 'from-woods', tile: { col: 38, row: 8 } }],
   checkpoints: [{ id: 'coast-checkpoint', tile: { col: 5, row: 9 } }],
   exits: [

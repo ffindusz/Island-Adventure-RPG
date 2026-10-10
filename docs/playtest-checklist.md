@@ -18,7 +18,7 @@ are in `docs/balance.md`, the keys in the README.
 - [ ] The title: the name of the game, New Game chosen, Continue greyed out (in a browser with no save), four hint rows.
 - [ ] New Game shows the card of the opening (four lines, the last one the goal, a way home to find; ENTER TO BEGIN),
       then you wake on the coast with the banner
-      "Wreckage litters the shore. Follow the beach east." Is it clear what to do in the first minute?
+      "Wreckage lines the shore. Follow the beach east." Is it clear what to do in the first minute?
 
 ## The five areas, in the order of the route
 
