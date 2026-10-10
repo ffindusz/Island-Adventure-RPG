@@ -64,11 +64,13 @@ export function isActive(state: PlayState, areaId: string, checkpoint: Checkpoin
  * taken back (see consumable-rollback.ts); everything else the hero has earned stays, what it has revealed on the
  * Automap included, and the terrain around the Checkpoint is revealed once the hero is on it. The monsters of the
  * Checkpoint's area are renewed, and a Guardian that has not fallen is put back wherever it is, one that has fallen stays
- * fallen (see guardian-reset.ts). Called with the hero's Health at 0. Returns what happened: the change of area, if any.
+ * fallen (see guardian-reset.ts). The arrows in the air are gone: they belong to the life that ended. Called with the
+ * hero's Health at 0. Returns what happened: the change of area, if any.
  */
 export function recoverHero(state: PlayState, content: Content): GameEvent[] {
   const { areaId, tile } = state.checkpoint;
   const events: GameEvent[] = [];
+  state.arrows = [];
   if (areaId !== state.areaId) {
     calmMonsters(state);
     state.areaId = areaId;

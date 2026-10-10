@@ -65,7 +65,7 @@ export function flyArrows(state: PlayState, content: Content, random: RandomSour
         : flyProjectile(state, content, arrow, arrow.shotBy, area, obstacles);
     events.push(...flight.events);
     if (flight.events.some((event) => event.type === 'hero-defeated')) {
-      state.arrows = [];
+      // The defeat took the arrows in the air (see recoverHero): there is nothing left to put back.
       return events;
     }
     if (flight.flying) {
