@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { monsterColour, terrainColour } from '../src/adapter/art';
+import { VIEW_TILES_HIGH, VIEW_TILES_WIDE } from '../src/adapter/config';
 import { gameContent } from '../src/content';
 import { GEAR_SLOTS, STEPS_PER_SECOND, createGame } from '../src/core';
 import type {
@@ -41,9 +42,6 @@ const WOODS = 'woods';
 const MOUNTAIN = 'mountain';
 const CAVE = 'cave';
 const CASTLE = 'castle';
-
-/** The canvas shows this many tiles (VIEW_TILES_WIDE and VIEW_TILES_HIGH in the adapter). */
-const SCREEN_TILES = { wide: 20, high: 12 };
 
 /** The notice is drawn over the bottom of the view, so a hero who has to stand in these rows of an area is hidden. */
 const BOTTOM_ROWS = 3;
@@ -249,8 +247,8 @@ describe('the way through the cave', () => {
   it('is larger than the screen in both directions, so that the view must follow the hero', () => {
     const { area } = playingView(quietGameAt(CAVE, wayInTile));
 
-    expect(area.width).toBeGreaterThan(SCREEN_TILES.wide);
-    expect(area.height).toBeGreaterThan(SCREEN_TILES.high);
+    expect(area.width).toBeGreaterThan(VIEW_TILES_WIDE);
+    expect(area.height).toBeGreaterThan(VIEW_TILES_HIGH);
   });
 
   it('leads along a path of sand from the way in to the exit forward, over open ground, with every door and gate shut and no key held', () => {

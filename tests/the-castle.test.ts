@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { monsterColour, terrainColour } from '../src/adapter/art';
+import { VIEW_TILES_HIGH, VIEW_TILES_WIDE } from '../src/adapter/config';
 import { gameContent } from '../src/content';
 import { GEAR_SLOTS, createGame } from '../src/core';
 import type {
@@ -45,9 +46,6 @@ const CASTLE = 'castle';
 
 /** The Adventure Areas in the order of the route of the adventure. */
 const ROUTE_OF_AREAS = [COAST, WOODS, MOUNTAIN, CAVE, CASTLE];
-
-/** The canvas shows this many tiles (VIEW_TILES_WIDE and VIEW_TILES_HIGH in the adapter). */
-const SCREEN_TILES = { wide: 20, high: 12 };
 
 /** The notice is drawn over the bottom of the view, so a hero who has to stand in these rows of an area is hidden. */
 const BOTTOM_ROWS = 3;
@@ -291,8 +289,8 @@ describe('the way through the castle', () => {
   it('is larger than the screen in both directions, so that the view must follow the hero', () => {
     const { area } = playingView(quietGameAt(CASTLE, wayInTile));
 
-    expect(area.width).toBeGreaterThan(SCREEN_TILES.wide);
-    expect(area.height).toBeGreaterThan(SCREEN_TILES.high);
+    expect(area.width).toBeGreaterThan(VIEW_TILES_WIDE);
+    expect(area.height).toBeGreaterThan(VIEW_TILES_HIGH);
   });
 
   it('has two Checkpoints: the one where the hero comes in from the cave, and the Guardian\'s', () => {
@@ -326,8 +324,8 @@ describe('the way through the castle', () => {
   it('is a long walk: four screens wide at least, and five at most', () => {
     const steps = (route?.length ?? 0) - 1;
 
-    expect(steps).toBeGreaterThanOrEqual(SCREENS_OF_ROUTE.least * SCREEN_TILES.wide);
-    expect(steps).toBeLessThanOrEqual(SCREENS_OF_ROUTE.most * SCREEN_TILES.wide);
+    expect(steps).toBeGreaterThanOrEqual(SCREENS_OF_ROUTE.least * VIEW_TILES_WIDE);
+    expect(steps).toBeLessThanOrEqual(SCREENS_OF_ROUTE.most * VIEW_TILES_WIDE);
   });
 
   it('goes through courtyards and halls in turn: two stretches of grass and two of sand, each six tiles long at least', () => {

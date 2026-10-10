@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { VIEW_TILES_HIGH, VIEW_TILES_WIDE } from '../src/adapter/config';
 import { gameContent } from '../src/content';
 import { STEPS_PER_SECOND, createGame } from '../src/core';
 import type { AreaDefinition, Direction, EntranceDefinition, Game, GameEvent, TileRect } from '../src/core';
@@ -13,9 +14,6 @@ const WOODS = 'woods';
 const MOUNTAIN = 'mountain';
 const CAVE = 'cave';
 const CASTLE = 'castle';
-
-/** The canvas shows this many tiles (VIEW_TILES_WIDE and VIEW_TILES_HIGH in the adapter). */
-const SCREEN_TILES = { wide: 20, high: 12 };
 
 function areaNamed(id: string): AreaDefinition {
   const area = gameContent.areas.find((candidate) => candidate.id === id);
@@ -116,8 +114,8 @@ describe('the Adventure Areas the game ships with', () => {
   it('has a second area larger than the screen in both directions, so that the view must follow the hero', () => {
     const { area } = playingView(gameComingInBy(WOODS, 'from-coast'));
 
-    expect(area.width).toBeGreaterThan(SCREEN_TILES.wide);
-    expect(area.height).toBeGreaterThan(SCREEN_TILES.high);
+    expect(area.width).toBeGreaterThan(VIEW_TILES_WIDE);
+    expect(area.height).toBeGreaterThan(VIEW_TILES_HIGH);
   });
 
   it('leads east from the coast into the second area, where the hero arrives at the entrance the exit names', () => {

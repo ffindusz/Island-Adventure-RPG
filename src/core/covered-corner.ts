@@ -1,12 +1,12 @@
 import type { Area } from './content';
 
-/** The screen's size in tiles. An Adventure Area larger than this scrolls with a camera that follows the hero. */
-export const SCREEN_TILES = { wide: 20, high: 12 } as const;
-
 /**
- * The tiles at the top left of the screen that the in-play HUD covers. The camera stops at a map's corner, and a map
- * that fits the screen shows all of it, so these are the map's own top-left tiles whatever its size, and a hero
- * standing on one would be hidden. Content that asks for it (`checkCoveredCorner`) keeps them solid in every area.
+ * The tiles at the top left of a map that the in-play HUD covers: the one thing the core knows about the screen, kept
+ * so that loading can refuse content that would hide the hero (the adapter refuses a HUD bigger than this). The
+ * screen's own size is the adapter's (VIEW_TILES_WIDE and VIEW_TILES_HIGH in config.ts). The camera stops at a map's
+ * corner, and a map that fits the screen shows all of it, so these are the map's own top-left tiles whatever its size,
+ * and a hero standing on one would be hidden. Content that asks for it (`checkCoveredCorner`) keeps them solid in every
+ * area.
  */
 export const COVERED_CORNER = { cols: 6, rows: 3 } as const;
 
