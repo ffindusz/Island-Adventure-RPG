@@ -4,9 +4,9 @@ import type { Content, GuardianMonsterType, GuardianPattern } from './content';
 import { boxAround, expandBox, overlaps } from './geometry';
 import type { GameEvent } from './interface';
 import { laneAhead } from './lanes';
-import { directionToward, walkMonster } from './monster-movement';
+import { directionToward, noticesHero, stillRecovering, walkMonster, windUpEnds } from './monster-movement';
 import { heroBody, monsterBody } from './state';
-import type { MonsterAction, MonsterState, PlayState } from './state';
+import type { MonsterState, PlayState, WindingUp } from './state';
 
 // The Guardian: notices the hero, and attacks with its patterns in turn. Each pattern is one telegraphed attack that
 // the chaser, the charger or nobody else makes: a sweep around its body, a charge along a lane, a smite on the spot
@@ -14,8 +14,6 @@ import type { MonsterAction, MonsterState, PlayState } from './state';
 // starting from the one after the last it made, and when none reaches it walks toward the hero. A hero's hit never
 // interrupts a wind-up. The noticing distance, the sweep's reach and the smite's range are measured from the
 // Guardian's body, as a square around it.
-
-type WindingUp = Extract<MonsterAction, { type: 'winding-up' }>;
 
 /** One fixed step of a Guardian. */
 export function stepGuardian(
@@ -26,8 +24,7 @@ export function stepGuardian(
 ): GameEvent[] {
   const action = monster.action;
   if (action.type === 'winding-up') {
-    action.elapsed += 1;
-    if (action.elapsed < action.length) {
+    if (!windUpEnds(action)) {
       return [];
     }
     const pattern = patternInProgress(monster, type);
@@ -40,11 +37,8 @@ export function stepGuardian(
     }
     return dash(monster, action, { ...pattern, size: type.size }, state, content);
   }
-  if (action.type === 'recovering') {
-    action.stepsLeft -= 1;
-    if (action.stepsLeft > 0) {
-      return [];
-    }
+  if (action.type === 'recovering' && stillRecovering(action)) {
+    return [];
   }
   decide(monster, type, state, content);
   return [];
@@ -52,8 +46,7 @@ export function stepGuardian(
 
 /** The Guardian is free: it winds up the first pattern that reaches the hero, walks toward the hero, or stays where it is. */
 function decide(monster: MonsterState, type: GuardianMonsterType, state: PlayState, content: Content): void {
-  const body = monsterBody(monster, content);
-  if (!overlaps(heroBody(state, content), expandBox(body, type.noticingDistance))) {
+  if (!noticesHero(monster, type, state, content)) {
     monster.action = { type: 'idle' };
     return;
   }

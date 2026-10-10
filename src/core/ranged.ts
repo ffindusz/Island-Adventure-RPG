@@ -1,9 +1,9 @@
 import type { Content, RangedMonsterType } from './content';
-import { EPSILON, expandBox, overlaps } from './geometry';
+import { EPSILON } from './geometry';
 import type { Direction } from './geometry';
 import type { GameEvent } from './interface';
-import { directionToward, walkMonster } from './monster-movement';
-import { heroBody, monsterBody } from './state';
+import { directionToward, noticesHero, stillRecovering, walkMonster, windUpEnds } from './monster-movement';
+import { monsterBody } from './state';
 import type { MonsterState, PlayState } from './state';
 
 // The ranged attacker: notices the hero, winds up with a flash on its own body, and fires a projectile at where the hero
@@ -22,24 +22,19 @@ export function stepRanged(
 ): GameEvent[] {
   const action = monster.action;
   if (action.type === 'winding-up') {
-    action.elapsed += 1;
-    return action.elapsed >= action.length ? fire(monster, type, state) : [];
+    return windUpEnds(action) ? fire(monster, type, state) : [];
   }
-  if (action.type === 'recovering') {
-    action.stepsLeft -= 1;
-    if (action.stepsLeft > 0) {
-      return [];
-    }
+  if (action.type === 'recovering' && stillRecovering(action)) {
+    return [];
   }
-  const body = monsterBody(monster, content);
-  if (!overlaps(heroBody(state, content), expandBox(body, type.noticingDistance))) {
+  if (!noticesHero(monster, type, state, content)) {
     monster.action = { type: 'idle' };
     return [];
   }
   if (type.keepsDistance !== null && keepDistance(monster, type, type.keepsDistance, state, content)) {
     return [];
   }
-  monster.action = { type: 'winding-up', zone: body, elapsed: 0, length: type.windUpSteps };
+  monster.action = { type: 'winding-up', zone: monsterBody(monster, content), elapsed: 0, length: type.windUpSteps };
   return [];
 }
 

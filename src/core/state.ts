@@ -49,6 +49,10 @@ export type MonsterAction =
   /** Resting after an attack, for this many more steps. */
   | { readonly type: 'recovering'; stepsLeft: number };
 
+/** The two kinds of action that a behavior counts down step by step, named for the helpers that count them. */
+export type WindingUp = Extract<MonsterAction, { type: 'winding-up' }>;
+export type Recovering = Extract<MonsterAction, { type: 'recovering' }>;
+
 /**
  * What changes about a chest: whether it has been opened. An opened chest stays opened, defeat included, unless it holds
  * a consumable and the hero opened it after the Checkpoint defeat sends it back to (see consumable-rollback.ts).
