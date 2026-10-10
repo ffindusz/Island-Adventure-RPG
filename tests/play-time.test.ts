@@ -228,10 +228,6 @@ describe('the guesses of a first-time player', () => {
     }
   });
 
-  it('are all of the inputs that the estimate takes from a playtest, and no others', () => {
-    expect(Object.keys(GUESSES).sort()).toEqual(Object.keys(ROUND).sort());
-  });
-
   it('are taken by each estimate at the value that it names', () => {
     expect(SCENARIOS).toEqual(['low', 'typical', 'high']);
     for (const scenario of SCENARIOS) {

@@ -101,8 +101,8 @@ describe('the Experience of a stretch of the adventure, for the tests that tune 
   if (fieldArea === undefined) {
     throw new Error('The arena has no area');
   }
-  const [close, far, beside] = fieldArea.monsters;
-  if (close === undefined || far === undefined || beside === undefined) {
+  const [close, , beside] = fieldArea.monsters;
+  if (close === undefined || beside === undefined) {
     throw new Error('The field has no monsters');
   }
   const bottomRow: Tile[] = [1, 2, 3, 4, 5].map((col) => ({ col, row: 5 }));
@@ -133,14 +133,10 @@ describe('the Experience of a stretch of the adventure, for the tests that tune 
     expect(milestonesOf({ ...fieldArea, milestones: undefined })).toBe(0);
   });
 
-  it('meets the monsters that have a tile of the route in the square their noticing distance makes round them: the edge of it too, a diagonal too', () => {
-    // The route ends on (5, 5): the biter at (7, 3) is 2 tiles off on the diagonal, the one at (8, 3) is 3 columns away.
+  it('meets the monsters that have a tile of the route in the square their noticing distance makes round them: the edge of it too, a diagonal too, and none that notices no one', () => {
+    // The route ends on (5, 5): the biter at (7, 3) is 2 tiles off on the diagonal, the one at (8, 3) is 3 columns away,
+    // and the dummy at (3, 4) is a tile off the route but notices no one.
     expect(metOn(field, fieldArea, bottomRow).map(({ id }) => id)).toEqual(['close']);
-    expect(metOn(field, fieldArea, bottomRow)).not.toContain(far);
-  });
-
-  it('does not meet a monster that notices no one, though the route runs beside it', () => {
-    expect(metOn(field, fieldArea, bottomRow)).not.toContain(beside);
   });
 
   it('meets nothing on a route that is not there', () => {

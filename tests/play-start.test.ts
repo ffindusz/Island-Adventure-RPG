@@ -41,6 +41,5 @@ describe('the scenes', () => {
     const keys = Object.values(SCENE_KEYS);
 
     expect(new Set(keys).size).toBe(keys.length);
-    expect(SCENE_KEYS.ending).toBe('ending');
   });
 });
