@@ -4,7 +4,6 @@ import type {
   AreaDefinition,
   ContentDefinition,
   ExitDefinition,
-  Game,
   GameEvent,
   GuardianMonsterDefinition,
   PageId,
@@ -16,6 +15,7 @@ import {
   arena,
   biterAt,
   defeatPrize,
+  eventsUntilDefeated,
   face,
   gameAtTitle,
   gameWithPrizes,
@@ -177,18 +177,6 @@ function farField(guardian: GuardianMonsterDefinition = GUARDIAN, options: Arena
   });
 }
 
-/** Steps the game until the hero is defeated, which has to happen within 120 steps. Returns the events of all of them. */
-function untilDefeated(game: Game): GameEvent[] {
-  const events: GameEvent[] = [];
-  for (let step = 0; step < 120; step += 1) {
-    events.push(...game.step());
-    if (events.some((event) => event.type === 'hero-defeated')) {
-      return events;
-    }
-  }
-  throw new Error('The hero was not defeated within 120 steps');
-}
-
 describe('the Guardian engaged', () => {
   it('is told in the step in which the Guardian notices the hero, and in no step before', () => {
     const game = newGame(farField());
@@ -232,7 +220,7 @@ describe('the Guardian engaged', () => {
   it('is told again for the Guardian that is put back when the hero is defeated, and begins its fight again', () => {
     const game = newGame(guardianContent([guardianAt(GUARDIAN_ID, 7, 3)], { hero: { health: 4 } }));
 
-    const fight = untilDefeated(game);
+    const fight = eventsUntilDefeated(game, 120);
 
     expect(engagements(fight)).toEqual([ENGAGED]);
     expect(monsterAction(game, GUARDIAN_ID)).toEqual({ type: 'idle' });

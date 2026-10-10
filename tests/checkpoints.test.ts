@@ -28,6 +28,7 @@ import {
   playingView,
   strike,
   throughStorage,
+  untilDefeated,
   walk,
 } from './fixtures';
 import type { ArenaOptions } from './fixtures';
@@ -169,16 +170,6 @@ function tookArrows(amount: number) {
 /** The ids of the pickups lying on the ground in the hero's Adventure Area. */
 function pickupIds(game: Game): string[] {
   return playingView(game).interactables.flatMap((item) => (item.kind === 'pickup' ? [item.id] : []));
-}
-
-/** Steps the game until the hero is defeated, which has to happen within 300 steps. */
-function untilDefeated(game: Game): void {
-  for (let step = 0; step < 300; step += 1) {
-    if (game.step().some((event) => event.type === 'hero-defeated')) {
-      return;
-    }
-  }
-  throw new Error('The hero was not defeated within 300 steps');
 }
 
 describe('Touching a Checkpoint', () => {

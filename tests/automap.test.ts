@@ -20,6 +20,7 @@ import {
   pickupAt,
   playingView,
   throughStorage,
+  untilDefeated,
   walk,
 } from './fixtures';
 import type { ArenaOptions } from './fixtures';
@@ -152,16 +153,6 @@ const AROUND_THE_ENTRANCE = [
   ' ...   ',
   '       ',
 ];
-
-/** Steps the game until the hero is defeated, which has to happen within 300 steps. */
-function untilDefeated(game: Game): void {
-  for (let step = 0; step < 300; step += 1) {
-    if (game.step().some((event) => event.type === 'hero-defeated')) {
-      return;
-    }
-  }
-  throw new Error('The hero was not defeated within 300 steps');
-}
 
 describe('The Automap at the start of the adventure', () => {
   it('shows the terrain around the hero and nothing else of its area', () => {

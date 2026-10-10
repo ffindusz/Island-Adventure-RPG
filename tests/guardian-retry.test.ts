@@ -5,7 +5,6 @@ import type {
   ContentDefinition,
   ExitDefinition,
   Game,
-  GameEvent,
   MonsterPlacement,
 } from '../src/core';
 import {
@@ -21,6 +20,7 @@ import {
   playingView,
   strike,
   throughStorage,
+  untilDefeated,
   walk,
 } from './fixtures';
 import type { ArenaOptions } from './fixtures';
@@ -104,16 +104,8 @@ function slays(game: Game): void {
   game.send({ type: 'assign-stat-point', stat: 'health' });
 }
 
-/** Steps the game until the hero is defeated, which has to happen within 120 steps. Returns the events of that step. */
-function untilDefeated(game: Game): readonly GameEvent[] {
-  for (let step = 0; step < 120; step += 1) {
-    const events = game.step();
-    if (events.some((event) => event.type === 'hero-defeated')) {
-      return events;
-    }
-  }
-  throw new Error('The hero was not defeated within 120 steps');
-}
+/** The steps within which the hero has to be defeated. */
+const DEFEAT_WITHIN = 120;
 
 /** The hero strikes the Guardian once, which takes its Health to 9. */
 function hurts(game: Game): void {
@@ -131,7 +123,7 @@ describe('a hero defeated while the Guardian lives', () => {
     const game = newGame(world([GUARDIAN_PLACE]));
     hurts(game);
 
-    const events = untilDefeated(game);
+    const events = untilDefeated(game, DEFEAT_WITHIN);
 
     expect(events).toContainEqual({ type: 'hero-hit', monsterId: GUARDIAN_ID, damage: 4, health: 0 });
     expect(playingView(game).hero.position).toEqual({ x: 10.5, y: 3.5 });
@@ -164,7 +156,7 @@ describe('a hero defeated while the Guardian lives', () => {
 
   it('lets it begin again with its first pattern, the sweep, though the charge was the one it would have made next', () => {
     const game = newGame(world([GUARDIAN_PLACE]));
-    untilDefeated(game);
+    untilDefeated(game, DEFEAT_WITHIN);
 
     game.step();
 
@@ -176,7 +168,7 @@ describe('a hero defeated while the Guardian lives', () => {
     expect(walk(game, 'left', 3)).toContainEqual(INTO_ARENA);
     hurts(game);
 
-    const events = untilDefeated(game);
+    const events = untilDefeated(game, DEFEAT_WITHIN);
 
     expect(events.slice(-2)).toEqual([{ type: 'hero-defeated' }, INTO_CELLAR]);
     expect(playingView(game).area.id).toBe('cellar');
@@ -187,7 +179,7 @@ describe('a hero defeated while the Guardian lives', () => {
     const game = newGame(world([GUARDIAN_PLACE], { start: CELLAR_START }));
     walk(game, 'left', 3);
     hurts(game);
-    untilDefeated(game);
+    untilDefeated(game, DEFEAT_WITHIN);
 
     expect(walk(game, 'left', 3)).toContainEqual(INTO_ARENA);
 
@@ -228,7 +220,7 @@ describe('a Guardian that has fallen', () => {
     slays(game);
     expect(ids(game)).toEqual(['killer']);
 
-    untilDefeated(game);
+    untilDefeated(game, DEFEAT_WITHIN);
 
     expect(ids(game)).toEqual(['weakling', 'killer']);
     expect(gateOf(game).open).toBe(true);
@@ -240,7 +232,7 @@ describe('a Guardian that has fallen', () => {
     walk(game, 'left', 3);
     slays(game);
 
-    expect(untilDefeated(game).slice(-1)).toEqual([INTO_CELLAR]);
+    expect(untilDefeated(game, DEFEAT_WITHIN).slice(-1)).toEqual([INTO_CELLAR]);
     expect(walk(game, 'left', 3)).toContainEqual(INTO_ARENA);
 
     expect(ids(game)).toEqual(['killer']);

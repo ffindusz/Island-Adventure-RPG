@@ -1,23 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { CheckpointDefinition, ContentDefinition, ExitDefinition, Game, GameEvent, MonsterPlacement } from '../src/core';
-import { FIELD_LAYOUT, advance, biterAt, face, frailMonster, monsterAction, monsterNamed, newGame, playingView, strike, walk } from './fixtures';
+import type { CheckpointDefinition, ContentDefinition, ExitDefinition, Game, MonsterPlacement } from '../src/core';
+import { FIELD_LAYOUT, advance, biterAt, face, frailMonster, monsterAction, monsterNamed, newGame, playingView, strike, untilDefeated, walk } from './fixtures';
 import { chargerAt, enemyContent, enemyField, shooterAt } from './enemy-fixtures';
 
 // Chargers and ranged attackers with the Checkpoints and the defeat of Checkpoints (checkpoints.test.ts). The timelines
 // are those of charger.test.ts and projectile.test.ts: a charger or a shooter in the tile (2, 3) launches its dash or
 // fires in step 31, the dash, 0.25 tile a step, would meet a hero who stays at (6.5, 3.5) in step 45 and the shot, 0.0625
 // tile a step, in step 89.
-
-/** Steps the game until the hero is defeated, which has to happen within 300 steps. Returns the events of that step. */
-function untilDefeated(game: Game): readonly GameEvent[] {
-  for (let step = 0; step < 300; step += 1) {
-    const events = game.step();
-    if (events.some((event) => event.type === 'hero-defeated')) {
-      return events;
-    }
-  }
-  throw new Error('The hero was not defeated within 300 steps');
-}
 
 const CAMP: CheckpointDefinition = { id: 'camp', tile: { col: 5, row: 3 } };
 const CAMP_ACTIVATED = { type: 'checkpoint-activated', checkpointId: 'camp' } as const;

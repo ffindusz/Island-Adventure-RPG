@@ -443,6 +443,29 @@ export function advance(game: Game, steps: number): GameEvent[] {
   return events;
 }
 
+/** Steps the game until the hero is defeated, which has to happen within `limit` steps. Returns the events of that step. */
+export function untilDefeated(game: Game, limit = 300): readonly GameEvent[] {
+  for (let step = 0; step < limit; step += 1) {
+    const events = game.step();
+    if (events.some((event) => event.type === 'hero-defeated')) {
+      return events;
+    }
+  }
+  throw new Error(`The hero was not defeated within ${limit} steps`);
+}
+
+/** Steps the game until the hero is defeated, which has to happen within `limit` steps. Returns the events of all of them. */
+export function eventsUntilDefeated(game: Game, limit = 300): GameEvent[] {
+  const events: GameEvent[] = [];
+  for (let step = 0; step < limit; step += 1) {
+    events.push(...game.step());
+    if (events.some((event) => event.type === 'hero-defeated')) {
+      return events;
+    }
+  }
+  throw new Error(`The hero was not defeated within ${limit} steps`);
+}
+
 /** Presses a direction key, holds it for some steps, and releases it. Returns the events of those steps. */
 export function walk(game: Game, direction: Direction, steps: number): GameEvent[] {
   game.send({ type: 'move', direction });

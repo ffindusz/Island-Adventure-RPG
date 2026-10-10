@@ -25,6 +25,7 @@ import {
   newGame,
   playingView,
   throughStorage,
+  untilDefeated,
   walk,
 } from './fixtures';
 
@@ -54,16 +55,6 @@ const RUSTY_KEY = keyAt('rusty-key', 2, 3, 'Rusty Key');
 const CELLAR_DOOR = doorAt('cellar-door', 3, 4, 'rusty-key');
 const SWITCH = leverAt('switch', 3, 2, ['portcullis']);
 const PORTCULLIS = gateAt('portcullis', 1, 2);
-
-/** Steps the game until the hero is defeated, which has to happen within 300 steps. */
-function untilDefeated(game: Game): void {
-  for (let step = 0; step < 300; step += 1) {
-    if (game.step().some((event) => event.type === 'hero-defeated')) {
-      return;
-    }
-  }
-  throw new Error('The hero was not defeated within 300 steps');
-}
 
 /** The hero takes the key beside it and comes back to where it began, facing down. */
 function takeKey(game: Game): void {
