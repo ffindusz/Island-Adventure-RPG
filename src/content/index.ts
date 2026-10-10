@@ -2,7 +2,7 @@ import type { ContentDefinition } from '../core';
 import { castle } from './areas/castle';
 import { cave } from './areas/cave';
 import { mountain } from './areas/mountain';
-import { shipwreckCoast } from './areas/shipwreck-coast';
+import { shipwreckCoast, START_TILE } from './areas/shipwreck-coast';
 import { woods } from './areas/woods';
 import { credits, ending } from './ending';
 import { gear } from './gear';
@@ -32,5 +32,5 @@ export const gameContent: ContentDefinition = {
   credits,
   checkCoveredCorner: true,
   requireGuardian: true,
-  start: { area: shipwreckCoast.id, tile: { col: 5, row: 9 } },
+  start: { area: shipwreckCoast.id, tile: START_TILE },
 };

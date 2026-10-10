@@ -1,4 +1,7 @@
-import type { AreaDefinition } from '../../core';
+import type { AreaDefinition, Tile } from '../../core';
+
+// The way in from the woods: the Entrance and the Checkpoint of the mountain share its tile.
+const WAY_IN: Tile = { col: 1, row: 24 };
 
 // The mountain, the third area of the adventure, between the woods and the cave: 44 by 30 tiles, larger than the
 // screen both ways (20 by 12), so that the view follows the hero. Rock (solid, #) is the cliffs and the boulders; the
@@ -18,10 +21,10 @@ export const mountain: AreaDefinition = {
   name: 'The Mountain',
   text: 'Follow the sand path up. Raiders watch the pass.',
   entrances: [
-    { id: 'from-woods', tile: { col: 1, row: 24 } },
+    { id: 'from-woods', tile: WAY_IN },
     { id: 'from-cave', tile: { col: 42, row: 6 } },
   ],
-  checkpoints: [{ id: 'mountain-checkpoint', tile: { col: 1, row: 24 } }],
+  checkpoints: [{ id: 'mountain-checkpoint', tile: WAY_IN }],
   exits: [
     {
       id: 'to-woods',

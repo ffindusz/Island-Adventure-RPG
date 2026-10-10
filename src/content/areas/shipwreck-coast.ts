@@ -1,4 +1,7 @@
-import type { AreaDefinition } from '../../core';
+import type { AreaDefinition, Tile } from '../../core';
+
+/** Where the hero starts, and the tile of the first Checkpoint: the start of the adventure counts as the first. */
+export const START_TILE: Tile = { col: 5, row: 9 };
 
 // The shipwreck coast, where the adventure begins: 40 by 18 tiles, so the view follows the hero. The hero comes to on
 // a beach under the hull of the wreck in the north-west, the sea behind it. A path of sand runs east along the beach,
@@ -16,7 +19,7 @@ export const shipwreckCoast: AreaDefinition = {
   name: 'Shipwreck Coast',
   text: 'Wreckage lines the shore. Follow the beach east.',
   entrances: [{ id: 'from-woods', tile: { col: 38, row: 8 } }],
-  checkpoints: [{ id: 'coast-checkpoint', tile: { col: 5, row: 9 } }],
+  checkpoints: [{ id: 'coast-checkpoint', tile: START_TILE }],
   exits: [
     {
       id: 'to-woods',
