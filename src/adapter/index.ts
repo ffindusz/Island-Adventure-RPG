@@ -41,7 +41,11 @@ export function startAdapter(core: Game, content: ContentDefinition, storage: Sa
     scale: { mode: Phaser.Scale.NONE, zoom: Phaser.Scale.MAX_ZOOM, autoCenter: Phaser.Scale.CENTER_BOTH },
     // The first scene is the one that starts: the title, which starts the play screen; the play screen starts the ending
     // when the hero sails home, and both go back to the title.
-    scene: [new TitleScene(core, saves, audio), new PlayScene(core, saves, audio), new EndingScene(audio)],
+    scene: [
+      new TitleScene(core, saves, audio),
+      new PlayScene(core, saves, audio, content.areas),
+      new EndingScene(audio),
+    ],
   });
   // The zoom above is only chosen at start-up, so choose it again whenever the window changes size.
   game.scale.on(Phaser.Scale.Events.RESIZE, () => {

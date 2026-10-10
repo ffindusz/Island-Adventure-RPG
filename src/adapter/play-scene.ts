@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { Command, Game, GameEvent, GameView, PlayingView } from '../core';
+import type { AreaDefinition, Command, Game, GameEvent, GameView, PlayingView } from '../core';
 import { AreaBanner } from './area-banner';
 import { drawMonster, drawStrike, drawTelegraph, drawTerrain } from './art';
 import { ARTWORK, hasFinalArt } from './artwork';
@@ -62,6 +62,8 @@ export class PlayScene extends Phaser.Scene {
   private readonly core: Game;
   private readonly saves: SaveStore;
   private readonly audio: GameAudio;
+  /** The areas of the content: the Automap draws a link at the side of a map where the exit of its area is. */
+  private readonly areas: readonly AreaDefinition[];
   private clock!: FixedStepClock;
   private feedback!: Feedback;
   private readonly inventoryMenu = new InventoryMenu();
@@ -99,11 +101,12 @@ export class PlayScene extends Phaser.Scene {
   /** Whether the fight with the Guardian is on, which the music of the fight plays for (audio-manifest.ts, `fightAfter`). */
   private fight = false;
 
-  constructor(core: Game, saves: SaveStore, audio: GameAudio) {
+  constructor(core: Game, saves: SaveStore, audio: GameAudio, areas: readonly AreaDefinition[]) {
     super(SCENE_KEYS.play);
     this.core = core;
     this.saves = saves;
     this.audio = audio;
+    this.areas = areas;
   }
 
   init(start: PlayStart): void {
@@ -150,7 +153,7 @@ export class PlayScene extends Phaser.Scene {
     this.banner = new AreaBanner(this);
     this.notice = new Notice(this);
     this.overlay = new Overlay(this);
-    this.automapPage = new AutomapPage(this);
+    this.automapPage = new AutomapPage(this, this.areas);
     this.audioLine = new AudioLine(this);
     const keyboard = this.input.keyboard;
     if (keyboard === null) {

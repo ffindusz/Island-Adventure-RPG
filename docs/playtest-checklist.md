@@ -149,7 +149,9 @@ Tick one when you accept it as it is; otherwise write what to change.
       Do you want a second one in the castle? That is a map change, and nothing was done about it.
 - [ ] **The cave's one-tile gate** has no corner assist (see "The optional puzzles").
 - [ ] **The two-press departure** at the vessel (the first press prepares it, the second asks).
-- [ ] **The Automap** joins the areas by schematic links, and draws the quay as sand.
+- [ ] **The Automap** joins the areas by schematic links, and draws the quay as sand. A link meets each map at the side
+      where its exit is (the mountain's east edge to the cave's west edge, the cave's east edge to the castle's west
+      edge, which makes two links that go round the cards): look that no link runs over a map or a name.
 - [ ] **The HUD and the hero's hand** show one weapon icon for each slot, not for each piece (a piece's own icon needs a
       field of the Game core, `hero.equipped`).
 - [ ] **A notice at the bottom of the view** can cover the hero in the last rows of a scrolling area. The area banner

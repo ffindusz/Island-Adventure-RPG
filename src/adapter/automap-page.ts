@@ -1,6 +1,15 @@
 import type Phaser from 'phaser';
-import type { AutomapAreaView, AutomapPageView, PlayingView } from '../core';
-import { exitRect, fitLabel, layoutRoute, linkedWithNext, markerRect, routeLinks, tileRects } from './automap-layout';
+import type { AreaDefinition, AutomapAreaView, AutomapPageView, PlayingView } from '../core';
+import {
+  exitRect,
+  fitLabel,
+  layoutRoute,
+  linkEnds,
+  linkedWithNext,
+  markerRect,
+  routeLinks,
+  tileRects,
+} from './automap-layout';
 import type { Metrics, Place, Rect } from './automap-layout';
 import { automapColour, EXIT_COLOUR, MAP_COLOUR } from './automap-palette';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
@@ -9,9 +18,10 @@ import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Graphics } from './pixel-font';
 import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
 
-// The Automap page: the route of Adventure Areas drawn as a map, from the Game core's view alone. It is a window like
-// the panels of the overlay, which draws nothing while this page is open, with the same frames (ui-layer.ts). Where
-// each area goes is worked out in automap-layout.ts; this file draws what that says and decides nothing about the game.
+// The Automap page: the route of Adventure Areas drawn as a map, from the Game core's view and from the exits that the
+// content gives its areas, which say at which side of a map a link meets it. It is a window like the panels of the
+// overlay, which draws nothing while this page is open, with the same frames (ui-layer.ts). Where each area and each
+// link goes is worked out in automap-layout.ts; this file draws what that says and decides nothing about the game.
 
 /**
  * Where the overlay is: it has nothing on the screen while the Automap is open. The map is drawn in shapes at this
@@ -91,6 +101,8 @@ export class AutomapPage {
   private readonly window: UiLayer;
   private readonly pageLayer: Graphics;
   private readonly markLayer: Graphics;
+  /** The areas of the content, whose exits say where each link meets a map. */
+  private readonly areas: readonly AreaDefinition[];
   /** What is drawn now, as text, or null while the page is closed: it is drawn again only when this changes. */
   private shown: string | null = null;
   /** Where the hero's mark is on the open page, or null when the hero is on none of its maps. */
@@ -98,7 +110,8 @@ export class AutomapPage {
   /** Which of the mark's two colours is drawn now. */
   private markPhase: number | null = null;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, areas: readonly AreaDefinition[]) {
+    this.areas = areas;
     this.backdrop = scene.add.graphics().setScrollFactor(0).setDepth(PAGE_DEPTH - 2);
     this.window = new UiLayer(scene, PAGE_DEPTH - 1);
     this.pageLayer = scene.add.graphics().setScrollFactor(0).setDepth(PAGE_DEPTH);
@@ -118,7 +131,7 @@ export class AutomapPage {
       this.shown = key;
       this.markPhase = null;
       drawWindow(this.backdrop, this.window);
-      this.mark = drawPage(this.pageLayer, page);
+      this.mark = drawPage(this.pageLayer, page, this.areas);
     }
     this.blink(timeMs);
   }
@@ -188,7 +201,7 @@ function drawWindow(backdrop: Graphics, layer: UiLayer): void {
 }
 
 /** Draws the route. Returns where the hero's mark goes, if the hero is on the map of an area. */
-function drawPage(graphics: Graphics, page: AutomapPageView): Rect | null {
+function drawPage(graphics: Graphics, page: AutomapPageView, areas: readonly AreaDefinition[]): Rect | null {
   graphics.clear();
   const cards = page.areas.map((area) => ({
     area,
@@ -204,7 +217,8 @@ function drawPage(graphics: Graphics, page: AutomapPageView): Rect | null {
     METRICS,
   );
   // The links go under the cards, so that a ring covers where a link meets a map.
-  for (const strip of routeLinks(layout, linkedWithNext(page.areas), LINK)) {
+  const ends = linkEnds(page.areas.map((area) => area.id), areas);
+  for (const strip of routeLinks(layout, linkedWithNext(page.areas), LINK, ends)) {
     fill(graphics, LINK_COLOUR, strip);
   }
   let mark: Rect | null = null;
