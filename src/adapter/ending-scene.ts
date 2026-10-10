@@ -1,15 +1,11 @@
-import Phaser from 'phaser';
-import { ARTWORK } from './artwork';
 import type { ArtName } from './artwork';
-import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import type { GameAudio } from './audio';
-import { AudioLine } from './audio-line';
 import { ChangeGuard } from './change-guard';
 import { DEPTH } from './depths';
 import { layoutEnding, turnPage } from './ending-pages';
 import type { EndingPage } from './ending-pages';
+import { GameScene } from './game-scene';
 import { drawCard } from './opening-card';
-import { PlayerInput } from './player-input';
 import { SCENE_KEYS } from './scene-keys';
 import type { EndingStart } from './scene-keys';
 import { UiLayer } from './ui-layer';
@@ -23,19 +19,15 @@ import { UiLayer } from './ui-layer';
 const BACKDROP = 'backdrop-ending' satisfies ArtName;
 
 /** The ending and the credits. */
-export class EndingScene extends Phaser.Scene {
-  private readonly audio: GameAudio;
+export class EndingScene extends GameScene {
   private layer!: UiLayer;
-  private audioLine!: AudioLine;
-  private playerInput!: PlayerInput<Phaser.Input.Keyboard.Key>;
   private pages: readonly EndingPage[] = [];
   private page = 0;
   /** The page on the screen, if any is drawn yet. */
   private readonly shown = new ChangeGuard();
 
   constructor(audio: GameAudio) {
-    super(SCENE_KEYS.ending);
-    this.audio = audio;
+    super(SCENE_KEYS.ending, audio);
   }
 
   init(start: EndingStart): void {
@@ -44,28 +36,15 @@ export class EndingScene extends Phaser.Scene {
     this.shown.forget();
   }
 
-  preload(): void {
-    queueArt(this.load, ARTWORK);
-    this.audio.queue(this);
-  }
-
   create(): void {
-    buildDrawnArt(this.textures, ARTWORK);
-    requireLoadedArt(this.textures, ARTWORK);
-    this.audio.requireLoaded();
+    this.requireFiles();
     this.add.image(0, 0, BACKDROP).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.backdrop);
     this.layer = new UiLayer(this, DEPTH.ending);
-    this.audioLine = new AudioLine(this);
-    const keyboard = this.input.keyboard;
-    if (keyboard === null) {
-      throw new Error('The keyboard plugin is not available, so nothing could turn the pages of the ending.');
-    }
-    this.playerInput = new PlayerInput(keyboard, Phaser.Input.Keyboard.JustDown);
+    this.useKeyboard('turn the pages of the ending');
   }
 
   override update(_time: number, frameMs: number): void {
-    // The keys of the audio work on every screen, whatever page the ending is on.
-    this.audioLine.update(this.audio.press(this.playerInput.pollAudio()), frameMs);
+    this.pollAudioKeys(frameMs);
     this.audio.playMusic({ at: 'ending' });
     const { page, done } = turnPage(this.page, this.pages.length, this.playerInput.pollMenu().confirm);
     if (done) {

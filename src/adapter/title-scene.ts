@@ -1,16 +1,12 @@
-import Phaser from 'phaser';
 import type { Game } from '../core';
-import { ARTWORK } from './artwork';
 import type { ArtName } from './artwork';
-import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import type { GameAudio } from './audio';
-import { AudioLine } from './audio-line';
 import { ChangeGuard } from './change-guard';
 import { VIEW_WIDTH } from './config';
 import { audioKeyLabel, closePageKeyLabel, confirmKeyLabel } from './controls';
 import { DEPTH } from './depths';
+import { GameScene } from './game-scene';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
-import { PlayerInput } from './player-input';
 import { stackHeight, stackRows } from './row-stack';
 import type { RowRules } from './row-stack';
 import type { SavedGame, SaveStore } from './save-store';
@@ -54,41 +50,25 @@ type Row =
   | { readonly kind: 'space'; readonly height: number };
 
 /** The title screen. */
-export class TitleScene extends Phaser.Scene {
+export class TitleScene extends GameScene {
   private readonly core: Game;
   private readonly saves: SaveStore;
-  private readonly audio: GameAudio;
   private layer!: UiLayer;
-  private audioLine!: AudioLine;
-  private playerInput!: PlayerInput<Phaser.Input.Keyboard.Key>;
   private saved: SavedGame = { status: 'none' };
   private menu: TitleMenu = openMenu(false);
   private readonly shown = new ChangeGuard();
 
   constructor(core: Game, saves: SaveStore, audio: GameAudio) {
-    super(SCENE_KEYS.title);
+    super(SCENE_KEYS.title, audio);
     this.core = core;
     this.saves = saves;
-    this.audio = audio;
-  }
-
-  preload(): void {
-    queueArt(this.load, ARTWORK);
-    this.audio.queue(this);
   }
 
   create(): void {
-    buildDrawnArt(this.textures, ARTWORK);
-    requireLoadedArt(this.textures, ARTWORK);
-    this.audio.requireLoaded();
+    this.requireFiles();
     this.add.image(0, 0, BACKDROP).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH.backdrop);
     this.layer = new UiLayer(this, DEPTH.title);
-    this.audioLine = new AudioLine(this, TITLE_LINE_CORNER);
-    const keyboard = this.input.keyboard;
-    if (keyboard === null) {
-      throw new Error('The keyboard plugin is not available, so nothing could choose from the title.');
-    }
-    this.playerInput = new PlayerInput(keyboard, Phaser.Input.Keyboard.JustDown);
+    this.useKeyboard('choose from the title', TITLE_LINE_CORNER);
     // The saved game is looked at each time the title comes up, which is also when it is the freshest it can be.
     this.saved = this.saves.read();
     if (this.saved.status === 'unusable') {
@@ -99,8 +79,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   override update(_time: number, frameMs: number): void {
-    // The keys of the audio work on every screen, whatever the menu is doing.
-    this.audioLine.update(this.audio.press(this.playerInput.pollAudio()), frameMs);
+    this.pollAudioKeys(frameMs);
     this.audio.playMusic({ at: 'title' });
     const { step, confirm } = this.playerInput.pollMenu();
     const saved = this.saved;
