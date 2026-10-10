@@ -257,6 +257,12 @@ describe('the code and the page of the game', () => {
 
     expect(page).not.toMatch(/https?:\/\/|@font-face|<img|<audio|<video|<embed/i);
   });
+
+  it('give their own icon inline, so that no browser asks the host for /favicon.ico, which a plain static host answers with a 404', () => {
+    const page = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+
+    expect(page).toMatch(/<link\b(?=[^>]*\brel="icon")(?=[^>]*\bhref="data:)[^>]*>/i);
+  });
 });
 
 // The credits screen draws what the record's entries in use owe it. the-credits.test.ts holds the credits of the content
