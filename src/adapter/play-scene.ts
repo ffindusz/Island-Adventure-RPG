@@ -22,6 +22,7 @@ import { MonsterSprites } from './monster-sprites';
 import { Notice } from './notice';
 import { OpeningCard } from './opening-card';
 import { Overlay } from './overlay';
+import { PickupRiseSprites } from './pickup-rise-sprites';
 import { PlayerInput } from './player-input';
 import { byShooter } from './projectiles';
 import { ProjectileSprites } from './projectile-sprites';
@@ -66,6 +67,7 @@ export class PlayScene extends Phaser.Scene {
   private readonly inventoryMenu = new InventoryMenu();
   private playerInput!: PlayerInput<Phaser.Input.Keyboard.Key>;
   private heroSprite!: HeroSprite;
+  private pickupRiseSprites!: PickupRiseSprites;
   private monsterSprites!: MonsterSprites;
   private projectileSprites!: ProjectileSprites;
   private propSprites!: PropSprites;
@@ -127,10 +129,10 @@ export class PlayScene extends Phaser.Scene {
     // The ground is added first, at the lowest depth: in colours, or the picture of it where the art is final. Everything
     // above it has its depth in depths.ts: the marks of the exits and the props are sprites, then the telegraphs of
     // monster attacks, then the flat shapes of what has no picture yet, then the monsters of final art, what they shoot,
-    // and the hero and its arrows, which are sprites too, and the strikes of the monsters above those. The HUD draws above
-    // them all, then the text of the area, the notice above that, and the overlay above that, which shares its place
-    // with the Automap page. The world scrolls with the camera; the HUD, the text, the notice, the overlay and the
-    // Automap page do not.
+    // and the hero and its arrows, which are sprites too, and the strikes of the monsters above those, and above them the
+    // picture of what the hero just picked up, rising over its head. The HUD draws above them all, then the text of the
+    // area, the notice above that, and the overlay above that, which shares its place with the Automap page. The world
+    // scrolls with the camera; the HUD, the text, the notice, the overlay and the Automap page do not.
     this.terrainLayer = this.add.graphics();
     this.groundImage = this.add.image(0, 0, '__WHITE').setOrigin(0, 0).setVisible(false);
     this.drawnAreaId = null;
@@ -143,6 +145,7 @@ export class PlayScene extends Phaser.Scene {
     this.projectileSprites = new ProjectileSprites(this);
     this.heroSprite = new HeroSprite(this);
     this.effectLayer = this.add.graphics().setDepth(DEPTH.effects);
+    this.pickupRiseSprites = new PickupRiseSprites(this);
     this.hud = new Hud(this);
     this.banner = new AreaBanner(this);
     this.notice = new Notice(this);
@@ -373,6 +376,7 @@ export class PlayScene extends Phaser.Scene {
     for (const zone of this.feedback.strikeZones()) {
       drawStrike(this.effectLayer, zone);
     }
+    this.pickupRiseSprites.draw(this.feedback.pickupRises(), view.hero.position);
     this.hud.draw(view);
     // A page or a Stat Point covers the text of the area; the core keeps its time frozen, so it is back afterwards.
     this.banner.draw(gameIsWaiting(view) ? null : view.areaText);

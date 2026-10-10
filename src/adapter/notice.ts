@@ -97,7 +97,8 @@ function iconFor(content: NoticeContent): string | null {
   }
 }
 
-function pickupIcon(item: PickedUpItem): string {
+/** The picture of the item, which the notice shows beside its lines and the hero's pickup shows rising over it. */
+export function pickupIcon(item: PickedUpItem): string {
   switch (item.kind) {
     case 'gear':
       return gearIcon(item.id);

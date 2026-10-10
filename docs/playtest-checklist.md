@@ -154,6 +154,10 @@ Tick one when you accept it as it is; otherwise write what to change.
       field of the Game core, `hero.equipped`).
 - [ ] **A notice at the bottom of the view** can cover the hero in the last rows of a scrolling area. The area banner
       comes back after Continue.
+- [ ] **A find rises over the hero:** the picture of what you found (a chest, a cache, a key, a potion, a drop) lifts 12
+      pixels in half a second and fades, beside the notice. The size, the time and the place are a first draft made
+      without a playtest; for that half second it can hide what is just above the hero, and in the top row of an area
+      it leaves the screen as it fades.
 - [ ] **Stand-in art:** the crab is a red mollusc, the wolf a black dog, the spitter a mushroom, the raiders pack
       ninjas and a knight, the bat reads as a droplet or a crab, and one violet orb is every monster's shot. The
       castle's skeleton, ghoul, wraith and knight, and the Guardian, are recoloured figures of the pack (no strike
