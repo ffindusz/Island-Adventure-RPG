@@ -15,7 +15,7 @@ import { checkRoutesStayOpen } from './device-routes';
 import { checkGuardianPlace, checkGuardians } from './guardian-content';
 import { checkVessels, loadVessel } from './vessel-content';
 import type { Vessel } from './vessel-content';
-import { CONSUMABLE_IDS, GEAR_SLOTS, STAT_IDS } from './definitions';
+import { GEAR_SLOTS, STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
   ChaserMonsterDefinition,
@@ -43,6 +43,7 @@ import type {
 } from './definitions';
 import { describeTile, tileBox, tileKey } from './geometry';
 import type { Box, Tile } from './geometry';
+import { isConsumableId, requireMoreThanZero, requireWholeNumberOfOneOrMore, requireZeroOrMore } from './requirements';
 import { msToSteps, STEP_MS, STEPS_PER_SECOND } from './time';
 import { zoneBox } from './zones';
 
@@ -653,29 +654,10 @@ function requireAtLeastOneStep(what: string, ms: number): void {
   }
 }
 
-// These also refuse NaN, which no comparison with a number is true for.
-function requireMoreThanZero(what: string, value: number): void {
-  if (!(value > 0)) {
-    throw new Error(`${what} must be more than 0, but it is ${value}`);
-  }
-}
-
-function requireZeroOrMore(what: string, value: number): void {
-  if (!(value >= 0)) {
-    throw new Error(`${what} must be 0 or more, but it is ${value}`);
-  }
-}
-
 /** Defense can never reduce a hit to nothing, so the floor under the damage the hero takes is a whole Health or more. */
 function requireOneOrMore(what: string, value: number): void {
   if (!(value >= 1)) {
     throw new Error(`${what} must be 1 or more, but it is ${value}`);
-  }
-}
-
-function requireWholeNumberOfOneOrMore(what: string, value: number): void {
-  if (!Number.isInteger(value) || value < 1) {
-    throw new Error(`${what} must be a whole number of 1 or more, but it is ${value}`);
   }
 }
 
@@ -990,11 +972,6 @@ function loadChestContents(
     default:
       return refuseContents(what, kind);
   }
-}
-
-/** Content read from a file could name a consumable that does not exist, and the compiler would not notice. */
-function isConsumableId(id: string): id is ConsumableId {
-  return (CONSUMABLE_IDS as readonly string[]).includes(id);
 }
 
 function refuseContents(what: string, kind: never): never {
