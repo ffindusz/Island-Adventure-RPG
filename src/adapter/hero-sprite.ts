@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import type { ArrowView, Direction, GameEvent, HeroView, Point } from '../core';
 import { ARROW, SWORD_HELD } from './artwork';
 import type { ArtName } from './artwork';
-import { FACING_STEP, px, TILE_SIZE } from './config';
+import { FACING_COLUMN, FACING_STEP, px, SHEET_COLUMNS, TILE_SIZE } from './config';
 import { DEPTH } from './depths';
 import { byShooter } from './projectiles';
 
@@ -15,14 +15,11 @@ const HERO = 'hero' satisfies ArtName;
 const BOW_HELD = 'bow-held' satisfies ArtName;
 const SLASH = 'slash' satisfies ArtName;
 
-/** The column of each direction, the same in every row of the hero's sheet. */
-const COLUMN: Readonly<Record<Direction, number>> = { down: 0, up: 1, left: 2, right: 3 };
-const COLUMNS = 4;
 /** The rows of the sheet: four of walking, of which the first also stands still, then the attack pose. */
 const WALK_ROWS = 4;
 const ATTACK_ROW = 4;
 /** The cell of the hero lying defeated: the first of the seventh row. */
-const DEAD_FRAME = 6 * COLUMNS;
+const DEAD_FRAME = 6 * SHEET_COLUMNS;
 const SLASH_FRAMES = 4;
 
 const WALK_FRAME_MS = 110;
@@ -177,10 +174,10 @@ export class HeroSprite {
       return DEAD_FRAME;
     }
     if (this.pose !== null) {
-      return ATTACK_ROW * COLUMNS + COLUMN[this.pose.direction];
+      return ATTACK_ROW * SHEET_COLUMNS + FACING_COLUMN[this.pose.direction];
     }
     const row = this.movingMsLeft > 0 ? Math.floor(this.walkMs / WALK_FRAME_MS) % WALK_ROWS : 0;
-    return row * COLUMNS + COLUMN[facing];
+    return row * SHEET_COLUMNS + FACING_COLUMN[facing];
   }
 
   /** The hero blinks red from a hit: a flat colour over the whole picture, on and off. */

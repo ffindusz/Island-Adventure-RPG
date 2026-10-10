@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FACING_STEP, px, TILE_SIZE } from '../src/adapter/config';
+import { FACING_COLUMN, FACING_STEP, px, SHEET_COLUMNS, TILE_SIZE } from '../src/adapter/config';
 import { advance, newGame, playingView } from './fixtures';
 
 describe('px', () => {
@@ -32,5 +32,14 @@ describe('FACING_STEP', () => {
     const step = FACING_STEP[direction];
     expect({ x: moved.x / length, y: moved.y / length }).toEqual(step);
     expect(Math.hypot(step.x, step.y)).toBe(1);
+  });
+});
+
+describe('FACING_COLUMN', () => {
+  it('gives each direction a column of its own, and the columns fill a sheet of SHEET_COLUMNS exactly', () => {
+    const columns = Object.values(FACING_COLUMN).sort((first, second) => first - second);
+
+    expect(Object.keys(FACING_COLUMN).sort()).toEqual(Object.keys(FACING_STEP).sort());
+    expect(columns).toEqual(Array.from({ length: SHEET_COLUMNS }, (_, column) => column));
   });
 });

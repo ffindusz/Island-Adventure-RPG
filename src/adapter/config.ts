@@ -32,3 +32,10 @@ export const FACING_STEP: Readonly<Record<Direction, Point>> = {
   left: { x: -1, y: 0 },
   right: { x: 1, y: 0 },
 };
+
+/**
+ * The column of each direction in a sheet of a character, the same in every row of it: the hero's sheet and the monsters'
+ * (docs/assets/compose-art.py makes them so) have one column for each way the character faces.
+ */
+export const FACING_COLUMN: Readonly<Record<Direction, number>> = { down: 0, up: 1, left: 2, right: 3 };
+export const SHEET_COLUMNS = 4;

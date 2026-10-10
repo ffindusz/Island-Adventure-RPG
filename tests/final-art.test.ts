@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { ARTWORK, FINAL_ART_AREAS, frameSize, hasFinalArt, neededArt } from '../src/adapter/artwork';
 import { manifestLookup, missingArt, requireArt } from '../src/adapter/asset-manifest';
 import type { ArtManifest } from '../src/adapter/asset-manifest';
+import { SHEET_COLUMNS } from '../src/adapter/config';
 import { describeStamp, planTerrain } from '../src/adapter/terrain-plan';
 import { gameContent } from '../src/content';
 import type { AreaDefinition, ContentDefinition } from '../src/core';
@@ -144,6 +145,17 @@ describe('the pictures of the manifest on disk', () => {
     if (entry?.kind === 'sheet') expect(framesOnDisk(art)).toBeGreaterThan(0);
     else if (entry?.kind === 'image') expect(sizeOnDisk(entry.file).width).toBeGreaterThan(0);
     else throw new Error(`"${art}" is not a picture of the manifest`);
+  });
+
+  it('has the sheet of the hero and of every monster as wide as the ways a character faces (SHEET_COLUMNS)', () => {
+    const characters = filed.filter((art) => art === 'hero' || art.startsWith('monster-'));
+
+    expect(characters.length).toBeGreaterThan(15);
+    for (const art of characters) {
+      const entry = (ARTWORK as ArtManifest)[art];
+      if (entry?.kind !== 'sheet') throw new Error(`"${art}" is not a sheet of the manifest`);
+      expect(sizeOnDisk(entry.file).width, `the width of ${entry.file}`).toBe(SHEET_COLUMNS * entry.frameWidth);
+    }
   });
 });
 

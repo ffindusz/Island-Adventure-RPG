@@ -3,8 +3,9 @@ import type { Direction, GameEvent, MonsterView, PlayingView, Point } from '../c
 import { frameSize, monsterArt } from './artwork';
 import type { ArtName } from './artwork';
 import { scrollFor } from './camera';
-import { FACING_STEP, px } from './config';
+import { FACING_COLUMN, FACING_STEP, px, SHEET_COLUMNS } from './config';
 import { DEPTH } from './depths';
+import { DASH_TRAIL_ALPHAS, HEALTH_COLOUR, OUTLINE_COLOUR, WARN_PARTS, warnsNow } from './monster-look';
 import type { Rect } from './pixel-font';
 
 // The monsters of the areas whose art is final, as sprites. Each sheet has four columns, the way the monster faces
@@ -13,8 +14,6 @@ import type { Rect } from './pixel-font';
 // step, from the direction of a dash, and, while the monster winds up, towards the hero. All of it is cosmetic: it runs
 // on frame time from the Game core's view and events, and nothing the Game core decides depends on it.
 
-const COLUMN: Readonly<Record<Direction, number>> = { down: 0, up: 1, left: 2, right: 3 };
-const COLUMNS = 4;
 /** The rows after the frames of the walk: the white one of a hit, then the red one of a wind-up. */
 const EXTRA_ROWS = 2;
 
@@ -23,13 +22,9 @@ const WALK_FRAME_MS = 140;
 const IDLE_FRAME_MS = 420;
 /** A monster still counts as moving this long after its last step, so a frame without a step does not stop the stride. */
 const MOVING_HOLD_MS = 100;
-/** A wind-up shows its red frame in the first of this many equal parts of it, hides it in the next, and so on, so that it ends on. */
-const WARN_PARTS = 7;
 /** A wind-up shakes the monster one pixel to either side, this many times in each part of it. */
 const SHAKES_PER_PART = 2;
 const RESTING_TINT = 0xa8a8a8;
-/** The faded copies of a dashing monster left behind it, nearest first, by how much of the picture shows. */
-const DASH_TRAIL_ALPHAS: readonly number[] = [0.5, 0.3, 0.15];
 
 const PUFF_ART = 'fx-puff' satisfies ArtName;
 const PUFF_FRAMES = 6;
@@ -40,8 +35,6 @@ const PUFF_LIFT = 18;
 /** The monster that fell stays as a white shape over its puff for this long, fading out. */
 const SHAPE_FADE_MS = 120;
 
-const BAR_OUTLINE = 0x1b1b24;
-const BAR_HEALTH = 0x7bd35f;
 const BAR_HEIGHT = 4;
 
 /** Which way a step of (dx, dy) goes: along the longer of the two. */
@@ -50,11 +43,6 @@ function directionOf(dx: number, dy: number): Direction {
     return dx < 0 ? 'left' : 'right';
   }
   return dy < 0 ? 'up' : 'down';
-}
-
-/** Whether a wind-up that is `progress` of the way through is showing its red at this moment: on at the very end. */
-function warnsNow(progress: number): boolean {
-  return Math.floor(progress * WARN_PARTS) % 2 === 0;
 }
 
 /**
@@ -105,7 +93,7 @@ class Figure {
     const cell = scene.textures.getFrame(art, 0);
     this.width = cell.width;
     this.height = cell.height;
-    this.walkRows = scene.textures.get(art).getFrameNames().length / COLUMNS - EXTRA_ROWS;
+    this.walkRows = scene.textures.get(art).getFrameNames().length / SHEET_COLUMNS - EXTRA_ROWS;
     this.sprite = scene.add.sprite(0, 0, art, 0).setOrigin(0, 0).setDepth(DEPTH.monster);
   }
 
@@ -115,7 +103,7 @@ class Figure {
 
   /** The cell of the white shape the monster is drawn as when it is hit, in the way it faces. */
   hurtFrame(): number {
-    return this.hurtRow * COLUMNS + COLUMN[this.facing];
+    return this.hurtRow * SHEET_COLUMNS + FACING_COLUMN[this.facing];
   }
 
   /** The top-left of the monster's picture, in whole pixels, centred on the monster. */
@@ -161,17 +149,17 @@ class Figure {
   }
 
   private frameFor(monster: MonsterView, flashing: boolean): number {
-    const column = COLUMN[this.facing];
+    const column = FACING_COLUMN[this.facing];
     if (flashing) {
-      return this.hurtRow * COLUMNS + column;
+      return this.hurtRow * SHEET_COLUMNS + column;
     }
     const { action } = monster;
     if (action.type === 'winding-up' && warnsNow(action.progress)) {
-      return (this.hurtRow + 1) * COLUMNS + column;
+      return (this.hurtRow + 1) * SHEET_COLUMNS + column;
     }
     const moving = this.movingMsLeft > 0 || action.type === 'dashing';
     const row = Math.floor(this.animMs / (moving ? WALK_FRAME_MS : IDLE_FRAME_MS)) % this.walkRows;
-    return row * COLUMNS + column;
+    return row * SHEET_COLUMNS + column;
   }
 
   /** Behind a dashing monster: faded copies of it, so that its speed shows. */
@@ -298,9 +286,9 @@ export class MonsterSprites {
     if (box === null) {
       return;
     }
-    this.bars.fillStyle(BAR_OUTLINE);
+    this.bars.fillStyle(OUTLINE_COLOUR);
     this.bars.fillRect(box.left, box.top, box.width, box.height);
-    this.bars.fillStyle(BAR_HEALTH);
+    this.bars.fillStyle(HEALTH_COLOUR);
     this.bars.fillRect(
       box.left + 1,
       box.top + 1,

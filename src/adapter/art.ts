@@ -1,14 +1,16 @@
 import type Phaser from 'phaser';
 import type { AreaView, Box, Direction, MonsterView, Point } from '../core';
 import { FACING_STEP, px, TILE_SIZE } from './config';
+import { DASH_TRAIL_ALPHAS, HEALTH_COLOUR, OUTLINE_COLOUR, warnsNow } from './monster-look';
 import type { Rect } from './pixel-font';
 
 // The flat shapes of what has no picture yet, and the colours of every kind of terrain and type of monster. Drawn here
 // from the state view: the ground and the monsters of an area whose art is not final, and the telegraphs and the strikes
 // of the monster attacks, which stay flat shapes. The pictures are elsewhere: the baked ground (terrain-baker.ts), the
 // monsters of final art and what they shoot (monster-sprites.ts, projectile-sprites.ts), the props (prop-sprites.ts: what
-// every area shares, and the old vessel), and the hero and its arrows (hero-sprite.ts). The rest of the adapter only calls
-// the draw functions below.
+// every area shares, and the old vessel), and the hero and its arrows (hero-sprite.ts). What a flat monster shares with a
+// pictured one, such as the flashes of its wind-up, is in monster-look.ts. The rest of the adapter only calls the draw
+// functions below.
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -52,21 +54,13 @@ const MONSTER_COLOURS: Readonly<Record<string, number>> = {
 /** Anything the art has no colour for is drawn in this colour, so a missing one cannot be overlooked. */
 const UNKNOWN_COLOUR = 0xff00ff;
 
-const OUTLINE_COLOUR = 0x1b1b24;
 const HIT_FLASH_COLOUR = 0xffffff;
-const HEALTH_COLOUR = 0x7bd35f;
 const TELEGRAPH_COLOUR = 0xe0392e;
 const STRIKE_COLOUR = 0xff8a3d;
 const WIND_UP_COLOUR = 0xff6b5b;
 
-/** A monster that warns by flashing alternates on and off over this many equal parts of its wind-up, ending on. */
-const WIND_UP_FLASH_PARTS = 7;
-
 /** How far, in tiles, a zone's edge may lie beyond a body's and still be the body's edge: it absorbs rounding. */
 const EDGE_TOLERANCE = 1e-6;
-
-/** The faded copies of a dashing monster's body left behind it, nearest first, by how much of its colour shows. */
-const DASH_TRAIL_ALPHAS: readonly number[] = [0.5, 0.3, 0.15];
 
 /** A body's rectangle in pixels. Its size is fixed, so it never flickers between sizes as it moves. */
 function bodyRect(position: Point, size: number): Rect {
@@ -149,7 +143,7 @@ function flashesToWarn(monster: MonsterView): boolean {
     zone.maxX <= position.x + half + EDGE_TOLERANCE &&
     zone.minY >= position.y - half - EDGE_TOLERANCE &&
     zone.maxY <= position.y + half + EDGE_TOLERANCE;
-  return withinBody && Math.floor(action.progress * WIND_UP_FLASH_PARTS) % 2 === 0;
+  return withinBody && warnsNow(action.progress);
 }
 
 /** Behind a dashing monster: faded copies of its body, so that its speed shows. */
