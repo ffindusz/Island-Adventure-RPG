@@ -15,6 +15,7 @@ import { automapColour, EXIT_COLOUR, MAP_COLOUR } from './automap-palette';
 import { ChangeGuard } from './change-guard';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { closePageKeyLabel } from './controls';
+import { DEPTH } from './depths';
 import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Graphics, Rect } from './pixel-font';
 import { INK, UiLayer, WINDOW_PADDING } from './ui-layer';
@@ -29,7 +30,7 @@ import { INK, UiLayer, WINDOW_PADDING } from './ui-layer';
  * depth, over the window, which is one below it, and the dimming of the game is one below that. The hero's mark is one
  * above the map.
  */
-const PAGE_DEPTH = 200;
+const PAGE_DEPTH = DEPTH.overlay;
 
 /** The window, in canvas pixels: in the middle of the screen, with the padding of every window (ui-layer.ts). */
 const PANEL_WIDTH = 300;

@@ -4,6 +4,7 @@ import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
 import { ChangeGuard } from './change-guard';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { interactKeyLabel, pageKeyLabel, switchWeaponKeyLabel } from './controls';
+import { DEPTH } from './depths';
 import { CONSUMABLE_NAMES, numberText, STAT_NAMES } from './labels';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import { INK, UiLayer } from './ui-layer';
@@ -29,9 +30,6 @@ export type NoticeContent =
   | { readonly kind: 'gate-opened' }
   | { readonly kind: 'vessel-prepared' }
   | { readonly kind: 'save-failed' };
-
-/** Above the HUD, below the overlay: a page that opens covers the notice. */
-const NOTICE_DEPTH = 150;
 
 /** From the panel's edge, whose frame is 3 pixels wide, to what it holds. */
 const PADDING = 7;
@@ -61,7 +59,7 @@ export class Notice {
   private readonly shown = new ChangeGuard();
 
   constructor(scene: Phaser.Scene) {
-    this.layer = new UiLayer(scene, NOTICE_DEPTH);
+    this.layer = new UiLayer(scene, DEPTH.notice);
   }
 
   /** Shows the content, or nothing. It draws again only when what it shows has changed. */

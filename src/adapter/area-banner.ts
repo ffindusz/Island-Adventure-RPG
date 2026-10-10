@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { ChangeGuard } from './change-guard';
 import { VIEW_WIDTH } from './config';
+import { DEPTH } from './depths';
 import { HUD_BOTTOM } from './hud';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import { INK, UiLayer } from './ui-layer';
@@ -8,9 +9,6 @@ import { INK, UiLayer } from './ui-layer';
 // The text of an Adventure Area, across the top of the screen for a few seconds after the hero first comes in. It is
 // drawn from the text the Game core's view carries, and the core also decides how long it stays: the banner is
 // see-through and takes no input, so it never gets in the way of play.
-
-/** Above the HUD, below the notice of what the hero found, and below the overlay. */
-const BANNER_DEPTH = 120;
 
 const SIDE_MARGIN = 6;
 /** From the panel's edge, whose frame is 3 pixels wide, to the text. */
@@ -32,7 +30,7 @@ export class AreaBanner {
   private readonly shown = new ChangeGuard();
 
   constructor(scene: Phaser.Scene) {
-    this.layer = new UiLayer(scene, BANNER_DEPTH);
+    this.layer = new UiLayer(scene, DEPTH.areaBanner);
   }
 
   /** Shows the text, or nothing. It draws again only when what it shows has changed. */

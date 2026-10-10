@@ -13,6 +13,7 @@ import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
 import { ChangeGuard } from './change-guard';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { closePageKeyLabel, confirmKeyLabel, statKeyLabel } from './controls';
+import { DEPTH } from './depths';
 import { potionLineOf } from './inventory-menu';
 import { CONSUMABLE_NAMES, GEAR_STAT_ABBREVIATIONS, numberText, STAT_NAMES } from './labels';
 import { bitmapHeight, bitmapWidth, TEXT_HEIGHT, textWidthOf } from './pixel-font';
@@ -26,9 +27,6 @@ import { INK, UiLayer, WINDOW_PADDING } from './ui-layer';
 // the Game core's view alone, in a window over a dimmed copy of the game, and every number on it is a number the view
 // gives: it works out nothing. The one thing it is given besides the view is where the player's cursor is on the
 // inventory page.
-
-/** Above the HUD. The dimming sits just under the window. */
-const OVERLAY_DEPTH = 200;
 
 const WIDE_WINDOW = 160;
 const NARROW_WINDOW = 96;
@@ -139,8 +137,9 @@ export class Overlay {
   private readonly shown = new ChangeGuard();
 
   constructor(scene: Phaser.Scene) {
-    this.backdrop = scene.add.graphics().setScrollFactor(0).setDepth(OVERLAY_DEPTH - 1);
-    this.layer = new UiLayer(scene, OVERLAY_DEPTH);
+    // The dimming sits just under the window.
+    this.backdrop = scene.add.graphics().setScrollFactor(0).setDepth(DEPTH.overlay - 1);
+    this.layer = new UiLayer(scene, DEPTH.overlay);
   }
 
   /** Shows what the view says. It draws again only when what it shows has changed. */

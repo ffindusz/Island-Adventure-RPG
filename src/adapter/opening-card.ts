@@ -2,6 +2,7 @@ import type Phaser from 'phaser';
 import { wrapText } from './area-banner';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { confirmKeyLabel } from './controls';
+import { DEPTH } from './depths';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Graphics, Rect } from './pixel-font';
 import { INK, UiLayer, WINDOW_PADDING } from './ui-layer';
@@ -10,9 +11,6 @@ import { INK, UiLayer, WINDOW_PADDING } from './ui-layer';
 // the middle of a black screen, with the lines in it and a hint under them. The play screen holds the game while the
 // card shows (play-scene.ts). Where the text goes is worked out apart from the drawing, so that it can be tested. The
 // ending and the credits are cards too (ending-pages.ts), laid out and drawn by the same two functions.
-
-/** Above the overlay and the Automap page: the card covers the whole play screen. */
-const OPENING_DEPTH = 250;
 
 /** The air between the screen's edge and the window at its widest, which a card keeps above and below it as well. */
 export const SIDE_MARGIN = 12;
@@ -100,9 +98,9 @@ export class OpeningCard {
   private readonly layer: UiLayer;
 
   constructor(scene: Phaser.Scene, lines: readonly string[]) {
-    this.backdrop = scene.add.graphics().setScrollFactor(0).setDepth(OPENING_DEPTH - 1);
+    this.backdrop = scene.add.graphics().setScrollFactor(0).setDepth(DEPTH.openingCard - 1);
     this.backdrop.fillStyle(0x000000).fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
-    this.layer = new UiLayer(scene, OPENING_DEPTH);
+    this.layer = new UiLayer(scene, DEPTH.openingCard);
     drawCard(this.layer, layoutCard(lines));
   }
 

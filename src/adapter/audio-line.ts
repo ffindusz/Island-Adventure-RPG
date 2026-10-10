@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { ChangeGuard } from './change-guard';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
+import { DEPTH } from './depths';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Rect } from './pixel-font';
 import { INK, UiLayer } from './ui-layer';
@@ -13,9 +14,6 @@ import { INK, UiLayer } from './ui-layer';
 // the pages and the card of the opening included, and, like the area banner, it is see-through and takes no input. Each
 // screen has a line of its own, which it gives the frame's time and what the keys said. The time is the frames' and not
 // a timer's, so that the line stays for as long as the game is shown and no longer.
-
-/** Above the title and the ending (300) and above everything the play screen draws, its pages and the opening card (250) too. */
-const LINE_DEPTH = 400;
 
 /** How long the line stays after the last press of a key, in milliseconds. */
 const LINE_MS = 1500;
@@ -50,7 +48,7 @@ export class AudioLine {
   private readonly shown = new ChangeGuard();
 
   constructor(scene: Phaser.Scene, corner: LineCorner = 'top-right') {
-    this.layer = new UiLayer(scene, LINE_DEPTH);
+    this.layer = new UiLayer(scene, DEPTH.audioLine);
     this.corner = corner;
   }
 

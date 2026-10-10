@@ -4,15 +4,13 @@ import type { PlayingView, WeaponSlot } from '../core';
 import { consumableIcon, gearIcon } from './artwork';
 import { ChangeGuard } from './change-guard';
 import { TILE_SIZE } from './config';
+import { DEPTH } from './depths';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import { INK, UiLayer } from './ui-layer';
 
 // The heads-up display: what the player must always see, drawn from the Game core's view and nothing else. It is a dark
 // panel at the top left, fixed to the screen, with pictures of the pack and the bitmap font on it. Text objects blur
 // at this size, so the numbers are drawn with rectangles, which stay sharp at every zoom.
-
-/** Above everything the play screen draws. */
-const HUD_DEPTH = 100;
 
 /** Distance from the screen's edge to the panel, and from the panel's edge to what it holds, in canvas pixels. */
 const MARGIN = 2;
@@ -93,7 +91,7 @@ export class Hud {
   private readonly shown = new ChangeGuard();
 
   constructor(scene: Phaser.Scene) {
-    this.layer = new UiLayer(scene, HUD_DEPTH);
+    this.layer = new UiLayer(scene, DEPTH.hud);
   }
 
   /** Shows what the view says. It draws again only when what it shows has changed. */
