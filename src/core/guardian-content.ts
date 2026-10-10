@@ -5,6 +5,7 @@ import { blockedTiles, reachableFrom, sourcesOf } from './device-routes';
 import type { Place, Start } from './device-routes';
 import { tileKey } from './geometry';
 import type { Tile } from './geometry';
+import { monsterTypeOf } from './monster-content';
 import type { VesselSite } from './vessel-content';
 
 // Checking that the game's one Guardian has its place. Whatever the content, there is at most one Guardian, and a gate
@@ -27,11 +28,11 @@ export interface GuardianSite extends Place {
  * Throws an Error naming the second Guardian, or the gate that waits for something that is no Guardian of its own area.
  * Returns the Guardians the content places: none, or one.
  */
-export function checkGuardians(areas: readonly Area[], monsterTypes: Content['monsterTypes']): GuardianSite[] {
+export function checkGuardians(areas: readonly Area[], content: Pick<Content, 'monsterTypes'>): GuardianSite[] {
   const sites: GuardianSite[] = [];
   for (const area of areas) {
     for (const monster of area.monsters) {
-      if (behaviorOf(monsterTypes, monster.type) !== 'guardian') {
+      if (monsterTypeOf(content, monster.type).behavior !== 'guardian') {
         continue;
       }
       const first = sites[0];
@@ -50,19 +51,11 @@ export function checkGuardians(areas: readonly Area[], monsterTypes: Content['mo
       });
     }
   }
-  checkGatesNameTheirGuardians(areas, monsterTypes);
+  checkGatesNameTheirGuardians(areas, content);
   return sites;
 }
 
-function behaviorOf(monsterTypes: Content['monsterTypes'], name: string): string {
-  const type = monsterTypes[name];
-  if (type === undefined) {
-    throw new Error(`There is no monster type "${name}"`);
-  }
-  return type.behavior;
-}
-
-function checkGatesNameTheirGuardians(areas: readonly Area[], monsterTypes: Content['monsterTypes']): void {
+function checkGatesNameTheirGuardians(areas: readonly Area[], content: Pick<Content, 'monsterTypes'>): void {
   for (const area of areas) {
     for (const interactable of area.interactables) {
       if (!isGuardianGate(interactable)) {
@@ -78,7 +71,7 @@ function checkGatesNameTheirGuardians(areas: readonly Area[], monsterTypes: Cont
       if (owner.id !== area.id) {
         throw new Error(`${refusal} that monster is in area "${owner.id}", not in this one`);
       }
-      const behavior = behaviorOf(monsterTypes, placement.type);
+      const behavior = monsterTypeOf(content, placement.type).behavior;
       if (behavior !== 'guardian') {
         throw new Error(`${refusal} that monster is not a Guardian: its behavior is "${behavior}"`);
       }

@@ -1,5 +1,5 @@
 import { arrowSizeOf } from './arrows';
-import { areaOf, monsterTypeOf } from './content';
+import { areaOf } from './content';
 import type { Content, Interactable } from './content';
 import { automapPage } from './automap';
 import { isActive } from './checkpoints';
@@ -9,6 +9,7 @@ import { carriedGear } from './gear';
 import { centerOfBox } from './geometry';
 import type { Box, Point } from './geometry';
 import type { GameView, InteractableView, LevelUpView, MonsterActionView, PageView } from './interface';
+import { monsterTypeOf } from './monster-content';
 import {
   experienceProgress,
   heroAttack,

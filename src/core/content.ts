@@ -243,7 +243,7 @@ export function loadContent(definition: ContentDefinition): Content {
   checkKeysAndDoors(Object.values(areas));
   checkLeverTargets(Object.values(areas));
   const start = { areaId: startArea.id, tile: definition.start.tile };
-  const guardians = checkGuardians(Object.values(areas), monsterTypes);
+  const guardians = checkGuardians(Object.values(areas), { monsterTypes });
   const vessels = checkVessels(Object.values(areas), ending !== null);
   checkRoutesStayOpen(Object.values(areas), start, [...guardians, ...vessels]);
   checkGuardianPlace(start, guardians, vessels, definition.requireGuardian === true);
@@ -656,14 +656,6 @@ export function areaOf(content: Content, areaId: string): Area {
     throw new Error(`Unknown area "${areaId}"`);
   }
   return area;
-}
-
-export function monsterTypeOf(content: Content, type: string): MonsterType {
-  const found = content.monsterTypes[type];
-  if (found === undefined) {
-    throw new Error(`Unknown monster type "${type}"`);
-  }
-  return found;
 }
 
 export function gearOf(content: Content, id: string): GearDefinition {

@@ -1,7 +1,7 @@
 import { grantConsumable } from './consumables';
-import { monsterTypeOf } from './content';
 import type { Content } from './content';
 import type { GameEvent, RandomSource } from './interface';
+import { monsterTypeOf } from './monster-content';
 import type { MonsterState, PlayState } from './state';
 
 /**

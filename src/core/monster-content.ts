@@ -1,3 +1,4 @@
+import type { Content } from './content';
 import type {
   ChaserMonsterDefinition,
   ChargerMonsterDefinition,
@@ -120,6 +121,15 @@ export type MonsterType =
   | ChargerMonsterType
   | RangedMonsterType
   | GuardianMonsterType;
+
+/** Like `areaOf`, it cannot fail for content that loaded; it fails loudly for a snapshot that does not fit it. */
+export function monsterTypeOf(content: Pick<Content, 'monsterTypes'>, type: string): MonsterType {
+  const found = content.monsterTypes[type];
+  if (found === undefined) {
+    throw new Error(`Unknown monster type "${type}"`);
+  }
+  return found;
+}
 
 /** The start of every message about a field of one monster type: `Monster type "boar": ` and then the field. */
 function monsterField(name: string): (fieldName: string) => string {

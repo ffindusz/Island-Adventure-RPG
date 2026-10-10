@@ -1,9 +1,9 @@
 import type { Area, Content, Interactable } from './content';
-import { monsterTypeOf } from './content';
 import { GEAR_SLOTS } from './definitions';
 import type { ConsumableId, GearSlot, MonsterPlacement, StatId, WeaponSlot } from './definitions';
 import type { Box, Direction, Point, Tile } from './geometry';
 import { boxAround, centerOf } from './geometry';
+import { monsterTypeOf } from './monster-content';
 import { heroMaxHealth } from './stats';
 
 /** Bumped whenever the shape of a Snapshot changes in a way an older save cannot satisfy. */

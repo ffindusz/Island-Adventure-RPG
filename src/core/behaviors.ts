@@ -1,9 +1,9 @@
 import type { Content } from './content';
-import { monsterTypeOf } from './content';
 import { stepChaser } from './chaser';
 import { stepCharger } from './charger';
 import { stepGuardian } from './guardian';
 import type { GameEvent } from './interface';
+import { monsterTypeOf } from './monster-content';
 import type { MonsterType } from './monster-content';
 import { stepRanged } from './ranged';
 import type { MonsterState, PlayState } from './state';
