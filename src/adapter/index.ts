@@ -3,7 +3,7 @@ import type { ContentDefinition, Game } from '../core';
 import { ARTWORK, neededArt } from './artwork';
 import { manifestLookup, requireArt } from './asset-manifest';
 import { GameAudio } from './audio';
-import { AUDIO, neededAudio, soundLookup } from './audio-manifest';
+import { AUDIO, neededAudio } from './audio-manifest';
 import { createAudioSettingsStore } from './audio-settings';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { checkAudioKeys } from './controls';
@@ -23,7 +23,7 @@ import { TitleScene } from './title-scene';
  */
 export function startAdapter(core: Game, content: ContentDefinition, storage: SaveStorage | null): Phaser.Game {
   requireArt(neededArt(content), manifestLookup(ARTWORK), 'The content needs pictures that the asset manifest lacks');
-  requireArt(neededAudio(content), soundLookup(AUDIO), 'The content needs sounds that the audio manifest lacks');
+  requireArt(neededAudio(content), manifestLookup(AUDIO), 'The content needs sounds that the audio manifest lacks');
   requireDrawableEnding(content);
   checkAudioKeys((name) => (Phaser.Input.Keyboard.KeyCodes as Record<string, number | undefined>)[name.toUpperCase()]);
   const saves = createSaveStore(storage, content);

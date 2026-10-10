@@ -1,8 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { requireArt, missingArt } from '../src/adapter/asset-manifest';
-import { AUDIO, EFFECTS, neededAudio, soundLookup, soundPath } from '../src/adapter/audio-manifest';
+import { manifestLookup, missingArt, requireArt } from '../src/adapter/asset-manifest';
+import { AUDIO, EFFECTS, neededAudio, soundPath } from '../src/adapter/audio-manifest';
 import type { AudioManifest } from '../src/adapter/audio-manifest';
 import { gameContent } from '../src/content';
 import { recordOnDisk } from './licence-record';
@@ -31,7 +31,7 @@ const sounds = Object.entries(AUDIO);
 
 describe('the audio that the shipped content needs', () => {
   it('is in the audio manifest, every sound of it', () => {
-    expect(missingArt(neededAudio(gameContent), soundLookup(AUDIO))).toEqual([]);
+    expect(missingArt(neededAudio(gameContent), manifestLookup(AUDIO))).toEqual([]);
   });
 
   it('is the title, the music of every area, the fight and the ending, and every effect, and no more', () => {
@@ -50,7 +50,7 @@ describe('the audio that the shipped content needs', () => {
   it.each(neededAudio(gameContent))(
     'stops the game from starting, naming it, when the sound %s is missing',
     (name) => {
-      const manifest = soundLookup(withoutSound(name));
+      const manifest = manifestLookup(withoutSound(name));
 
       expect(missingArt(neededAudio(gameContent), manifest)).toEqual([name]);
       expect(() => requireArt(neededAudio(gameContent), manifest, 'The content needs sounds that the audio manifest lacks')).toThrow(
@@ -64,7 +64,7 @@ describe('the audio that the shipped content needs', () => {
     if (!first) throw new Error('the shipped content has no area to copy');
     const content = { ...gameContent, areas: [...gameContent.areas, { ...first, id: 'an-area-nobody-scored' }] };
 
-    expect(missingArt(neededAudio(content), soundLookup(AUDIO))).toEqual(['music-area-an-area-nobody-scored']);
+    expect(missingArt(neededAudio(content), manifestLookup(AUDIO))).toEqual(['music-area-an-area-nobody-scored']);
   });
 });
 
