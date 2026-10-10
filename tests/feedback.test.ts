@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { Feedback } from '../src/adapter/feedback';
 import { VESSEL_ID } from './harbor-fixtures';
 
-// When the player is told that the vessel is prepared, and for how long, and how long the picture of what the hero
-// picked up rises over it. The rest of what feedback.ts shows is told of by the play scene, and looked at in the smoke
-// test.
+// When the player is told that the vessel is prepared, and for how long, how long the picture of what the hero
+// picked up rises over it, and that the notice that the game could not be saved is told once. The rest of what
+// feedback.ts shows is told of by the play scene, and looked at in the smoke test.
 
 const PREPARED = { type: 'vessel-prepared', vesselId: VESSEL_ID } as const;
 const A_NOTICE_BEFORE = { type: 'checkpoint-activated', checkpointId: 'any' } as const;
@@ -142,5 +142,81 @@ describe('the picture of what the hero picked up, rising over it', () => {
 
     expect(feedback.pickupRises()).toEqual([]);
     expect(feedback.notice()).toEqual({ kind: 'pickup', item: POTION });
+  });
+});
+
+describe('the notice that the game could not be saved', () => {
+  it('tells the player when a save fails, over a notice that was still showing, and not before', () => {
+    const feedback = new Feedback();
+    expect(feedback.notice()).toBeNull();
+    feedback.show([A_NOTICE_BEFORE]);
+    expect(feedback.notice()).toEqual({ kind: 'checkpoint' });
+
+    feedback.saveFailed();
+
+    expect(feedback.notice()).toEqual({ kind: 'save-failed' });
+  });
+
+  it('stays for three seconds, as a notice does, and then goes', () => {
+    const feedback = new Feedback();
+    feedback.saveFailed();
+
+    feedback.age(2999);
+    expect(feedback.notice()).toEqual({ kind: 'save-failed' });
+
+    feedback.age(1);
+    expect(feedback.notice()).toBeNull();
+  });
+
+  it('is told once: a second failed save says nothing, once the first notice has gone', () => {
+    const feedback = new Feedback();
+    feedback.saveFailed();
+    feedback.age(3000);
+
+    feedback.saveFailed();
+
+    expect(feedback.notice()).toBeNull();
+  });
+
+  it('does not start its three seconds again when a second save fails while it is still up', () => {
+    const feedback = new Feedback();
+    feedback.saveFailed();
+    feedback.age(2000);
+
+    feedback.saveFailed();
+    feedback.age(1000);
+
+    expect(feedback.notice()).toBeNull();
+  });
+
+  it('counts as told when a page covered it at once: the second failed save says nothing either', () => {
+    const feedback = new Feedback();
+    feedback.saveFailed();
+    feedback.dismissNotice();
+
+    feedback.saveFailed();
+
+    expect(feedback.notice()).toBeNull();
+  });
+
+  it('leaves the notice of a Checkpoint showing when a second save fails over it', () => {
+    const feedback = new Feedback();
+    feedback.saveFailed();
+    feedback.age(3000);
+    feedback.show([A_NOTICE_BEFORE]);
+
+    feedback.saveFailed();
+
+    expect(feedback.notice()).toEqual({ kind: 'checkpoint' });
+  });
+
+  it('is told again in a play of its own: each play has a Feedback of its own, and the title said so before it', () => {
+    const first = new Feedback();
+    first.saveFailed();
+
+    const second = new Feedback();
+    second.saveFailed();
+
+    expect(second.notice()).toEqual({ kind: 'save-failed' });
   });
 });

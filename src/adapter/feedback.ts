@@ -37,6 +37,7 @@ export class Feedback {
   private told: { readonly content: NoticeContent; readonly msLeft: number } | null = null;
   private rises: Rising[] = [];
   private falling = false;
+  private saveFailureTold = false;
 
   /** Starts the feedback for events the Game core just reported. */
   show(events: readonly GameEvent[]): void {
@@ -161,8 +162,16 @@ export class Feedback {
     this.told = null;
   }
 
-  /** Tells the player that the game could not be saved, over whatever the notice told. */
+  /**
+   * Tells the player that the game could not be saved, over whatever the notice told. Only the first save that fails in
+   * a play is told: with no storage at all every save fails, and the title has already said so, so the rest would cover
+   * the notice of each Checkpoint.
+   */
   saveFailed(): void {
+    if (this.saveFailureTold) {
+      return;
+    }
+    this.saveFailureTold = true;
     this.told = { content: { kind: 'save-failed' }, msLeft: NOTICE_MS };
   }
 }
