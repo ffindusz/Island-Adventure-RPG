@@ -16,6 +16,8 @@ import { potionLineOf } from './inventory-menu';
 import { CONSUMABLE_NAMES, GEAR_STAT_ABBREVIATIONS, shown, STAT_NAMES } from './labels';
 import { bitmapHeight, bitmapWidth, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Bitmap, Graphics } from './pixel-font';
+import { stackHeight, stackRows } from './row-stack';
+import type { RowRules } from './row-stack';
 import { INK, UiLayer, WINDOW_PADDING } from './ui-layer';
 
 // The overlay: what covers the game while it waits for the player. It shows the level-up choice, the page that is open
@@ -343,7 +345,7 @@ function heightOf(row: Row): number {
     case 'space':
       return row.height;
     case 'columns':
-      return Math.max(stackHeight(row.left), stackHeight(row.right));
+      return Math.max(stackHeight(row.left, ROW_RULES), stackHeight(row.right, ROW_RULES));
   }
 }
 
@@ -356,19 +358,11 @@ function gapBetween(above: Row, below: Row): number {
   return isItem(above) && isItem(below) ? 0 : ROW_GAP;
 }
 
-function stackHeight(rows: readonly Row[]): number {
-  let height = 0;
-  let above: Row | null = null;
-  for (const row of rows) {
-    height += (above === null ? 0 : gapBetween(above, row)) + heightOf(row);
-    above = row;
-  }
-  return height;
-}
+const ROW_RULES: RowRules<Row> = { heightOf, gapBetween };
 
 function drawPanel(layer: UiLayer, panel: Panel): void {
   const { width, rows } = panel;
-  const height = stackHeight(rows) + 2 * WINDOW_PADDING;
+  const height = stackHeight(rows, ROW_RULES) + 2 * WINDOW_PADDING;
   const left = Math.floor((VIEW_WIDTH - width) / 2);
   const top = Math.floor((VIEW_HEIGHT - height) / 2);
   layer.window(left, top, width, height);
@@ -392,15 +386,8 @@ function drawStack(layer: UiLayer, rows: readonly Row[], space: RowSpace): void 
     0,
     ...rows.map((row) => (row.kind === 'stat' && row.gain !== null ? textWidthOf(row.gain) + COLUMN_GAP : 0)),
   );
-  let top = space.top;
-  let above: Row | null = null;
-  for (const row of rows) {
-    if (above !== null) {
-      top += gapBetween(above, row);
-    }
-    drawRow(layer, row, { left: space.left, right: space.right, top }, gainColumn);
-    top += heightOf(row);
-    above = row;
+  for (const placed of stackRows(rows, space.top, ROW_RULES)) {
+    drawRow(layer, placed.row, { left: space.left, right: space.right, top: placed.top }, gainColumn);
   }
 }
 

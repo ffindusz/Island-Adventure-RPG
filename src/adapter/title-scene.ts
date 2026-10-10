@@ -9,6 +9,8 @@ import { audioKeyLabel, closePageKeyLabel, confirmKeyLabel } from './controls';
 import { DEPTH } from './depths';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import { PlayerInput } from './player-input';
+import { stackHeight, stackRows } from './row-stack';
+import type { RowRules } from './row-stack';
 import type { SavedGame, SaveStore } from './save-store';
 import { SCENE_KEYS, startOfNewGame } from './scene-keys';
 import type { PlayStart } from './scene-keys';
@@ -212,15 +214,7 @@ function gapBetween(above: Row, below: Row): number {
   return above.kind === 'entry' && below.kind === 'entry' ? 0 : ROW_GAP;
 }
 
-function stackHeight(rows: readonly Row[]): number {
-  let height = 0;
-  let above: Row | null = null;
-  for (const row of rows) {
-    height += (above === null ? 0 : gapBetween(above, row)) + heightOf(row);
-    above = row;
-  }
-  return height;
-}
+const ROW_RULES: RowRules<Row> = { heightOf, gapBetween };
 
 /** Draws the name of the game across the top: the letters in the title colour, a brown extrusion under them and a dark outline round both. */
 function drawLogo(layer: UiLayer): void {
@@ -234,17 +228,12 @@ function drawLogo(layer: UiLayer): void {
 
 /** Draws the window with the rows one under the other, under the name of the game. */
 function drawWindow(layer: UiLayer, rows: readonly Row[]): void {
-  const height = stackHeight(rows) + 2 * WINDOW_PADDING;
+  const height = stackHeight(rows, ROW_RULES) + 2 * WINDOW_PADDING;
   const left = Math.floor((VIEW_WIDTH - WINDOW_WIDTH) / 2);
   const top = windowTop(height);
   layer.window(left, top, WINDOW_WIDTH, height);
   const centred = (width: number): number => left + Math.floor((WINDOW_WIDTH - width) / 2);
-  let rowTop = top + WINDOW_PADDING;
-  let above: Row | null = null;
-  for (const row of rows) {
-    if (above !== null) {
-      rowTop += gapBetween(above, row);
-    }
+  for (const { row, top: rowTop } of stackRows(rows, top + WINDOW_PADDING, ROW_RULES)) {
     if (row.kind === 'entry') {
       if (row.highlighted) {
         layer.frame('button', centred(ENTRY_WIDTH), rowTop, ENTRY_WIDTH, ENTRY_HEIGHT);
@@ -254,7 +243,5 @@ function drawWindow(layer: UiLayer, rows: readonly Row[]): void {
     } else if (row.kind === 'text') {
       layer.text(row.text, centred(textWidthOf(row.text)), rowTop, row.colour);
     }
-    rowTop += heightOf(row);
-    above = row;
   }
 }
