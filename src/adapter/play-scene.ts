@@ -1,13 +1,7 @@
 import Phaser from 'phaser';
 import type { Command, Game, GameEvent, GameView, PlayingView } from '../core';
 import { AreaBanner } from './area-banner';
-import {
-  drawInteractable,
-  drawMonster,
-  drawStrike,
-  drawTelegraph,
-  drawTerrain,
-} from './art';
+import { drawMonster, drawStrike, drawTelegraph, drawTerrain } from './art';
 import { ARTWORK, hasFinalArt } from './artwork';
 import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import { AutomapPage } from './automap-page';
@@ -358,9 +352,6 @@ export class PlayScene extends Phaser.Scene {
     this.telegraphLayer.clear();
     this.entityLayer.clear();
     this.propSprites.draw(view);
-    for (const interactable of view.interactables) {
-      drawInteractable(this.entityLayer, interactable);
-    }
     const monstersAreSprites = hasFinalArt(view.area.id);
     for (const monster of view.monsters) {
       if (monster.action.type === 'winding-up') {

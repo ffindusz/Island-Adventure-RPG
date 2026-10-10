@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import type { AreaView, Box, Direction, InteractableView, MonsterView, Point } from '../core';
+import type { AreaView, Box, Direction, MonsterView, Point } from '../core';
 import { TILE_SIZE } from './config';
 
 // The flat shapes of what has no picture yet, and the colours of every kind of terrain and type of monster. Drawn here
@@ -123,27 +123,6 @@ export function drawTerrain(graphics: Graphics, area: AreaView): void {
       graphics.fillRect(x + TILE_SIZE - 1, y, 1, TILE_SIZE - 1);
     });
   });
-}
-
-/**
- * Draws what the hero can interact with that has no picture, as flat shapes. Every kind has its picture now
- * (prop-sprites.ts), so nothing is drawn here: a new kind of interactable does not compile until it is listed here, and
- * one that has no picture yet is drawn here until it has.
- */
-export function drawInteractable(_graphics: Graphics, interactable: InteractableView): void {
-  switch (interactable.kind) {
-    case 'chest':
-    case 'pickup':
-    case 'key':
-    case 'door':
-    case 'gate':
-    case 'lever':
-    case 'sign':
-    case 'vessel':
-      return;
-    default:
-      interactable satisfies never;
-  }
 }
 
 /**

@@ -180,6 +180,9 @@ export class PropSprites {
       case 'vessel':
         this.place(VESSEL, DEPTH.prop, vesselFoot(foot), interactable.prepared ? VESSEL_HOISTED_FRAME : VESSEL_FURLED_FRAME);
         return;
+      default:
+        // A new kind of interactable does not compile until it has its picture here.
+        interactable satisfies never;
     }
   }
 
