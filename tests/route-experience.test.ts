@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
-import { AREA_IDS, areaOf, experienceOnRoute, levelOf, milestonesOnRoute } from './main-route';
+import { AREA_IDS, areaOf, experienceOnRoute, milestonesOnRoute } from './main-route';
 import type { AreaId } from './main-route';
+import { levelOf } from './profile-heroes';
 
 // The Experience along the intended route, against the Level thresholds of the content: about five level-ups on the
 // way from the shore to the Guardian, with no grinding. The sums read the shipped content, so a monster's worth, a

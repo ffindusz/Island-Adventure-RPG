@@ -121,11 +121,6 @@ export function experienceOnRoute(id: AreaId): number {
   );
 }
 
-/** The Level of a hero with some Experience, by the thresholds of the content: Level 1 below the first. */
-export function levelOf(experience: number): number {
-  return 1 + gameContent.progression.levelThresholds.filter((threshold) => experience >= threshold).length;
-}
-
 /** What a hero has earned on the way in to an area: the route of every area before it, monsters and milestones. */
 export function experienceBefore(id: AreaId): number {
   return AREA_IDS.slice(0, AREA_IDS.indexOf(id)).reduce((total, before) => total + experienceOnRoute(before), 0);

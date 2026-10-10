@@ -1,9 +1,9 @@
 import { gameContent } from '../src/content';
 import type { ConsumableId, GearSlot } from '../src/core';
 import { buildAt, gearFrom, heroAtEntrance, pointsFor, SPENDS, type Spend } from './fight-table';
-import { AREA_IDS, type AreaId, experienceBefore, findsOf, levelOf, monstersOnRoute, MOST_NEARBY } from './main-route';
+import { AREA_IDS, type AreaId, experienceBefore, findsOf, monstersOnRoute, MOST_NEARBY } from './main-route';
 import { markdownTable } from './markdown-table';
-import { gameAtTheGuardian, heroAt, maxHealthOf, statsOf } from './profile-heroes';
+import { gameAtTheGuardian, heroAt, levelOf, maxHealthOf, statsOf } from './profile-heroes';
 
 // What the route gives a hero to fight with, for the balance pass: the steps its Gear makes, and the Healing Potions and
 // Ammunition that lie along it against what the fights of the route take. Nothing is a number of its own: every one

@@ -1,6 +1,16 @@
-import type { ConsumableId, ContentDefinition, Direction, Game, GearSlot, Point, Snapshot, StatId } from '../src/core';
+import type {
+  ConsumableId,
+  ContentDefinition,
+  Direction,
+  Game,
+  GearSlot,
+  PlayingView,
+  Point,
+  Snapshot,
+  StatId,
+} from '../src/core';
 import { gameContent } from '../src/content';
-import { gameAtTitle, newGame } from './fixtures';
+import { gameAtTitle, newGame, playingView } from './fixtures';
 import { experienceForLevel, withoutOrdinaryMonsters } from './routes';
 
 // Heroes of a given make for the tests of the balance pass: what a player has when it reaches a place, put into the
@@ -98,9 +108,36 @@ export interface Place {
 
 const bases = new WeakMap<ContentDefinition, Snapshot>();
 
-/** The most Health a hero with these Stat Points has: the base Health and what the points spent on Health add. */
+/** A copy of the save of a new game of this content, for a test to change as another player's save would differ. */
+function savedNewGame(content: ContentDefinition): Snapshot {
+  let base = bases.get(content);
+  if (base === undefined) {
+    base = newGame(content).snapshot();
+    bases.set(content, base);
+  }
+  return structuredClone(base);
+}
+
+const NO_POINTS: Points = { health: 0, attack: 0, defense: 0 };
+
+/** What the core says of a hero with this Experience and these Stat Points spent: the view of a game continued from a save of it. */
+function viewOfHero(content: ContentDefinition, experience: number, points: Points): PlayingView {
+  const snapshot = savedNewGame(content);
+  snapshot.state.hero.experience = experience;
+  snapshot.state.hero.statPoints = { ...points };
+  const game = gameAtTitle(content);
+  game.send({ type: 'continue', snapshot });
+  return playingView(game);
+}
+
+/** The Level of a hero with some Experience, as the core reports it: Level 1 below the first threshold of the content. */
+export function levelOf(experience: number, content: ContentDefinition = gameContent): number {
+  return viewOfHero(content, experience, NO_POINTS).progress.level;
+}
+
+/** The most Health a hero with these Stat Points has, as the core reports it. */
 export function maxHealthOf(points: Points, content: ContentDefinition = gameContent): number {
-  return content.hero.health + points.health * content.progression.statPointValue.health;
+  return viewOfHero(content, 0, points).hero.maxHealth;
 }
 
 /**
@@ -108,12 +145,7 @@ export function maxHealthOf(points: Points, content: ContentDefinition = gameCon
  * save, which is how a hero of any make is built through the core's own interface.
  */
 export function gameWithHero(content: ContentDefinition, profile: HeroProfile, place: Place): Game {
-  let base = bases.get(content);
-  if (base === undefined) {
-    base = newGame(content).snapshot();
-    bases.set(content, base);
-  }
-  const snapshot = structuredClone(base);
+  const snapshot = savedNewGame(content);
   const { hero } = snapshot.state;
   snapshot.state.areaId = place.areaId;
   hero.position = { ...place.position };
