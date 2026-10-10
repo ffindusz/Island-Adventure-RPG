@@ -307,8 +307,15 @@ export interface Content {
 
 /** Throws an Error that says what is wrong when the definition does not make sense. */
 export function loadContent(definition: ContentDefinition): Content {
+  // The size comes first: the hero's arrow, checked below, must fit in it.
+  requireMoreThanZero("The hero's size", definition.hero.size);
+  requireMoreThanZero("The hero's speed", definition.hero.speedTilesPerSecond);
   requireMoreThanZero("The hero's health", definition.hero.health);
   requireZeroOrMore("The hero's defense", definition.hero.defense);
+  requireZeroOrMore("The hero's attack", definition.hero.attack);
+  requireZeroOrMore("The hero's attack cooldown", definition.hero.attackCooldownMs);
+  requireMoreThanZero("The hero's Melee Weapon reach", definition.hero.meleeWeapon.reach);
+  requireMoreThanZero("The hero's Melee Weapon width", definition.hero.meleeWeapon.width);
   requireMoreThanZero("The hero's interaction reach", definition.hero.interactionReach);
   const rangedWeapon = loadRangedWeapon(definition.hero.rangedWeapon, definition.hero.size);
   const minimumDamage = definition.minimumDamage ?? DEFAULT_MINIMUM_DAMAGE;
@@ -438,6 +445,9 @@ function loadProgression(definition: ProgressionDefinition): ProgressionDefiniti
 }
 
 function loadMonsterType(name: string, definition: MonsterTypeDefinition): MonsterType {
+  // What every behavior has in common is checked once, here; a monster without Health or a body cannot be fought.
+  requireMoreThanZero(`Monster type "${name}": health`, definition.health);
+  requireMoreThanZero(`Monster type "${name}": size`, definition.size);
   requireZeroOrMore(`Monster type "${name}": experience`, definition.experience);
   const drops = loadDrops(name, definition.drops ?? []);
   switch (definition.behavior) {

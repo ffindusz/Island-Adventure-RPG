@@ -10,6 +10,8 @@ import type {
   TileRect,
 } from '../src/core';
 import { ARENA_LAYOUT, arena, BITER, chestAt, dummyAt, fixedRandom, frailMonster, milestone } from './fixtures';
+import { CHARGER, SHOOTER } from './enemy-fixtures';
+import { GUARDIAN } from './guardian-fixtures';
 
 function expectRefused(content: ContentDefinition, message: string): void {
   expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
@@ -117,6 +119,61 @@ describe('numbers the rules cannot work with are refused when the game is create
       what: 'a hero with negative Defense',
       content: arena({ hero: { defense: -1 } }),
       message: "The hero's defense must be 0 or more, but it is -1",
+    },
+    {
+      what: 'a hero with no body',
+      content: arena({ hero: { size: 0 } }),
+      message: "The hero's size must be more than 0, but it is 0",
+    },
+    {
+      what: 'a hero with a negative size',
+      content: arena({ hero: { size: -0.5 } }),
+      message: "The hero's size must be more than 0, but it is -0.5",
+    },
+    {
+      what: 'a hero who cannot walk',
+      content: arena({ hero: { speedTilesPerSecond: 0 } }),
+      message: "The hero's speed must be more than 0, but it is 0",
+    },
+    {
+      what: 'a hero who walks backwards',
+      content: arena({ hero: { speedTilesPerSecond: -5 } }),
+      message: "The hero's speed must be more than 0, but it is -5",
+    },
+    {
+      what: 'a hero with negative Attack',
+      content: arena({ hero: { attack: -1 } }),
+      message: "The hero's attack must be 0 or more, but it is -1",
+    },
+    {
+      what: 'a hero whose attack cooldown is not a number',
+      content: arena({ hero: { attackCooldownMs: Number.NaN } }),
+      message: "The hero's attack cooldown must be 0 or more, but it is NaN",
+    },
+    {
+      what: 'a hero with a negative attack cooldown',
+      content: arena({ hero: { attackCooldownMs: -400 } }),
+      message: "The hero's attack cooldown must be 0 or more, but it is -400",
+    },
+    {
+      what: 'a Melee Weapon that reaches nowhere',
+      content: arena({ hero: { meleeWeapon: { reach: 0, width: 1 } } }),
+      message: "The hero's Melee Weapon reach must be more than 0, but it is 0",
+    },
+    {
+      what: 'a Melee Weapon with a negative reach',
+      content: arena({ hero: { meleeWeapon: { reach: -1, width: 1 } } }),
+      message: "The hero's Melee Weapon reach must be more than 0, but it is -1",
+    },
+    {
+      what: 'a Melee Weapon that sweeps nothing',
+      content: arena({ hero: { meleeWeapon: { reach: 1, width: 0 } } }),
+      message: "The hero's Melee Weapon width must be more than 0, but it is 0",
+    },
+    {
+      what: 'a Melee Weapon with a negative width',
+      content: arena({ hero: { meleeWeapon: { reach: 1, width: -3 } } }),
+      message: "The hero's Melee Weapon width must be more than 0, but it is -3",
     },
     {
       what: 'a negative minimum damage',
@@ -236,7 +293,8 @@ describe('numbers the rules cannot work with are refused when the game is create
 
   it('the lowest numbers that still make sense are accepted', () => {
     const content = arena({
-      hero: { defense: 0 },
+      // A hero with no Attack of its own relies on Gear and Stat Points, and one with no cooldown strikes every step.
+      hero: { defense: 0, attack: 0, attackCooldownMs: 0 },
       minimumDamage: 0,
       progression: { levelThresholds: [1], statPointValue: { health: 1, attack: 1, defense: 1 } },
       milestones: [
@@ -257,6 +315,34 @@ describe('numbers the rules cannot work with are refused when the game is create
     });
 
     expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
+  });
+});
+
+describe('a monster type of any behavior with no Health or no body is refused when the game is created', () => {
+  const BEHAVIORS: readonly { readonly behavior: string; readonly definition: MonsterTypeDefinition }[] = [
+    { behavior: 'stationary', definition: frailMonster(0) },
+    { behavior: 'chaser', definition: BITER },
+    { behavior: 'charger', definition: CHARGER },
+    { behavior: 'ranged', definition: SHOOTER },
+    { behavior: 'guardian', definition: GUARDIAN },
+  ];
+  const CASES: readonly {
+    readonly what: string;
+    readonly changes: { readonly health?: number; readonly size?: number };
+    readonly message: string;
+  }[] = [
+    { what: 'no Health', changes: { health: 0 }, message: 'health must be more than 0, but it is 0' },
+    { what: 'negative Health', changes: { health: -3 }, message: 'health must be more than 0, but it is -3' },
+    { what: 'no body', changes: { size: 0 }, message: 'size must be more than 0, but it is 0' },
+    { what: 'a negative size', changes: { size: -0.5 }, message: 'size must be more than 0, but it is -0.5' },
+  ];
+
+  describe.each(BEHAVIORS)('a $behavior', ({ definition }) => {
+    it.each(CASES)('with $what', ({ changes, message }) => {
+      const content = arena({ monsterTypes: { thing: { ...definition, ...changes } } });
+
+      expectRefused(content, `Monster type "thing": ${message}`);
+    });
   });
 });
 
