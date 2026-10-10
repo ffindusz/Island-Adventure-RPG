@@ -18,6 +18,7 @@ import { routeOf } from './main-route';
 import {
   directionBetween,
   distanceBetween,
+  experienceForLevel,
   experienceOfAll,
   isInZone,
   keyOf,
@@ -663,7 +664,6 @@ describe('the milestone of the castle', () => {
 });
 
 describe('the Experience on the way through the castle', () => {
-  const [, , , , levelSix = 0] = gameContent.progression.levelThresholds;
   const coast = definitionOf(COAST);
   const woods = definitionOf(WOODS);
   const mountain = definitionOf(MOUNTAIN);
@@ -682,7 +682,7 @@ describe('the Experience on the way through the castle', () => {
       experienceOfAll(gameContent, metOn(gameContent, castle, route)) +
       milestonesOf(castle);
 
-    expect(earned).toBeGreaterThanOrEqual(levelSix);
+    expect(earned).toBeGreaterThanOrEqual(experienceForLevel(gameContent, 6));
   });
 });
 

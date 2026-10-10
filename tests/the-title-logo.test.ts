@@ -82,11 +82,11 @@ describe('the text as one bitmap', () => {
   it('leaves a space and a character the font lacks blank, as the font does, and draws lower case as capitals', () => {
     expect(textBitmap('A;A')).toEqual(textBitmap('A A'));
     expect(textBitmap('a')).toEqual(textBitmap('A'));
-    expect(textBitmap(' ').every((row) => row === '.....')).toBe(true);
+    expect(textBitmap(' ')).toEqual(Array.from({ length: TEXT_HEIGHT }, () => '.....'));
   });
 
-  it('has no rows to speak of for no text', () => {
-    expect(textBitmap('').every((row) => row === '')).toBe(true);
+  it('is a line of text high and no pixel wide for no text', () => {
+    expect(textBitmap('')).toEqual(Array.from({ length: TEXT_HEIGHT }, () => ''));
   });
 });
 
@@ -116,11 +116,21 @@ describe('the logo across the top of the title screen', () => {
   it('is a whole number of times the font, two, three or four, the biggest that leaves room at both sides', () => {
     const logo = logoLayout();
     expect([2, 3, 4]).toContain(logo.scale);
-    expect(logo.width).toBe(textWidthOf(GAME_TITLE) * logo.scale);
-    expect(logo.height).toBe(TEXT_HEIGHT * logo.scale);
     const margin = (VIEW_WIDTH - logo.width) / 2;
     expect(margin).toBeGreaterThanOrEqual(8);
     expect(textWidthOf(GAME_TITLE) * (logo.scale + 1) + 16).toBeGreaterThan(VIEW_WIDTH);
+  });
+
+  // The font is 6 pixels a letter less the 1 pixel gap after the last, and 7 high: two letters are 11 wide, eight are 47.
+  // A scale fits when the name and 12 pixels at each side lie across the screen.
+  it.each([
+    ['AB', 320, 4, 44, 28, 138],
+    ['ABCDEFGH', 212, 4, 188, 28, 12],
+    ['ABCDEFGH', 211, 3, 141, 21, 35],
+    ['ABCDEFGH', 200, 3, 141, 21, 29],
+    ['ABCDEFGH', 150, 2, 94, 14, 28],
+  ])('has the size and place worked out by hand for %s across %i pixels: scale %i, %i by %i, %i from the left', (text, viewWidth, scale, width, height, left) => {
+    expect(logoLayout(text, viewWidth)).toMatchObject({ scale, width, height, left });
   });
 
   it('is on whole pixels, in the middle of the screen', () => {

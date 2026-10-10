@@ -14,6 +14,7 @@ import { face, fixedRandom, newGame, playingView } from './fixtures';
 import { routeOf } from './main-route';
 import {
   directionBetween,
+  experienceForLevel,
   experienceOfAll,
   isInZone,
   keyOf,
@@ -358,7 +359,6 @@ describe('the creatures of the woods', () => {
 });
 
 describe('the Experience on the way through the woods', () => {
-  const [, levelThree = 0, levelFour = 0] = gameContent.progression.levelThresholds;
   const coast = definitionOf(COAST);
 
   it('gives a hero who fights what it meets from the start to the exit of the woods, and passes the milestones, the Experience of Level 3', () => {
@@ -368,7 +368,7 @@ describe('the Experience on the way through the woods', () => {
       experienceOfAll(gameContent, metOn(gameContent, woods, trail)) +
       milestonesOf(woods);
 
-    expect(earned).toBeGreaterThanOrEqual(levelThree);
+    expect(earned).toBeGreaterThanOrEqual(experienceForLevel(gameContent, 3));
   });
 
   it('does not give a hero who clears the coast and the woods the Experience of Level 4: nobody has to grind', () => {
@@ -378,7 +378,7 @@ describe('the Experience on the way through the woods', () => {
       experienceOfAll(gameContent, woods.monsters) +
       milestonesOf(woods);
 
-    expect(everything).toBeLessThan(levelFour);
+    expect(everything).toBeLessThan(experienceForLevel(gameContent, 4));
   });
 });
 

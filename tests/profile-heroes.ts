@@ -1,7 +1,7 @@
 import type { ConsumableId, ContentDefinition, Direction, Game, GearSlot, Point, Snapshot, StatId } from '../src/core';
 import { gameContent } from '../src/content';
 import { gameAtTitle, newGame } from './fixtures';
-import { withoutOrdinaryMonsters } from './routes';
+import { experienceForLevel, withoutOrdinaryMonsters } from './routes';
 
 // Heroes of a given make for the tests of the balance pass: what a player has when it reaches a place, put into the
 // shipped content the way a save would put it there, so that every number is the core's own and nothing is worked out
@@ -54,7 +54,7 @@ export const SPLITS = {
 
 /** The Experience a hero has on reaching this Level, the least it can have. */
 export function experienceAt(level: number): number {
-  return level <= 1 ? 0 : (gameContent.progression.levelThresholds[level - 2] ?? Infinity);
+  return level <= 1 ? 0 : experienceForLevel(gameContent, level);
 }
 
 /** A hero of this Level, who has spent the Stat Points that it has earned, and is as the profile says. */

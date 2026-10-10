@@ -243,3 +243,15 @@ export function experienceOfAll(content: ContentDefinition, monsters: readonly {
 export function milestonesOf(area: AreaDefinition): number {
   return (area.milestones ?? []).reduce((total, { reward }) => total + reward.experience, 0);
 }
+
+/**
+ * The Experience that raises a hero to a Level 2 or higher, by the thresholds of the content. A Level the content does
+ * not have is a mistake of the test, so it throws: an Experience of 0 would make "at least this Level" true of anyone.
+ */
+export function experienceForLevel(content: ContentDefinition, level: number): number {
+  const threshold = content.progression.levelThresholds[level - 2];
+  if (threshold === undefined) {
+    throw new Error(`The content has no Experience for Level ${level}`);
+  }
+  return threshold;
+}

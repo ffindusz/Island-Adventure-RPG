@@ -16,6 +16,7 @@ import { routeOf } from './main-route';
 import {
   directionBetween,
   distanceBetween,
+  experienceForLevel,
   experienceOfAll,
   isInZone,
   keyOf,
@@ -477,7 +478,6 @@ describe('what the hero finds on the mountain', () => {
 });
 
 describe('the Experience on the way through the mountain', () => {
-  const [, , levelFour = 0, levelFive = 0] = gameContent.progression.levelThresholds;
   const coast = definitionOf(COAST);
   const woods = definitionOf(WOODS);
 
@@ -490,7 +490,7 @@ describe('the Experience on the way through the mountain', () => {
       experienceOfAll(gameContent, metOn(gameContent, mountain, trail)) +
       milestonesOf(mountain);
 
-    expect(earned).toBeGreaterThanOrEqual(levelFour);
+    expect(earned).toBeGreaterThanOrEqual(experienceForLevel(gameContent, 4));
   });
 
   it('does not give a hero who clears the coast, the woods and the mountain the Experience of Level 5: nobody has to grind', () => {
@@ -502,7 +502,7 @@ describe('the Experience on the way through the mountain', () => {
       experienceOfAll(gameContent, mountain.monsters) +
       milestonesOf(mountain);
 
-    expect(everything).toBeLessThan(levelFive);
+    expect(everything).toBeLessThan(experienceForLevel(gameContent, 5));
   });
 });
 

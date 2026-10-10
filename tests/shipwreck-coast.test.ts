@@ -6,6 +6,7 @@ import type { AreaDefinition, Tile } from '../src/core';
 import { face, fixedRandom, playingView } from './fixtures';
 import {
   directionBetween,
+  experienceForLevel,
   isInZone,
   keyOf,
   neighboursOf,
@@ -175,7 +176,6 @@ describe('the monsters of the shipwreck coast', () => {
 });
 
 describe('the Experience of the shipwreck coast', () => {
-  const [levelTwo = 0, levelThree = 0] = gameContent.progression.levelThresholds;
   const experienceOf = (monster: { readonly type: string }): number =>
     gameContent.monsterTypes[monster.type]?.experience ?? 0;
   const noticingOf = (monster: { readonly type: string }): number => {
@@ -194,13 +194,13 @@ describe('the Experience of the shipwreck coast', () => {
   it('gives a hero who fights what it meets on the way out, and passes the milestone, the Experience of Level 2', () => {
     const earned = metOnTheWay.reduce((total, monster) => total + experienceOf(monster), 0) + milestonesExperience;
 
-    expect(earned).toBeGreaterThanOrEqual(levelTwo);
+    expect(earned).toBeGreaterThanOrEqual(experienceForLevel(gameContent, 2));
   });
 
   it('does not give a hero who clears the whole coast the Experience of Level 3: nobody has to grind', () => {
     const everything = coast.monsters.reduce((total, monster) => total + experienceOf(monster), 0) + milestonesExperience;
 
-    expect(everything).toBeLessThan(levelThree);
+    expect(everything).toBeLessThan(experienceForLevel(gameContent, 3));
   });
 });
 

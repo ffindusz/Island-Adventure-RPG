@@ -18,6 +18,7 @@ import { routeOf } from './main-route';
 import {
   directionBetween,
   distanceBetween,
+  experienceForLevel,
   experienceOfAll,
   isInZone,
   keyOf,
@@ -635,7 +636,6 @@ describe('the milestone of the cave', () => {
 });
 
 describe('the Experience on the way through the cave', () => {
-  const [, , , levelFive = 0, levelSix = 0] = gameContent.progression.levelThresholds;
   const coast = definitionOf(COAST);
   const woods = definitionOf(WOODS);
   const mountain = definitionOf(MOUNTAIN);
@@ -651,7 +651,7 @@ describe('the Experience on the way through the cave', () => {
       experienceOfAll(gameContent, metOn(gameContent, cave, trail)) +
       milestonesOf(cave);
 
-    expect(earned).toBeGreaterThanOrEqual(levelFive);
+    expect(earned).toBeGreaterThanOrEqual(experienceForLevel(gameContent, 5));
   });
 
   it('does not give a hero who clears the coast, the woods, the mountain and the cave the Experience of Level 6: nobody has to grind', () => {
@@ -660,7 +660,7 @@ describe('the Experience on the way through the cave', () => {
       0,
     );
 
-    expect(everything).toBeLessThan(levelSix);
+    expect(everything).toBeLessThan(experienceForLevel(gameContent, 6));
   });
 });
 
