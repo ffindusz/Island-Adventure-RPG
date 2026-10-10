@@ -4,6 +4,7 @@ import { ARTWORK } from './artwork';
 import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import type { GameAudio } from './audio';
 import { AudioLine } from './audio-line';
+import { ChangeGuard } from './change-guard';
 import { VIEW_WIDTH } from './config';
 import { audioKeyLabel, closePageKeyLabel, confirmKeyLabel } from './controls';
 import { DEPTH } from './depths';
@@ -60,7 +61,7 @@ export class TitleScene extends Phaser.Scene {
   private playerInput!: PlayerInput<Phaser.Input.Keyboard.Key>;
   private saved: SavedGame = { status: 'none' };
   private menu: TitleMenu = openMenu(false);
-  private shown = '';
+  private readonly shown = new ChangeGuard();
 
   constructor(core: Game, saves: SaveStore, audio: GameAudio) {
     super(SCENE_KEYS.title);
@@ -92,7 +93,7 @@ export class TitleScene extends Phaser.Scene {
       console.warn(`The saved game cannot be continued from (${this.saved.problem}): ${this.saved.detail}`);
     }
     this.menu = openMenu(this.saved.status === 'usable');
-    this.shown = '';
+    this.shown.forget();
   }
 
   override update(_time: number, frameMs: number): void {
@@ -127,11 +128,9 @@ export class TitleScene extends Phaser.Scene {
   /** Draws the screen again only when what it shows has changed. */
   private draw(): void {
     const rows = rowsFor(this.menu, this.saved);
-    const key = JSON.stringify(rows);
-    if (key === this.shown) {
+    if (!this.shown.changed(rows)) {
       return;
     }
-    this.shown = key;
     this.layer.clear();
     drawLogo(this.layer);
     drawWindow(this.layer, rows);

@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { ChangeGuard } from './change-guard';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Rect } from './pixel-font';
@@ -46,7 +47,7 @@ export class AudioLine {
   private readonly corner: LineCorner;
   private text: string | null = null;
   private remaining = 0;
-  private shown: string | null = null;
+  private readonly shown = new ChangeGuard();
 
   constructor(scene: Phaser.Scene, corner: LineCorner = 'top-right') {
     this.layer = new UiLayer(scene, LINE_DEPTH);
@@ -72,10 +73,9 @@ export class AudioLine {
 
   /** Draws again only when what it shows has changed. */
   private draw(): void {
-    if (this.text === this.shown) {
+    if (!this.shown.changed(this.text)) {
       return;
     }
-    this.shown = this.text;
     this.layer.clear();
     if (this.text !== null) {
       drawPanel(this.layer, this.text, this.corner);

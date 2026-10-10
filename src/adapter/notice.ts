@@ -1,9 +1,10 @@
 import type Phaser from 'phaser';
 import type { PickedUpItem } from '../core';
 import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
+import { ChangeGuard } from './change-guard';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { interactKeyLabel, pageKeyLabel, switchWeaponKeyLabel } from './controls';
-import { CONSUMABLE_NAMES, shown, STAT_NAMES } from './labels';
+import { CONSUMABLE_NAMES, numberText, STAT_NAMES } from './labels';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import { INK, UiLayer } from './ui-layer';
 
@@ -57,7 +58,7 @@ interface Line {
  */
 export class Notice {
   private readonly layer: UiLayer;
-  private shown = 'null';
+  private readonly shown = new ChangeGuard();
 
   constructor(scene: Phaser.Scene) {
     this.layer = new UiLayer(scene, NOTICE_DEPTH);
@@ -65,11 +66,9 @@ export class Notice {
 
   /** Shows the content, or nothing. It draws again only when what it shows has changed. */
   draw(content: NoticeContent | null): void {
-    const key = JSON.stringify(content);
-    if (key === this.shown) {
+    if (!this.shown.changed(content)) {
       return;
     }
-    this.shown = key;
     this.layer.clear();
     if (content !== null) {
       drawLines(this.layer, linesFor(content), iconFor(content));
@@ -159,7 +158,7 @@ function pickupLines(item: PickedUpItem): Line[] {
     case 'gear':
       return [
         { text: `FOUND ${item.name}`, colour: TITLE_COLOUR },
-        { text: `+${shown(item.bonus)} ${STAT_NAMES[item.stat]}`, colour: GAIN_COLOUR },
+        { text: `+${numberText(item.bonus)} ${STAT_NAMES[item.stat]}`, colour: GAIN_COLOUR },
         { text: `PRESS ${pageKeyLabel('inventory')} TO EQUIP`, colour: HINT_COLOUR },
       ];
     case 'consumable':

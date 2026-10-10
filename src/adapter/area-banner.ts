@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { ChangeGuard } from './change-guard';
 import { VIEW_WIDTH } from './config';
 import { HUD_BOTTOM } from './hud';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
@@ -28,7 +29,7 @@ export const BANNER_TEXT_WIDTH = VIEW_WIDTH - 2 * (SIDE_MARGIN + PADDING);
 /** Shows the text of the Adventure Area the hero has just come into. */
 export class AreaBanner {
   private readonly layer: UiLayer;
-  private shown: string | null = null;
+  private readonly shown = new ChangeGuard();
 
   constructor(scene: Phaser.Scene) {
     this.layer = new UiLayer(scene, BANNER_DEPTH);
@@ -36,10 +37,9 @@ export class AreaBanner {
 
   /** Shows the text, or nothing. It draws again only when what it shows has changed. */
   draw(text: string | null): void {
-    if (text === this.shown) {
+    if (!this.shown.changed(text)) {
       return;
     }
-    this.shown = text;
     this.layer.clear();
     if (text !== null) {
       drawPanel(this.layer, wrapText(text, BANNER_TEXT_WIDTH));

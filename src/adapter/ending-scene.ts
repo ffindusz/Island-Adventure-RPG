@@ -3,6 +3,7 @@ import { ARTWORK } from './artwork';
 import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import type { GameAudio } from './audio';
 import { AudioLine } from './audio-line';
+import { ChangeGuard } from './change-guard';
 import { DEPTH } from './depths';
 import { layoutEnding, turnPage } from './ending-pages';
 import type { EndingPage } from './ending-pages';
@@ -26,8 +27,8 @@ export class EndingScene extends Phaser.Scene {
   private playerInput!: PlayerInput<Phaser.Input.Keyboard.Key>;
   private pages: readonly EndingPage[] = [];
   private page = 0;
-  /** The page on the screen, or -1 before the first is drawn. */
-  private shown = -1;
+  /** The page on the screen, if any is drawn yet. */
+  private readonly shown = new ChangeGuard();
 
   constructor(audio: GameAudio) {
     super(SCENE_KEYS.ending);
@@ -37,7 +38,7 @@ export class EndingScene extends Phaser.Scene {
   init(start: EndingStart): void {
     this.pages = layoutEnding(start.ending, start.credits);
     this.page = 0;
-    this.shown = -1;
+    this.shown.forget();
   }
 
   preload(): void {
@@ -69,10 +70,9 @@ export class EndingScene extends Phaser.Scene {
       return;
     }
     this.page = page;
-    if (page === this.shown) {
+    if (!this.shown.changed(page)) {
       return;
     }
-    this.shown = page;
     this.layer.clear();
     const card = this.pages[page];
     if (card !== undefined) {

@@ -15,6 +15,6 @@ export const CONSUMABLE_NAMES: Readonly<Record<ConsumableId, string>> = {
 };
 
 /** A number as the player reads it: whole when it is whole, with no more than two decimals otherwise. */
-export function shown(value: number): string {
+export function numberText(value: number): string {
   return String(Math.round(value * 100) / 100);
 }

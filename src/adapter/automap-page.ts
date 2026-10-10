@@ -12,6 +12,7 @@ import {
 } from './automap-layout';
 import type { Metrics, Place } from './automap-layout';
 import { automapColour, EXIT_COLOUR, MAP_COLOUR } from './automap-palette';
+import { ChangeGuard } from './change-guard';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { closePageKeyLabel } from './controls';
 import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
@@ -101,8 +102,8 @@ export class AutomapPage {
   private readonly markLayer: Graphics;
   /** The areas of the content, whose exits say where each link meets a map. */
   private readonly areas: readonly AreaDefinition[];
-  /** What is drawn now, as text, or null while the page is closed: it is drawn again only when this changes. */
-  private shown: string | null = null;
+  /** What is drawn now: it is drawn again only when this changes, and it is forgotten while the page is closed. */
+  private readonly shown = new ChangeGuard();
   /** Where the hero's mark is on the open page, or null when the hero is on none of its maps. */
   private mark: Rect | null = null;
   /** Which of the mark's two colours is drawn now. */
@@ -124,9 +125,7 @@ export class AutomapPage {
       this.hide();
       return;
     }
-    const key = JSON.stringify(page);
-    if (key !== this.shown) {
-      this.shown = key;
+    if (this.shown.changed(page)) {
       this.markPhase = null;
       drawWindow(this.backdrop, this.window);
       this.mark = drawPage(this.pageLayer, page, this.areas);
@@ -148,10 +147,10 @@ export class AutomapPage {
   }
 
   private hide(): void {
-    if (this.shown === null) {
+    if (!this.shown.hasShown()) {
       return;
     }
-    this.shown = null;
+    this.shown.forget();
     this.mark = null;
     this.markPhase = null;
     this.backdrop.clear();

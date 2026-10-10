@@ -2,6 +2,7 @@ import type Phaser from 'phaser';
 import { COVERED_CORNER } from '../core';
 import type { PlayingView, WeaponSlot } from '../core';
 import { consumableIcon, gearIcon } from './artwork';
+import { ChangeGuard } from './change-guard';
 import { TILE_SIZE } from './config';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import { INK, UiLayer } from './ui-layer';
@@ -89,7 +90,7 @@ export function checkHudFootprint(): void {
  */
 export class Hud {
   private readonly layer: UiLayer;
-  private shown = 'nothing';
+  private readonly shown = new ChangeGuard();
 
   constructor(scene: Phaser.Scene) {
     this.layer = new UiLayer(scene, HUD_DEPTH);
@@ -98,11 +99,9 @@ export class Hud {
   /** Shows what the view says. It draws again only when what it shows has changed. */
   draw(view: PlayingView): void {
     const { hero, progress } = view;
-    const key = JSON.stringify([hero.health, hero.maxHealth, hero.activeWeapon, hero.consumables, progress]);
-    if (key === this.shown) {
+    if (!this.shown.changed([hero.health, hero.maxHealth, hero.activeWeapon, hero.consumables, progress])) {
       return;
     }
-    this.shown = key;
     const layer = this.layer;
     const { health, maxHealth, activeWeapon, consumables } = hero;
     layer.clear();

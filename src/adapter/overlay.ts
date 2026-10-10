@@ -10,10 +10,11 @@ import type {
   StatPageView,
 } from '../core';
 import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
+import { ChangeGuard } from './change-guard';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { closePageKeyLabel, confirmKeyLabel, statKeyLabel } from './controls';
 import { potionLineOf } from './inventory-menu';
-import { CONSUMABLE_NAMES, GEAR_STAT_ABBREVIATIONS, shown, STAT_NAMES } from './labels';
+import { CONSUMABLE_NAMES, GEAR_STAT_ABBREVIATIONS, numberText, STAT_NAMES } from './labels';
 import { bitmapHeight, bitmapWidth, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Bitmap, Graphics } from './pixel-font';
 import { stackHeight, stackRows } from './row-stack';
@@ -135,7 +136,7 @@ export interface Panel {
 export class Overlay {
   private readonly backdrop: Graphics;
   private readonly layer: UiLayer;
-  private shown = 'nothing';
+  private readonly shown = new ChangeGuard();
 
   constructor(scene: Phaser.Scene) {
     this.backdrop = scene.add.graphics().setScrollFactor(0).setDepth(OVERLAY_DEPTH - 1);
@@ -145,11 +146,9 @@ export class Overlay {
   /** Shows what the view says. It draws again only when what it shows has changed. */
   draw(view: PlayingView, focused: boolean, inventoryCursor: number): void {
     const panel = panelFor(view, focused, inventoryCursor);
-    const key = JSON.stringify(panel);
-    if (key === this.shown) {
+    if (!this.shown.changed(panel)) {
       return;
     }
-    this.shown = key;
     this.backdrop.clear();
     this.layer.clear();
     if (panel !== null) {
@@ -204,8 +203,8 @@ function levelUpPanel(levelUp: LevelUpView): Panel {
       (option): Row => ({
         kind: 'stat',
         label: `${statKeyLabel(option.stat)} ${STAT_NAMES[option.stat]}`,
-        value: shown(option.value),
-        gain: `+${shown(option.gain)}`,
+        value: numberText(option.value),
+        gain: `+${numberText(option.gain)}`,
       }),
     ),
     { kind: 'space', height: 0 },
@@ -254,7 +253,7 @@ function inventoryPagePanel(page: InventoryPageView, hero: HeroView, cursor: num
       kind: 'gear',
       icon: gearIcon(piece.id),
       name: piece.name,
-      bonus: `+${shown(piece.bonus)} ${GEAR_STAT_ABBREVIATIONS[piece.stat]}`,
+      bonus: `+${numberText(piece.bonus)} ${GEAR_STAT_ABBREVIATIONS[piece.stat]}`,
       equipped: piece.equipped,
       highlighted: first + offset === cursor,
     }),
@@ -279,8 +278,8 @@ function inventoryPagePanel(page: InventoryPageView, hero: HeroView, cursor: num
       value: `${Math.ceil(hero.health)}/${Math.ceil(hero.maxHealth)}`,
       gain: null,
     },
-    { kind: 'stat', label: STAT_NAMES.attack, value: shown(page.attack), gain: null },
-    { kind: 'stat', label: STAT_NAMES.defense, value: shown(page.defense), gain: null },
+    { kind: 'stat', label: STAT_NAMES.attack, value: numberText(page.attack), gain: null },
+    { kind: 'stat', label: STAT_NAMES.defense, value: numberText(page.defense), gain: null },
   ];
   const rows: Row[] = [
     { kind: 'text', text: inventoryTitle(gear.length, cursor), colour: INK.title },
@@ -308,14 +307,14 @@ function statPagePanel(page: StatPageView): Panel {
       {
         kind: 'stat',
         label: 'EXP',
-        value: experience === null ? 'MAX' : `${shown(experience.earned)}/${shown(experience.needed)}`,
+        value: experience === null ? 'MAX' : `${numberText(experience.earned)}/${numberText(experience.needed)}`,
         gain: null,
       },
       { kind: 'bar', share: experience === null ? 1 : experience.earned / experience.needed },
       // Health is rounded up, as on the HUD, so a hero that is still standing never reads as 0.
       { kind: 'stat', label: 'HEALTH', value: `${Math.ceil(page.health)}/${Math.ceil(page.maxHealth)}`, gain: null },
-      { kind: 'stat', label: 'ATTACK', value: shown(page.attack), gain: null },
-      { kind: 'stat', label: 'DEFENSE', value: shown(page.defense), gain: null },
+      { kind: 'stat', label: 'ATTACK', value: numberText(page.attack), gain: null },
+      { kind: 'stat', label: 'DEFENSE', value: numberText(page.defense), gain: null },
       { kind: 'space', height: 0 },
       { kind: 'text', text: `${closePageKeyLabel()} TO CLOSE`, colour: INK.hint },
     ],

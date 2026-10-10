@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shown } from '../src/adapter/labels';
+import { numberText } from '../src/adapter/labels';
 import { LONGEST_GEAR_NAME } from '../src/adapter/overlay';
 import { gameContent } from '../src/content';
 
@@ -24,7 +24,9 @@ describe('the name of a piece of Gear on the inventory page', () => {
   });
 
   it('has a bonus of one digit in every piece of Gear in the content, which the room for a name counts on', () => {
-    const wider = PIECES.filter(([, gear]) => !/^\d$/.test(shown(gear.bonus))).map(([id, gear]) => `${id}: +${shown(gear.bonus)}`);
+    const wider = PIECES.filter(([, gear]) => !/^\d$/.test(numberText(gear.bonus))).map(
+      ([id, gear]) => `${id}: +${numberText(gear.bonus)}`,
+    );
 
     expect(PIECES.length).toBeGreaterThan(0);
     expect(wider).toEqual([]);
