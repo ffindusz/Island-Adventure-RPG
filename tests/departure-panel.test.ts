@@ -1,14 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { PADDING, panelFor } from '../src/adapter/overlay';
 import type { Panel } from '../src/adapter/overlay';
 import { textWidthOf } from '../src/adapter/pixel-font';
 import { charactersTheFontLacks } from './drawn-text';
 import { playingView } from './fixtures';
 import { askingGame, harborGame, preparedGame, VESSEL_ID } from './harbor-fixtures';
-
-// The overlay's key labels come from player-input.ts, which imports Phaser, and Phaser cannot load without a window.
-// None of its keyboard code runs here, so an empty Phaser is enough.
-vi.mock('phaser', () => ({ default: {} }));
 
 // The question whether to sail home, as the overlay shows it: the game is paused behind it, as it is behind a page.
 

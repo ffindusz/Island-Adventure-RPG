@@ -2,9 +2,9 @@ import type Phaser from 'phaser';
 import type { PickedUpItem } from '../core';
 import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
+import { interactKeyLabel, pageKeyLabel, switchWeaponKeyLabel } from './controls';
 import { CONSUMABLE_NAMES, shown, STAT_NAMES } from './labels';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
-import { interactKeyLabel, pageKeyLabel, switchWeaponKeyLabel } from './player-input';
 import { INK, UiLayer } from './ui-layer';
 
 // The notice of what the hero just found, that the bow has nothing to shoot, that it touched a Checkpoint, that a door

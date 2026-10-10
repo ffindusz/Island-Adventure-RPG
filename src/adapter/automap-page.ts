@@ -4,6 +4,7 @@ import { exitRect, fitLabel, layoutRoute, linkedWithNext, markerRect, routeLinks
 import type { Metrics, Place, Rect } from './automap-layout';
 import { automapColour, EXIT_COLOUR, MAP_COLOUR } from './automap-palette';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
+import { closePageKeyLabel } from './controls';
 import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Graphics } from './pixel-font';
 import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
@@ -183,7 +184,7 @@ function drawWindow(backdrop: Graphics, layer: UiLayer): void {
     PANEL.height - 2 * WINDOW_FRAME,
   );
   drawCentred(layer, 'AUTOMAP', CONTENT.top, INK.title);
-  drawCentred(layer, 'ESC TO CLOSE', CONTENT.top + CONTENT.height - TEXT_HEIGHT, INK.hint);
+  drawCentred(layer, `${closePageKeyLabel()} TO CLOSE`, CONTENT.top + CONTENT.height - TEXT_HEIGHT, INK.hint);
 }
 
 /** Draws the route. Returns where the hero's mark goes, if the hero is on the map of an area. */

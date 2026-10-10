@@ -5,9 +5,10 @@ import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
 import type { GameAudio } from './audio';
 import { AudioLine } from './audio-line';
 import { VIEW_WIDTH } from './config';
+import { audioKeyLabel, closePageKeyLabel, confirmKeyLabel } from './controls';
 import { DEPTH } from './depths';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
-import { audioKeyLabel, PlayerInput } from './player-input';
+import { PlayerInput } from './player-input';
 import type { SavedGame, SaveStore } from './save-store';
 import { SCENE_KEYS, startOfNewGame } from './scene-keys';
 import type { PlayStart } from './scene-keys';
@@ -56,7 +57,7 @@ export class TitleScene extends Phaser.Scene {
   private readonly audio: GameAudio;
   private layer!: UiLayer;
   private audioLine!: AudioLine;
-  private playerInput!: PlayerInput;
+  private playerInput!: PlayerInput<Phaser.Input.Keyboard.Key>;
   private saved: SavedGame = { status: 'none' };
   private menu: TitleMenu = openMenu(false);
   private shown = '';
@@ -84,7 +85,7 @@ export class TitleScene extends Phaser.Scene {
     if (keyboard === null) {
       throw new Error('The keyboard plugin is not available, so nothing could choose from the title.');
     }
-    this.playerInput = new PlayerInput(keyboard);
+    this.playerInput = new PlayerInput(keyboard, Phaser.Input.Keyboard.JustDown);
     // The saved game is looked at each time the title comes up, which is also when it is the freshest it can be.
     this.saved = this.saves.read();
     if (this.saved.status === 'unusable') {
@@ -175,8 +176,8 @@ function rowsFor(menu: TitleMenu, saved: SavedGame): Row[] {
     rows.push(
       { kind: 'text', text: 'REPLACE THE SAVED GAME?', colour: INK.warning },
       { kind: 'space', height: 0 },
-      { kind: 'text', text: 'ENTER TO REPLACE IT', colour: INK.text },
-      { kind: 'text', text: 'ESC TO KEEP IT', colour: INK.text },
+      { kind: 'text', text: `${confirmKeyLabel()} TO REPLACE IT`, colour: INK.text },
+      { kind: 'text', text: `${closePageKeyLabel()} TO KEEP IT`, colour: INK.text },
     );
     return rows;
   }
@@ -188,7 +189,7 @@ function rowsFor(menu: TitleMenu, saved: SavedGame): Row[] {
   }
   rows.push(
     { kind: 'text', text: 'W/S OR ARROWS TO CHOOSE', colour: INK.hint },
-    { kind: 'text', text: 'ENTER TO SELECT', colour: INK.hint },
+    { kind: 'text', text: `${confirmKeyLabel()} TO SELECT`, colour: INK.hint },
   );
   rows.push(
     { kind: 'text', text: `${audioKeyLabel('toggle-mute')} TO MUTE`, colour: INK.hint },

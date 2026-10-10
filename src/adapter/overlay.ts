@@ -11,11 +11,11 @@ import type {
 } from '../core';
 import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
+import { closePageKeyLabel, confirmKeyLabel, statKeyLabel } from './controls';
 import { potionLineOf } from './inventory-menu';
 import { CONSUMABLE_NAMES, GEAR_STAT_ABBREVIATIONS, shown, STAT_NAMES } from './labels';
 import { bitmapHeight, bitmapWidth, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Bitmap, Graphics } from './pixel-font';
-import { statKeyLabel } from './player-input';
 import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
 
 // The overlay: what covers the game while it waits for the player. It shows the level-up choice, the page that is open
@@ -163,8 +163,8 @@ function departurePanel(): Panel {
       { kind: 'text', text: 'SAIL HOME?', colour: INK.title },
       { kind: 'text', text: 'THE ADVENTURE ENDS.', colour: INK.warning },
       { kind: 'space', height: 0 },
-      { kind: 'text', text: 'ENTER TO SAIL', colour: INK.text },
-      { kind: 'text', text: 'ESC TO STAY', colour: INK.text },
+      { kind: 'text', text: `${confirmKeyLabel()} TO SAIL`, colour: INK.text },
+      { kind: 'text', text: `${closePageKeyLabel()} TO STAY`, colour: INK.text },
     ],
   };
 }
@@ -263,10 +263,10 @@ function inventoryPagePanel(page: InventoryPageView, hero: HeroView, cursor: num
     { kind: 'space', height: 0 },
     {
       kind: 'text',
-      text: cursor === potionLineOf(page) ? 'UP/DOWN PICK ENTER USE' : 'UP/DOWN PICK ENTER EQUIP',
+      text: `UP/DOWN PICK ${confirmKeyLabel()} ${cursor === potionLineOf(page) ? 'USE' : 'EQUIP'}`,
       colour: INK.hint,
     },
-    { kind: 'text', text: 'ESC TO CLOSE', colour: INK.hint },
+    { kind: 'text', text: `${closePageKeyLabel()} TO CLOSE`, colour: INK.hint },
   ];
   return { width: INVENTORY_WINDOW, rows };
 }
@@ -291,7 +291,7 @@ function statPagePanel(page: StatPageView): Panel {
       { kind: 'stat', label: 'ATTACK', value: shown(page.attack), gain: null },
       { kind: 'stat', label: 'DEFENSE', value: shown(page.defense), gain: null },
       { kind: 'space', height: 0 },
-      { kind: 'text', text: 'ESC TO CLOSE', colour: INK.hint },
+      { kind: 'text', text: `${closePageKeyLabel()} TO CLOSE`, colour: INK.hint },
     ],
   };
 }

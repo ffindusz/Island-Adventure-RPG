@@ -70,7 +70,7 @@ export class PlayScene extends Phaser.Scene {
   private clock!: FixedStepClock;
   private feedback!: Feedback;
   private readonly inventoryMenu = new InventoryMenu();
-  private playerInput!: PlayerInput;
+  private playerInput!: PlayerInput<Phaser.Input.Keyboard.Key>;
   private heroSprite!: HeroSprite;
   private monsterSprites!: MonsterSprites;
   private projectileSprites!: ProjectileSprites;
@@ -159,7 +159,7 @@ export class PlayScene extends Phaser.Scene {
     if (keyboard === null) {
       throw new Error('The keyboard plugin is not available, so nothing could control the hero.');
     }
-    this.playerInput = new PlayerInput(keyboard);
+    this.playerInput = new PlayerInput(keyboard, Phaser.Input.Keyboard.JustDown);
     this.card = this.openingLines.length > 0 ? new OpeningCard(this, this.openingLines) : null;
   }
 

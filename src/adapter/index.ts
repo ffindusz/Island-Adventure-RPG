@@ -6,10 +6,10 @@ import { GameAudio } from './audio';
 import { AUDIO, neededAudio, soundLookup } from './audio-manifest';
 import { createAudioSettingsStore } from './audio-settings';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
+import { checkAudioKeys } from './controls';
 import { requireDrawableEnding } from './ending-pages';
 import { EndingScene } from './ending-scene';
 import { PlayScene } from './play-scene';
-import { checkAudioKeys } from './player-input';
 import { createSaveStore } from './save-store';
 import type { SaveStorage } from './save-store';
 import { TitleScene } from './title-scene';
@@ -25,7 +25,7 @@ export function startAdapter(core: Game, content: ContentDefinition, storage: Sa
   requireArt(neededArt(content), manifestLookup(ARTWORK), 'The content needs pictures that the asset manifest lacks');
   requireArt(neededAudio(content), soundLookup(AUDIO), 'The content needs sounds that the audio manifest lacks');
   requireDrawableEnding(content);
-  checkAudioKeys();
+  checkAudioKeys((name) => (Phaser.Input.Keyboard.KeyCodes as Record<string, number | undefined>)[name.toUpperCase()]);
   const saves = createSaveStore(storage, content);
   // One for the whole game: sounds outlive a scene, so every scene is given the same service.
   const audio = new GameAudio(createAudioSettingsStore(storage));

@@ -1,14 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { VIEW_WIDTH } from '../src/adapter/config';
 import { linesFor } from '../src/adapter/notice';
 import { SIDE_MARGIN } from '../src/adapter/opening-card';
 import { textWidthOf } from '../src/adapter/pixel-font';
 import { INK } from '../src/adapter/ui-layer';
 import { charactersTheFontLacks } from './drawn-text';
-
-// The notice's key labels come from player-input.ts, which imports Phaser, and Phaser cannot load without a window. None
-// of its keyboard code runs here, so an empty Phaser is enough.
-vi.mock('phaser', () => ({ default: {} }));
 
 // The lines of the notice that the vessel is prepared, as they are written: where the notice is drawn is looked at in
 // the smoke test.

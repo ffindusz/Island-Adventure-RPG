@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { wrapText } from './area-banner';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
+import { confirmKeyLabel } from './controls';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Graphics } from './pixel-font';
 import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
@@ -24,7 +25,7 @@ const LINE_GAP = 10;
 const HINT_GAP = 14;
 
 /** What the card tells the player to do, under the lines. */
-export const OPENING_HINT = 'ENTER TO BEGIN';
+export const OPENING_HINT = `${confirmKeyLabel()} TO BEGIN`;
 
 /** The widest a row of text can be and still sit in the card, which is as wide as the screen allows. */
 export const CARD_TEXT_WIDTH = VIEW_WIDTH - 2 * (SIDE_MARGIN + PADDING);

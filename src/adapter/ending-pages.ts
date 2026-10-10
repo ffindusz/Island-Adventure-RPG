@@ -1,5 +1,6 @@
 import type { ContentDefinition } from '../core';
 import { wrapText } from './area-banner';
+import { confirmKeyLabel } from './controls';
 import { CARD_MAX_HEIGHT, CARD_TEXT_WIDTH, layoutRows } from './opening-card';
 import type { CardLayout } from './opening-card';
 import { textWidthOf, undrawableIn } from './pixel-font';
@@ -10,8 +11,8 @@ import { textWidthOf, undrawableIn } from './pixel-font';
 // the drawing, so that it can be tested (ending-scene.ts draws and flips the pages).
 
 /** What the card tells the player under a page that another follows, and under the last page. */
-export const CONTINUE_HINT = 'ENTER TO CONTINUE';
-export const TITLE_HINT = 'ENTER FOR THE TITLE';
+export const CONTINUE_HINT = `${confirmKeyLabel()} TO CONTINUE`;
+export const TITLE_HINT = `${confirmKeyLabel()} FOR THE TITLE`;
 
 /** One card of the ending or the credits: where its window, its rows and its hint go. */
 export type EndingPage = CardLayout;

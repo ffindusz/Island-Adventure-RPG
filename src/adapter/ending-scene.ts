@@ -23,7 +23,7 @@ export class EndingScene extends Phaser.Scene {
   private readonly audio: GameAudio;
   private layer!: UiLayer;
   private audioLine!: AudioLine;
-  private playerInput!: PlayerInput;
+  private playerInput!: PlayerInput<Phaser.Input.Keyboard.Key>;
   private pages: readonly EndingPage[] = [];
   private page = 0;
   /** The page on the screen, or -1 before the first is drawn. */
@@ -56,7 +56,7 @@ export class EndingScene extends Phaser.Scene {
     if (keyboard === null) {
       throw new Error('The keyboard plugin is not available, so nothing could turn the pages of the ending.');
     }
-    this.playerInput = new PlayerInput(keyboard);
+    this.playerInput = new PlayerInput(keyboard, Phaser.Input.Keyboard.JustDown);
   }
 
   override update(_time: number, frameMs: number): void {
