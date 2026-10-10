@@ -10,7 +10,7 @@ import { bulletOf, creditsOwedBy, recordEntries, recordOnDisk } from './licence-
 // says where it is from, what licence it is under, when that was checked and what the credits say of it, that the
 // licence lets a public game be sold, and that the credits screen shows the text the record owes. The record is working
 // notes in Markdown, read here as the-credits.test.ts reads it; the files are read from the disk, as the tests of the
-// pictures and of the audio read them, and that is seam drift, flagged in the ticket.
+// pictures and of the audio read them, which ADR 0005 allows.
 
 const RECORD = [
   '# Asset licence record',

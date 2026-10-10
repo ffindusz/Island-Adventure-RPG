@@ -6,7 +6,8 @@ import { TITLE_LINE_CORNER, logoLayout, paintedBounds, windowTop } from '../src/
 import { gameContent } from '../src/content';
 
 // Where the line of the audio goes, as a pure rule of the adapter's (the Phaser drawing of it is looked at in the real
-// game). Seam drift, like the other adapter-pure tests: it imports from src/adapter, not the Game core.
+// game). A direct test of a pure function of the adapter, as ADR 0005 allows: it imports from src/adapter, not from the
+// Game core.
 
 /** Everything the keys of the audio can say: the narrowest line is SOUND ON, and the widest VOLUME 10/10. */
 const SAID = ['SOUND OFF', 'SOUND ON', ...Array.from({ length: 11 }, (_, volume) => `VOLUME ${volume}/10`)];

@@ -9,7 +9,8 @@ import type { Picture, Pixel } from './pictures';
 // The raiders of the mountain and the creatures of the cave are drawn from sheets of their own, the way the monsters of
 // the coast and the woods are (src/adapter/monster-sprites.ts): four columns, the way each faces (down, up, left, right),
 // the frames of its walk, then a row of a white shape for a hit and a row of a red one for a wind-up. That is the manifest
-// check of ADR 0002 and the shape of the sheets: what each one looks like is for the screenshots.
+// check of ADR 0002 and, with the sheets read from disk as ADR 0005 allows, their shape: what each one looks like is for
+// the screenshots.
 
 const MOUNTAIN = ['raider', 'raider-charger', 'raider-archer', 'raider-veteran'];
 const CAVE = ['cave-bat', 'cave-lizard', 'cave-eye', 'cave-bear'];

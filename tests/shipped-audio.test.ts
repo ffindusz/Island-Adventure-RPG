@@ -8,11 +8,11 @@ import { gameContent } from '../src/content';
 import { recordOnDisk } from './licence-record';
 
 // The sounds of the game are found by name, and the game refuses to start while a name has no entry in the audio
-// manifest. This is the manifest check of ADR 0002, and the files on disk behind it: that each sound the manifest points
-// at is a file of the right format in public/audio, that nothing is shipped that the manifest does not name, that every
-// shipped file is in the asset licence record, and that none comes from the voice acting of the pack, which the game does
-// not have. It is an on-disk check, like the ones of final-art.test.ts, and its seam drift is flagged in the ticket. How
-// the sounds sound, and whether they are the right ones, is for a play check: nothing here can listen.
+// manifest. This is the manifest check of ADR 0002, and the files on disk behind it, which ADR 0005 allows: that each sound
+// the manifest points at is a file of the right format in public/audio, that nothing is shipped that the manifest does not
+// name, that every shipped file is in the asset licence record, and that none comes from the voice acting of the pack,
+// which the game does not have. It is an on-disk check, like the ones of final-art.test.ts. How the sounds sound, and
+// whether they are the right ones, is for a play check: nothing here can listen.
 
 const AUDIO_FOLDER = fileURLToPath(new URL('../public/audio/', import.meta.url));
 

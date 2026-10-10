@@ -9,8 +9,9 @@ import type { Picture, Pixel } from './pictures';
 // The skeleton, the ghoul, the wraith and the knight of the castle are drawn from sheets of their own, the way the other
 // monsters are (src/adapter/monster-sprites.ts): four columns, the way each faces (down, up, left, right), the frames of
 // its walk, then a row of a white shape for a hit and a row of a red one for a wind-up. That is the manifest check of ADR
-// 0002 and the shape of the sheets, and that the four can be told apart by their outlines as well as by their colours: what
-// each one looks like is for the screenshots. The Guardian has a sheet of its own, in tests/castle-guardian-art.test.ts.
+// 0002 and, with the sheets read from disk as ADR 0005 allows, their shape, and that the four can be told apart by their
+// outlines as well as by their colours: what each one looks like is for the screenshots. The Guardian has a sheet of its
+// own, in tests/castle-guardian-art.test.ts.
 
 const UNDEAD = ['castle-skeleton', 'castle-ghoul', 'castle-wraith', 'castle-knight'];
 const CELL = 16;

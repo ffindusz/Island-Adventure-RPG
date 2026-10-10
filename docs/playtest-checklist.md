@@ -175,5 +175,5 @@ Tick one when you accept it as it is; otherwise write what to change.
 - [ ] **`?debug`** in the address bar gives the page the Game core, in a build for the public too. Keep it, or switch it
       off in a shipped build?
 - [ ] **No LICENSE file** is in the repository, so the project's own code, drawings and bitmap font state no licence.
-- [ ] **The tests** that read files from disk, and the first ones that stand in for Phaser, step outside the test seam
-      of ADR 0002. They are listed in the Comments of ticket 26 ("Suggestions and proposals") for your veto.
+- [ ] **The tests** that read files from disk, and those that call the adapter's pure functions directly, step outside
+      the test seam of ADR 0002. ADR 0005 records them and lists them for your veto; no test stands in for Phaser.

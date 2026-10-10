@@ -10,8 +10,9 @@ import type { AreaDefinition, ContentDefinition } from '../src/core';
 // The terrain and the monsters of the areas whose art is final are found by name, `terrain-<kind>` and
 // `monster-<type>`, and the game refuses to start while one is missing. Only the areas that are listed as final count: a
 // kind or a type that has only a colour (the mountain's, until its art is drawn) must not stop the game from starting.
-// This is the manifest check of ADR 0002 and nothing else of the drawing: the names, and that each picture a manifest
-// entry points at is a file of the right shape in public/art. The look is for the screenshots.
+// This is the manifest check of ADR 0002, and with it the files of public/art read from disk as ADR 0005 allows, and
+// nothing else of the drawing: the names, and that each picture a manifest entry points at is a file of the right shape.
+// The look is for the screenshots.
 
 const terrainOrMonster = (name: string): boolean => name.startsWith('terrain-') || name.startsWith('monster-');
 

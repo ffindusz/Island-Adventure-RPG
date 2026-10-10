@@ -15,8 +15,9 @@ import { SAVE_KEY, createSaveStore } from '../src/adapter/save-store';
 import type { SaveStorage } from '../src/adapter/save-store';
 import { adventureAfter, adventureContent } from './saved-adventure';
 
-// The sound settings of the player, which the game keeps in the browser apart from the saved game. The one adapter test
-// that ADR 0002 allows for this: the parsing of what the storage holds, which may be anything.
+// The sound settings of the player, which the game keeps in the browser apart from the saved game. This is the settings
+// boundary of ADR 0002 (the parsing of what the storage holds, which may be anything), and with it, as ADR 0005 allows
+// for the adapter's pure functions, the three changes and the store over a storage in memory.
 
 /** The part of localStorage the game uses, in memory. The tests look at what it holds and what was asked of it, and make it fail. */
 class MemoryStorage implements SaveStorage {

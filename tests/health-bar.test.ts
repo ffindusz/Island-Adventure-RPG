@@ -4,7 +4,8 @@ import { TILE_SIZE, VIEW_HEIGHT } from '../src/adapter/config';
 import { healthBarBox } from '../src/adapter/monster-sprites';
 
 // Where a monster's Health bar goes, as a pure rule of the adapter's (the Phaser drawing of it is looked at in the real
-// game). Seam drift, like the other adapter-pure tests: it imports from src/adapter, not the Game core.
+// game). A direct test of a pure function of the adapter, as ADR 0005 allows: it imports from src/adapter, not from the
+// Game core.
 
 /** A map taller than the screen, so that the camera follows the hero up and down in every row the tests use. */
 const MAP_SIZE = { width: 40, height: 30 };

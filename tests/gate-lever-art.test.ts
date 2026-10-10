@@ -7,7 +7,8 @@ import type { Pixel } from './pictures';
 // A gate and a lever are each a sheet of two frames, the way a door is (src/adapter/prop-sprites.ts): a gate shut and
 // then open, a lever at rest and then pulled. A gate's frame is its arch, which stands over the way and on the rock on
 // each side of it, with its bars in the way between its legs; a lever's frame is its whole tile, a niche in the rock.
-// That is the manifest check of ADR 0002 and the shape of the frames: how they look is for the screenshots.
+// That is the manifest check of ADR 0002 and, with the sheets read from disk as ADR 0005 allows, the shape of the frames:
+// how they look is for the screenshots.
 
 const GATE = 'prop-gate';
 const LEVER = 'prop-lever';
