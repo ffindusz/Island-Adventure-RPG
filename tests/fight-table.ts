@@ -1,6 +1,6 @@
 import { gameContent } from '../src/content';
 import type { GearSlot, MonsterTypeDefinition, StatId } from '../src/core';
-import { duel, type DuelResult } from './duel';
+import { duel, type DuelResult, hitOf } from './duel';
 import { AREA_IDS, type AreaId, areaOf, experienceBefore, findsOf, MOST_NEARBY, monstersOnRoute } from './main-route';
 import { heroAt, levelOf, type HeroProfile, type Points } from './profile-heroes';
 
@@ -73,9 +73,9 @@ export interface Build {
   readonly points: Points;
   /** The fight with no potion to drink: the hero wins or is defeated. */
   readonly result: DuelResult;
-  /** How many blows the hero needs to defeat the monster. */
+  /** How many blows the hero needs to defeat the monster: those it strikes in the fight it wins, as the core reports them. */
   readonly hitsToKill: number;
-  /** What one hit of the monster takes from the hero, after Defense. */
+  /** What one hit of the monster takes from the hero, after Defense, as the core reports it to a hero who takes one. */
   readonly damagePerHit: number;
   /** How many hits of the monster the hero's whole Health takes. */
   readonly hitsToDie: number;
@@ -98,22 +98,18 @@ export function buildAt(typeId: string, area: AreaId, spend: Spend): Build {
   if (known !== undefined) {
     return known;
   }
-  const type = gameContent.monsterTypes[typeId];
-  if (type === undefined) {
-    throw new Error(`The content has no monster type "${typeId}"`);
-  }
   const bare = heroAtEntrance(area, spend);
   const result = duel(typeId, bare);
   const supplied = duel(typeId, heroAtEntrance(area, spend, AMPLE_POTIONS));
   if (supplied.outcome !== 'won') {
     throw new Error(`A hero with ${AMPLE_POTIONS} Healing Potions does not win against a ${typeId}: ${supplied.outcome}`);
   }
-  const damagePerHit = Math.max(gameContent.minimumDamage ?? 1, damageOf(type) - result.defense);
+  const damagePerHit = hitOf(typeId, bare);
   const build: Build = {
     spend,
     points: bare.points,
     result,
-    hitsToKill: Math.ceil(type.health / result.attack),
+    hitsToKill: supplied.blows,
     damagePerHit,
     hitsToDie: Math.ceil(result.maxHealth / damagePerHit),
     lostShare: result.healthLost / result.maxHealth,
