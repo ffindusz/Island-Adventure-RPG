@@ -1160,10 +1160,26 @@ QUARTERS = (
 
 
 def scatter(x, y, salt):
-    """A number that depends only on where it is asked for: the planner's own, so the sand is dressed the way the coast's is."""
+    """A number that depends only on where it is asked for: the planner's own (`scatter` in src/adapter/terrain-plan.ts, the same
+    formula in TypeScript), so the sand is dressed the way the coast's is."""
     h = (((x + 1) * 374761393) ^ ((y + 1) * 668265263) ^ ((salt + 1) * 1103515245)) & 0xFFFFFFFF
     h = ((h ^ (h >> 13)) * 1274126177) & 0xFFFFFFFF
     return h ^ (h >> 16)
+
+
+# What the planner's `scatter` gives for a few places, the same numbers as in tests/terrain-plan.test.ts: if the formula changes
+# in one language only, the check there or the one here fails.
+SCATTER_PINS = (
+    ((0, 0, 0), 1003020413),
+    ((1, 0, 0), 597366888),
+    ((0, 1, 0), 4041187058),
+    ((0, 0, 1), 2280609883),
+    ((5, 7, 2), 4145784892),
+    ((63, 42, 11), 3497004711),
+    ((120, 95, 6), 2176068382),
+)
+assert all(scatter(*place) == number for place, number in SCATTER_PINS), (
+    'scatter no longer gives what src/adapter/terrain-plan.ts gives: change both, and the pins here and in tests/terrain-plan.test.ts')
 
 
 def sky(bands, height=HORIZON):

@@ -160,8 +160,12 @@ const CORNERS: readonly Corner[] = [
 
 type KindAt = (x: number, y: number) => string | undefined;
 
-/** A number that depends only on where it is asked for, so that the same map is always dressed the same way. */
-function scatter(x: number, y: number, salt: number): number {
+/**
+ * A number that depends only on where it is asked for, so that the same map is always dressed the same way.
+ * docs/assets/compose-art.py has this formula again in Python, to dress the sand of the two backdrops as the planner dresses the
+ * coast's; both check the same numbers (see tests/terrain-plan.test.ts), so change them together.
+ */
+export function scatter(x: number, y: number, salt: number): number {
   let h = Math.imul(x + 1, 374761393) ^ Math.imul(y + 1, 668265263) ^ Math.imul(salt + 1, 1103515245);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return (h ^ (h >>> 16)) >>> 0;
