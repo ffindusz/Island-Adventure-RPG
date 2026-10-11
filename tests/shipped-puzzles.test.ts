@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { drawText } from '../src/adapter/pixel-font';
-import type { Graphics } from '../src/adapter/pixel-font';
 import { gameContent } from '../src/content';
 import { STEPS_PER_SECOND, createGame } from '../src/core';
 import type {
@@ -14,6 +12,7 @@ import type {
   Tile,
   TileRect,
 } from '../src/core';
+import { charactersTheFontLacks } from './drawn-text';
 import { face, fixedRandom, interactableViews, inventoryOf, playingView, throughStorage, walk } from './fixtures';
 
 // The light puzzle the game ships with, in the woods: a cabin behind a locked door whose key lies in the north woods.
@@ -180,19 +179,6 @@ function interactWith(game: Game, tile: Tile): readonly GameEvent[] {
   return game.send({ type: 'interact' });
 }
 
-/** How many rectangles the pixel font draws for a piece of text: none when it has no picture for it. */
-function drawnRectangles(text: string): number {
-  let rectangles = 0;
-  const recorder = {
-    fillStyle: () => undefined,
-    fillRect: () => {
-      rectangles += 1;
-    },
-  };
-  drawText(recorder as unknown as Graphics, text, 0, 0, 0xffffff);
-  return rectangles;
-}
-
 describe('the cabin in the woods', () => {
   it('keeps its key where the hero can take it with every door and gate shut', () => {
     const key = placedNamed('key', placedNamed('door', 'cabin-door').key);
@@ -267,9 +253,7 @@ describe('what the game ships with', () => {
 
   // The core cannot tell what the pixel font draws, and a letter that it leaves out is a gap in a clue.
   it.each(texts)('has $of in letters the pixel font can draw', ({ text }) => {
-    const undrawable = [...new Set(text)].filter((character) => character !== ' ' && drawnRectangles(character) === 0);
-
-    expect(undrawable).toEqual([]);
+    expect(charactersTheFontLacks(text)).toEqual([]);
   });
 });
 
