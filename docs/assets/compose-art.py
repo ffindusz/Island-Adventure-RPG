@@ -21,6 +21,7 @@ import argparse
 import math
 import os
 import sys
+from typing import NamedTuple, Optional
 
 from PIL import Image
 
@@ -82,6 +83,11 @@ def hexrgb(text):
 
 def as_rgb(colour):
     return colour if isinstance(colour, tuple) else hexrgb(colour)
+
+
+# Two colours of the pack that many pictures share: the near-black of its outlines and its white, a warm one (not #ffffff).
+OUTLINE = hexrgb('#141b1b')
+PACK_WHITE = hexrgb('#f2eaf1')
 
 
 def key_pieces(tileset, base_row):
@@ -166,7 +172,7 @@ def terrain_tree(pack):
 #   row 1      frame 13 and 14 plain deck, 15 a hole in the deck, 16 to 20 the cargo (barrel, sack, rope, bones, planks)
 #   rows 2-4   the mast, three by three frames at columns 0-2 (frame 26 + 13 * row + column)
 #   row 2      frame 30 and 31, the two halves of a broken mast lying on the sand (a picture of 32 by 16)
-LIGHT, PLANK, SEAM, WALL, DARK, OUTLINE = (hexrgb(text) for text in ('#ffad5d', '#f38c4c', '#e66a3a', '#965746', '#7d3e24', '#141b1b'))
+LIGHT, PLANK, SEAM, WALL, DARK = (hexrgb(text) for text in ('#ffad5d', '#f38c4c', '#e66a3a', '#965746', '#7d3e24'))
 DECK_PIECES = [name for name, _, _ in KEY_PIECES]
 PIECE_OUTSIDE = {
     'C': set(), 'T': {'n'}, 'B': {'s'}, 'L': {'w'}, 'R': {'e'},
@@ -412,7 +418,7 @@ def red_shape(frame):
     for y in range(out.height):
         for x in range(out.width):
             r, g, b, a = pixels[x, y]
-            if a > 0 and (r, g, b) != hexrgb('#141b1b'):
+            if a > 0 and (r, g, b) != OUTLINE:
                 pixels[x, y] = (min(255, r // 2 + 150), g // 3 + 20, b // 3 + 15, a)
     return out
 
@@ -424,12 +430,30 @@ def monster_sheet(walk):
     return frames_sheet([f for row in rows for f in row], 4, cell)
 
 
-def monster_four_ways(pack, folder, name, colours=None, kind='Monster'):
-    """A creature of the pack's `Actor/<kind>/<folder>`: four ways, four frames of a walk (a character's first four rows)."""
-    sprite = pack.image('Actor', kind, folder, name)
-    if colours:
-        sprite = recolour(sprite, colours)
+class MonsterSource(NamedTuple):
+    """Where a monster is cut from: the pack's `Actor/<kind>/<folder>/<file>`, and the colours swapped on it, if any."""
+    kind: str
+    folder: str
+    file: str
+    colours: Optional[dict] = None
+
+
+def monster_picture(pack, source):
+    """A monster sheet cut from `source`: the pack's animals from the side, every other creature four ways with four frames
+    of a walk (a character's first four rows)."""
+    sprite = pack.image('Actor', source.kind, source.folder, source.file)
+    if source.colours:
+        sprite = recolour(sprite, source.colours)
+    if source.kind == 'Animal':
+        width = sprite.width // 2
+        right = [sprite.crop((i * width, 0, (i + 1) * width, sprite.height)) for i in range(2)]
+        left = [frame.transpose(Image.FLIP_LEFT_RIGHT) for frame in right]
+        return monster_sheet([[right[i], right[i], left[i], right[i]] for i in range(2)])
     return monster_sheet([[cut(sprite, d, f) for d in range(4)] for f in range(4)])
+
+
+def monster_builder(source):
+    return lambda pack: monster_picture(pack, source)
 
 
 # The pack's mushroom has a red cap, as red as the crab and as the flash of a wind-up, so its cap is made purple: the red
@@ -450,20 +474,34 @@ GHOUL_FLESH = {'#d14b34': '#b9c28e', '#8f3e56': '#7c8650', '#ef914f': '#e8e6a8'}
 WRAITH_VIOLET = {'#79b8ce': '#a77ee0', '#9ba7aa': '#7c60b8'}
 KNIGHT_TARNISHED = {'#f1c471': '#d1a64e', '#d78b4a': '#9a6e36', '#d14b34': '#c0392b', '#8f3e56': '#5a2d4a'}
 
+# Where each monster is cut from, in the order of the pictures. The pack's `Monster` and `Character` creatures are drawn
+# four ways, its `Animal`s from the side.
+MONSTERS = {
+    'monster-crab': MonsterSource('Monster', 'Mollusc', 'Mollusc.png'),
+    'monster-slime': MonsterSource('Monster', 'Slime', 'Slime.png'),
+    'monster-spitter': MonsterSource('Monster', 'Mushroom', 'mushroom.png', SPITTER_CAP),
+    'monster-wolf': MonsterSource('Animal', 'DogBlack', 'SpriteSheet.png'),
+    'monster-boar': MonsterSource('Animal', 'WildBoar', 'SpriteSheet.png'),
+    'monster-raider': MonsterSource('Character', 'NinjaDark', 'SpriteSheet.png'),
+    'monster-raider-charger': MonsterSource('Character', 'NinjaYellow', 'SpriteSheet.png'),
+    'monster-raider-archer': MonsterSource('Character', 'NinjaBlue', 'SpriteSheet.png'),
+    'monster-raider-veteran': MonsterSource('Character', 'Knight', 'SpriteSheet.png', VETERAN_STEEL),
+    'monster-cave-bat': MonsterSource('Monster', 'BlueBat', 'SpriteSheet.png'),
+    'monster-cave-lizard': MonsterSource('Monster', 'Lizard', 'Lizard.png'),
+    'monster-cave-eye': MonsterSource('Monster', 'Eye', 'Eye.png'),
+    'monster-cave-bear': MonsterSource('Monster', 'Bear', 'SpriteSheet.png', CAVE_BEAR),
+    'monster-castle-skeleton': MonsterSource('Character', 'Skeleton', 'SpriteSheet.png'),
+    'monster-castle-ghoul': MonsterSource('Monster', 'Beast', 'Beast.png', GHOUL_FLESH),
+    'monster-castle-wraith': MonsterSource('Character', 'Spirit', 'SpriteSheet.png', WRAITH_VIOLET),
+    'monster-castle-knight': MonsterSource('Character', 'KnightGold', 'SpriteSheet.png', KNIGHT_TARNISHED),
+}
+
 
 def projectile_orb(pack):
     """The pack's energy ball in the colours of the spitter's cap, with the dark outline of the pack's creatures."""
     ball = pack.image('FX', 'Projectile', 'EnergyBall.png')
     ball = recolour(ball, {'#8feff1': '#e3a6ff', '#79b8ce': '#a15fd8'})
     return outlined(ball)
-
-
-def monster_side(pack, folder, name):
-    sprite = pack.image('Actor', 'Animal', folder, name)
-    width = sprite.width // 2
-    right = [sprite.crop((i * width, 0, (i + 1) * width, sprite.height)) for i in range(2)]
-    left = [frame.transpose(Image.FLIP_LEFT_RIGHT) for frame in right]
-    return monster_sheet([[right[i], right[i], left[i], right[i]] for i in range(2)])
 
 
 # The Guardian of the castle is the pack's Giant Blue Samurai, a boss as wide as four tiles and a half, so its cells are
@@ -603,7 +641,7 @@ def exit_sheet(pack):
     code, white with the pack's dark outline. The adapter shows it see-through."""
     right = Image.new('RGBA', (TILE, TILE), (0, 0, 0, 0))
     for x in (2, 7):
-        stamp(right, CHEVRON_ROWS, {'X': (242, 234, 241)}, x, 3)
+        stamp(right, CHEVRON_ROWS, {'X': PACK_WHITE}, x, 3)
     right = outlined(right)
     return frames_sheet([right.transpose(Image.ROTATE_90), right.transpose(Image.ROTATE_270),
                          right.transpose(Image.FLIP_LEFT_RIGHT), right], 4)
@@ -624,7 +662,7 @@ GATE_ARCH = (172, 183, 196, 208)
 GATE_WAY = (4, 9)
 FENCE_TOP, FENCE_STEM, FENCE_FOOT = 194, 200, 208
 FENCE_STRIPS = ((155, 159), (159, 161), (155, 159), (159, 161), (155, 159))
-IRON, IRON_SHADE = hexrgb('#f2eaf1'), hexrgb('#abc2bc')
+IRON, IRON_SHADE = PACK_WHITE, hexrgb('#abc2bc')
 REST_KNOB = (hexrgb('#d14b34'), hexrgb('#ffcba9'))
 PULLED_KNOB = (hexrgb('#79b8ce'), IRON)
 KNOB_ROUND = [(dx, dy) for dx in range(-2, 2) for dy in range(-3, 1) if dx in (-1, 0) or dy in (-2, -1)]
@@ -857,9 +895,11 @@ def castle_dock(pack):
     return frames_sheet([plain_a, plain_b, moss_a, moss_b, weeds, split], 6)
 
 
+# Three tones of the castle's stone, light to dark, that the pillars, the plinth and the rim of the fountain are drawn in.
+STONE_LIGHT, STONE_MID, STONE_DARK = hexrgb('#c4baa8'), hexrgb('#a59b8a'), hexrgb('#8a8071')
 # The pillars stand where a rock stands alone: a column with a cap and a foot wider than its shaft, in the stone of the wall.
 PILLAR_COLOURS = {
-    'O': OUTLINE, 'h': hexrgb('#ebe3d2'), 'l': hexrgb('#c4baa8'), 'm': hexrgb('#a59b8a'), 'd': hexrgb('#7c7367'),
+    'O': OUTLINE, 'h': hexrgb('#ebe3d2'), 'l': STONE_LIGHT, 'm': STONE_MID, 'd': hexrgb('#7c7367'),
 }
 PILLAR_ROWS = [
     '................',
@@ -928,11 +968,18 @@ def castle_pillars(pack):
     return frames_sheet([pillar_intact(), pillar_mossy(), pillar_broken(), pillar_cracked()], 4)
 
 
+class FountainWater(NamedTuple):
+    """The three tones of the water of the fountain: the surface, the glint on it, the shade."""
+    base: tuple
+    glint: tuple
+    deep: tuple
+
+
 # The fountain is a round basin of the stone of the castle, mossy on its rim, with water in it, a round plinth of stone
 # standing in the middle with a jet of water rising from it. The picture is three tiles by three, drawn on the grass of the
 # courtyard, with nothing in the corners; the plan cuts it into its nine tiles. The water is the water of the harbor.
-FOUNTAIN_WATER = (hexrgb('#71ddee'), hexrgb('#8feff1'), hexrgb('#3da6bd'))
-FOUNTAIN_JET = {'F': hexrgb('#f2eaf1'), 'W': hexrgb('#8feff1'), 'D': hexrgb('#3da6bd'), 'B': hexrgb('#71ddee')}
+FOUNTAIN_WATER = FountainWater(hexrgb('#71ddee'), hexrgb('#8feff1'), hexrgb('#3da6bd'))
+FOUNTAIN_JET = {'F': PACK_WHITE, 'W': FOUNTAIN_WATER.glint, 'D': FOUNTAIN_WATER.deep, 'B': FOUNTAIN_WATER.base}
 FOUNTAIN_JET_ROWS = [
     '....FF....',
     '..F.FF.F..',
@@ -951,18 +998,17 @@ def fountain_plinth():
     layer = Image.new('RGBA', (3 * TILE, 3 * TILE), (0, 0, 0, 0))
     pixels = layer.load()
     centre = 23.5
-    light, mid, dark = hexrgb('#c4baa8'), hexrgb('#a59b8a'), hexrgb('#8a8071')
     for y in range(14, 36):
         for x in range(3 * TILE):
             across = ((x - centre) / 6.0) ** 2
             on_top = across + ((y - 22.0) / 4.4) ** 2 <= 1
             in_body = across + ((y - 25.0) / 4.4) ** 2 <= 1
             if on_top:
-                colour = light if x - centre < 2.5 else mid
+                colour = STONE_LIGHT if x - centre < 2.5 else STONE_MID
                 if across + ((y - 22.0) / 2.4) ** 2 <= 0.6:
-                    colour = FOUNTAIN_WATER[2] if y < 22 and x < centre else FOUNTAIN_WATER[0]
+                    colour = FOUNTAIN_WATER.deep if y < 22 and x < centre else FOUNTAIN_WATER.base
             elif in_body:
-                colour = mid if x < centre else dark
+                colour = STONE_MID if x < centre else STONE_DARK
                 if y > 27:
                     colour = shifted(colour, -14)
             else:
@@ -988,11 +1034,11 @@ def castle_fountain(pack):
             if d > 22:
                 colour = OUTLINE
             elif d > 17.5:
-                colour = hexrgb('#a59b8a')
+                colour = STONE_MID
                 if light > 0.35:
-                    colour = hexrgb('#c4baa8')
+                    colour = STONE_LIGHT
                 elif light < -0.35:
-                    colour = hexrgb('#8a8071')
+                    colour = STONE_DARK
                 if d > 21:
                     colour = shifted(colour, 18)
                 if min(turn, 1 - turn) * (2 * math.pi * d / 20) < 0.7:
@@ -1023,7 +1069,7 @@ VESSEL_HULL_AT = (17, 40)
 VESSEL_MAST_AT = (30, 30)
 VESSEL_SAIL_REACH = 17
 VESSEL_COLOURS = {
-    'O': OUTLINE, 'L': hexrgb('#a98563'), 'M': hexrgb('#7d5f45'), 'S': hexrgb('#cdb892'), 'W': hexrgb('#f2eaf1'),
+    'O': OUTLINE, 'L': hexrgb('#a98563'), 'M': hexrgb('#7d5f45'), 'S': hexrgb('#cdb892'), 'W': PACK_WHITE,
 }
 VESSEL_WOOD = {
     hexrgb('#ffad5d'): VESSEL_COLOURS['L'], hexrgb('#f38c4c'): VESSEL_COLOURS['M'],
@@ -1267,7 +1313,7 @@ def title_backdrop(pack):
     for index, at in TITLE_SAND_PROPS:
         out.alpha_composite(cut(nature, index % NATURE_COLUMNS, index // NATURE_COLUMNS), at)
     out.alpha_composite(broken_mast_picture(pack), (230, 166))
-    out.alpha_composite(cut(monster_four_ways(pack, 'Mollusc', 'Mollusc.png'), 0, 0), (150, 164))
+    out.alpha_composite(cut(monster_picture(pack, MONSTERS['monster-crab']), 0, 0), (150, 164))
     stamp(out, SHADOW_ROWS, {'X': hexrgb('#d2b37d')}, 29, 160)
     out.alpha_composite(cut(pack.image('Actor', 'Character', 'Hunter', 'SpriteSheet.png'), 1, 0), (26, 146))
     return out
@@ -1281,13 +1327,25 @@ def title_backdrop(pack):
 ENDING_HORIZON = 25
 ENDING_SKY = (('#543c52', 0), ('#8f3e56', 5), ('#cf736d', 10), ('#ef914f', 15), ('#ffad5d', 20))
 ENDING_SEA = (('#ef914f', 0), ('#cf736d', 7), ('#8f3e56', 17), ('#543c52', 40), ('#4a5270', 80), ('#3b3643', 130))
-ENDING_SUN = (66, 12, 9)
 ENDING_QUAY = 164
 ENDING_CLOUDS = {'W': hexrgb('#ef9597'), 'S': hexrgb('#a5608b')}
 ENDING_DARK = hexrgb('#3b3643')
-GLITTER = ((0.78, '#ffe18d'), (0.0, '#ffbc75'))
+# The light of the sun from its middle outwards: its core, its disc and the halo round it. The glitter on the sea is the
+# colour of the disc and of the halo.
+SUN_CORE, SUN_DISC, SUN_HALO = hexrgb('#fce2ca'), hexrgb('#ffe18d'), hexrgb('#ffbc75')
+GLITTER = ((0.78, SUN_DISC), (0.0, SUN_HALO))
 VESSEL_AFAR_AT = (64, 5)
 VESSEL_AFAR_CANVAS = {'W': hexrgb('#fce2ca'), 'S': hexrgb('#d3a2c0')}
+
+
+class Sun(NamedTuple):
+    """The sun half set on the horizon: where its middle is, its radius, and how far its halo reaches beyond (in pixels)."""
+    centre_x: int
+    radius: int
+    glow: int
+
+
+ENDING_SUN = Sun(centre_x=66, radius=12, glow=9)
 
 
 def sun(img, centre_x, radius, glow):
@@ -1297,11 +1355,11 @@ def sun(img, centre_x, radius, glow):
         for x in range(centre_x - radius - glow, centre_x + radius + glow + 1):
             distance = math.hypot(x - centre_x, y + 0.5 - ENDING_HORIZON)
             if distance <= radius * 0.55:
-                surface[x, y] = (*hexrgb('#fce2ca'), 255)
+                surface[x, y] = (*SUN_CORE, 255)
             elif distance <= radius:
-                surface[x, y] = (*hexrgb('#ffe18d'), 255)
+                surface[x, y] = (*SUN_DISC, 255)
             elif distance < radius + glow and BAYER[y % 4][x % 4] / 16 < 0.75 * (1 - (distance - radius) / glow):
-                surface[x, y] = (*hexrgb('#ffbc75'), 255)
+                surface[x, y] = (*SUN_HALO, 255)
 
 
 def ending_sea(height):
@@ -1309,7 +1367,7 @@ def ending_sea(height):
     there in the colour of the band above, and the sun's path, a stripe of dashes of light that widens towards the viewer."""
     out = sky(ENDING_SEA, height)
     surface = out.load()
-    centre = ENDING_SUN[0]
+    centre = ENDING_SUN.centre_x
     for y in range(height):
         band = max(i for i, (_, first) in enumerate(ENDING_SEA) if first <= y)
         ripple = hexrgb(ENDING_SEA[max(band - 1, 0)][0])
@@ -1320,7 +1378,7 @@ def ending_sea(height):
             roll = scatter(segment, y, 7) % 100
             length = 2 + scatter(segment, y, 9) % 3
             if roll < 55 * reach:
-                colour = next(hexrgb(colour) for floor, colour in GLITTER if reach >= floor)
+                colour = next(colour for floor, colour in GLITTER if reach >= floor)
                 paint(out, [(x + dx, y) for dx in range(length)], colour)
             elif reach < 0.5 and roll < 55 * reach + 14:
                 paint(out, [(x + dx, y) for dx in range(length)], ripple)
@@ -1347,7 +1405,7 @@ def vessel_afar():
 def ending_backdrop(pack):
     out = Image.new('RGBA', CANVAS, (0, 0, 0, 255))
     out.alpha_composite(sky(ENDING_SKY, ENDING_HORIZON), (0, 0))
-    sun(out, ENDING_SUN[0], ENDING_SUN[1], ENDING_SUN[2])
+    sun(out, *ENDING_SUN)
     for at, rows in (((22, 7), CLOUD_SMALL), ((112, 5), CLOUD_LONG), ((176, 12), CLOUD_MEDIUM), ((218, 4), CLOUD_SMALL)):
         stamp(out, rows, ENDING_CLOUDS, *at)
     for at in ((132, 17), (148, 12), (160, 18)):
@@ -1389,25 +1447,9 @@ BUILDERS = {
     'castle-fountain': castle_fountain,
     'castle-water': castle_water,
     'castle-dock': castle_dock,
-    'monster-crab': lambda pack: monster_four_ways(pack, 'Mollusc', 'Mollusc.png'),
-    'monster-slime': lambda pack: monster_four_ways(pack, 'Slime', 'Slime.png'),
-    'monster-spitter': lambda pack: monster_four_ways(pack, 'Mushroom', 'mushroom.png', SPITTER_CAP),
+    **{name: monster_builder(source) for name, source in MONSTERS.items()},
     'projectile-orb': projectile_orb,
     'fx-puff': lambda pack: pack.image('FX', 'Smoke', 'Smoke', 'SpriteSheet.png'),
-    'monster-wolf': lambda pack: monster_side(pack, 'DogBlack', 'SpriteSheet.png'),
-    'monster-boar': lambda pack: monster_side(pack, 'WildBoar', 'SpriteSheet.png'),
-    'monster-raider': lambda pack: monster_four_ways(pack, 'NinjaDark', 'SpriteSheet.png', kind='Character'),
-    'monster-raider-charger': lambda pack: monster_four_ways(pack, 'NinjaYellow', 'SpriteSheet.png', kind='Character'),
-    'monster-raider-archer': lambda pack: monster_four_ways(pack, 'NinjaBlue', 'SpriteSheet.png', kind='Character'),
-    'monster-raider-veteran': lambda pack: monster_four_ways(pack, 'Knight', 'SpriteSheet.png', VETERAN_STEEL, 'Character'),
-    'monster-cave-bat': lambda pack: monster_four_ways(pack, 'BlueBat', 'SpriteSheet.png'),
-    'monster-cave-lizard': lambda pack: monster_four_ways(pack, 'Lizard', 'Lizard.png'),
-    'monster-cave-eye': lambda pack: monster_four_ways(pack, 'Eye', 'Eye.png'),
-    'monster-cave-bear': lambda pack: monster_four_ways(pack, 'Bear', 'SpriteSheet.png', CAVE_BEAR),
-    'monster-castle-skeleton': lambda pack: monster_four_ways(pack, 'Skeleton', 'SpriteSheet.png', kind='Character'),
-    'monster-castle-ghoul': lambda pack: monster_four_ways(pack, 'Beast', 'Beast.png', GHOUL_FLESH),
-    'monster-castle-wraith': lambda pack: monster_four_ways(pack, 'Spirit', 'SpriteSheet.png', WRAITH_VIOLET, 'Character'),
-    'monster-castle-knight': lambda pack: monster_four_ways(pack, 'KnightGold', 'SpriteSheet.png', KNIGHT_TARNISHED, 'Character'),
     'monster-castle-guardian': guardian_sheet,
     'prop-chest': chest_sheet,
     'prop-pickup': pickup_sheet,
