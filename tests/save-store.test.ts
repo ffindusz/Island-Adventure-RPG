@@ -1,32 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createSaveStore } from '../src/adapter/save-store';
-import type { SaveStorage } from '../src/adapter/save-store';
 import { SNAPSHOT_VERSION } from '../src/core';
 import type { ContentDefinition } from '../src/core';
+import { MemoryStorage } from './memory-storage';
 import { adventureAfter, adventureContent } from './saved-adventure';
 
 const content = adventureContent();
-
-/** The part of localStorage the game uses, in memory. The tests look at what it holds, and make it fail. */
-class MemoryStorage implements SaveStorage {
-  readonly items = new Map<string, string>();
-  refuseReads: Error | null = null;
-  refuseWrites: Error | null = null;
-
-  getItem(key: string): string | null {
-    if (this.refuseReads !== null) {
-      throw this.refuseReads;
-    }
-    return this.items.get(key) ?? null;
-  }
-
-  setItem(key: string, value: string): void {
-    if (this.refuseWrites !== null) {
-      throw this.refuseWrites;
-    }
-    this.items.set(key, value);
-  }
-}
 
 const KEY = 'island-adventure-rpg:saved-game';
 

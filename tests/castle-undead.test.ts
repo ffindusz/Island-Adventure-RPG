@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { ARTWORK } from '../src/adapter/artwork';
 import type { ArtManifest } from '../src/adapter/asset-manifest';
 import { gameContent } from '../src/content';
-import { bytesOf, fileOf, frameOf, readPicture } from './pictures';
+import { bytesOf, fileOf, frameOf, isOutline, isRed, isWhite, readPicture, sameShape } from './pictures';
 import type { Picture, Pixel } from './pictures';
 
 // The skeleton, the ghoul, the wraith and the knight of the castle are drawn from sheets of their own, the way the other
@@ -19,7 +19,6 @@ const FACINGS = ['down', 'up', 'left', 'right'] as const;
 const WALK_FRAMES = 4;
 const HIT_ROW = WALK_FRAMES;
 const WIND_UP_ROW = WALK_FRAMES + 1;
-const OUTLINE = [0x14, 0x1b, 0x1b];
 
 function typesOf(areaId: string): string[] {
   const area = gameContent.areas.find((candidate) => candidate.id === areaId);
@@ -30,15 +29,6 @@ function typesOf(areaId: string): string[] {
 /** The opaque pixels of the cell in this row and column of a sheet, as a map from "x,y" to the pixel. */
 function cellOf(sheet: Picture, row: number, column: number): Map<string, Pixel> {
   return frameOf(sheet, row, column, CELL);
-}
-
-const isOutline = (pixel: Pixel): boolean => OUTLINE.every((channel, index) => channel === pixel[index]);
-const isWhite = (pixel: Pixel): boolean => pixel[0] === 255 && pixel[1] === 255 && pixel[2] === 255;
-/** The red that compose-art.py gives a wind-up: strong in the red, weak in the green and in the blue. */
-const isRed = (pixel: Pixel): boolean => pixel[0] >= 150 && pixel[1] <= 105 && pixel[2] <= 100;
-
-function sameShape(a: Map<string, Pixel>, b: Map<string, Pixel>): boolean {
-  return a.size === b.size && [...a.keys()].every((key) => b.has(key));
 }
 
 /** How many pixels are in one of the two shapes and not in the other. */

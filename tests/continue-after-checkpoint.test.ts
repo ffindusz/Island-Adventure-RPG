@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createSaveStore } from '../src/adapter/save-store';
-import type { SaveStorage } from '../src/adapter/save-store';
 import { gameContent } from '../src/content';
 import { createGame } from '../src/core';
 import type { ContentDefinition, Game, GameEvent, GameView, Snapshot, Tile } from '../src/core';
 import { fixedRandom, newGame, walk } from './fixtures';
 import { AREA_IDS, routeOf, walkAssigning } from './main-route';
+import { MemoryStorage } from './memory-storage';
 import { withoutOrdinaryMonsters } from './routes';
 
 // Continue after a Checkpoint, on the game as shipped: the hero walks the main route as in whole-route.test.ts, the game
@@ -29,17 +29,6 @@ const CHECKPOINTS = [
 
 /** How long the hero runs on into the arena from the Guardian's Checkpoint: the Guardian wakes and attacks in it. */
 const ARENA_RUN_STEPS = 120;
-
-/** The part of localStorage the game uses, in memory. */
-function memoryStorage(): SaveStorage {
-  const items = new Map<string, string>();
-  return {
-    getItem: (key) => items.get(key) ?? null,
-    setItem: (key, value) => {
-      items.set(key, value);
-    },
-  };
-}
 
 /** The area and the tile of a Checkpoint of the content. */
 function checkpointNamed(id: string): { readonly areaId: string; readonly tile: Tile } {
@@ -106,7 +95,7 @@ function momentAt(index: number): Moment {
 
 /** A game that continues from a save, which has been through the save store as text. */
 function continuedFrom(snapshot: Snapshot): Game {
-  const storage = memoryStorage();
+  const storage = new MemoryStorage();
   createSaveStore(storage, content).write(snapshot);
   const saved = createSaveStore(storage, content).read();
   if (saved.status !== 'usable') {
@@ -125,7 +114,7 @@ describe('the game as shipped, saved at each Checkpoint of the main route', () =
   describe.each(CHECKPOINTS.map((id, index) => ({ id, index })))('at "$id"', ({ id, index }) => {
     it('saves the place of that Checkpoint, and the save store gives the game back whole to a later visit', () => {
       const { snapshot } = momentAt(index);
-      const storage = memoryStorage();
+      const storage = new MemoryStorage();
 
       expect(createSaveStore(storage, content).write(snapshot)).toBe(true);
 
