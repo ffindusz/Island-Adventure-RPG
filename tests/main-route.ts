@@ -9,6 +9,7 @@ import type {
   MonsterPlacement,
   MonsterTypeDefinition,
   Tile,
+  TileRect,
 } from '../src/core';
 import { playingView } from './fixtures';
 import {
@@ -26,7 +27,9 @@ import {
 // The intended route of the adventure, read from the shipped content, for the tests of the balance pass and of the
 // areas: the legs a first-time player walks, from the start of the coast to the Guardian's Checkpoint, with every door
 // and gate shut.
-// Nothing here is a number of its own: the route, what it meets and what it earns all come from the content.
+// The route, what it meets and what it earns all come from the content: nothing here is a number of its own, but for
+// the few literals that the tests of several areas must agree on, which are declared once below (the ids of the
+// Guardian, its gate, its Checkpoint and the vessel, the arena, and the rows at the bottom of an area).
 
 /** The five Adventure Areas in the order of the adventure. */
 export const AREA_IDS = ['shipwreck-coast', 'woods', 'mountain', 'cave', 'castle'] as const;
@@ -36,7 +39,22 @@ export type AreaId = (typeof AREA_IDS)[number];
 const TRAIL_OF_SAND: readonly AreaId[] = ['woods', 'mountain', 'cave'];
 
 /** The Checkpoint where the route of the castle ends: the Guardian's, in the gateway to the arena. */
-const GUARDIAN_CHECKPOINT = 'guardian-checkpoint';
+export const GUARDIAN_CHECKPOINT = 'guardian-checkpoint';
+
+/** The Guardian of the island, who stands in the arena. */
+export const GUARDIAN_ID = 'arena-guardian';
+
+/** The gate in the far wall of the arena, which the defeat of the Guardian opens. */
+export const HARBOR_GATE_ID = 'harbor-gate';
+
+/** The old vessel in the harbor behind the gate. */
+export const VESSEL_ID = 'old-vessel';
+
+/** The arena: open floor sixteen tiles wide and nine high with a few pillars in it, walled in but for the gateway and the gate. */
+export const ARENA: TileRect = { col: 68, row: 7, width: 16, height: 9 };
+
+/** The notice is drawn over the bottom of the view, so a hero who has to stand in these rows of an area is hidden. */
+export const BOTTOM_ROWS = 3;
 
 /** The shipped Adventure Area with this id, for every test that needs one: a test of the content is wrong when there is none, so it throws. */
 export function areaOf(id: string): AreaDefinition {

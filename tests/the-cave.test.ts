@@ -12,7 +12,7 @@ import type {
   Tile,
 } from '../src/core';
 import { STEPS_PER_TILE, face, fixedRandom, interactableViews, playingView, walk } from './fixtures';
-import { areaOf, LEAST_DETOUR, MOST_NEARBY, quietGameAt, routeOf, typeOf } from './main-route';
+import { areaOf, BOTTOM_ROWS, LEAST_DETOUR, MOST_NEARBY, quietGameAt, routeOf, typeOf } from './main-route';
 import { colourGap, LEAST_COLOUR_GAP } from './pictures';
 import {
   damageOf,
@@ -46,9 +46,6 @@ const WOODS = 'woods';
 const MOUNTAIN = 'mountain';
 const CAVE = 'cave';
 const CASTLE = 'castle';
-
-/** The notice is drawn over the bottom of the view, so a hero who has to stand in these rows of an area is hidden. */
-const BOTTOM_ROWS = 3;
 
 /** A way winds when it is this many times as long as the straight line from its start to its end, at least. */
 const LEAST_WINDING = 1.5;

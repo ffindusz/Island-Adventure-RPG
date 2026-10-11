@@ -12,7 +12,7 @@ import type {
   Tile,
 } from '../src/core';
 import { FIELD_LAYOUT, arena, face, fixedRandom, newGame, playingView } from './fixtures';
-import { areaOf, LEAST_DETOUR, MOST_NEARBY, quietGameAt, routeOf, typeOf } from './main-route';
+import { areaOf, BOTTOM_ROWS, LEAST_DETOUR, MOST_NEARBY, quietGameAt, routeOf, typeOf } from './main-route';
 import { colourGap, LEAST_COLOUR_GAP } from './pictures';
 import {
   damageOf,
@@ -49,9 +49,6 @@ const CASTLE = 'castle';
 
 /** The Adventure Areas in the order of the route of the adventure. */
 const ROUTE_OF_AREAS = [COAST, WOODS, MOUNTAIN, CAVE, CASTLE];
-
-/** The notice is drawn over the bottom of the view, so a hero who has to stand in these rows of an area is hidden. */
-const BOTTOM_ROWS = 3;
 
 /**
  * Where the route of the castle ends: the middle of the east wall of the last hall, against the tile where the gateway

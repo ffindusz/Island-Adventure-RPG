@@ -11,7 +11,7 @@ import type {
   Tile,
 } from '../src/core';
 import { face, fixedRandom, playingView } from './fixtures';
-import { areaOf, LEAST_DETOUR, MOST_NEARBY, quietGameAt, routeOf, typeOf } from './main-route';
+import { areaOf, BOTTOM_ROWS, LEAST_DETOUR, MOST_NEARBY, quietGameAt, routeOf, typeOf } from './main-route';
 import {
   damageOf,
   directionBetween,
@@ -41,9 +41,6 @@ const COAST = 'shipwreck-coast';
 const WOODS = 'woods';
 const MOUNTAIN = 'mountain';
 const CAVE = 'cave';
-
-/** The notice is drawn over the bottom of the view, so a hero who has to stand in these rows of an area is hidden. */
-const BOTTOM_ROWS = 3;
 
 /** A pass is narrow when the way is this many tiles wide or fewer, and it is a pass for this many tiles in a row. */
 const NARROW = 2;

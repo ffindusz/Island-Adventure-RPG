@@ -11,7 +11,7 @@ import type {
 } from '../src/core';
 import { gameContent } from '../src/content';
 import { gameAtTitle, newGame, playingView } from './fixtures';
-import { areaOf } from './main-route';
+import { areaOf, GUARDIAN_CHECKPOINT } from './main-route';
 import { experienceForLevel, withoutOrdinaryMonsters } from './routes';
 
 // Heroes of a given make for the tests of the balance pass: what a player has when it reaches a place, put into the
@@ -96,9 +96,6 @@ export function mainRouteHero(points: Points, potions: number): HeroProfile {
 export function underLeveledHero(potions: number): HeroProfile {
   return heroAt(3, { health: 1, attack: 1, defense: 0 }, MAIN_ROUTE_GEAR, potions);
 }
-
-/** The Guardian's Checkpoint, in the gateway to the arena: where a hero stands before it goes in to the Guardian. */
-const GUARDIAN_CHECKPOINT = 'guardian-checkpoint';
 
 /** Where a hero is put: an Adventure Area, the centre of its body and the way it faces. */
 export interface Place {

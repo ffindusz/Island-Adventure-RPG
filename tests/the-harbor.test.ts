@@ -3,7 +3,7 @@ import { gameContent } from '../src/content';
 import { createGame } from '../src/core';
 import type { Game, Tile } from '../src/core';
 import { face, fixedRandom, gameAtTitle, interactableViews, newGame, playingView, walk } from './fixtures';
-import { areaOf } from './main-route';
+import { areaOf, ARENA, BOTTOM_ROWS, GUARDIAN_CHECKPOINT, GUARDIAN_ID, HARBOR_GATE_ID, VESSEL_ID } from './main-route';
 import { FIRST_GEAR, gameWithHero, heroAt, INTENDED_LEVEL, QUIET } from './profile-heroes';
 import { directionBetween, isInZone, keyOf, neighboursOf, openTilesOf, routeBetween, walkRoute } from './routes';
 
@@ -16,16 +16,6 @@ import { directionBetween, isInZone, keyOf, neighboursOf, openTilesOf, routeBetw
 // are tested in the-credits.test.ts.
 
 const CASTLE = 'castle';
-const GUARDIAN_ID = 'arena-guardian';
-const GATE_ID = 'harbor-gate';
-const VESSEL_ID = 'old-vessel';
-const CHECKPOINT_ID = 'guardian-checkpoint';
-
-/** The tiles of the arena, where the way to the vessel crosses to the gate in its far wall. */
-const ARENA = { col: 68, row: 7, width: 16, height: 9 };
-
-/** The rows at the bottom of an area where the view stops, so that the notice would be drawn over a hero standing there. */
-const BOTTOM_ROWS = 3;
 
 /** The kinds of interactable that a hero must not need to get to the vessel, but for the Guardian's gate. */
 const PUZZLE_KINDS: readonly string[] = ['key', 'door', 'gate', 'lever'];
@@ -35,7 +25,7 @@ const wayIn = (castle.entrances ?? [])[0];
 const wayInTile: Tile = wayIn?.tile ?? { col: 0, row: 0 };
 const guardian = castle.monsters.find(({ id }) => id === GUARDIAN_ID);
 const guardianTile: Tile = guardian?.tile ?? { col: 0, row: 0 };
-const gateTile: Tile = (castle.interactables ?? []).find(({ id }) => id === GATE_ID)?.tile ?? { col: 0, row: 0 };
+const gateTile: Tile = (castle.interactables ?? []).find(({ id }) => id === HARBOR_GATE_ID)?.tile ?? { col: 0, row: 0 };
 const vesselTile: Tile = (castle.interactables ?? []).find(({ id }) => id === VESSEL_ID)?.tile ?? { col: 0, row: 0 };
 
 /** Where the hero can stand with every door and gate shut, as it begins, and with them all open, as it is once the puzzles are solved. */
@@ -98,7 +88,7 @@ describe('the way to the vessel', () => {
     expect(route).not.toBeNull();
     const at = (isPlace: (tile: Tile) => boolean) => (route ?? []).findIndex(isPlace);
     const checkpoint = at((tile) =>
-      (castle.checkpoints ?? []).some(({ id, tile: place }) => id === CHECKPOINT_ID && keyOf(place) === keyOf(tile)),
+      (castle.checkpoints ?? []).some(({ id, tile: place }) => id === GUARDIAN_CHECKPOINT && keyOf(place) === keyOf(tile)),
     );
     const arena = at((tile) => isInZone(ARENA, tile));
     const gate = at((tile) => keyOf(tile) === keyOf(gateTile));
@@ -115,7 +105,7 @@ describe('the way to the vessel', () => {
       ({ kind, tile }) => PUZZLE_KINDS.includes(kind) && route.has(keyOf(tile)),
     );
 
-    expect(onTheWay.map(({ id }) => id)).toEqual([GATE_ID]);
+    expect(onTheWay.map(({ id }) => id)).toEqual([HARBOR_GATE_ID]);
   });
 });
 
@@ -170,7 +160,7 @@ describe('the walk to the vessel', () => {
   it('is made by walking alone once the Guardian has fallen: over the Checkpoint, across the arena and through its open gate, to the ground beside the vessel', () => {
     const { game, events } = atTheVessel();
 
-    expect(events).toContainEqual({ type: 'checkpoint-activated', checkpointId: CHECKPOINT_ID });
+    expect(events).toContainEqual({ type: 'checkpoint-activated', checkpointId: GUARDIAN_CHECKPOINT });
     expect(events.filter(({ type }) => type === 'hero-hit')).toEqual([]);
     expect(playingView(game).area.id).toBe(CASTLE);
     expect(isByVessel(tileOf(playingView(game).hero.position))).toBe(true);

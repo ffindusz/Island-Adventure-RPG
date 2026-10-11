@@ -14,7 +14,7 @@ import type {
   TileRect,
 } from '../src/core';
 import { fixedRandom, interactableViews, monsterNamed, playingView, walk } from './fixtures';
-import { areaOf, quietGameAt } from './main-route';
+import { areaOf, ARENA, GUARDIAN_CHECKPOINT, GUARDIAN_ID, HARBOR_GATE_ID, quietGameAt, VESSEL_ID } from './main-route';
 import { colourGap, LEAST_COLOUR_GAP } from './pictures';
 import { gameWithHero, heroAt, type HeroProfile, QUIET } from './profile-heroes';
 import {
@@ -43,19 +43,12 @@ import {
 // has spent, and the Gear of the main route, or with the best that the island holds.
 
 const CASTLE = 'castle';
-const GUARDIAN_ID = 'arena-guardian';
-const GATE_ID = 'harbor-gate';
-const VESSEL_ID = 'old-vessel';
-const CHECKPOINT_ID = 'guardian-checkpoint';
 
 /** The gateway: one tile wide and five long, in the row where the route of the castle ends, east of the wall of the last hall. */
 const GATEWAY: TileRect = { col: 63, row: 11, width: 5, height: 1 };
 
 /** The Guardian's Checkpoint, in the gateway, three tiles from the arena. */
 const CHECKPOINT_TILE: Tile = { col: 65, row: 11 };
-
-/** The arena: open floor sixteen tiles wide and nine high with a few pillars in it, walled in but for the gateway and the gate. */
-const ARENA: TileRect = { col: 68, row: 7, width: 16, height: 9 };
 
 /** The Guardian's gate: the one gap in the far wall of the arena, in the row of the gateway. */
 const GATE_TILE: Tile = { col: 84, row: 11 };
@@ -196,19 +189,19 @@ describe('the way to the Guardian', () => {
   });
 
   it('has the Guardian\'s Checkpoint in the gateway, at least two tiles from the arena, and no other Checkpoint but the one at the way in', () => {
-    const checkpoint = (castle.checkpoints ?? []).find(({ id }) => id === CHECKPOINT_ID);
+    const checkpoint = (castle.checkpoints ?? []).find(({ id }) => id === GUARDIAN_CHECKPOINT);
 
     expect(checkpoint?.tile).toEqual(CHECKPOINT_TILE);
     expect(isInZone(GATEWAY, CHECKPOINT_TILE)).toBe(true);
     expect(ARENA.col - CHECKPOINT_TILE.col).toBeGreaterThanOrEqual(2);
-    expect((castle.checkpoints ?? []).map(({ id }) => id).sort()).toEqual(['castle-checkpoint', CHECKPOINT_ID]);
+    expect((castle.checkpoints ?? []).map(({ id }) => id).sort()).toEqual(['castle-checkpoint', GUARDIAN_CHECKPOINT]);
   });
 
   it('gives the game six Checkpoints in all: one at each of the five ways into an area, and the Guardian\'s', () => {
     const all = gameContent.areas.flatMap((area) => area.checkpoints ?? []);
 
     expect(all).toHaveLength(6);
-    expect(all.filter(({ id }) => id === CHECKPOINT_ID)).toHaveLength(1);
+    expect(all.filter(({ id }) => id === GUARDIAN_CHECKPOINT)).toHaveLength(1);
   });
 
   it('leads over open ground from the way in to the Guardian with every door and gate shut and no key held, through the gateway and over the Checkpoint', () => {
@@ -240,7 +233,7 @@ describe('the way to the Guardian', () => {
 
     const events = walkRoute(game, route ?? [], () => monsterNamed(game, GUARDIAN_ID).action.type === 'idle');
 
-    expect(events).toContainEqual({ type: 'checkpoint-activated', checkpointId: CHECKPOINT_ID });
+    expect(events).toContainEqual({ type: 'checkpoint-activated', checkpointId: GUARDIAN_CHECKPOINT });
     expect(isInZone(ARENA, tileOf(playingView(game).hero.position))).toBe(true);
     expect(monsterNamed(game, GUARDIAN_ID).action.type).not.toBe('idle');
     expect(events.filter(({ type }) => type === 'guardian-engaged')).toEqual([
@@ -258,11 +251,11 @@ describe('the harbor behind the gate', () => {
     routeBetween(isOpenGround, wayInTile, (tile) => isInZone(HARBOR, tile));
 
   it('has the Guardian\'s gate in the gap of the arena\'s far wall, next to the first tile of the stub, and it begins shut', () => {
-    const gate = (castle.interactables ?? []).find(({ id }) => id === GATE_ID);
+    const gate = (castle.interactables ?? []).find(({ id }) => id === HARBOR_GATE_ID);
 
     expect(gate).toMatchObject({ kind: 'gate', tile: GATE_TILE, opensWhenDefeated: GUARDIAN_ID });
     expect(isInZone(HARBOR, { col: GATE_TILE.col + 1, row: GATE_TILE.row })).toBe(true);
-    expect(interactableViews(quietGameAt(CASTLE, wayInTile), 'gate').find(({ id }) => id === GATE_ID)?.open).toBe(false);
+    expect(interactableViews(quietGameAt(CASTLE, wayInTile), 'gate').find(({ id }) => id === HARBOR_GATE_ID)?.open).toBe(false);
   });
 
   it('is out of reach of the hero while the gate is shut: no way leads to any tile of the stub', () => {
@@ -514,7 +507,7 @@ describe('the fight against the reference heroes', () => {
 
   it('opens its gate with its fall: the gate is shut until the strike that takes its last Health, and the hero then walks through it into the harbor', () => {
     const game = sceneOf(MAIN_ROUTE, { guardianHealth: 1 });
-    const gate = () => interactableViews(game, 'gate').find(({ id }) => id === GATE_ID);
+    const gate = () => interactableViews(game, 'gate').find(({ id }) => id === HARBOR_GATE_ID);
     expect(gate()?.open).toBe(false);
 
     const events = game.send({ type: 'attack' });
@@ -531,7 +524,7 @@ describe('the fight against the reference heroes', () => {
     const events = walk(game, 'right', 24);
 
     expect(playingView(game).hero.position.x).toBeLessThanOrEqual(GATE_TILE.col - hero.size / 2);
-    expect(interactableViews(game, 'gate').find(({ id }) => id === GATE_ID)?.open).toBe(false);
+    expect(interactableViews(game, 'gate').find(({ id }) => id === HARBOR_GATE_ID)?.open).toBe(false);
     expect(events.filter(({ type }) => type === 'hero-hit')).toEqual([]);
   });
 });
