@@ -14,7 +14,7 @@ import type {
   TileRect,
 } from '../src/core';
 import { FIELD_LAYOUT, arena, face, fixedRandom, newGame, playingView } from './fixtures';
-import { areaOf, routeOf } from './main-route';
+import { areaOf, LEAST_DETOUR, MOST_NEARBY, routeOf } from './main-route';
 import {
   directionBetween,
   distanceBetween,
@@ -69,12 +69,6 @@ const LAST_HALL_REACH = 4;
 
 /** Two colours are set apart when they lie this far from each other, at least, in the cube of red, green and blue (0 to 255 each). */
 const LEAST_COLOUR_GAP = 50;
-
-/** A chest is near the route when the walk to it from the route is this many tiles at most: a step aside, not a trip. */
-const MOST_NEARBY = 4;
-
-/** A side path is a walk, not a step aside: this many tiles from the route to the spot beside what lies at its end. */
-const LEAST_DETOUR = 6;
 
 /**
  * A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the

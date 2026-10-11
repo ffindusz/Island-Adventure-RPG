@@ -21,8 +21,9 @@ import {
   walkRoute,
 } from './routes';
 
-// The intended route of the adventure, read from the shipped content, for the tests of the balance pass: the legs a
-// first-time player walks, from the start of the coast to the Guardian's Checkpoint, with every door and gate shut.
+// The intended route of the adventure, read from the shipped content, for the tests of the balance pass and of the
+// areas: the legs a first-time player walks, from the start of the coast to the Guardian's Checkpoint, with every door
+// and gate shut.
 // Nothing here is a number of its own: the route, what it meets and what it earns all come from the content.
 
 /** The five Adventure Areas in the order of the adventure. */
@@ -127,8 +128,15 @@ export function experienceBefore(id: AreaId): number {
   return AREA_IDS.slice(0, AREA_IDS.indexOf(id)).reduce((total, before) => total + experienceOnRoute(before), 0);
 }
 
-/** As in the area tests: something this many steps from the route or fewer is on it, for a hero who looks around. */
+/**
+ * A chest or a pickup is near the route when the walk to it from the route is this many tiles at most: a step aside,
+ * not a trip. The area tests hold what lies near the route to it, and the balance tools take what a hero who looks
+ * around picks up with it.
+ */
 export const MOST_NEARBY = 4;
+
+/** A side path is a walk, not a step aside: this many tiles at least from the route to the spot beside what lies at its end. */
+export const LEAST_DETOUR = 6;
 
 const detours = new Map<string, Map<string, number>>();
 

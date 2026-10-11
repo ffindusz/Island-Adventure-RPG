@@ -1,24 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
 import { STEPS_PER_SECOND, createGame } from '../src/core';
-import type {
-  AutomapAreaView,
-  AutomapPageView,
-  Direction,
-  Game,
-  GameEvent,
-  GearSlot,
-  InventoryPageView,
-} from '../src/core';
-import { fixedRandom, playingView, walk } from './fixtures';
+import type { AutomapAreaView, AutomapPageView, Direction, Game, GameEvent, GearSlot } from '../src/core';
+import { fixedRandom, inventoryOf, playingView, walk } from './fixtures';
 import { areaOf } from './main-route';
 import { isInZone, openTilesOf, quietGameOf, routeBetween, walkRoute } from './routes';
 
 // Only what must hold for any content the game ships with. The tests of the rules use purpose-built content
 // (fixtures.ts), so that changing what ships never breaks them.
 
-const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
-const CLOSE_INVENTORY = { type: 'close-page', page: 'inventory' } as const;
 const OPEN_AUTOMAP = { type: 'open-page', page: 'automap' } as const;
 const CLOSE_AUTOMAP = { type: 'close-page', page: 'automap' } as const;
 
@@ -26,17 +16,6 @@ function newShippedGame() {
   const game = createGame({ content: gameContent, random: fixedRandom });
   game.send({ type: 'new-game' });
   return game;
-}
-
-/** What the inventory page shows now. It is closed again afterwards, so that the hero can walk. */
-function inventoryOf(game: Game): InventoryPageView {
-  game.send(OPEN_INVENTORY);
-  const { page } = playingView(game);
-  game.send(CLOSE_INVENTORY);
-  if (page?.id !== 'inventory') {
-    throw new Error('The inventory page did not open');
-  }
-  return page;
 }
 
 /** What the Automap page shows now. It is closed again afterwards, so that the hero can walk. */

@@ -12,7 +12,7 @@ import type {
   Tile,
 } from '../src/core';
 import { face, fixedRandom, newGame, playingView } from './fixtures';
-import { areaOf, routeOf } from './main-route';
+import { areaOf, LEAST_DETOUR, MOST_NEARBY, routeOf } from './main-route';
 import {
   directionBetween,
   distanceBetween,
@@ -48,12 +48,6 @@ const BOTTOM_ROWS = 3;
 /** A pass is narrow when the way is this many tiles wide or fewer, and it is a pass for this many tiles in a row. */
 const NARROW = 2;
 const PASS_LENGTH = 3;
-
-/** A chest is near the trail when the walk to it from the trail is this many tiles at most: a step aside, not a trip. */
-const MOST_NEARBY = 4;
-
-/** A side path is a walk, not a step aside: this many tiles from the trail to the spot beside what lies at its end. */
-const LEAST_DETOUR = 6;
 
 /**
  * A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the

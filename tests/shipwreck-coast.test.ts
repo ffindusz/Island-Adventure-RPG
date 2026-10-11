@@ -4,12 +4,15 @@ import { gameContent } from '../src/content';
 import { createGame } from '../src/core';
 import type { Tile } from '../src/core';
 import { face, fixedRandom, playingView } from './fixtures';
-import { areaOf } from './main-route';
+import { areaOf, LEAST_DETOUR } from './main-route';
 import {
   directionBetween,
   experienceForLevel,
+  experienceOfAll,
   isInZone,
   keyOf,
+  metOn,
+  milestonesOf,
   neighboursOf,
   openTilesOf,
   quietGameOf,
@@ -25,8 +28,6 @@ const COAST = 'shipwreck-coast';
 
 /** A monster that the hero's basic sword takes down in three hits at most is weak. */
 const WEAK_HEALTH = 3;
-/** The side path is a walk, not a step aside: this many tiles from the way out to the spot beside its chest. */
-const LEAST_DETOUR = 6;
 
 const coast = areaOf(COAST);
 const isOpen = openTilesOf(gameContent, coast);
@@ -169,29 +170,14 @@ describe('the monsters of the shipwreck coast', () => {
 });
 
 describe('the Experience of the shipwreck coast', () => {
-  const experienceOf = (monster: { readonly type: string }): number =>
-    gameContent.monsterTypes[monster.type]?.experience ?? 0;
-  const noticingOf = (monster: { readonly type: string }): number => {
-    const type = gameContent.monsterTypes[monster.type];
-    return type !== undefined && 'noticingDistance' in type ? type.noticingDistance : 0;
-  };
-  const milestonesExperience = (coast.milestones ?? []).reduce((total, { reward }) => total + reward.experience, 0);
-  /** A monster notices a hero in the square round its body that its noticing distance makes, so a hero on the way out meets it when a tile of the way lies in that square. */
-  const metOnTheWay = coast.monsters.filter((monster) =>
-    (mainRoute ?? []).some(
-      (tile) =>
-        Math.max(Math.abs(tile.col - monster.tile.col), Math.abs(tile.row - monster.tile.row)) <= noticingOf(monster),
-    ),
-  );
-
   it('gives a hero who fights what it meets on the way out, and passes the milestone, the Experience of Level 2', () => {
-    const earned = metOnTheWay.reduce((total, monster) => total + experienceOf(monster), 0) + milestonesExperience;
+    const earned = experienceOfAll(gameContent, metOn(gameContent, coast, mainRoute)) + milestonesOf(coast);
 
     expect(earned).toBeGreaterThanOrEqual(experienceForLevel(gameContent, 2));
   });
 
   it('does not give a hero who clears the whole coast the Experience of Level 3: nobody has to grind', () => {
-    const everything = coast.monsters.reduce((total, monster) => total + experienceOf(monster), 0) + milestonesExperience;
+    const everything = experienceOfAll(gameContent, coast.monsters) + milestonesOf(coast);
 
     expect(everything).toBeLessThan(experienceForLevel(gameContent, 3));
   });

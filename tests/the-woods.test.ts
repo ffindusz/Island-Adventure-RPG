@@ -11,7 +11,7 @@ import type {
   Tile,
 } from '../src/core';
 import { face, fixedRandom, newGame, playingView } from './fixtures';
-import { areaOf, routeOf } from './main-route';
+import { areaOf, LEAST_DETOUR, routeOf } from './main-route';
 import {
   directionBetween,
   experienceForLevel,
@@ -37,9 +37,6 @@ import {
 const COAST = 'shipwreck-coast';
 const WOODS = 'woods';
 const MOUNTAIN = 'mountain';
-
-/** A side path is a walk, not a step aside: this many tiles from the trail to the spot beside what lies at its end. */
-const LEAST_DETOUR = 6;
 
 function chaserNamed(name: string): ChaserMonsterDefinition {
   const type = gameContent.monsterTypes[name];
