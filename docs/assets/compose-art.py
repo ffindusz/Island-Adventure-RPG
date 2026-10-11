@@ -25,6 +25,8 @@ import sys
 from PIL import Image
 
 TILE = 16
+# The four tiles, or pixels, that lie beside one: east, west, south, north.
+NEIGHBOURS = ((1, 0), (-1, 0), (0, 1), (0, -1))
 
 # The thirteen pieces of an autotile family, as (name, column, row) from the top-left tile of the family: the middle, the
 # four edges, the four outer corners, and the four inner corners (the neighbour across the corner is the only one that
@@ -48,8 +50,8 @@ class Pack:
         return self.image('Backgrounds', 'Tilesets', name + '.png')
 
 
-def cut(img, col, row, cols=1, rows=1, size=TILE):
-    return img.crop((col * size, row * size, (col + cols) * size, (row + rows) * size))
+def cut(img, col, row):
+    return img.crop((col * TILE, row * TILE, (col + 1) * TILE, (row + 1) * TILE))
 
 
 def frames_sheet(frames, columns, cell=(TILE, TILE)):
@@ -62,19 +64,24 @@ def frames_sheet(frames, columns, cell=(TILE, TILE)):
 
 
 def recolour(img, mapping):
-    """Swaps exact colours, `{(r, g, b): (r, g, b)}`; alpha stays."""
+    """Swaps exact colours, `{old: new}`, each one a '#rrggbb' or an (r, g, b); alpha stays."""
+    swaps = {as_rgb(old): as_rgb(new) for old, new in mapping.items()}
     out = img.copy()
     pixels = out.load()
     for y in range(out.height):
         for x in range(out.width):
             r, g, b, a = pixels[x, y]
-            if (r, g, b) in mapping:
-                pixels[x, y] = (*mapping[(r, g, b)], a)
+            if (r, g, b) in swaps:
+                pixels[x, y] = (*swaps[(r, g, b)], a)
     return out
 
 
 def hexrgb(text):
     return tuple(int(text[i:i + 2], 16) for i in (1, 3, 5))
+
+
+def as_rgb(colour):
+    return colour if isinstance(colour, tuple) else hexrgb(colour)
 
 
 def key_pieces(tileset, base_row):
@@ -95,7 +102,7 @@ def terrain_water(pack):
 def terrain_sand(pack):
     """Sand: the thirteen pieces of its edge against grass, then the plain ground."""
     floor = pack.tileset('TilesetFloor')
-    to_sand = {hexrgb('#d3865f'): hexrgb('#ffcb8d'), hexrgb('#bd7959'): hexrgb('#ffcb8d')}
+    to_sand = {'#d3865f': '#ffcb8d', '#bd7959': '#ffcb8d'}
     edge = [recolour(piece, to_sand) for piece in key_pieces(floor, 7)]
     ground = [cut(floor, 1, 1), cut(floor, 0, 4), cut(floor, 1, 4)]
     return frames_sheet(edge + ground, KEY_COUNT)
@@ -142,7 +149,7 @@ def mini_tree(nature, shade=None):
 def terrain_tree(pack):
     """Woodland: dark forest floor, one-tile trees, and the four quarters of four two-by-two trees."""
     nature = pack.tileset('TilesetNature')
-    green = {hexrgb('#adbc3a'): hexrgb('#74a334'), hexrgb('#74a334'): hexrgb('#4a7f4b'), hexrgb('#4a7f4b'): hexrgb('#345a52')}
+    green = {'#adbc3a': '#74a334', '#74a334': '#4a7f4b', '#4a7f4b': '#345a52'}
     out = Image.new('RGBA', (8 * TILE, 3 * TILE), (0, 0, 0, 0))
     row0 = [forest_floor(7), forest_floor(31), mini_tree(nature), mini_tree(nature, green)]
     for index, frame in enumerate(row0):
@@ -228,7 +235,7 @@ def deck_frame(deck, outside):
         if not here:
             continue
         v, h = quarter[x, y]
-        beyond = [(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+        beyond = [(x + dx, y + dy) for dx, dy in NEIGHBOURS]
         edge = any(
             (not (0 <= nx < TILE and 0 <= ny < TILE) and ((h if nx != x else v)))
             or ((0 <= nx < TILE and 0 <= ny < TILE) and not inside[nx, ny])
@@ -248,7 +255,7 @@ def deck_hole(deck):
         pixels[x, y] = (0, 0, 0, 0)
     for x in range(TILE):
         for y in range(TILE):
-            if (x, y) not in hole and any((x + dx, y + dy) in hole for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+            if (x, y) not in hole and any((x + dx, y + dy) in hole for dx, dy in NEIGHBOURS):
                 pixels[x, y] = (*OUTLINE, 255)
     for x, y in ((6, 3), (9, 3), (2, 6), (13, 7), (7, 10)):
         pixels[x, y] = (*DARK, 255)
@@ -299,7 +306,7 @@ CAVE_FLOOR = {
 
 
 def stone(names):
-    return {hexrgb(old): hexrgb(new) for old, new in zip(GREY_STONE, names)}
+    return dict(zip(GREY_STONE, names))
 
 
 def stone_cliff(pack, names):
@@ -319,7 +326,7 @@ def mountain_boulders(pack):
 
 def cave_floor(pack, make):
     """The ground of the coast or of the woods, in the dim colours of the cave: every colour of the sheet is in CAVE_FLOOR."""
-    return recolour(make(pack), {hexrgb(old): hexrgb(new) for old, new in CAVE_FLOOR.items()})
+    return recolour(make(pack), CAVE_FLOOR)
 
 
 def paint(img, pixels, colour):
@@ -335,7 +342,7 @@ def outlined(img):
     src, dst = img.load(), out.load()
     for y in range(img.height):
         for x in range(img.width):
-            near = [(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+            near = [(x + dx, y + dy) for dx, dy in NEIGHBOURS]
             if src[x, y][3] == 0 and any(0 <= nx < img.width and 0 <= ny < img.height and src[nx, ny][3] > 0 for nx, ny in near):
                 dst[x, y] = (*OUTLINE, 255)
     return out
@@ -421,7 +428,7 @@ def monster_four_ways(pack, folder, name, colours=None, kind='Monster'):
     """A creature of the pack's `Actor/<kind>/<folder>`: four ways, four frames of a walk (a character's first four rows)."""
     sprite = pack.image('Actor', kind, folder, name)
     if colours:
-        sprite = recolour(sprite, {hexrgb(old): hexrgb(new) for old, new in colours.items()})
+        sprite = recolour(sprite, colours)
     return monster_sheet([[cut(sprite, d, f) for d in range(4)] for f in range(4)])
 
 
@@ -447,7 +454,7 @@ KNIGHT_TARNISHED = {'#f1c471': '#d1a64e', '#d78b4a': '#9a6e36', '#d14b34': '#c03
 def projectile_orb(pack):
     """The pack's energy ball in the colours of the spitter's cap, with the dark outline of the pack's creatures."""
     ball = pack.image('FX', 'Projectile', 'EnergyBall.png')
-    ball = recolour(ball, {hexrgb('#8feff1'): hexrgb('#e3a6ff'), hexrgb('#79b8ce'): hexrgb('#a15fd8')})
+    ball = recolour(ball, {'#8feff1': '#e3a6ff', '#79b8ce': '#a15fd8'})
     return outlined(ball)
 
 
@@ -484,9 +491,8 @@ def boss_frame(strip, index, lift, lean=0):
 
 
 def guardian_sheet(pack):
-    colours = {hexrgb(old): hexrgb(new) for old, new in GUARDIAN_PALE.items()}
     strip = {
-        name: recolour(pack.image('Actor', 'Boss', 'GiantBlueSamurai', name + '.png'), colours)
+        name: recolour(pack.image('Actor', 'Boss', 'GiantBlueSamurai', name + '.png'), GUARDIAN_PALE)
         for name in ('Walk', 'ChargeLeft', 'ChargeRight')
     }
     ways = [
@@ -793,10 +799,9 @@ def castle_floor(pack):
     stones = cobbles(pack)
     under = stones.load()
     dirt = {hexrgb('#d3865f'), hexrgb('#bd7959')}
-    moss = {hexrgb(old): hexrgb(new) for old, new in CASTLE_MOSS.items()}
     edge = []
     for piece in key_pieces(pack.tileset('TilesetFloor'), 7):
-        piece = recolour(piece, moss)
+        piece = recolour(piece, CASTLE_MOSS)
         pixels = piece.load()
         for y in range(TILE):
             for x in range(TILE):
@@ -808,7 +813,7 @@ def castle_floor(pack):
 
 def castle_grass(pack):
     """The grass of the woods as moss, with a few chips of stone on the two frames that have flecks."""
-    mossy = recolour(terrain_grass(pack), {hexrgb(old): hexrgb(new) for old, new in CASTLE_MOSS.items()})
+    mossy = recolour(terrain_grass(pack), CASTLE_MOSS)
     for frame, chips in ((4, ((9, 9, CHIP), (3, 3, SMALL_CHIP))), (6, ((3, 10, CHIP), (11, 3, SMALL_CHIP)))):
         for x, y, rows in chips:
             stamp(mossy, rows, CHIP_COLOURS, frame * TILE + x, y)
@@ -825,7 +830,7 @@ CASTLE_WATER = {
 
 
 def castle_water(pack):
-    return recolour(terrain_water(pack), {hexrgb(old): hexrgb(new) for old, new in CASTLE_WATER.items()})
+    return recolour(terrain_water(pack), CASTLE_WATER)
 
 
 # The planks of the quay are the pack's dock on its side, weathered as the deck of the wreck is, with the colours of old brown wood.
