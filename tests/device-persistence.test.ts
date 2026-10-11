@@ -1,14 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type {
-  AreaDefinition,
-  ContentDefinition,
-  EntranceDefinition,
-  ExitDefinition,
-  Game,
-  InteractableDefinition,
-} from '../src/core';
+import type { ContentDefinition, Game, InteractableDefinition } from '../src/core';
+import { world } from './cellar-fixtures';
 import {
-  ARENA_LAYOUT,
   INTERACT,
   arena,
   biterAt,
@@ -133,37 +126,12 @@ describe('when the hero is defeated', () => {
   });
 });
 
-// The arena and a cellar, as in area-connections.test.ts: the hero walks right 11 steps from where it begins, into the
-// cellar, where it arrives at (2.5, 3.5), and 3 steps to the left take it back into the arena, at (4.5, 3.5).
-const FROM_CELLAR: EntranceDefinition = { id: 'from-cellar', tile: { col: 4, row: 3 } };
-const TO_CELLAR: ExitDefinition = {
-  id: 'to-cellar',
-  zone: { col: 5, row: 3, width: 1, height: 1 },
-  to: { area: 'cellar', entrance: 'from-arena' },
-};
-const CELLAR: AreaDefinition = {
-  id: 'cellar',
-  name: 'Cellar',
-  layout: ARENA_LAYOUT,
-  monsters: [],
-  entrances: [{ id: 'from-arena', tile: { col: 2, row: 3 } }],
-  exits: [
-    {
-      id: 'to-arena',
-      zone: { col: 1, row: 3, width: 1, height: 1 },
-      to: { area: 'arena', entrance: 'from-cellar' },
-    },
-  ],
-};
+// The arena and a cellar (cellar-fixtures.ts): the hero walks right 11 steps from where it begins, into the cellar, where it
+// arrives at (2.5, 3.5), and 3 steps to the left take it back into the arena, at (4.5, 3.5).
 
 /** The arena with its key, door, switch and portcullis, and the cellar beside it. */
 function worldOfDevices(): ContentDefinition {
-  return arena({
-    entrances: [FROM_CELLAR],
-    exits: [TO_CELLAR],
-    interactables: [RUSTY_KEY, CELLAR_DOOR, SWITCH, PORTCULLIS],
-    otherAreas: [CELLAR],
-  });
+  return world({ interactables: [RUSTY_KEY, CELLAR_DOOR, SWITCH, PORTCULLIS] });
 }
 
 function intoTheCellar(game: Game): void {

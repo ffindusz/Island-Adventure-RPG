@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { AreaDefinition, ExitDefinition, Game } from '../src/core';
+import type { ExitDefinition, Game } from '../src/core';
+import { CELLAR } from './cellar-fixtures';
 import {
-  ARENA_LAYOUT,
   advance,
   chestAt,
   dummyAt,
@@ -238,24 +238,11 @@ describe('a charger recovering', () => {
 
 describe('a charger and the Adventure Areas', () => {
   // The hero goes through an exit on the tile (8, 3): it is in the exit on its 11th step, and back in the arena, at
-  // (7.5, 3.5), 3 steps after it came into the cellar.
+  // (7.5, 3.5), 3 steps after it came into the cellar of cellar-fixtures.ts.
   const TO_CELLAR: ExitDefinition = {
     id: 'to-cellar',
     zone: { col: 8, row: 3, width: 1, height: 1 },
     to: { area: 'cellar', entrance: 'from-arena' },
-  };
-  const TO_ARENA: ExitDefinition = {
-    id: 'to-arena',
-    zone: { col: 1, row: 3, width: 1, height: 1 },
-    to: { area: 'arena', entrance: 'from-cellar' },
-  };
-  const CELLAR: AreaDefinition = {
-    id: 'cellar',
-    name: 'Cellar',
-    layout: ARENA_LAYOUT,
-    monsters: [],
-    entrances: [{ id: 'from-arena', tile: { col: 2, row: 3 } }],
-    exits: [TO_ARENA],
   };
 
   it('forgets a wind-up that the hero walked out of: it starts over when the hero is back', () => {

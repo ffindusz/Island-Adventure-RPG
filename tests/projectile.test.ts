@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { AreaDefinition, ExitDefinition, Game, RangedMonsterDefinition } from '../src/core';
+import type { ExitDefinition, Game, RangedMonsterDefinition } from '../src/core';
+import { CELLAR } from './cellar-fixtures';
 import {
-  ARENA_LAYOUT,
   ATTACK,
   WITH_BOW,
   advance,
@@ -222,24 +222,12 @@ describe('a projectile that defeats the hero', () => {
 
 describe('a projectile and the Adventure Areas', () => {
   // The hero goes through an exit on the tile (8, 3). Its right edge reaches x = 8 after 10 steps and the hero is in the
-  // exit on the 11th. The way back through the cellar takes 3 steps. It arrives in the arena at (7.5, 3.5).
+  // exit on the 11th. The way back through the cellar of cellar-fixtures.ts takes 3 steps. It arrives in the arena at
+  // (7.5, 3.5).
   const TO_CELLAR: ExitDefinition = {
     id: 'to-cellar',
     zone: { col: 8, row: 3, width: 1, height: 1 },
     to: { area: 'cellar', entrance: 'from-arena' },
-  };
-  const TO_ARENA: ExitDefinition = {
-    id: 'to-arena',
-    zone: { col: 1, row: 3, width: 1, height: 1 },
-    to: { area: 'arena', entrance: 'from-cellar' },
-  };
-  const CELLAR: AreaDefinition = {
-    id: 'cellar',
-    name: 'Cellar',
-    layout: ARENA_LAYOUT,
-    monsters: [],
-    entrances: [{ id: 'from-arena', tile: { col: 2, row: 3 } }],
-    exits: [TO_ARENA],
   };
 
   function shooterWithACellar(): Game {
