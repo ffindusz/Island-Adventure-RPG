@@ -3,11 +3,11 @@ import {
   advance,
   arena,
   biterAt,
+  continuedFrom,
   gameAtTitle,
   gameWithPrizes,
   newGame,
   playingView,
-  throughStorage,
 } from './fixtures';
 
 const OPEN_STATS = { type: 'open-page', page: 'stats' } as const;
@@ -76,8 +76,7 @@ describe('the stat page', () => {
     const game = newGame();
     game.send(OPEN_STATS);
 
-    const continued = gameAtTitle();
-    continued.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
+    const continued = continuedFrom(arena(), game.snapshot());
 
     expect(playingView(continued).page).toMatchObject({ id: 'stats' });
   });

@@ -14,6 +14,7 @@ import {
   advance,
   arena,
   biterAt,
+  continuedFrom,
   defeatPrize,
   eventsUntilDefeated,
   face,
@@ -22,7 +23,6 @@ import {
   monsterAction,
   newGame,
   playingView,
-  throughStorage,
   walk,
 } from './fixtures';
 import type { ArenaOptions } from './fixtures';
@@ -265,9 +265,7 @@ describe('the Guardian engaged', () => {
     const content = farField(GUARDIAN, { hero: { health: 1000 } });
     const game = newGame(content);
     walk(game, 'right', STEPS_TO_NOTICE);
-    const continued = gameAtTitle(content);
-
-    continued.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
+    const continued = continuedFrom(content, game.snapshot());
 
     expect(monsterAction(continued, GUARDIAN_ID).type).not.toBe('idle');
     expect(engagements(advance(continued, 300))).toEqual([]);

@@ -14,12 +14,12 @@ import {
   advance,
   arena,
   biterAt,
+  continuedFrom,
   gameAtTitle,
   milestone,
   newGame,
   pickupAt,
   playingView,
-  throughStorage,
   untilDefeated,
   walk,
 } from './fixtures';
@@ -567,25 +567,18 @@ describe('The Automap in a saved game', () => {
     return game;
   }
 
-  /** A game continued from the snapshot of another, which has been through storage as a saved game would be. */
-  function continuedFrom(game: Game): Game {
-    const continued = gameAtTitle(content());
-    continued.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
-    return continued;
-  }
-
   it('keeps every discovery when the game is saved and continued', () => {
     const game = exploredGame();
     expect(automap(game).areas.map((area) => area.discovered)).toEqual([true, true, false]);
 
-    expect(automap(continuedFrom(game))).toEqual(automap(game));
+    expect(automap(continuedFrom(content(), game.snapshot()))).toEqual(automap(game));
   });
 
   it('is open again when the game is saved with the page open', () => {
     const game = exploredGame();
     game.send(OPEN_AUTOMAP);
 
-    const continued = continuedFrom(game);
+    const continued = continuedFrom(content(), game.snapshot());
 
     expect(playingView(continued).page).toMatchObject({ id: 'automap' });
     expect(playingView(continued).page).toEqual(playingView(game).page);

@@ -7,13 +7,12 @@ import {
   cacheAt,
   chestAt,
   chestViews,
+  continuedFrom,
   expectAccepted,
   expectRefused,
   face,
-  gameAtTitle,
   newGame,
   playingView,
-  throughStorage,
 } from './fixtures';
 
 // The hero stands at (3.5, 3.5) facing down. A cache is a chest that holds Ammunition, opened like any chest: here the
@@ -99,8 +98,7 @@ describe('Ammunition', () => {
     const game = newGame(content);
     game.send(INTERACT);
 
-    const restored = gameAtTitle(content);
-    restored.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
+    const restored = continuedFrom(content, game.snapshot());
 
     expect(playingView(restored).hero.consumables).toMatchObject({ ammunition: 6 });
     expect(restored.send(INTERACT), 'the cache stays empty').toEqual([]);

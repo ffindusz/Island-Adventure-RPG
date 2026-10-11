@@ -6,7 +6,6 @@ import type {
   ExitDefinition,
   Game,
   InteractableDefinition,
-  Snapshot,
 } from '../src/core';
 import {
   ARENA_LAYOUT,
@@ -15,9 +14,9 @@ import {
   biterAt,
   cacheAt,
   chestViews,
+  continuedFrom,
   doorAt,
   face,
-  gameAtTitle,
   gateAt,
   interactableViews,
   inventoryOf,
@@ -25,7 +24,6 @@ import {
   leverAt,
   newGame,
   playingView,
-  throughStorage,
   untilDefeated,
   walk,
 } from './fixtures';
@@ -222,16 +220,10 @@ describe('when the hero leaves an Adventure Area and comes back', () => {
 });
 
 describe('in a saved game', () => {
-  function continuedFrom(snapshot: Snapshot): Game {
-    const game = gameAtTitle(worldOfDevices());
-    game.send({ type: 'continue', snapshot: throughStorage(snapshot) });
-    return game;
-  }
-
   it('keeps a key lying where it lies, a door locked, a lever not pulled and a gate shut', () => {
     const original = newGame(worldOfDevices());
 
-    const restored = continuedFrom(original.snapshot());
+    const restored = continuedFrom(worldOfDevices(), original.snapshot());
 
     expect(restored.view()).toEqual(original.view());
     expect(interactableViews(restored, 'key')).toMatchObject([{ id: 'rusty-key' }]);
@@ -246,7 +238,7 @@ describe('in a saved game', () => {
     const original = newGame(worldOfDevices());
     takeKey(original);
 
-    const restored = continuedFrom(original.snapshot());
+    const restored = continuedFrom(worldOfDevices(), original.snapshot());
 
     expect(restored.view()).toEqual(original.view());
     expect(inventoryOf(restored).keys).toEqual([RUSTY_KEY_HELD]);
@@ -262,7 +254,7 @@ describe('in a saved game', () => {
     useSwitch(original);
     intoTheCellar(original);
 
-    const restored = continuedFrom(original.snapshot());
+    const restored = continuedFrom(worldOfDevices(), original.snapshot());
 
     expect(restored.view()).toEqual(original.view());
     backToTheArena(restored);

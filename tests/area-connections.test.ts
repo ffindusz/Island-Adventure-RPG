@@ -17,6 +17,7 @@ import {
   cacheAt,
   chestAt,
   chestViews,
+  continuedFrom,
   dummyAt,
   expectAccepted,
   expectRefused,
@@ -28,7 +29,6 @@ import {
   pickupAt,
   playingView,
   strike,
-  throughStorage,
   walk,
 } from './fixtures';
 import type { ArenaOptions } from './fixtures';
@@ -624,8 +624,7 @@ describe('Area text', () => {
     const game = newGame(world({}, { text: CELLAR_TEXT }));
     walk(game, 'right', 11);
     advance(game, 100);
-    const resumed = gameAtTitle(world({}, { text: CELLAR_TEXT }));
-    resumed.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
+    const resumed = continuedFrom(world({}, { text: CELLAR_TEXT }), game.snapshot());
 
     expect(playingView(resumed).areaText).toBe(CELLAR_TEXT);
     advance(resumed, 139);
@@ -656,8 +655,7 @@ describe('Saving a game across several Adventure Areas', () => {
     walk(game, 'right', 10);
     game.send({ type: 'interact' });
 
-    const resumed = gameAtTitle(content);
-    resumed.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
+    const resumed = continuedFrom(content, game.snapshot());
 
     expect(resumed.view()).toEqual(game.view());
     expect(playingView(resumed).interactables).toEqual([expect.objectContaining({ id: 'cellar-chest', opened: true })]);

@@ -542,3 +542,10 @@ export function monsterAction(game: Game, id: string): MonsterView['action'] {
 export function throughStorage(snapshot: Snapshot): Snapshot {
   return JSON.parse(JSON.stringify(snapshot)) as Snapshot;
 }
+
+/** A game of this content that has been continued from the snapshot as storage gives it back: text, not the object. */
+export function continuedFrom(content: ContentDefinition, snapshot: Snapshot): Game {
+  const game = gameAtTitle(content);
+  game.send({ type: 'continue', snapshot: throughStorage(snapshot) });
+  return game;
+}

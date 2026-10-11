@@ -13,6 +13,7 @@ import {
   biterAt,
   cacheAt,
   chestAt,
+  continuedFrom,
   dummyAt,
   face,
   fixedRandom,
@@ -537,8 +538,7 @@ describe('a saved game', () => {
     game.send(ATTACK);
     advance(game, 10);
 
-    const restored = gameAtTitle(content);
-    restored.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
+    const restored = continuedFrom(content, game.snapshot());
 
     expect(playingView(restored)).toEqual(playingView(game));
     expect(advance(restored, 10)).toEqual(advance(game, 10));
@@ -551,8 +551,7 @@ describe('a saved game', () => {
     face(game, 'right');
     game.send(ATTACK);
 
-    const restored = gameAtTitle(content);
-    restored.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
+    const restored = continuedFrom(content, game.snapshot());
 
     expect(ammunitionOf(restored)).toBe(2);
   });

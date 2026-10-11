@@ -1,15 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import type { Game, Snapshot } from '../src/core';
 import {
   ATTACK,
   advance,
+  continuedFrom,
   face,
-  gameAtTitle,
   monsterAction,
   monsterNamed,
   newGame,
   playingView,
-  throughStorage,
   walk,
 } from './fixtures';
 import { chargerAt, enemyContent, enemyField, HEAVY } from './enemy-fixtures';
@@ -159,12 +157,6 @@ describe('a tougher charger is a change of data', () => {
 describe('the snapshot of a charger', () => {
   const content = enemyContent([chargerAt('charger-1', 2, 3)], { hero: { health: 20 } });
 
-  function continuedFrom(snapshot: Snapshot): Game {
-    const game = gameAtTitle(content);
-    game.send({ type: 'continue', snapshot: throughStorage(snapshot) });
-    return game;
-  }
-
   it.each([
     { stage: 'wind-up', steps: 10 },
     { stage: 'dash', steps: 38 },
@@ -173,7 +165,7 @@ describe('the snapshot of a charger', () => {
     const original = newGame(content);
     advance(original, steps);
 
-    const restored = continuedFrom(original.snapshot());
+    const restored = continuedFrom(content, original.snapshot());
 
     expect(restored.view()).toEqual(original.view());
     expect(advance(restored, 100)).toEqual(advance(original, 100));
@@ -186,7 +178,7 @@ describe('the snapshot of a charger', () => {
     walk(original, 'up', 4);
     advance(original, 36); // step 41: ten moves into a dash of 24, with the charger at x = 5
 
-    const restored = continuedFrom(original.snapshot());
+    const restored = continuedFrom(content, original.snapshot());
     advance(restored, 14);
 
     expect(monsterNamed(restored, 'charger-1').position).toEqual({ x: 8.5, y: 3.5 });

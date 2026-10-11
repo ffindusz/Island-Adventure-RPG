@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { arena, biterAt, eventsUntilDefeated, expectAccepted, expectRefused, newGame, untilDefeated } from './fixtures';
+import {
+  arena,
+  biterAt,
+  continuedFrom,
+  eventsUntilDefeated,
+  expectAccepted,
+  expectRefused,
+  newGame,
+  playingView,
+  untilDefeated,
+  walk,
+} from './fixtures';
 
 // Dozens of tests lean on these helpers to fail when the game does not do what they expect: a helper that let
 // everything pass would leave all of them green whatever the game did.
@@ -55,5 +66,28 @@ describe('untilDefeated and eventsUntilDefeated', () => {
   it('give up after 300 steps when they are not given a number', () => {
     expect(() => untilDefeated(newGame())).toThrow('within 300 steps');
     expect(() => eventsUntilDefeated(newGame())).toThrow('within 300 steps');
+  });
+});
+
+describe('continuedFrom', () => {
+  const walkedRight = () => {
+    const game = newGame();
+    walk(game, 'right', 3);
+    return game;
+  };
+
+  it('gives a game in play that shows what the snapshot holds', () => {
+    const played = walkedRight();
+
+    expect(playingView(played)).not.toEqual(playingView(newGame()));
+    expect(playingView(continuedFrom(arena(), played.snapshot()))).toEqual(playingView(played));
+  });
+
+  it('gives the game the snapshot as storage gives it back: its text, not the object', () => {
+    const played = walkedRight();
+    // JSON.stringify asks an object for its toJSON: this one stands in for the text of the played game's snapshot
+    const standIn = { ...newGame().snapshot(), toJSON: () => played.snapshot() };
+
+    expect(playingView(continuedFrom(arena(), standIn))).toEqual(playingView(played));
   });
 });

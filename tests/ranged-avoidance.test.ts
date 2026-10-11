@@ -1,15 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import type { Game, Snapshot } from '../src/core';
+import type { Game } from '../src/core';
 import {
   ATTACK,
   advance,
+  continuedFrom,
   face,
-  gameAtTitle,
   monsterAction,
   monsterNamed,
   newGame,
   playingView,
-  throughStorage,
   walk,
 } from './fixtures';
 import { enemyContent, enemyField, shooterAt, SNIPER, untilFired } from './enemy-fixtures';
@@ -159,12 +158,6 @@ describe('a tougher shooter is a change of data', () => {
 describe('the snapshot of a shooter', () => {
   const content = enemyContent([shooterAt('shooter-1', 2, 3)], { hero: { health: 20 } });
 
-  function continuedFrom(snapshot: Snapshot): Game {
-    const game = gameAtTitle(content);
-    game.send({ type: 'continue', snapshot: throughStorage(snapshot) });
-    return game;
-  }
-
   it.each([
     { stage: 'wind-up', steps: 10 },
     { stage: 'shot in the air', steps: 50 },
@@ -173,7 +166,7 @@ describe('the snapshot of a shooter', () => {
     const original = newGame(content);
     advance(original, steps);
 
-    const restored = continuedFrom(original.snapshot());
+    const restored = continuedFrom(content, original.snapshot());
 
     expect(restored.view()).toEqual(original.view());
     expect(advance(restored, 100)).toEqual(advance(original, 100));
@@ -184,7 +177,7 @@ describe('the snapshot of a shooter', () => {
     const original = newGame(content);
     advance(original, 50);
 
-    const restored = continuedFrom(original.snapshot());
+    const restored = continuedFrom(content, original.snapshot());
 
     expect(playingView(restored).arrows).toEqual([
       { position: { x: 3.6875, y: 3.5 }, direction: 'right', size: 0.25, shooter: 'monster' },

@@ -9,13 +9,13 @@ import {
   arena,
   biterAt,
   chestAt,
+  continuedFrom,
   dummyAt,
   gameAtTitle,
   milestone,
   newGame,
   playingView,
   strike,
-  throughStorage,
 } from './fixtures';
 
 // The hero stands at (3.5, 3.5) facing down in the arena, where a chest on the tile (3, 4) is in its reach.
@@ -225,8 +225,7 @@ describe('the weapon in hand', () => {
     const game = newGame(content);
     game.send(SWITCH);
 
-    const restored = gameAtTitle(content);
-    restored.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
+    const restored = continuedFrom(content, game.snapshot());
 
     expect(playingView(restored).hero.activeWeapon).toBe('ranged-weapon');
     expect(restored.send(SWITCH)).toEqual([{ type: 'weapon-switched', weapon: 'melee-weapon' }]);

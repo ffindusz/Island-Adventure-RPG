@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PAGE_IDS } from '../src/core';
-import type { AreaDefinition, Direction, InteractableDefinition, Snapshot } from '../src/core';
+import type { AreaDefinition, Direction, InteractableDefinition } from '../src/core';
 import {
   ARENA_LAYOUT,
   INTERACT,
@@ -9,13 +9,13 @@ import {
   biterAt,
   chestAt,
   chestViews,
+  continuedFrom,
   face,
   gameAtTitle,
   milestone,
   monsterNamed,
   newGame,
   playingView,
-  throughStorage,
   walk,
 } from './fixtures';
 
@@ -272,17 +272,11 @@ describe('chests and Gear in a saved game', () => {
     return game;
   }
 
-  function continuedFrom(snapshot: Snapshot) {
-    const game = gameAtTitle(content);
-    game.send({ type: 'continue', snapshot: throughStorage(snapshot) });
-    return game;
-  }
-
   it('keeps an opened chest opened: a game continued from a save finds nothing more in it', () => {
     const game = newGame(content);
     game.send(INTERACT);
 
-    const restored = continuedFrom(game.snapshot());
+    const restored = continuedFrom(content, game.snapshot());
 
     expect(playingView(restored).interactables).toMatchObject([{ id: 'chest-1', opened: true }]);
     expect(restored.send(INTERACT)).toEqual([]);
@@ -290,14 +284,14 @@ describe('chests and Gear in a saved game', () => {
   });
 
   it('keeps a chest that was not opened closed', () => {
-    const restored = continuedFrom(newGame(content).snapshot());
+    const restored = continuedFrom(content, newGame(content).snapshot());
 
     expect(playingView(restored).interactables).toMatchObject([{ id: 'chest-1', opened: false }]);
     expect(restored.send(INTERACT)).toEqual([{ type: 'chest-opened', chestId: 'chest-1' }, STEEL_SWORD_PICKED_UP]);
   });
 
   it('keeps the Gear that the hero carries and has equipped', () => {
-    const restored = continuedFrom(gameWithSteelSwordEquipped().snapshot());
+    const restored = continuedFrom(content, gameWithSteelSwordEquipped().snapshot());
 
     restored.send(OPEN_INVENTORY);
 

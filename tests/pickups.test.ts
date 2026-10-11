@@ -5,14 +5,13 @@ import {
   advance,
   arena,
   chestAt,
+  continuedFrom,
   expectAccepted,
   expectRefused,
   face,
-  gameAtTitle,
   newGame,
   pickupAt,
   playingView,
-  throughStorage,
   walk,
 } from './fixtures';
 
@@ -35,13 +34,6 @@ function potionsOf(game: Game): number {
 /** The content with two Healing Potions on the tile (5, 3), two tiles right of the tile the hero stands on. */
 function contentWithPotionsToTheRight(): ContentDefinition {
   return arena({ interactables: [pickupAt('potion-1', 5, 3, 2)] });
-}
-
-/** The game that a player gets by saving this one and continuing it later. */
-function continued(content: ContentDefinition, game: Game): Game {
-  const restored = gameAtTitle(content);
-  restored.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
-  return restored;
 }
 
 describe('a pickup', () => {
@@ -103,7 +95,7 @@ describe('a pickup', () => {
     const game = newGame(content);
     walk(game, 'right', 11);
 
-    const restored = continued(content, game);
+    const restored = continuedFrom(content, game.snapshot());
 
     expect(playingView(restored).interactables).toEqual([]);
     expect(advance(restored, 3), 'the hero stands where it lay, and takes nothing').toEqual([]);
@@ -113,7 +105,7 @@ describe('a pickup', () => {
   it('is part of a saved game: one that was not taken is still there to take', () => {
     const content = contentWithPotionsToTheRight();
 
-    const restored = continued(content, newGame(content));
+    const restored = continuedFrom(content, newGame(content).snapshot());
 
     expect(playingView(restored).interactables).toHaveLength(1);
     expect(walk(restored, 'right', 11)).toEqual([TWO_POTIONS_PICKED_UP]);

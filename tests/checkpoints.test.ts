@@ -19,17 +19,16 @@ import {
   cacheAt,
   chestAt,
   chestViews,
+  continuedFrom,
   dummyAt,
   expectRefused,
   face,
   frailMonster,
-  gameAtTitle,
   milestone,
   newGame,
   pickupAt,
   playingView,
   strike,
-  throughStorage,
   untilDefeated,
   walk,
 } from './fixtures';
@@ -610,8 +609,7 @@ describe('Defeat and the consumables', () => {
 
   it('is the same after saving and continuing: the snapshot holds the Checkpoint and what it recorded', () => {
     const original = aboutToFall();
-    const restored = gameAtTitle(worldOfTheFall());
-    restored.send({ type: 'continue', snapshot: throughStorage(original.snapshot()) });
+    const restored = continuedFrom(worldOfTheFall(), original.snapshot());
     expect(restored.view()).toEqual(original.view());
 
     untilDefeated(original);
