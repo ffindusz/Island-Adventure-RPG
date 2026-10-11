@@ -4,163 +4,16 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { layoutEnding } from '../src/adapter/ending-pages';
 import { gameContent } from '../src/content';
+import { datesIn, isCalendarDate, permitsPublicCommercialUse } from './licence-policy';
 import { bulletOf, creditsOwedBy, recordEntries, recordOnDisk } from './licence-record';
 
 // The asset licence record against the build: that every file the build ships has its entry, that every entry in use
 // says where it is from, what licence it is under, when that was checked and what the credits say of it, that the
 // licence lets a public game be sold, and that the credits screen shows the text the record owes. The record is working
 // notes in Markdown, read here as the-credits.test.ts reads it; the files are read from the disk, as the tests of the
-// pictures and of the audio read them, which ADR 0005 allows.
-
-const RECORD = [
-  '# Asset licence record',
-  '',
-  'Nothing else is in use yet.',
-  '',
-  '| ID | Source | Licence | Checked | Status |',
-  '| --- | --- | --- | --- | --- |',
-  '| A1 | The art pack | CC0 1.0 Universal | 2026-01-01, re-read 2026-02-02 | Approved base; in use: the hero |',
-  '| B2 | A font | Non-Commercial License | 2026-03-03 | Do not use |',
-  '| C3 | A tileset | CC0 | 2026-04-04 | Candidate |',
-  '',
-  '## Entries',
-  '',
-  '### A1. The art pack',
-  '',
-  '- **Source:** https://example.com/art',
-  '- **Licence:** CC0 1.0. Public and commercial use are allowed.',
-  '- **Date checked:** 2026-01-01 and re-read on 2026-02-02.',
-  '- **Credits text (a courtesy, not required):** "The art pack by Someone (CC0), https://example.com/art"',
-  '',
-  '### B2. A font',
-  '',
-  '- **Source:** https://example.com/font',
-  '- **Checked:** 2026-03-03 from the saved page.',
-].join('\n');
-
-describe('the reading of the entries of the licence record', () => {
-  it('finds each row of the summary table, with its source, licence, date and status', () => {
-    expect(recordEntries(RECORD).map(({ section, ...row }) => row)).toEqual([
-      {
-        id: 'A1',
-        source: 'The art pack',
-        licence: 'CC0 1.0 Universal',
-        checked: '2026-01-01, re-read 2026-02-02',
-        status: 'Approved base; in use: the hero',
-        inUse: true,
-      },
-      {
-        id: 'B2',
-        source: 'A font',
-        licence: 'Non-Commercial License',
-        checked: '2026-03-03',
-        status: 'Do not use',
-        inUse: false,
-      },
-      { id: 'C3', source: 'A tileset', licence: 'CC0', checked: '2026-04-04', status: 'Candidate', inUse: false },
-    ]);
-  });
-
-  it('gives each entry the text of its own section, and an empty one to an entry that has none', () => {
-    const [first, second, third] = recordEntries(RECORD);
-
-    expect(first?.section).toContain('- **Source:** https://example.com/art');
-    expect(first?.section).not.toContain('https://example.com/font');
-    expect(second?.section).toContain('- **Source:** https://example.com/font');
-    expect(third?.section).toBe('');
-  });
-
-  it('is not led astray by the heading of the table, its rule, or the sentences around it', () => {
-    expect(recordEntries(RECORD).map(({ id }) => id)).toEqual(['A1', 'B2', 'C3']);
-  });
-
-  it('reads a record whose lines end the way Windows ends them as the same record', () => {
-    expect(recordEntries(RECORD.replaceAll('\n', '\r\n'))).toEqual(recordEntries(RECORD));
-  });
-
-  it('finds nothing in a record that has no table', () => {
-    expect(recordEntries('# Asset licence record\n\nNothing is in use.\n')).toEqual([]);
-  });
-});
-
-describe('the reading of a bullet of an entry', () => {
-  const [first, second] = recordEntries(RECORD);
-
-  it('gives the text after its label, to the end of its line', () => {
-    expect(bulletOf(first?.section ?? '', 'Source')).toBe('https://example.com/art');
-    expect(bulletOf(first?.section ?? '', 'Licence')).toBe('CC0 1.0. Public and commercial use are allowed.');
-  });
-
-  it('reads past a note in the label, as in "Credits text (a courtesy, not required)"', () => {
-    expect(bulletOf(first?.section ?? '', 'Credits text')).toBe('"The art pack by Someone (CC0), https://example.com/art"');
-  });
-
-  it('finds the date under whichever of the labels it has', () => {
-    expect(bulletOf(first?.section ?? '', 'Date checked', 'Checked')).toBe('2026-01-01 and re-read on 2026-02-02.');
-    expect(bulletOf(second?.section ?? '', 'Date checked', 'Checked')).toBe('2026-03-03 from the saved page.');
-  });
-
-  it('says that an entry has no such bullet by giving nothing', () => {
-    expect(bulletOf(second?.section ?? '', 'Licence')).toBeUndefined();
-    expect(bulletOf('', 'Source')).toBeUndefined();
-  });
-});
-
-/** The licences that let a public game use an asset, and be sold: the entries in use must be under one of them. */
-const PERMITTED = [/\bCC0\b/, /\bCC BY 4\.0\b/];
-/** What a licence's wording says when it takes that back, even when it names a permitted one: "the pack's CC0 claim". */
-const RESTRICTED = /non-?commercial|personal use|no resale|not for (?:sale|commercial)/i;
-
-function permitsPublicCommercialUse(licence: string): boolean {
-  return PERMITTED.some((permitted) => permitted.test(licence)) && !RESTRICTED.test(licence);
-}
-
-/** The days the record writes, as 2026-10-06, in a text. */
-const datesIn = (text: string): string[] => text.match(/\d{4}-\d{2}-\d{2}/g) ?? [];
-
-/** Whether a day written as 2026-10-06 is a day of the calendar: 2026-02-30 and 2026-13-01 are not. */
-function isCalendarDate(day: string): boolean {
-  const time = Date.parse(`${day}T00:00:00Z`);
-  return !Number.isNaN(time) && new Date(time).toISOString().startsWith(day);
-}
-
-describe('the licences that allow public and commercial use', () => {
-  it.each([
-    ['CC0 1.0 Universal'],
-    ['Creative Commons Zero v1.0 Universal (CC0 1.0): Public and commercial use, modification, and redistribution are allowed.'],
-    ['CC BY 4.0 (attribution required)'],
-  ])('include %s', (licence) => {
-    expect(permitsPublicCommercialUse(licence)).toBe(true);
-  });
-
-  it.each([
-    ["FontStruct Non-Commercial License (embedded in the font file), conflicting with the pack's CC0 claim"],
-    ['Custom itch.io text: personal and commercial use, no resale or redistribution'],
-    ['Creative Commons Attribution-NonCommercial 4.0 (CC BY-NC 4.0)'],
-    ['CC BY-NC 4.0'],
-  ])('leave out %s', (licence) => {
-    expect(permitsPublicCommercialUse(licence)).toBe(false);
-  });
-
-  it('leave out an entry that gives no licence at all', () => {
-    expect(permitsPublicCommercialUse('')).toBe(false);
-  });
-});
-
-describe('the days the record gives', () => {
-  it.each(['2026-10-06', '2028-02-29', '2026-12-31'])('%s is a day of the calendar', (day) => {
-    expect(isCalendarDate(day)).toBe(true);
-  });
-
-  it.each(['2026-02-30', '2026-13-01', '2026-00-10', '2026-10-32', '2027-02-29'])('%s is not', (day) => {
-    expect(isCalendarDate(day)).toBe(false);
-  });
-
-  it('are found in a text however many it holds, and none in a text that has none', () => {
-    expect(datesIn('2026-10-06, re-read 2026-10-07')).toEqual(['2026-10-06', '2026-10-07']);
-    expect(datesIn('re-read last week')).toEqual([]);
-  });
-});
+// pictures and of the audio read them, which ADR 0005 allows. licence-record.ts reads the record and licence-policy.ts
+// says what its entries in use must be (a licence that lets a public game be sold, days of the calendar), each with
+// tests of its own; this holds the build to them.
 
 const RECORD_ON_DISK = recordOnDisk();
 const IN_USE = recordEntries(RECORD_ON_DISK).filter((entry) => entry.inUse);
