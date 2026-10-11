@@ -161,10 +161,6 @@ function pickupFrom({ contents }: ChestDefinition): unknown {
 }
 
 describe('the way through the cave', () => {
-  it('comes fourth on the route of the adventure: after the coast, the woods and the mountain, before the castle', () => {
-    expect(gameContent.areas.slice(0, 5).map(({ id }) => id)).toEqual([COAST, WOODS, MOUNTAIN, CAVE, CASTLE]);
-  });
-
   it('loads with the rest of the shipped content: the content check passes', () => {
     expect(() => createGame({ content: gameContent, random: fixedRandom })).not.toThrow();
   });

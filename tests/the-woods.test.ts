@@ -129,10 +129,6 @@ function pickupFrom({ contents }: ChestDefinition): unknown {
 }
 
 describe('the way through the woods', () => {
-  it('comes second on the route of the adventure: after the coast, before the mountain', () => {
-    expect(gameContent.areas.slice(0, 3).map(({ id }) => id)).toEqual([COAST, WOODS, MOUNTAIN]);
-  });
-
   it('loads with the rest of the shipped content: the content check passes', () => {
     expect(() => createGame({ content: gameContent, random: fixedRandom })).not.toThrow();
   });

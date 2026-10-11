@@ -152,10 +152,6 @@ function widthAt(tile: Tile): number {
 }
 
 describe('the way through the mountain', () => {
-  it('comes third on the route of the adventure: after the coast and the woods, before the cave', () => {
-    expect(gameContent.areas.slice(0, 4).map(({ id }) => id)).toEqual([COAST, WOODS, MOUNTAIN, CAVE]);
-  });
-
   it('loads with the rest of the shipped content: the content check passes', () => {
     expect(() => createGame({ content: gameContent, random: fixedRandom })).not.toThrow();
   });

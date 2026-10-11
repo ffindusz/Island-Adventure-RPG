@@ -101,12 +101,12 @@ function puzzlesOn(area: AreaDefinition, route: readonly Tile[]): string[] {
 }
 
 describe('the whole route of the adventure', () => {
-  it('has five Adventure Areas, and the exits lead on from the start through them in order', () => {
+  it('has five Adventure Areas, listed in the order of the route, and the exits lead on from the start through them in order', () => {
     const { areas, forks } = chainFromStart();
 
     expect(areas).toEqual([...AREA_IDS]);
     expect(forks).toEqual([]);
-    expect(gameContent.areas.map(({ id }) => id).sort()).toEqual([...AREA_IDS].sort());
+    expect(gameContent.areas.map(({ id }) => id)).toEqual([...AREA_IDS]);
   });
 
   it.each(PAIRS)(

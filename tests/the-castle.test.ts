@@ -47,9 +47,6 @@ const MOUNTAIN = 'mountain';
 const CAVE = 'cave';
 const CASTLE = 'castle';
 
-/** The Adventure Areas in the order of the route of the adventure. */
-const ROUTE_OF_AREAS = [COAST, WOODS, MOUNTAIN, CAVE, CASTLE];
-
 /**
  * Where the route of the castle ends: the middle of the east wall of the last hall, against the tile where the gateway
  * to the Guardian's arena begins, which the route does not go into.
@@ -227,23 +224,6 @@ function pickupFrom({ contents }: ChestDefinition): unknown {
 }
 
 describe('the five Adventure Areas', () => {
-  it('come in the order of the route of the adventure, and the castle is the last: coast, woods, mountain, cave, castle', () => {
-    expect(gameContent.areas.map(({ id }) => id)).toEqual(ROUTE_OF_AREAS);
-  });
-
-  it('are joined in order: each area has an exit forward to an entrance of the next, and the next has an exit back to an entrance of it', () => {
-    for (const [index, id] of ROUTE_OF_AREAS.slice(0, -1).entries()) {
-      const next = ROUTE_OF_AREAS[index + 1] ?? '';
-      const forward = (areaOf(id).exits ?? []).find(({ to }) => to.area === next);
-      const back = (areaOf(next).exits ?? []).find(({ to }) => to.area === id);
-
-      expect(forward, `${id} has an exit forward to ${next}`).toBeDefined();
-      expect((areaOf(next).entrances ?? []).map((entrance) => entrance.id)).toContain(forward?.to.entrance);
-      expect(back, `${next} has an exit back to ${id}`).toBeDefined();
-      expect((areaOf(id).entrances ?? []).map((entrance) => entrance.id)).toContain(back?.to.entrance);
-    }
-  });
-
   it('load with the rest of the shipped content: the content check passes', () => {
     expect(() => createGame({ content: gameContent, random: fixedRandom })).not.toThrow();
   });
