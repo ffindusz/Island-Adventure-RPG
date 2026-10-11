@@ -55,13 +55,18 @@ def cut(img, col, row):
     return img.crop((col * TILE, row * TILE, (col + 1) * TILE, (row + 1) * TILE))
 
 
-def frames_sheet(frames, columns, cell=(TILE, TILE)):
+def sheet_of(frames, columns, cell=(TILE, TILE)):
     """The frames side by side, `columns` to a row, row by row, as the manifest's `sheet` numbers them."""
     rows = -(-len(frames) // columns)
     out = Image.new('RGBA', (columns * cell[0], rows * cell[1]), (0, 0, 0, 0))
     for index, frame in enumerate(frames):
         out.paste(frame, ((index % columns) * cell[0], (index // columns) * cell[1]))
     return out
+
+
+def frames_in(sheet, columns, count):
+    """The first `count` frames of a sheet of tiles, `columns` to a row: what `sheet_of` put together, taken apart."""
+    return [cut(sheet, index % columns, index // columns) for index in range(count)]
 
 
 def recolour(img, mapping):
@@ -102,7 +107,7 @@ def terrain_water(pack):
     """Water with a shore: the thirteen pieces against sand, the thirteen against grass, then plain water."""
     water = pack.tileset('TilesetWater')
     plain = [cut(water, 1, 1), cut(water, 11, 2)]
-    return frames_sheet(key_pieces(water, 0) + key_pieces(water, 6) + plain, KEY_COUNT)
+    return sheet_of(key_pieces(water, 0) + key_pieces(water, 6) + plain, KEY_COUNT)
 
 
 def terrain_sand(pack):
@@ -111,19 +116,19 @@ def terrain_sand(pack):
     to_sand = {'#d3865f': '#ffcb8d', '#bd7959': '#ffcb8d'}
     edge = [recolour(piece, to_sand) for piece in key_pieces(floor, 7)]
     ground = [cut(floor, 1, 1), cut(floor, 0, 4), cut(floor, 1, 4)]
-    return frames_sheet(edge + ground, KEY_COUNT)
+    return sheet_of(edge + ground, KEY_COUNT)
 
 
 def terrain_grass(pack):
     floor = pack.tileset('TilesetFloor')
     ground = [cut(floor, c, 12) for c in range(5)] + [cut(floor, 2, 11), cut(floor, 3, 11)]
-    return frames_sheet(ground, 7)
+    return sheet_of(ground, 7)
 
 
 def terrain_rock(pack):
     """The face of a cliff, three rows (the lip, the middle, the foot) by three columns (left, middle, right)."""
     relief = pack.tileset('TilesetRelief')
-    return frames_sheet([cut(relief, c, r) for r in (5, 6, 7) for c in (4, 5, 6)], 3)
+    return sheet_of([cut(relief, c, r) for r in (5, 6, 7) for c in (4, 5, 6)], 3)
 
 
 def forest_floor(seed):
@@ -172,6 +177,11 @@ def terrain_tree(pack):
 #   row 1      frame 13 and 14 plain deck, 15 a hole in the deck, 16 to 20 the cargo (barrel, sack, rope, bones, planks)
 #   rows 2-4   the mast, three by three frames at columns 0-2 (frame 26 + 13 * row + column)
 #   row 2      frame 30 and 31, the two halves of a broken mast lying on the sand (a picture of 32 by 16)
+
+# The five tones of the wreck's wood, light to dark. LIGHT and SEAM are the two colours of the pack's dock (its planks and the
+# seams between them), PLANK lies between them, WALL is the shade of the hull's sides and of the mast, DARK the deepest. The
+# same tone plays different parts in different pictures (the hull, the mast, the joints of the deck, the gold of a padlock,
+# the key of the quay's recolour), so the tones are named by their place in the ramp and not by one of those parts.
 LIGHT, PLANK, SEAM, WALL, DARK = (hexrgb(text) for text in ('#ffad5d', '#f38c4c', '#e66a3a', '#965746', '#7d3e24'))
 DECK_PIECES = [name for name, _, _ in KEY_PIECES]
 PIECE_OUTSIDE = {
@@ -319,7 +329,7 @@ def stone_cliff(pack, names):
     """The face of a cliff in grey stone recoloured, three rows (the lip, the middle, the foot) by three columns (left,
     middle, right), as terrain-rock has them."""
     relief = pack.tileset('TilesetRelief')
-    return frames_sheet([recolour(cut(relief, c, r), stone(names)) for r in (0, 1, 2) for c in (4, 5, 6)], 3)
+    return sheet_of([recolour(cut(relief, c, r), stone(names)) for r in (0, 1, 2) for c in (4, 5, 6)], 3)
 
 
 def mountain_boulders(pack):
@@ -327,7 +337,7 @@ def mountain_boulders(pack):
     details."""
     nature, detail = pack.tileset('TilesetNature'), pack.tileset('TilesetReliefDetail')
     rocks = [cut(nature, col, 17) for col in (17, 18, 19)] + [cut(detail, 4, 0)]
-    return frames_sheet([recolour(rock, stone(SLATE)) for rock in rocks], len(rocks))
+    return sheet_of([recolour(rock, stone(SLATE)) for rock in rocks], len(rocks))
 
 
 def cave_floor(pack, make):
@@ -427,7 +437,7 @@ def monster_sheet(walk):
     """`walk[frame][direction]` as images of one size; returns the sheet with the hurt and the wind-up rows added."""
     rows = walk + [[white_shape(f) for f in walk[0]], [red_shape(f) for f in walk[0]]]
     cell = rows[0][0].size
-    return frames_sheet([f for row in rows for f in row], 4, cell)
+    return sheet_of([f for row in rows for f in row], 4, cell)
 
 
 class MonsterSource(NamedTuple):
@@ -544,7 +554,7 @@ def guardian_sheet(pack):
     lunge_right = boss_frame(strip['ChargeRight'], 1, BOSS_LUNGE_LIFT['ChargeRight'])
     rows.append([white_shape(frame) for frame in rows[0]])
     rows.append([red_shape(frame) for frame in (lunge_right, lunge_left, lunge_left, lunge_right)])
-    return frames_sheet([frame for row in rows for frame in row], 4, (BOSS_CELL, BOSS_CELL))
+    return sheet_of([frame for row in rows for frame in row], 4, (BOSS_CELL, BOSS_CELL))
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -593,7 +603,7 @@ def chest_sheet(pack):
     pot = pack.image('Items', 'Potion', 'LifePot.png')
     arrows = stocked_crate(empty, [(arrow, 1, 2), (arrow, 5, 0), (arrow, 10, 2)])
     potions = stocked_crate(empty, [(pot, 0, 1), (pot, 7, 0)])
-    return frames_sheet([*gear, arrows, empty, potions, empty], 6)
+    return sheet_of([*gear, arrows, empty, potions, empty], 6)
 
 
 def twinkle(frame, x, y):
@@ -610,7 +620,7 @@ def pickup_sheet(pack):
     arrows = in_cell(arrow, 0, 0)
     arrows.alpha_composite(arrow.transpose(Image.FLIP_LEFT_RIGHT), (0, 0))
     key = in_cell(pack.image('Items', 'Treasure', 'GoldKey.png'), 2, 4)
-    return frames_sheet([pot, twinkle(pot, 12, 3), arrows, twinkle(arrows, 8, 2), key, twinkle(key, 13, 3)], 6)
+    return sheet_of([pot, twinkle(pot, 12, 3), arrows, twinkle(arrows, 8, 2), key, twinkle(key, 13, 3)], 6)
 
 
 def flagpole(flag, drop):
@@ -633,7 +643,7 @@ def checkpoint_sheet(pack):
     red = flags('Red')
     still = flagpole(grey.crop((0, 0, TILE, TILE)), 10)
     waving = [flagpole(red.crop((i * TILE, 0, (i + 1) * TILE, TILE)), 0) for i in range(4)]
-    return frames_sheet([still, *waving], 5, (TILE, CHECKPOINT_HEIGHT))
+    return sheet_of([still, *waving], 5, (TILE, CHECKPOINT_HEIGHT))
 
 
 def exit_sheet(pack):
@@ -643,8 +653,8 @@ def exit_sheet(pack):
     for x in (2, 7):
         stamp(right, CHEVRON_ROWS, {'X': PACK_WHITE}, x, 3)
     right = outlined(right)
-    return frames_sheet([right.transpose(Image.ROTATE_90), right.transpose(Image.ROTATE_270),
-                         right.transpose(Image.FLIP_LEFT_RIGHT), right], 4)
+    return sheet_of([right.transpose(Image.ROTATE_90), right.transpose(Image.ROTATE_270),
+                     right.transpose(Image.FLIP_LEFT_RIGHT), right], 4)
 
 
 def door_sheet(pack):
@@ -653,7 +663,7 @@ def door_sheet(pack):
     house = pack.tileset('TilesetHouse')
     shut = cut(house, 8, 3)
     stamp(shut, LOCK_ROWS, GOLD_LOCK, 5, 7)
-    return frames_sheet([shut, cut(house, 9, 3)], 2)
+    return sheet_of([shut, cut(house, 9, 3)], 2)
 
 
 # The pack's iron arch (TilesetHouse) is 24 by 25 pixels: legs of four pixels, nine rows of arch, and an opening of exactly
@@ -691,7 +701,7 @@ def gate_sheet(pack):
         x += strip.width
     shut = arch.copy()
     shut.alpha_composite(fence, GATE_WAY)
-    return frames_sheet([shut, arch], 2, arch.size)
+    return sheet_of([shut, arch], 2, arch.size)
 
 
 def line(start, end):
@@ -722,7 +732,7 @@ def lever_frame(dungeon, lean, knob):
 def lever_sheet(pack):
     """Two frames, the lever at rest, its stick leaning left with a red ball, and the lever pulled, leaning right with a blue one."""
     dungeon = pack.tileset('TilesetDungeon')
-    return frames_sheet([lever_frame(dungeon, -1, REST_KNOB), lever_frame(dungeon, 1, PULLED_KNOB)], 2)
+    return sheet_of([lever_frame(dungeon, -1, REST_KNOB), lever_frame(dungeon, 1, PULLED_KNOB)], 2)
 
 
 def bow_icon(pack, folder, shorter_by=0):
@@ -806,7 +816,7 @@ def castle_wall_tile(tile, column, row):
 def castle_wall(pack):
     """The face of a wall of masonry, three rows (the lip, the middle, the foot) by three columns (left, middle, right)."""
     relief = pack.tileset('TilesetRelief')
-    return frames_sheet([castle_wall_tile(cut(relief, c, r), c - 4, r) for r in (0, 1, 2) for c in (4, 5, 6)], 3)
+    return sheet_of([castle_wall_tile(cut(relief, c, r), c - 4, r) for r in (0, 1, 2) for c in (4, 5, 6)], 3)
 
 
 def cobbles(pack):
@@ -846,7 +856,7 @@ def castle_floor(pack):
                 if pixels[x, y][:3] in dirt:
                     pixels[x, y] = under[x, y]
         edge.append(piece)
-    return frames_sheet(edge + [stones, weedy_cobbles(stones), loose_cobbles(stones)], KEY_COUNT)
+    return sheet_of(edge + [stones, weedy_cobbles(stones), loose_cobbles(stones)], KEY_COUNT)
 
 
 def castle_grass(pack):
@@ -892,7 +902,7 @@ def castle_dock(pack):
     paint(weeds, [(9, 7), (10, 6)], MOSS)
     paint(split, [(4, 4), (5, 5), (5, 6), (6, 7), (7, 8), (8, 8)], CRACK_COLOUR)
     paint(split, [(6, 5), (7, 7), (4, 5)], hexrgb('#b39878'))
-    return frames_sheet([plain_a, plain_b, moss_a, moss_b, weeds, split], 6)
+    return sheet_of([plain_a, plain_b, moss_a, moss_b, weeds, split], 6)
 
 
 # Three tones of the castle's stone, light to dark, that the pillars, the plinth and the rim of the fountain are drawn in.
@@ -965,7 +975,7 @@ def pillar_broken():
 
 
 def castle_pillars(pack):
-    return frames_sheet([pillar_intact(), pillar_mossy(), pillar_broken(), pillar_cracked()], 4)
+    return sheet_of([pillar_intact(), pillar_mossy(), pillar_broken(), pillar_cracked()], 4)
 
 
 class FountainWater(NamedTuple):
@@ -1125,7 +1135,7 @@ def vessel_frame(pack, hoisted):
 
 
 def vessel_sheet(pack):
-    return frames_sheet([vessel_frame(pack, False), vessel_frame(pack, True)], 2, VESSEL_CELL)
+    return sheet_of([vessel_frame(pack, False), vessel_frame(pack, True)], 2, VESSEL_CELL)
 
 
 # The backdrops of the screens. The title and the ending each have a picture of the size of the canvas (20 by 12 tiles,
@@ -1195,15 +1205,11 @@ def put_quarters(img, frames, x, y):
         img.alpha_composite(frame.crop((qx, qy, qx + 8, qy + 8)), (x + qx, y + qy))
 
 
-def frames_of(sheet, columns, count):
-    return [cut(sheet, index % columns, index // columns) for index in range(count)]
-
-
 def paint_coast(img, pack, kinds, top):
     """The sea and the sand of rows of letters (`~` water, `.` sand) from the pixel row `top`, the shore pieced together as the
     planner does and the sand dressed by the planner's own scatter."""
-    water = frames_of(terrain_water(pack), KEY_COUNT, 2 * KEY_COUNT + 2)
-    sand = frames_of(terrain_sand(pack), KEY_COUNT, KEY_COUNT + 3)
+    water = frames_in(terrain_water(pack), KEY_COUNT, 2 * KEY_COUNT + 2)
+    sand = frames_in(terrain_sand(pack), KEY_COUNT, KEY_COUNT + 3)
 
     def kind(x, y):
         return kinds[y][x] if 0 <= y < len(kinds) and 0 <= x < len(kinds[y]) else None
@@ -1226,7 +1232,7 @@ def paint_wreck(img, pack, left, top, columns, rows, mast, cargo):
     """A hull of `columns` by `rows` tiles with its corner at left, top, its deck laid over what is under it as the planner lays
     a wreck's, the cargo (`{(column, row): frame}`) on its deck and the mast standing on the tile `mast` (column, row)."""
     sheet = terrain_wreckage(pack)
-    frames = frames_of(sheet, KEY_COUNT, 2 * KEY_COUNT)
+    frames = frames_in(sheet, KEY_COUNT, 2 * KEY_COUNT)
 
     def inside(column, row):
         return 0 <= column < columns and 0 <= row < rows
@@ -1415,7 +1421,7 @@ def ending_backdrop(pack):
     out.alpha_composite(ending_sea(CANVAS[1] - ENDING_HORIZON), (0, ENDING_HORIZON))
     out.alpha_composite(vessel_afar(), VESSEL_AFAR_AT)
     paint(out, [(x, ENDING_HORIZON + 2) for x in range(92, 102)] + [(x, ENDING_HORIZON + 4) for x in range(95, 103)], hexrgb('#fce2ca'))
-    planks = frames_of(castle_dock(pack), 6, 6)
+    planks = frames_in(castle_dock(pack), 6, 6)
     for row in range(2):
         for column in range(CANVAS[0] // TILE):
             roll = scatter(column, row, 5) % 8
