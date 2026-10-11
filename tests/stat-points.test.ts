@@ -12,12 +12,11 @@ import {
   gameAtTitle,
   gameWithPrizes,
   newGame,
+  OPEN_STATS,
   playingView,
   prizes,
   strike,
 } from './fixtures';
-
-const OPEN_STATS = { type: 'open-page', page: 'stats' } as const;
 
 function assign(game: Game, stat: StatId): void {
   game.send({ type: 'assign-stat-point', stat });

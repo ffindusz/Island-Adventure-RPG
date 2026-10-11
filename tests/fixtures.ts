@@ -64,9 +64,15 @@ export const HERO_STEP = 0.125;
 export const STEPS_PER_TILE = 8;
 export const COOLDOWN_STEPS = 24;
 
-/** The two commands the tests send most; a test that needs another declares it itself. */
+/** The commands the tests send most, those of the field and those that open and close the pages; a test that needs another declares it itself. */
 export const ATTACK = { type: 'attack' } as const;
 export const INTERACT = { type: 'interact' } as const;
+export const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
+export const CLOSE_INVENTORY = { type: 'close-page', page: 'inventory' } as const;
+export const OPEN_STATS = { type: 'open-page', page: 'stats' } as const;
+export const CLOSE_STATS = { type: 'close-page', page: 'stats' } as const;
+export const OPEN_AUTOMAP = { type: 'open-page', page: 'automap' } as const;
+export const CLOSE_AUTOMAP = { type: 'close-page', page: 'automap' } as const;
 
 export const ARENA_LAYOUT = ['#######', '#.....#', '#.~...#', '#.....#', '#...,.#', '#######'];
 
@@ -515,9 +521,9 @@ export function interactableViews<K extends InteractableView['kind']>(
 
 /** The inventory page as the player reads it: the page is opened and closed again. */
 export function inventoryOf(game: Game): InventoryPageView {
-  game.send({ type: 'open-page', page: 'inventory' });
+  game.send(OPEN_INVENTORY);
   const page = playingView(game).page;
-  game.send({ type: 'close-page', page: 'inventory' });
+  game.send(CLOSE_INVENTORY);
   if (page?.id !== 'inventory') {
     throw new Error('Expected the inventory page to open');
   }

@@ -4,6 +4,8 @@ import type { MonsterTypeDefinition } from '../src/core';
 import {
   COOLDOWN_STEPS,
   INTERACT,
+  OPEN_INVENTORY,
+  OPEN_STATS,
   WITH_BOW,
   advance,
   arena,
@@ -20,8 +22,6 @@ import {
 
 // The hero stands at (3.5, 3.5) facing down in the arena, where a chest on the tile (3, 4) is in its reach.
 
-const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
-const OPEN_STATS = { type: 'open-page', page: 'stats' } as const;
 const SWITCH = { type: 'switch-weapon' } as const;
 
 const SHORT_BOW_PICKED_UP = {

@@ -2,15 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
 import { STEPS_PER_SECOND, createGame } from '../src/core';
 import type { AutomapAreaView, AutomapPageView, Direction, Game, GameEvent, GearSlot } from '../src/core';
-import { fixedRandom, inventoryOf, playingView, walk } from './fixtures';
+import { CLOSE_AUTOMAP, OPEN_AUTOMAP, fixedRandom, inventoryOf, playingView, walk } from './fixtures';
 import { areaOf } from './main-route';
 import { isInZone, openTilesOf, quietGameOf, routeBetween, walkRoute } from './routes';
 
 // Only what must hold for any content the game ships with. The tests of the rules use purpose-built content
 // (fixtures.ts), so that changing what ships never breaks them.
-
-const OPEN_AUTOMAP = { type: 'open-page', page: 'automap' } as const;
-const CLOSE_AUTOMAP = { type: 'close-page', page: 'automap' } as const;
 
 function newShippedGame() {
   const game = createGame({ content: gameContent, random: fixedRandom });

@@ -4,6 +4,7 @@ import type { AreaDefinition, Direction, InteractableDefinition } from '../src/c
 import {
   ARENA_LAYOUT,
   INTERACT,
+  OPEN_INVENTORY,
   advance,
   arena,
   biterAt,
@@ -21,8 +22,6 @@ import {
 
 // The hero stands at (3.5, 3.5) and faces down, its body 0.5 tiles wide, and it interacts with what is within 0.5 tile
 // of its body in front of it. A chest fills the tile it stands on.
-
-const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
 
 const STEEL_SWORD_PICKED_UP = {
   type: 'pickup',

@@ -11,7 +11,9 @@ import {
   ARENA_LAYOUT,
   ATTACK,
   BITER,
+  CLOSE_INVENTORY,
   INTERACT,
+  OPEN_INVENTORY,
   WITH_BOW,
   advance,
   arena,
@@ -154,8 +156,6 @@ const WEAKLING = { weakling: frailMonster(0) };
 const LOOKOUT: CheckpointDefinition = { id: 'lookout', tile: { col: 4, row: 2 } };
 const LOOKOUT_ACTIVATED = { type: 'checkpoint-activated', checkpointId: 'lookout' } as const;
 
-const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
-const CLOSE_INVENTORY = { type: 'close-page', page: 'inventory' } as const;
 const USE_POTION = { type: 'use-healing-potion' } as const;
 
 function tookPotions(amount: number) {

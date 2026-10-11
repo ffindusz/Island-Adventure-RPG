@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CLOSE_STATS,
+  OPEN_STATS,
   advance,
   arena,
   biterAt,
@@ -9,9 +11,6 @@ import {
   newGame,
   playingView,
 } from './fixtures';
-
-const OPEN_STATS = { type: 'open-page', page: 'stats' } as const;
-const CLOSE_STATS = { type: 'close-page', page: 'stats' } as const;
 
 describe('the stat page', () => {
   it('is not open in a new game', () => {

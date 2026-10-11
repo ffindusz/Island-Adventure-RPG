@@ -10,7 +10,10 @@ import type {
 } from '../src/core';
 import {
   ARENA_LAYOUT,
+  CLOSE_AUTOMAP,
   FIELD_LAYOUT,
+  OPEN_AUTOMAP,
+  OPEN_STATS,
   advance,
   arena,
   biterAt,
@@ -37,9 +40,6 @@ import type { ArenaOptions } from './fixtures';
 //
 // A test reads the Automap as the picture the page shows of an area: the symbol of the terrain on each revealed tile
 // and a space on each tile that is hidden, so what is expected can be read off the layout.
-
-const OPEN_AUTOMAP = { type: 'open-page', page: 'automap' } as const;
-const CLOSE_AUTOMAP = { type: 'close-page', page: 'automap' } as const;
 
 /** What the terrain kinds of the arena look like in a picture: the symbols of its layout. */
 const SYMBOLS: Readonly<Record<string, string>> = { wall: '#', ground: '.', water: '~', sand: ',' };
@@ -489,8 +489,6 @@ describe('The Automap on arrival in another Adventure Area', () => {
 });
 
 describe('The Automap page', () => {
-  const OPEN_STATS = { type: 'open-page', page: 'stats' } as const;
-
   it('opens over the game when asked to and closes when asked to', () => {
     const game = newGame(route());
     expect(playingView(game).page).toBeNull();
