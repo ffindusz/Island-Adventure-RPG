@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Game, Snapshot } from '../src/core';
 import {
+  ATTACK,
   advance,
   face,
   gameAtTitle,
@@ -17,8 +18,6 @@ import { chargerAt, enemyContent, enemyField, HEAVY } from './enemy-fixtures';
 // wind-up begins in step 1 and the dash is launched in step 31. The dash meets a hero who stays in step 45, and when
 // nothing is in its way it ends in step 55. The hero walks 0.125 tile a step, so it takes four steps to get its body
 // from the middle of the lane to just outside it.
-
-const ATTACK = { type: 'attack' } as const;
 
 describe('avoiding a charger', () => {
   it.each(['up', 'down'] as const)('costs the hero nothing to step out of the lane %s during the wind-up', (side) => {

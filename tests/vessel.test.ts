@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { interactableViews, playingView, walk } from './fixtures';
+import { INTERACT, interactableViews, playingView, walk } from './fixtures';
 import { harborGame, VESSEL_ID } from './harbor-fixtures';
 
 // The vessel fills the tile it stands on and is always solid. The hero prepares it with Interact, and asks to sail home
 // with the next Interact (what the question does is in departure.test.ts). The harbor of the tests is in
 // harbor-fixtures.ts: the hero stands at (11.5, 3.5) facing right, and the vessel fills tile (12, 3), x 12 to 13.
-
-const INTERACT = { type: 'interact' } as const;
 
 describe('a vessel', () => {
   it('is solid: it stops the hero flush against it', () => {

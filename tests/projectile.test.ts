@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AreaDefinition, ExitDefinition, Game, RangedMonsterDefinition } from '../src/core';
 import {
   ARENA_LAYOUT,
+  ATTACK,
   WITH_BOW,
   advance,
   cacheAt,
@@ -19,8 +20,6 @@ import { SHOOTER, enemyContent, enemyField, shooterAt, untilFired } from './enem
 // The timeline is that of ranged-attacker.test.ts: a shooter in tile (2, 3), at (2.5, 3.5), and the hero at (6.5, 3.5),
 // in the same row. The shot is fired in step 31 and has made k moves of 0.0625 tile in step 31 + k. Its body is 0.25
 // wide, so its front edge is at x = 2.625 + 0.0625 k, and it meets the hero after 58 moves, in step 89.
-
-const ATTACK = { type: 'attack' } as const;
 
 const MONSTER_SHOT = { direction: 'right', size: 0.25, shooter: 'monster' } as const;
 

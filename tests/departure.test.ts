@@ -5,6 +5,7 @@ import {
   biterAt,
   face,
   gameAtTitle,
+  INTERACT,
   interactableViews,
   playingView,
   throughStorage,
@@ -17,7 +18,6 @@ import { askingGame, harborContent, harborGame, preparedGame, VESSEL_ID } from '
 // prepared opens the question, which is part of the game state as an open page is, and pauses the game in the same way
 // until the player answers it. The answers are two commands: to decline, and to sail.
 
-const INTERACT = { type: 'interact' } as const;
 const CANCEL = { type: 'cancel-departure' } as const;
 const ASKED_ABOUT_THE_VESSEL = { vesselId: VESSEL_ID };
 

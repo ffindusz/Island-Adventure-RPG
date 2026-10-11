@@ -64,6 +64,10 @@ export const HERO_STEP = 0.125;
 export const STEPS_PER_TILE = 8;
 export const COOLDOWN_STEPS = 24;
 
+/** The two commands the tests send most; a test that needs another declares it itself. */
+export const ATTACK = { type: 'attack' } as const;
+export const INTERACT = { type: 'interact' } as const;
+
 export const ARENA_LAYOUT = ['#######', '#.....#', '#.~...#', '#.....#', '#...,.#', '#######'];
 
 // A wide, empty field for tests that need room, such as monsters being farther from the hero than they can notice it:
@@ -477,7 +481,7 @@ export function walk(game: Game, direction: Direction, steps: number): GameEvent
 /** Waits out the attack cooldown, then strikes. Returns the strike's events. */
 export function strike(game: Game): readonly GameEvent[] {
   advance(game, COOLDOWN_STEPS);
-  return game.send({ type: 'attack' });
+  return game.send(ATTACK);
 }
 
 /** Turns the hero on the spot: the key goes down and up again before any step, so the hero does not move. */

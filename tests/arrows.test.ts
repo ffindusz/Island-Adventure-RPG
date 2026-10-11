@@ -3,8 +3,10 @@ import { createGame } from '../src/core';
 import type { ContentDefinition, Direction, Game, MonsterTypeDefinition, Snapshot } from '../src/core';
 import {
   ARENA_LAYOUT,
+  ATTACK,
   COOLDOWN_STEPS,
   FIELD_LAYOUT,
+  INTERACT,
   WITH_BOW,
   advance,
   arena,
@@ -32,8 +34,6 @@ import type { ArenaOptions } from './fixtures';
 // The hero has Ammunition only from a cache, a chest that is in reach next to its start. Each game here has the hero
 // open the cache and take the bow in hand, so the cache stands on the side opposite the one the hero shoots to.
 
-const ATTACK = { type: 'attack' } as const;
-const INTERACT = { type: 'interact' } as const;
 const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
 const SWITCH = { type: 'switch-weapon' } as const;
 

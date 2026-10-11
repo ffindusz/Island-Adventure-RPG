@@ -3,6 +3,7 @@ import type { StatId } from '../src/core';
 import {
   COOLDOWN_STEPS,
   FIELD_LAYOUT,
+  INTERACT,
   STEPS_PER_TILE,
   advance,
   arena,
@@ -20,7 +21,6 @@ import {
 const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
 const CLOSE_INVENTORY = { type: 'close-page', page: 'inventory' } as const;
 const OPEN_STATS = { type: 'open-page', page: 'stats' } as const;
-const INTERACT = { type: 'interact' } as const;
 
 describe('the Gear the hero begins with', () => {
   it('is a basic sword and basic armor, both equipped, as the inventory page lists them', () => {

@@ -10,6 +10,7 @@ import type {
 } from '../src/core';
 import {
   ARENA_LAYOUT,
+  INTERACT,
   arena,
   biterAt,
   cacheAt,
@@ -43,8 +44,6 @@ import {
 //
 // In the tests about defeat a biter stands on the tile (4, 3), beside the hero, which has 5 Health: it starts its wind-up
 // on the first step and bites for 5 on the 31st. A hero that has touched no Checkpoint is sent back to where it began.
-
-const INTERACT = { type: 'interact' } as const;
 
 const RUSTY_KEY_HELD = { id: 'rusty-key', name: 'Rusty Key' };
 const OPENED = { type: 'door-opened', doorId: 'cellar-door', keyName: 'Rusty Key' } as const;

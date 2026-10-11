@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ContentDefinition, Game, InteractableDefinition } from '../src/core';
 import {
+  INTERACT,
   advance,
   arena,
   chestAt,
@@ -21,8 +22,6 @@ import {
 //
 // The hero stands at (3.5, 3.5) and walks 0.125 tile a step. Walking right, its body (0.5 wide) only touches the tile
 // (5, 3) after 10 steps, at x = 4.75, and overlaps it after 11, at x = 4.875.
-
-const INTERACT = { type: 'interact' } as const;
 
 const TWO_POTIONS_PICKED_UP = {
   type: 'pickup',

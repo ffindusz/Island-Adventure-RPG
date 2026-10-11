@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ContentDefinition, Game } from '../src/core';
 import {
+  INTERACT,
   arena,
   doorAt,
   face,
@@ -22,8 +23,6 @@ import {
 // The hero stands at (3.5, 3.5) facing down. In most tests the lever is on the tile (3, 2), right above it, and its gate
 // on the tile (4, 3), right of it. Walking right 20 steps takes a hero that the gate does not stop to the wall, at
 // x = 5.75, and one that it stops to x = 3.75, flush against it.
-
-const INTERACT = { type: 'interact' } as const;
 
 const PULLED = { type: 'lever-toggled', leverId: 'lever-1', pulled: true } as const;
 const PUT_BACK = { type: 'lever-toggled', leverId: 'lever-1', pulled: false } as const;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { InteractableDefinition } from '../src/core';
 import {
+  INTERACT,
   advance,
   arena,
   cacheAt,
@@ -18,7 +19,6 @@ import {
 // The hero stands at (3.5, 3.5) facing down. A cache is a chest that holds Ammunition, opened like any chest: here the
 // one on the tile (3, 4) is in reach below the hero, and the one on the tile (4, 3) is in reach when it faces right.
 
-const INTERACT = { type: 'interact' } as const;
 const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
 
 const SIX_ARROWS_PICKED_UP = { type: 'pickup', item: { kind: 'consumable', id: 'ammunition', amount: 6 } } as const;

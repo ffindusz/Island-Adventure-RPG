@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { Command } from '../src/core';
-import { arena, expectAccepted, expectRefused, face, gameAtTitle, newGame, playingView, throughStorage } from './fixtures';
+import {
+  INTERACT,
+  arena,
+  expectAccepted,
+  expectRefused,
+  face,
+  gameAtTitle,
+  newGame,
+  playingView,
+  throughStorage,
+} from './fixtures';
 import {
   askingGame,
   harborContent,
@@ -15,7 +25,6 @@ import {
 // the ending and of the credits, and is at the title afterwards: there is no postgame, and the core has no storage to
 // write to, so what was saved before is as it was. Showing the ending and the credits is the caller's job.
 
-const INTERACT = { type: 'interact' } as const;
 const CONFIRM = { type: 'confirm-departure' } as const;
 const ENDED = [{ type: 'ending-reached', ending: HARBOR_ENDING, credits: HARBOR_CREDITS }];
 

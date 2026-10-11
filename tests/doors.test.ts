@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AreaDefinition, ContentDefinition, EntranceDefinition, ExitDefinition, Game } from '../src/core';
 import {
   ARENA_LAYOUT,
+  INTERACT,
   arena,
   doorAt,
   face,
@@ -21,8 +22,6 @@ import {
 // The hero stands at (3.5, 3.5) facing down. In most tests the door is on the tile (3, 4), right below it, and its key
 // on the tile (2, 3), beside it: the hero's body overlaps that tile after 3 steps to the left (its left edge is then
 // at x = 3.25 - 3 * 0.125 = 2.875, inside the tile, which spans x 2 to 3), and 3 steps to the right bring it back.
-
-const INTERACT = { type: 'interact' } as const;
 
 const LOCKED = { type: 'door-locked', doorId: 'cellar-door', keyName: 'Rusty Key' } as const;
 const OPENED = { type: 'door-opened', doorId: 'cellar-door', keyName: 'Rusty Key' } as const;
