@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { BANNER_TEXT_WIDTH, wrapText } from '../src/adapter/area-banner';
 import { gameContent } from '../src/content';
 import { createGame } from '../src/core';
-import type { AreaDefinition, Tile } from '../src/core';
+import type { Tile } from '../src/core';
 import { face, fixedRandom, playingView } from './fixtures';
+import { areaOf } from './main-route';
 import {
   directionBetween,
   experienceForLevel,
@@ -27,15 +28,7 @@ const WEAK_HEALTH = 3;
 /** The side path is a walk, not a step aside: this many tiles from the way out to the spot beside its chest. */
 const LEAST_DETOUR = 6;
 
-function definitionOf(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The shipped content has no Adventure Area "${id}"`);
-  }
-  return area;
-}
-
-const coast = definitionOf(COAST);
+const coast = areaOf(COAST);
 const isOpen = openTilesOf(gameContent, coast);
 const start = gameContent.start.tile;
 const wayOut = coast.exits ?? [];

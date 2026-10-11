@@ -35,6 +35,7 @@ const TRAIL_OF_SAND: readonly AreaId[] = ['woods', 'mountain', 'cave'];
 /** The Checkpoint where the route of the castle ends: the Guardian's, in the gateway to the arena. */
 const GUARDIAN_CHECKPOINT = 'guardian-checkpoint';
 
+/** The shipped Adventure Area with this id, for every test that needs one: a test of the content is wrong when there is none, so it throws. */
 export function areaOf(id: string): AreaDefinition {
   const found = gameContent.areas.find((candidate) => candidate.id === id);
   if (found === undefined) {

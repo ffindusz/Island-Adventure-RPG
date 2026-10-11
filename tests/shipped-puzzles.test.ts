@@ -14,6 +14,7 @@ import type {
 } from '../src/core';
 import { charactersTheFontLacks } from './drawn-text';
 import { face, fixedRandom, interactableViews, inventoryOf, playingView, throughStorage, walk } from './fixtures';
+import { areaOf } from './main-route';
 
 // The light puzzle the game ships with, in the woods: a cabin behind a locked door whose key lies in the north woods.
 // What a key, a door, a lever and a gate do is tested on purpose-built content (keys, doors, levers), and that no route
@@ -33,14 +34,6 @@ const NEIGHBOURS: readonly (readonly [Direction, Tile])[] = [
   ['left', { col: -1, row: 0 }],
   ['right', { col: 1, row: 0 }],
 ];
-
-function areaNamed(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The shipped content has no Adventure Area "${id}"`);
-  }
-  return area;
-}
 
 function firstEntranceOf(area: AreaDefinition): EntranceDefinition {
   const entrance = area.entrances?.[0];
@@ -121,13 +114,13 @@ function standsBeside(routes: ReadonlyMap<string, unknown>, tile: Tile): boolean
 
 /** The walks to every tile the hero can reach in the shipped woods from their way in, with these doors and gates open. */
 function woodsRoutes(...open: string[]): Map<string, Direction[]> {
-  const woods = areaNamed(WOODS);
+  const woods = areaOf(WOODS);
   return routesFrom(woods, firstEntranceOf(woods).tile, blockedByPlacements(woods, open));
 }
 
 /** The shipped content, with the hero beginning at the way in to the woods and the monsters of the woods taken out. */
 function quietWoodsContent(): ContentDefinition {
-  const woods = areaNamed(WOODS);
+  const woods = areaOf(WOODS);
   const areas = gameContent.areas.map((area) => (area.id === WOODS ? { ...area, monsters: [] } : area));
   return { ...gameContent, areas, start: { area: WOODS, tile: firstEntranceOf(woods).tile } };
 }
@@ -147,7 +140,7 @@ function routesInGame(game: Game): Map<string, Direction[]> {
       .filter((item) => stopsHero(item.kind, 'open' in item && item.open))
       .map((item) => tileKey(tileOf(item.position))),
   );
-  return routesFrom(areaNamed(WOODS), tileOf(view.hero.position), blocked);
+  return routesFrom(areaOf(WOODS), tileOf(view.hero.position), blocked);
 }
 
 function walkAlong(game: Game, route: readonly Direction[]): GameEvent[] {
@@ -232,7 +225,7 @@ describe('what the game ships with', () => {
   it.each(gameContent.areas.map((area) => area.id))(
     'keeps the entrances and the exits of %s free of chests, pickups and devices',
     (id) => {
-      const area = areaNamed(id);
+      const area = areaOf(id);
       const kept = new Set([
         ...(area.entrances ?? []).map((entrance) => tileKey(entrance.tile)),
         ...(area.exits ?? []).flatMap((exit) => tilesOf(exit.zone).map(tileKey)),

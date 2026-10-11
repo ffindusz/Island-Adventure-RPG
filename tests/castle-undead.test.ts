@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { ARTWORK } from '../src/adapter/artwork';
 import type { ArtManifest } from '../src/adapter/asset-manifest';
-import { gameContent } from '../src/content';
+import { areaOf } from './main-route';
 import { bytesOf, fileOf, frameOf, isOutline, isRed, isWhite, readPicture, sameShape } from './pictures';
 import type { Picture, Pixel } from './pictures';
 
@@ -21,9 +21,7 @@ const HIT_ROW = WALK_FRAMES;
 const WIND_UP_ROW = WALK_FRAMES + 1;
 
 function typesOf(areaId: string): string[] {
-  const area = gameContent.areas.find((candidate) => candidate.id === areaId);
-  if (!area) throw new Error(`the shipped content has no area "${areaId}"`);
-  return [...new Set(area.monsters.map((monster) => monster.type))].sort();
+  return [...new Set(areaOf(areaId).monsters.map((monster) => monster.type))].sort();
 }
 
 /** The opaque pixels of the cell in this row and column of a sheet, as a map from "x,y" to the pixel. */

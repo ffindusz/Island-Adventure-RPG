@@ -14,7 +14,7 @@ import type {
   TileRect,
 } from '../src/core';
 import { STEPS_PER_TILE, face, fixedRandom, interactableViews, newGame, playingView, walk } from './fixtures';
-import { routeOf } from './main-route';
+import { areaOf, routeOf } from './main-route';
 import {
   directionBetween,
   distanceBetween,
@@ -66,14 +66,6 @@ const MOST_NEARBY = 4;
 /** A side path is a walk, not a step aside: this many tiles from the trail to the spot beside what lies at its end, at least. */
 const LEAST_DETOUR = 6;
 
-function definitionOf(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The shipped content has no Adventure Area "${id}"`);
-  }
-  return area;
-}
-
 /**
  * A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the
  * Guardian, which the content must keep.
@@ -83,7 +75,7 @@ function quietGameAt(areaId: string, tile: Tile): Game {
   return newGame({ ...gameContent, areas, start: { area: areaId, tile } });
 }
 
-const cave = definitionOf(CAVE);
+const cave = areaOf(CAVE);
 const wayIn = (cave.entrances ?? [])[0];
 const wayInTile: Tile = wayIn?.tile ?? { col: 0, row: 0 };
 const wayForward = (cave.exits ?? []).find(({ to }) => to.area === CASTLE);
@@ -502,7 +494,7 @@ describe('the weapon behind the gate', () => {
   it('is a melee weapon that adds more than any Gear of that slot that the hero begins with or finds on the coast, in the woods and on the mountain', () => {
     const earlier = [
       ...GEAR_SLOTS.flatMap((slot) => gameContent.hero.startingGear[slot] ?? []),
-      ...[COAST, WOODS, MOUNTAIN].flatMap((id) => gearInChestsOf(definitionOf(id))),
+      ...[COAST, WOODS, MOUNTAIN].flatMap((id) => gearInChestsOf(areaOf(id))),
     ].flatMap((id) => gameContent.gear[id] ?? []);
 
     const best = Math.max(0, ...earlier.filter((gear) => gear.slot === 'melee-weapon').map((gear) => gear.bonus));
@@ -636,9 +628,9 @@ describe('the milestone of the cave', () => {
 });
 
 describe('the Experience on the way through the cave', () => {
-  const coast = definitionOf(COAST);
-  const woods = definitionOf(WOODS);
-  const mountain = definitionOf(MOUNTAIN);
+  const coast = areaOf(COAST);
+  const woods = areaOf(WOODS);
+  const mountain = areaOf(MOUNTAIN);
 
   it('gives a hero who fights what it meets from the start to the exit of the cave, and passes the milestones, the Experience of Level 5', () => {
     const earned =

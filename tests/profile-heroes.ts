@@ -11,6 +11,7 @@ import type {
 } from '../src/core';
 import { gameContent } from '../src/content';
 import { gameAtTitle, newGame, playingView } from './fixtures';
+import { areaOf } from './main-route';
 import { experienceForLevel, withoutOrdinaryMonsters } from './routes';
 
 // Heroes of a given make for the tests of the balance pass: what a player has when it reaches a place, put into the
@@ -204,8 +205,7 @@ export function statsOf(
  * puts it.
  */
 export function gameAtTheGuardian(profile: HeroProfile): Game {
-  const castle = gameContent.areas.find(({ id }) => id === 'castle');
-  const checkpoint = castle?.checkpoints?.find(({ id }) => id === GUARDIAN_CHECKPOINT);
+  const checkpoint = areaOf('castle').checkpoints?.find(({ id }) => id === GUARDIAN_CHECKPOINT);
   if (checkpoint === undefined) {
     throw new Error('The castle has no Guardian Checkpoint');
   }

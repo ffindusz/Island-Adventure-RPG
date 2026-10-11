@@ -3,7 +3,6 @@ import { monsterColour, terrainColour } from '../src/adapter/art';
 import { gameContent } from '../src/content';
 import { createGame } from '../src/core';
 import type {
-  AreaDefinition,
   Direction,
   Game,
   GuardianMonsterDefinition,
@@ -16,6 +15,7 @@ import type {
   TileRect,
 } from '../src/core';
 import { fixedRandom, interactableViews, monsterNamed, newGame, playingView, walk } from './fixtures';
+import { areaOf } from './main-route';
 import { gameWithHero, heroAt, type HeroProfile, QUIET } from './profile-heroes';
 import { isInZone, isWithinAwareness, keyOf, neighboursOf, openTilesOf, routeBetween, walkRoute, withoutOrdinaryMonsters } from './routes';
 
@@ -71,14 +71,6 @@ const STRIKES_TO_DEFEAT = { least: 12, most: 40 };
 /** A hit takes this long at most to land from the first step of its wind-up, so that a scene can end where it must: well over the longest. */
 const SCENE_STEP_LIMIT = 240;
 
-function definitionOf(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The shipped content has no Adventure Area "${id}"`);
-  }
-  return area;
-}
-
 /** The Guardian's type, which the content must give to the monster it places. */
 function guardianTypeOf(placement: MonsterPlacement | undefined): GuardianMonsterDefinition {
   const type = placement === undefined ? undefined : gameContent.monsterTypes[placement.type];
@@ -88,7 +80,7 @@ function guardianTypeOf(placement: MonsterPlacement | undefined): GuardianMonste
   return type;
 }
 
-const castle = definitionOf(CASTLE);
+const castle = areaOf(CASTLE);
 const wayIn = (castle.entrances ?? [])[0];
 const wayInTile: Tile = wayIn?.tile ?? { col: 0, row: 0 };
 const guardian = castle.monsters.find(({ id }) => id === GUARDIAN_ID);

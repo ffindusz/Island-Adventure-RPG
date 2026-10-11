@@ -4,6 +4,7 @@ import { gameContent } from '../src/content';
 import { STEPS_PER_SECOND, createGame } from '../src/core';
 import type { AreaDefinition, Direction, EntranceDefinition, Game, GameEvent, TileRect } from '../src/core';
 import { advance, fixedRandom, playingView } from './fixtures';
+import { areaOf } from './main-route';
 import { keyOf, neighboursOf, openTilesOf } from './routes';
 
 // What must hold for the Adventure Areas the game ships with and the ways between them. The rules of moving between
@@ -15,16 +16,8 @@ const MOUNTAIN = 'mountain';
 const CAVE = 'cave';
 const CASTLE = 'castle';
 
-function areaNamed(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The shipped content has no Adventure Area "${id}"`);
-  }
-  return area;
-}
-
 function entranceOf(areaId: string, entranceId: string): EntranceDefinition {
-  const entrance = areaNamed(areaId).entrances?.find((candidate) => candidate.id === entranceId);
+  const entrance = areaOf(areaId).entrances?.find((candidate) => candidate.id === entranceId);
   if (entrance === undefined) {
     throw new Error(`The Adventure Area "${areaId}" has no entrance "${entranceId}"`);
   }
@@ -210,7 +203,7 @@ describe('the Adventure Areas the game ships with', () => {
     const game = createGame({ content: gameContent, random: fixedRandom });
     game.send({ type: 'new-game' });
 
-    const coastText = areaNamed(COAST).text;
+    const coastText = areaOf(COAST).text;
 
     expect(coastText).toBeTypeOf('string');
     expect(playingView(game).areaText).toBe(coastText);
@@ -218,7 +211,7 @@ describe('the Adventure Areas the game ships with', () => {
 
   it('shows the text of an area the first time the hero comes in, and not on a later visit', () => {
     const game = gameComingInBy(COAST, 'from-woods');
-    const woodsText = areaNamed(WOODS).text;
+    const woodsText = areaOf(WOODS).text;
 
     walkThroughExit(game, 'right');
 
@@ -245,7 +238,7 @@ describe('the Adventure Areas the game ships with', () => {
   );
 
   it('puts a Checkpoint at the entrance of each area: the start of the adventure on the coast, the way in from it in the woods, the way in from the woods in the mountain, the way in from the mountain in the cave, the way in from the cave in the castle', () => {
-    const checkpointTiles = (id: string) => (areaNamed(id).checkpoints ?? []).map(({ tile }) => tile);
+    const checkpointTiles = (id: string) => (areaOf(id).checkpoints ?? []).map(({ tile }) => tile);
 
     expect(gameContent.start.area).toBe(COAST);
     expect(checkpointTiles(COAST)).toContainEqual(gameContent.start.tile);
@@ -317,12 +310,12 @@ describe('the Adventure Areas the game ships with', () => {
   it.each(gameContent.areas.map((area) => area.id))(
     'lets the hero walk from the first entrance of %s to every tile in it that is not solid, a chest being solid like rock and every door and gate open',
     (id) => {
-      expect(unreachableTiles(areaNamed(id))).toEqual([]);
+      expect(unreachableTiles(areaOf(id))).toEqual([]);
     },
   );
 
   it.each(gameContent.areas.map((area) => area.id))('leaves room to stand next to every chest of %s', (id) => {
-    const area = areaNamed(id);
+    const area = areaOf(id);
     const isOpen = openTilesOf(gameContent, area);
 
     const walledIn = (area.interactables ?? []).filter(
@@ -335,7 +328,7 @@ describe('the Adventure Areas the game ships with', () => {
   it.each(gameContent.areas.map((area) => area.id))(
     'keeps every chest and pickup of %s off its entrances, where the hero comes in',
     (id) => {
-      const area = areaNamed(id);
+      const area = areaOf(id);
       const entrances = new Set((area.entrances ?? []).map(({ tile }) => keyOf(tile)));
 
       const onEntrance = (area.interactables ?? []).filter((item) => entrances.has(keyOf(item.tile)));

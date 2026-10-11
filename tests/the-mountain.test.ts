@@ -12,7 +12,7 @@ import type {
   Tile,
 } from '../src/core';
 import { face, fixedRandom, newGame, playingView } from './fixtures';
-import { routeOf } from './main-route';
+import { areaOf, routeOf } from './main-route';
 import {
   directionBetween,
   distanceBetween,
@@ -55,14 +55,6 @@ const MOST_NEARBY = 4;
 /** A side path is a walk, not a step aside: this many tiles from the trail to the spot beside what lies at its end. */
 const LEAST_DETOUR = 6;
 
-function definitionOf(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The shipped content has no Adventure Area "${id}"`);
-  }
-  return area;
-}
-
 /**
  * A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the
  * Guardian, which the content must keep.
@@ -72,7 +64,7 @@ function quietGameAt(areaId: string, tile: Tile): Game {
   return newGame({ ...gameContent, areas, start: { area: areaId, tile } });
 }
 
-const mountain = definitionOf(MOUNTAIN);
+const mountain = areaOf(MOUNTAIN);
 const wayIn = (mountain.entrances ?? [])[0];
 const wayInTile: Tile = wayIn?.tile ?? { col: 0, row: 0 };
 const wayForward = (mountain.exits ?? []).find(({ to }) => to.area === CAVE);
@@ -367,8 +359,8 @@ describe('the armor of the mountain', () => {
     const upgrade = gameContent.gear[gearOf(armorChest())];
     const others = [
       ...GEAR_SLOTS.flatMap((slot) => gameContent.hero.startingGear[slot] ?? []),
-      ...gearInChestsOf(definitionOf(COAST)),
-      ...gearInChestsOf(definitionOf(WOODS)),
+      ...gearInChestsOf(areaOf(COAST)),
+      ...gearInChestsOf(areaOf(WOODS)),
     ].flatMap((id) => gameContent.gear[id] ?? []);
 
     const best = Math.max(0, ...others.filter((gear) => gear.slot === 'armor').map((gear) => gear.bonus));
@@ -478,8 +470,8 @@ describe('what the hero finds on the mountain', () => {
 });
 
 describe('the Experience on the way through the mountain', () => {
-  const coast = definitionOf(COAST);
-  const woods = definitionOf(WOODS);
+  const coast = areaOf(COAST);
+  const woods = areaOf(WOODS);
 
   it('gives a hero who fights what it meets from the start to the exit of the mountain, and passes the milestones, the Experience of Level 4', () => {
     const earned =

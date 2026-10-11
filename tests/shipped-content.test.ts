@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
 import { STEPS_PER_SECOND, createGame } from '../src/core';
 import type {
-  AreaDefinition,
   AutomapAreaView,
   AutomapPageView,
   Direction,
@@ -12,6 +11,7 @@ import type {
   InventoryPageView,
 } from '../src/core';
 import { fixedRandom, playingView, walk } from './fixtures';
+import { areaOf } from './main-route';
 import { isInZone, openTilesOf, quietGameOf, routeBetween, walkRoute } from './routes';
 
 // Only what must hold for any content the game ships with. The tests of the rules use purpose-built content
@@ -54,14 +54,6 @@ function areaOnMap(page: AutomapPageView, id: string): AutomapAreaView {
   const area = page.areas.find((candidate) => candidate.id === id);
   if (area === undefined) {
     throw new Error(`The Automap shows no area "${id}"`);
-  }
-  return area;
-}
-
-function definitionOf(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The content has no area "${id}"`);
   }
   return area;
 }
@@ -214,7 +206,7 @@ describe('what the hero can find in the content the game ships with', () => {
 
 describe('the Automap of the content the game ships with', () => {
   const { area: startAreaId, tile: startTile } = gameContent.start;
-  const firstArea = definitionOf(startAreaId);
+  const firstArea = areaOf(startAreaId);
   const wayOut = firstArea.exits ?? [];
   const wayOutIds = wayOut.map(({ id }) => id);
   const routeOut = routeBetween(openTilesOf(gameContent, firstArea), startTile, (tile) =>
@@ -275,7 +267,7 @@ describe('the Automap of the content the game ships with', () => {
     const first = areaOnMap(page, startAreaId);
     expect(first).toMatchObject({ discovered: true, current: false, hero: null });
     const next = areaOnMap(page, nextAreaId);
-    expect(next).toMatchObject({ discovered: true, current: true, name: definitionOf(nextAreaId).name });
+    expect(next).toMatchObject({ discovered: true, current: true, name: areaOf(nextAreaId).name });
     expect(next.hero).toEqual(playingView(game).hero.position);
     expect(next.connections).toContain(startAreaId);
   });

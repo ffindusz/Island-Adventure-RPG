@@ -4,6 +4,7 @@ import type { ArtManifest } from '../src/adapter/asset-manifest';
 import { describeStamp, lookOf, planTerrain } from '../src/adapter/terrain-plan';
 import type { Stamp } from '../src/adapter/terrain-plan';
 import { gameContent } from '../src/content';
+import { areaOf } from './main-route';
 import { fileOf, readPicture } from './pictures';
 
 // How the ground of the castle is dressed, which is how no other area is: walls of masonry, flagstones in the halls, an
@@ -39,9 +40,7 @@ function artsOn(stamps: readonly Stamp[], x: number, y: number): string[] {
 }
 
 function areaKinds(areaId: string): string[][] {
-  const area = gameContent.areas.find((candidate) => candidate.id === areaId);
-  if (!area) throw new Error(`the shipped content has no area "${areaId}"`);
-  return area.layout.map((row) => [...row].map((symbol) => gameContent.terrain[symbol]?.kind ?? '?'));
+  return areaOf(areaId).layout.map((row) => [...row].map((symbol) => gameContent.terrain[symbol]?.kind ?? '?'));
 }
 
 function framesOnDisk(art: string): number {

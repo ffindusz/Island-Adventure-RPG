@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
 import { createGame } from '../src/core';
-import type { AreaDefinition, Game, Tile } from '../src/core';
+import type { Game, Tile } from '../src/core';
 import { face, fixedRandom, gameAtTitle, interactableViews, newGame, playingView, walk } from './fixtures';
+import { areaOf } from './main-route';
 import { FIRST_GEAR, gameWithHero, heroAt, INTENDED_LEVEL, QUIET } from './profile-heroes';
 import { directionBetween, isInZone, keyOf, neighboursOf, openTilesOf, routeBetween, walkRoute } from './routes';
 
@@ -29,15 +30,7 @@ const BOTTOM_ROWS = 3;
 /** The kinds of interactable that a hero must not need to get to the vessel, but for the Guardian's gate. */
 const PUZZLE_KINDS: readonly string[] = ['key', 'door', 'gate', 'lever'];
 
-function definitionOf(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The shipped content has no Adventure Area "${id}"`);
-  }
-  return area;
-}
-
-const castle = definitionOf(CASTLE);
+const castle = areaOf(CASTLE);
 const wayIn = (castle.entrances ?? [])[0];
 const wayInTile: Tile = wayIn?.tile ?? { col: 0, row: 0 };
 const guardian = castle.monsters.find(({ id }) => id === GUARDIAN_ID);

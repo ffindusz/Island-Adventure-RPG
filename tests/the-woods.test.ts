@@ -11,7 +11,7 @@ import type {
   Tile,
 } from '../src/core';
 import { face, fixedRandom, newGame, playingView } from './fixtures';
-import { routeOf } from './main-route';
+import { areaOf, routeOf } from './main-route';
 import {
   directionBetween,
   experienceForLevel,
@@ -41,14 +41,6 @@ const MOUNTAIN = 'mountain';
 /** A side path is a walk, not a step aside: this many tiles from the trail to the spot beside what lies at its end. */
 const LEAST_DETOUR = 6;
 
-function definitionOf(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The shipped content has no Adventure Area "${id}"`);
-  }
-  return area;
-}
-
 function chaserNamed(name: string): ChaserMonsterDefinition {
   const type = gameContent.monsterTypes[name];
   if (type === undefined || type.behavior !== 'chaser') {
@@ -66,7 +58,7 @@ function quietGameAt(areaId: string, tile: Tile): Game {
   return newGame({ ...gameContent, areas, start: { area: areaId, tile } });
 }
 
-const woods = definitionOf(WOODS);
+const woods = areaOf(WOODS);
 const wayIn = (woods.entrances ?? [])[0];
 const wayInTile: Tile = wayIn?.tile ?? { col: 0, row: 0 };
 const wayForward = (woods.exits ?? []).find(({ to }) => to.area === MOUNTAIN);
@@ -304,7 +296,7 @@ describe('the cabin in the woods', () => {
       const upgrade = reward.contents.kind === 'gear' ? gameContent.gear[reward.contents.gear] : undefined;
       const others = [
         ...GEAR_SLOTS.flatMap((slot) => gameContent.hero.startingGear[slot] ?? []),
-        ...gearInChestsOf(definitionOf(COAST)),
+        ...gearInChestsOf(areaOf(COAST)),
         ...chests.filter((chest) => chest !== reward).flatMap((chest) => (chest.contents.kind === 'gear' ? [chest.contents.gear] : [])),
       ].flatMap((id) => gameContent.gear[id] ?? []);
 
@@ -359,7 +351,7 @@ describe('the creatures of the woods', () => {
 });
 
 describe('the Experience on the way through the woods', () => {
-  const coast = definitionOf(COAST);
+  const coast = areaOf(COAST);
 
   it('gives a hero who fights what it meets from the start to the exit of the woods, and passes the milestones, the Experience of Level 3', () => {
     const earned =

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
-import type { AreaDefinition, GuardianPatternDefinition, MonsterTypeDefinition } from '../src/core';
+import type { GuardianPatternDefinition, MonsterTypeDefinition } from '../src/core';
+import { areaOf } from './main-route';
 import { isWithinAwareness } from './routes';
 
 // What must hold for the monsters the game ships with. The rules of the charger and the ranged attacker are tested on
@@ -12,14 +13,6 @@ import { isWithinAwareness } from './routes';
 const BEHAVIORS = ['chaser', 'charger', 'ranged', 'guardian'] as const;
 
 const { hero } = gameContent;
-
-function areaNamed(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The shipped content has no Adventure Area "${id}"`);
-  }
-  return area;
-}
 
 function typeNamed(name: string): MonsterTypeDefinition {
   const type = gameContent.monsterTypes[name];
@@ -81,7 +74,7 @@ describe('the monsters the game ships with', () => {
   });
 
   it.each(SPOTS)('keeps every monster from noticing a hero who stands on $what of $area', ({ area, tile }) => {
-    const noticing = areaNamed(area)
+    const noticing = areaOf(area)
       .monsters.filter((monster) => isWithinAwareness(typeNamed(monster.type), monster.tile, hero.size, tile))
       .map((monster) => monster.id);
 

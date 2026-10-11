@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { describeStamp, planTerrain } from '../src/adapter/terrain-plan';
 import type { Stamp } from '../src/adapter/terrain-plan';
 import { gameContent } from '../src/content';
+import { areaOf } from './main-route';
 
 const KINDS: Readonly<Record<string, string>> = {
   '~': 'water',
@@ -331,8 +332,7 @@ describe('the ground of a little wreckage', () => {
 });
 
 describe('the ground of the shipwreck coast, which has a wreck and a little wreckage', () => {
-  const coast = gameContent.areas.find((area) => area.id === 'shipwreck-coast');
-  if (!coast) throw new Error('the shipped content has no shipwreck coast');
+  const coast = areaOf('shipwreck-coast');
   const kinds = coast.layout.map((row) => [...row].map((symbol) => gameContent.terrain[symbol]?.kind ?? '?'));
   const stamps = planTerrain(kinds);
 

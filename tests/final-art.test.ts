@@ -7,6 +7,7 @@ import { SHEET_COLUMNS } from '../src/adapter/config';
 import { describeStamp, planTerrain } from '../src/adapter/terrain-plan';
 import { gameContent } from '../src/content';
 import type { AreaDefinition, ContentDefinition } from '../src/core';
+import { areaOf } from './main-route';
 
 // The terrain and the monsters of the areas whose art is final are found by name, `terrain-<kind>` and
 // `monster-<type>`, and the game refuses to start while one is missing. Only the areas that are listed as final count: a
@@ -43,12 +44,6 @@ function withLavaAndALizard(area: AreaDefinition, id: string = area.id): AreaDef
     layout: area.layout.map((row, index) => (index === 0 ? `^${row.slice(1)}` : row)),
     monsters: [...area.monsters, { id: `${id}-lizard`, type: 'lizard', tile: { col: 5, row: 9 } }],
   };
-}
-
-function shippedArea(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (!area) throw new Error(`the shipped content has no area "${id}"`);
-  return area;
 }
 
 describe('the art of the areas whose art is final', () => {
@@ -89,13 +84,13 @@ describe('the art of the areas whose art is final', () => {
   );
 
   it('is asked for as well when a listed area gets a kind of terrain and a type of monster that have no art yet', () => {
-    const content = withArea(withLavaAndALizard(shippedArea('shipwreck-coast')));
+    const content = withArea(withLavaAndALizard(areaOf('shipwreck-coast')));
 
     expect(missingArt(neededArt(content), manifestLookup(ARTWORK))).toEqual(['terrain-lava', 'monster-lizard']);
   });
 
   it('is not asked for a kind or a type that only an area outside the list uses, which keeps its colour', () => {
-    const content = withArea(withLavaAndALizard(shippedArea('woods'), 'unfinished-area'));
+    const content = withArea(withLavaAndALizard(areaOf('woods'), 'unfinished-area'));
 
     expect(FINAL_ART_AREAS).not.toContain('unfinished-area');
     expect(neededArt(content)).toEqual(neededArt(gameContent));
@@ -175,7 +170,7 @@ describe('the size of a frame of a sheet', () => {
 
 describe('the sheets of the terrain on disk', () => {
   it.each(FINAL_ART_AREAS)('hold a frame for every stamp planned for %s', (areaId) => {
-    const area = shippedArea(areaId);
+    const area = areaOf(areaId);
     const kinds = area.layout.map((row) => [...row].map((symbol) => gameContent.terrain[symbol]?.kind ?? '?'));
     const stamps = planTerrain(kinds);
     const frames = new Map<string, number>();

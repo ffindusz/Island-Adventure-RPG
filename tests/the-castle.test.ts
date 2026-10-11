@@ -14,7 +14,7 @@ import type {
   TileRect,
 } from '../src/core';
 import { FIELD_LAYOUT, arena, face, fixedRandom, newGame, playingView } from './fixtures';
-import { routeOf } from './main-route';
+import { areaOf, routeOf } from './main-route';
 import {
   directionBetween,
   distanceBetween,
@@ -76,14 +76,6 @@ const MOST_NEARBY = 4;
 /** A side path is a walk, not a step aside: this many tiles from the route to the spot beside what lies at its end. */
 const LEAST_DETOUR = 6;
 
-function definitionOf(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The shipped content has no Adventure Area "${id}"`);
-  }
-  return area;
-}
-
 /**
  * A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the
  * Guardian, which the content must keep.
@@ -93,7 +85,7 @@ function quietGameAt(areaId: string, tile: Tile): Game {
   return newGame({ ...gameContent, areas, start: { area: areaId, tile } });
 }
 
-const castle = definitionOf(CASTLE);
+const castle = areaOf(CASTLE);
 const wayIn = (castle.entrances ?? [])[0];
 const wayInTile: Tile = wayIn?.tile ?? { col: 0, row: 0 };
 const wayBack = (castle.exits ?? []).find(({ to }) => to.area === CAVE);
@@ -297,13 +289,13 @@ describe('the five Adventure Areas', () => {
   it('are joined in order: each area has an exit forward to an entrance of the next, and the next has an exit back to an entrance of it', () => {
     for (const [index, id] of ROUTE_OF_AREAS.slice(0, -1).entries()) {
       const next = ROUTE_OF_AREAS[index + 1] ?? '';
-      const forward = (definitionOf(id).exits ?? []).find(({ to }) => to.area === next);
-      const back = (definitionOf(next).exits ?? []).find(({ to }) => to.area === id);
+      const forward = (areaOf(id).exits ?? []).find(({ to }) => to.area === next);
+      const back = (areaOf(next).exits ?? []).find(({ to }) => to.area === id);
 
       expect(forward, `${id} has an exit forward to ${next}`).toBeDefined();
-      expect((definitionOf(next).entrances ?? []).map((entrance) => entrance.id)).toContain(forward?.to.entrance);
+      expect((areaOf(next).entrances ?? []).map((entrance) => entrance.id)).toContain(forward?.to.entrance);
       expect(back, `${next} has an exit back to ${id}`).toBeDefined();
-      expect((definitionOf(id).entrances ?? []).map((entrance) => entrance.id)).toContain(back?.to.entrance);
+      expect((areaOf(id).entrances ?? []).map((entrance) => entrance.id)).toContain(back?.to.entrance);
     }
   });
 
@@ -512,7 +504,7 @@ describe('the armor of the castle', () => {
     const upgrade = gameContent.gear[gearOf(armorChest())];
     const others = [
       ...GEAR_SLOTS.flatMap((slot) => gameContent.hero.startingGear[slot] ?? []),
-      ...[COAST, WOODS, MOUNTAIN, CAVE].flatMap((id) => gearInChestsOf(definitionOf(id))),
+      ...[COAST, WOODS, MOUNTAIN, CAVE].flatMap((id) => gearInChestsOf(areaOf(id))),
     ].flatMap((id) => gameContent.gear[id] ?? []);
 
     const best = Math.max(0, ...others.filter((gear) => gear.slot === 'armor').map((gear) => gear.bonus));
@@ -664,10 +656,10 @@ describe('the milestone of the castle', () => {
 });
 
 describe('the Experience on the way through the castle', () => {
-  const coast = definitionOf(COAST);
-  const woods = definitionOf(WOODS);
-  const mountain = definitionOf(MOUNTAIN);
-  const cave = definitionOf(CAVE);
+  const coast = areaOf(COAST);
+  const woods = areaOf(WOODS);
+  const mountain = areaOf(MOUNTAIN);
+  const cave = areaOf(CAVE);
 
   it('gives a hero who fights what it meets from the start to the end of the route of the castle, and passes the milestones, the Experience of Level 6', () => {
     const earned =
