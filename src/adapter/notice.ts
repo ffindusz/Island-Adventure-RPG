@@ -1,10 +1,12 @@
 import type Phaser from 'phaser';
 import type { PickedUpItem } from '../core';
-import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
+import { consumableIcon, gearIcon, HEART, KEY_ICON } from './artwork';
+import { ChangeGuard } from './change-guard';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
-import { CONSUMABLE_NAMES, shown, STAT_NAMES } from './labels';
+import { interactKeyLabel, pageKeyLabel, switchWeaponKeyLabel } from './controls';
+import { DEPTH } from './depths';
+import { CONSUMABLE_NAMES, numberText, STAT_NAMES } from './labels';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
-import { interactKeyLabel, pageKeyLabel, switchWeaponKeyLabel } from './player-input';
 import { INK, UiLayer } from './ui-layer';
 
 // The notice of what the hero just found, that the bow has nothing to shoot, that it touched a Checkpoint, that a door
@@ -28,9 +30,6 @@ export type NoticeContent =
   | { readonly kind: 'gate-opened' }
   | { readonly kind: 'vessel-prepared' }
   | { readonly kind: 'save-failed' };
-
-/** Above the HUD, below the overlay: a page that opens covers the notice. */
-const NOTICE_DEPTH = 150;
 
 /** From the panel's edge, whose frame is 3 pixels wide, to what it holds. */
 const PADDING = 7;
@@ -57,19 +56,17 @@ interface Line {
  */
 export class Notice {
   private readonly layer: UiLayer;
-  private shown = 'null';
+  private readonly shown = new ChangeGuard();
 
   constructor(scene: Phaser.Scene) {
-    this.layer = new UiLayer(scene, NOTICE_DEPTH);
+    this.layer = new UiLayer(scene, DEPTH.notice);
   }
 
   /** Shows the content, or nothing. It draws again only when what it shows has changed. */
   draw(content: NoticeContent | null): void {
-    const key = JSON.stringify(content);
-    if (key === this.shown) {
+    if (!this.shown.changed(content)) {
       return;
     }
-    this.shown = key;
     this.layer.clear();
     if (content !== null) {
       drawLines(this.layer, linesFor(content), iconFor(content));
@@ -85,7 +82,7 @@ function iconFor(content: NoticeContent): string | null {
     case 'out-of-ammunition':
       return consumableIcon('ammunition');
     case 'checkpoint':
-      return 'ui-heart';
+      return HEART;
     case 'door-locked':
     case 'door-opened':
       return KEY_ICON;
@@ -97,7 +94,8 @@ function iconFor(content: NoticeContent): string | null {
   }
 }
 
-function pickupIcon(item: PickedUpItem): string {
+/** The picture of the item, which the notice shows beside its lines and the hero's pickup shows rising over it. */
+export function pickupIcon(item: PickedUpItem): string {
   switch (item.kind) {
     case 'gear':
       return gearIcon(item.id);
@@ -158,7 +156,7 @@ function pickupLines(item: PickedUpItem): Line[] {
     case 'gear':
       return [
         { text: `FOUND ${item.name}`, colour: TITLE_COLOUR },
-        { text: `+${shown(item.bonus)} ${STAT_NAMES[item.stat]}`, colour: GAIN_COLOUR },
+        { text: `+${numberText(item.bonus)} ${STAT_NAMES[item.stat]}`, colour: GAIN_COLOUR },
         { text: `PRESS ${pageKeyLabel('inventory')} TO EQUIP`, colour: HINT_COLOUR },
       ];
     case 'consumable':

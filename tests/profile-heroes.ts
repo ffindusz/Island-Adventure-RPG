@@ -1,7 +1,18 @@
-import type { ConsumableId, ContentDefinition, Direction, Game, GearSlot, Point, Snapshot, StatId } from '../src/core';
+import type {
+  ConsumableId,
+  ContentDefinition,
+  Direction,
+  Game,
+  GearSlot,
+  PlayingView,
+  Point,
+  Snapshot,
+  StatId,
+} from '../src/core';
 import { gameContent } from '../src/content';
-import { gameAtTitle, newGame } from './fixtures';
-import { withoutOrdinaryMonsters } from './routes';
+import { gameAtTitle, newGame, playingView } from './fixtures';
+import { areaOf, GUARDIAN_CHECKPOINT } from './main-route';
+import { experienceForLevel, withoutOrdinaryMonsters } from './routes';
 
 // Heroes of a given make for the tests of the balance pass: what a player has when it reaches a place, put into the
 // shipped content the way a save would put it there, so that every number is the core's own and nothing is worked out
@@ -54,7 +65,7 @@ export const SPLITS = {
 
 /** The Experience a hero has on reaching this Level, the least it can have. */
 export function experienceAt(level: number): number {
-  return level <= 1 ? 0 : (gameContent.progression.levelThresholds[level - 2] ?? Infinity);
+  return level <= 1 ? 0 : experienceForLevel(gameContent, level);
 }
 
 /** A hero of this Level, who has spent the Stat Points that it has earned, and is as the profile says. */
@@ -86,9 +97,6 @@ export function underLeveledHero(potions: number): HeroProfile {
   return heroAt(3, { health: 1, attack: 1, defense: 0 }, MAIN_ROUTE_GEAR, potions);
 }
 
-/** The Guardian's Checkpoint, in the gateway to the arena: where a hero stands before it goes in to the Guardian. */
-const GUARDIAN_CHECKPOINT = 'guardian-checkpoint';
-
 /** Where a hero is put: an Adventure Area, the centre of its body and the way it faces. */
 export interface Place {
   readonly areaId: string;
@@ -98,22 +106,50 @@ export interface Place {
 
 const bases = new WeakMap<ContentDefinition, Snapshot>();
 
-/** The most Health a hero with these Stat Points has: the base Health and what the points spent on Health add. */
-export function maxHealthOf(points: Points, content: ContentDefinition = gameContent): number {
-  return content.hero.health + points.health * content.progression.statPointValue.health;
-}
-
-/**
- * A game of this content with the hero as the profile says, at full Health and in the place: a game continued from a
- * save, which is how a hero of any make is built through the core's own interface.
- */
-export function gameWithHero(content: ContentDefinition, profile: HeroProfile, place: Place): Game {
+/** A copy of the save of a new game of this content, for a test to change as another player's save would differ. */
+function savedNewGame(content: ContentDefinition): Snapshot {
   let base = bases.get(content);
   if (base === undefined) {
     base = newGame(content).snapshot();
     bases.set(content, base);
   }
-  const snapshot = structuredClone(base);
+  return structuredClone(base);
+}
+
+const NO_POINTS: Points = { health: 0, attack: 0, defense: 0 };
+
+/** What the core says of a hero with this Experience and these Stat Points spent: the view of a game continued from a save of it. */
+function viewOfHero(content: ContentDefinition, experience: number, points: Points): PlayingView {
+  const snapshot = savedNewGame(content);
+  snapshot.state.hero.experience = experience;
+  snapshot.state.hero.statPoints = { ...points };
+  const game = gameAtTitle(content);
+  game.send({ type: 'continue', snapshot });
+  return playingView(game);
+}
+
+/** The Level of a hero with some Experience, as the core reports it: Level 1 below the first threshold of the content. */
+export function levelOf(experience: number, content: ContentDefinition = gameContent): number {
+  return viewOfHero(content, experience, NO_POINTS).progress.level;
+}
+
+/** The most Health a hero with these Stat Points has, as the core reports it. */
+export function maxHealthOf(points: Points, content: ContentDefinition = gameContent): number {
+  return viewOfHero(content, 0, points).hero.maxHealth;
+}
+
+/**
+ * A game of this content with the hero as the profile says, at full Health and in the place: a game continued from a
+ * save, which is how a hero of any make is built through the core's own interface. `adjust` changes the save before the
+ * game continues from it, for what the core has no command for, such as the Health of a monster.
+ */
+export function gameWithHero(
+  content: ContentDefinition,
+  profile: HeroProfile,
+  place: Place,
+  adjust?: (save: Snapshot) => void,
+): Game {
+  const snapshot = savedNewGame(content);
   const { hero } = snapshot.state;
   snapshot.state.areaId = place.areaId;
   hero.position = { ...place.position };
@@ -126,6 +162,7 @@ export function gameWithHero(content: ContentDefinition, profile: HeroProfile, p
   hero.activeWeapon = 'melee-weapon';
   hero.consumables = { ...profile.consumables };
   hero.health = maxHealthOf(profile.points, content);
+  adjust?.(snapshot);
   const game = gameAtTitle(content);
   game.send({ type: 'continue', snapshot });
   return game;
@@ -165,8 +202,7 @@ export function statsOf(
  * puts it.
  */
 export function gameAtTheGuardian(profile: HeroProfile): Game {
-  const castle = gameContent.areas.find(({ id }) => id === 'castle');
-  const checkpoint = castle?.checkpoints?.find(({ id }) => id === GUARDIAN_CHECKPOINT);
+  const checkpoint = areaOf('castle').checkpoints?.find(({ id }) => id === GUARDIAN_CHECKPOINT);
   if (checkpoint === undefined) {
     throw new Error('The castle has no Guardian Checkpoint');
   }

@@ -1,5 +1,5 @@
 import { STEP_MS } from '../src/core';
-import { fightTheGuardian, type FightResult } from './dodging-bot';
+import { DRINK_AT_SHARE, fightTheGuardian, type FightResult } from './dodging-bot';
 import {
   gameAtTheGuardian,
   type HeroProfile,
@@ -66,7 +66,7 @@ export function guardianTable(): GuardianRow[] {
       const result = fightTheGuardian(gameAtTheGuardian(hero.withPotions(play.potions)), {
         reactionMs: play.reactionMs,
         missEvery: play.missEvery,
-        drinkAtShare: 0.5,
+        drinkAtShare: DRINK_AT_SHARE,
       });
       const damage = result.telegraphs.reduce((sum, telegraph) => sum + telegraph.damage, 0);
       return { hero: hero.label, play: play.label, potions: play.potions, result, damage };

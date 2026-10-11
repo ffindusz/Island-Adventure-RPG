@@ -5,19 +5,18 @@ import {
   arena,
   BITER,
   biterAt,
+  continuedFrom,
   defeatPrize,
   dummyAt,
   face,
   gameAtTitle,
   gameWithPrizes,
   newGame,
+  OPEN_STATS,
   playingView,
   prizes,
   strike,
-  throughStorage,
 } from './fixtures';
-
-const OPEN_STATS = { type: 'open-page', page: 'stats' } as const;
 
 function assign(game: Game, stat: StatId): void {
   game.send({ type: 'assign-stat-point', stat });
@@ -70,8 +69,7 @@ describe('a level-up asks where to put a Stat Point', () => {
   it('is still waiting when the game is saved and continued', () => {
     const game = gameAtLevel2();
 
-    const continued = gameAtTitle(arena(prizes(10)));
-    continued.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
+    const continued = continuedFrom(arena(prizes(10)), game.snapshot());
 
     expect(playingView(continued).levelUp).toEqual({ level: 2, points: 1, options: CHOICES_AT_LEVEL_1 });
   });

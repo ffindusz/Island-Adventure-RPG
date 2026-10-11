@@ -1,10 +1,12 @@
-import { areaOf, monsterTypeOf } from './content';
-import type { Area, Content, MonsterProjectile } from './content';
-import { boxAround, EPSILON, overlaps } from './geometry';
+import { areaOf } from './content';
+import type { Area, Content } from './content';
+import { boxAround, EPSILON, overlaps, travelledBetween } from './geometry';
 import type { Box, Direction, Point } from './geometry';
 import { hurtHero } from './hero-damage';
 import { interactableObstacles } from './interactables';
 import type { GameEvent, RandomSource } from './interface';
+import { monsterTypeOf } from './monster-content';
+import type { MonsterProjectile } from './monster-content';
 import { hurtMonster } from './monster-damage';
 import { gapAhead, moveBody } from './movement';
 import { heroBody, livingMonsters, monsterBody } from './state';
@@ -65,7 +67,7 @@ export function flyArrows(state: PlayState, content: Content, random: RandomSour
         : flyProjectile(state, content, arrow, arrow.shotBy, area, obstacles);
     events.push(...flight.events);
     if (flight.events.some((event) => event.type === 'hero-defeated')) {
-      state.arrows = [];
+      // The defeat took the arrows in the air (see recoverHero): there is nothing left to put back.
       return events;
     }
     if (flight.flying) {
@@ -100,7 +102,7 @@ function flyHeroArrow(
   const { arrowSpeedPerStep, arrowSize } = content.hero.rangedWeapon;
   const distance = Math.min(arrowSpeedPerStep, arrow.rangeLeft);
   const end = moveBody(area, arrow.position, arrowSize, arrow.direction, distance, obstacles);
-  const travelled = Math.abs(end.x - arrow.position.x) + Math.abs(end.y - arrow.position.y);
+  const travelled = travelledBetween(arrow.position, end);
   const body = boxAround(arrow.position, arrowSize);
   const target = firstMonsterReached(state, content, body, arrow.direction, travelled);
   if (target !== undefined) {

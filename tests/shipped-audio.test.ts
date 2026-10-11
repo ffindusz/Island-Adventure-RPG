@@ -1,18 +1,18 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { requireArt, missingArt } from '../src/adapter/asset-manifest';
-import { AUDIO, EFFECTS, neededAudio, soundLookup, soundPath } from '../src/adapter/audio-manifest';
+import { manifestLookup, missingArt, requireArt } from '../src/adapter/asset-manifest';
+import { AUDIO, EFFECTS, neededAudio, soundPath } from '../src/adapter/audio-manifest';
 import type { AudioManifest } from '../src/adapter/audio-manifest';
 import { gameContent } from '../src/content';
 import { recordOnDisk } from './licence-record';
 
 // The sounds of the game are found by name, and the game refuses to start while a name has no entry in the audio
-// manifest. This is the manifest check of ADR 0002, and the files on disk behind it: that each sound the manifest points
-// at is a file of the right format in public/audio, that nothing is shipped that the manifest does not name, that every
-// shipped file is in the asset licence record, and that none comes from the voice acting of the pack, which the game does
-// not have. It is an on-disk check, like the ones of final-art.test.ts, and its seam drift is flagged in the ticket. How
-// the sounds sound, and whether they are the right ones, is for a play check: nothing here can listen.
+// manifest. This is the manifest check of ADR 0002, and the files on disk behind it, which ADR 0005 allows: that each sound
+// the manifest points at is a file of the right format in public/audio, that nothing is shipped that the manifest does not
+// name, that every shipped file is in the asset licence record, and that none comes from the voice acting of the pack,
+// which the game does not have. It is an on-disk check, like the ones of final-art.test.ts. How the sounds sound, and
+// whether they are the right ones, is for a play check: nothing here can listen.
 
 const AUDIO_FOLDER = fileURLToPath(new URL('../public/audio/', import.meta.url));
 
@@ -31,7 +31,7 @@ const sounds = Object.entries(AUDIO);
 
 describe('the audio that the shipped content needs', () => {
   it('is in the audio manifest, every sound of it', () => {
-    expect(missingArt(neededAudio(gameContent), soundLookup(AUDIO))).toEqual([]);
+    expect(missingArt(neededAudio(gameContent), manifestLookup(AUDIO))).toEqual([]);
   });
 
   it('is the title, the music of every area, the fight and the ending, and every effect, and no more', () => {
@@ -50,7 +50,7 @@ describe('the audio that the shipped content needs', () => {
   it.each(neededAudio(gameContent))(
     'stops the game from starting, naming it, when the sound %s is missing',
     (name) => {
-      const manifest = soundLookup(withoutSound(name));
+      const manifest = manifestLookup(withoutSound(name));
 
       expect(missingArt(neededAudio(gameContent), manifest)).toEqual([name]);
       expect(() => requireArt(neededAudio(gameContent), manifest, 'The content needs sounds that the audio manifest lacks')).toThrow(
@@ -64,7 +64,7 @@ describe('the audio that the shipped content needs', () => {
     if (!first) throw new Error('the shipped content has no area to copy');
     const content = { ...gameContent, areas: [...gameContent.areas, { ...first, id: 'an-area-nobody-scored' }] };
 
-    expect(missingArt(neededAudio(content), soundLookup(AUDIO))).toEqual(['music-area-an-area-nobody-scored']);
+    expect(missingArt(neededAudio(content), manifestLookup(AUDIO))).toEqual(['music-area-an-area-nobody-scored']);
   });
 });
 

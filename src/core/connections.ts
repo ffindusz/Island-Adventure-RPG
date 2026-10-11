@@ -1,6 +1,6 @@
 import type { Area, Entrance, Exit } from './content';
 import type { AreaDefinition } from './definitions';
-import { boxAround, centerOf, overlaps } from './geometry';
+import { boxAround, centerOf, describeTile, overlaps } from './geometry';
 import type { Tile } from './geometry';
 import { zoneBox } from './zones';
 
@@ -23,10 +23,6 @@ export function loadEntrances(area: AreaDefinition, isWalkable: (tile: Tile) => 
     }
     return { id: entrance.id, tile: entrance.tile };
   });
-}
-
-function describeTile(tile: Tile): string {
-  return `(col ${tile.col}, row ${tile.row})`;
 }
 
 /** Ids of entrances, and of exits, are unique within their Adventure Area: they are only looked up there. */

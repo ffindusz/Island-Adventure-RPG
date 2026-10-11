@@ -1,16 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { createGame } from '../src/core';
-import type {
-  AreaDefinition,
-  CheckpointDefinition,
-  ContentDefinition,
-  EntranceDefinition,
-  ExitDefinition,
-  Game,
-} from '../src/core';
+import type { AreaDefinition, CheckpointDefinition, ContentDefinition, Game } from '../src/core';
+import { world as worldWithCellar } from './cellar-fixtures';
 import {
   ARENA_LAYOUT,
+  ATTACK,
   BITER,
+  CLOSE_INVENTORY,
+  INTERACT,
+  OPEN_INVENTORY,
   WITH_BOW,
   advance,
   arena,
@@ -18,63 +15,28 @@ import {
   cacheAt,
   chestAt,
   chestViews,
+  continuedFrom,
   dummyAt,
+  expectRefused,
   face,
-  fixedRandom,
   frailMonster,
-  gameAtTitle,
   milestone,
   newGame,
   pickupAt,
   playingView,
   strike,
-  throughStorage,
+  untilDefeated,
   walk,
 } from './fixtures';
 import type { ArenaOptions } from './fixtures';
 
-// The test world: the arena and a cellar, both 7 x 6 tiles (see fixtures.ts), each with an exit into the other.
-//
-//   arena   entrance "from-cellar" at tile (4, 3), exit "to-cellar" on tile (5, 3)
-//   cellar  entrance "from-arena" at tile (2, 3), exit "to-arena" on tile (1, 3)
-//
-// The hero starts at (3.5, 3.5) in the arena. Its body is 0.5 wide and a step is 0.125.
-
-const FROM_CELLAR: EntranceDefinition = { id: 'from-cellar', tile: { col: 4, row: 3 } };
-const FROM_ARENA: EntranceDefinition = { id: 'from-arena', tile: { col: 2, row: 3 } };
-const TO_CELLAR: ExitDefinition = {
-  id: 'to-cellar',
-  zone: { col: 5, row: 3, width: 1, height: 1 },
-  to: { area: 'cellar', entrance: 'from-arena' },
-};
-const TO_ARENA: ExitDefinition = {
-  id: 'to-arena',
-  zone: { col: 1, row: 3, width: 1, height: 1 },
-  to: { area: 'arena', entrance: 'from-cellar' },
-};
-
-const CELLAR: AreaDefinition = {
-  id: 'cellar',
-  name: 'Cellar',
-  layout: ARENA_LAYOUT,
-  monsters: [],
-  entrances: [FROM_ARENA],
-  exits: [TO_ARENA],
-  checkpoints: [{ id: 'cellar-checkpoint', tile: { col: 1, row: 1 } }],
-};
-
-function expectRefused(content: ContentDefinition, message: string): void {
-  expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
-}
+// The test world is the arena and the cellar of cellar-fixtures.ts, each with an exit into the other; the hero starts at
+// (3.5, 3.5) in the arena. Here the cellar has a Checkpoint of its own, on the tile (1, 1), and not the default one.
 
 /** The arena and the cellar, with the hero in the arena. `cellar` replaces parts of the cellar. */
 function world(arenaOptions: ArenaOptions = {}, cellar: Partial<AreaDefinition> = {}): ContentDefinition {
-  return arena({
-    entrances: [FROM_CELLAR],
-    exits: [TO_CELLAR],
-    ...arenaOptions,
-    otherAreas: [{ ...CELLAR, ...cellar }],
-  });
+  const checkpoints = [{ id: 'cellar-checkpoint', tile: { col: 1, row: 1 } }];
+  return worldWithCellar(arenaOptions, { checkpoints, ...cellar });
 }
 
 describe('Checkpoints in the content', () => {
@@ -157,10 +119,6 @@ const WEAKLING = { weakling: frailMonster(0) };
 const LOOKOUT: CheckpointDefinition = { id: 'lookout', tile: { col: 4, row: 2 } };
 const LOOKOUT_ACTIVATED = { type: 'checkpoint-activated', checkpointId: 'lookout' } as const;
 
-const INTERACT = { type: 'interact' } as const;
-const ATTACK = { type: 'attack' } as const;
-const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
-const CLOSE_INVENTORY = { type: 'close-page', page: 'inventory' } as const;
 const USE_POTION = { type: 'use-healing-potion' } as const;
 
 function tookPotions(amount: number) {
@@ -174,16 +132,6 @@ function tookArrows(amount: number) {
 /** The ids of the pickups lying on the ground in the hero's Adventure Area. */
 function pickupIds(game: Game): string[] {
   return playingView(game).interactables.flatMap((item) => (item.kind === 'pickup' ? [item.id] : []));
-}
-
-/** Steps the game until the hero is defeated, which has to happen within 300 steps. */
-function untilDefeated(game: Game): void {
-  for (let step = 0; step < 300; step += 1) {
-    if (game.step().some((event) => event.type === 'hero-defeated')) {
-      return;
-    }
-  }
-  throw new Error('The hero was not defeated within 300 steps');
 }
 
 describe('Touching a Checkpoint', () => {
@@ -624,8 +572,7 @@ describe('Defeat and the consumables', () => {
 
   it('is the same after saving and continuing: the snapshot holds the Checkpoint and what it recorded', () => {
     const original = aboutToFall();
-    const restored = gameAtTitle(worldOfTheFall());
-    restored.send({ type: 'continue', snapshot: throughStorage(original.snapshot()) });
+    const restored = continuedFrom(worldOfTheFall(), original.snapshot());
     expect(restored.view()).toEqual(original.view());
 
     untilDefeated(original);

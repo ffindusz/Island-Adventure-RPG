@@ -1,9 +1,9 @@
 import type { Area, Content, Interactable } from './content';
-import { monsterTypeOf } from './content';
 import { GEAR_SLOTS } from './definitions';
 import type { ConsumableId, GearSlot, MonsterPlacement, StatId, WeaponSlot } from './definitions';
 import type { Box, Direction, Point, Tile } from './geometry';
 import { boxAround, centerOf } from './geometry';
+import { monsterTypeOf } from './monster-content';
 import { heroMaxHealth } from './stats';
 
 /** Bumped whenever the shape of a Snapshot changes in a way an older save cannot satisfy. */
@@ -48,6 +48,10 @@ export type MonsterAction =
   | { readonly type: 'dashing'; readonly direction: Direction; rangeLeft: number }
   /** Resting after an attack, for this many more steps. */
   | { readonly type: 'recovering'; stepsLeft: number };
+
+/** The two kinds of action that a behavior counts down step by step, named for the helpers that count them. */
+export type WindingUp = Extract<MonsterAction, { type: 'winding-up' }>;
+export type Recovering = Extract<MonsterAction, { type: 'recovering' }>;
 
 /**
  * What changes about a chest: whether it has been opened. An opened chest stays opened, defeat included, unless it holds

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ContentDefinition, Game } from '../src/core';
-import { advance, arena, face, interactableViews, newGame, playingView, signAt, walk } from './fixtures';
+import { INTERACT, advance, arena, face, interactableViews, newGame, playingView, signAt, walk } from './fixtures';
 
 // A sign fills the tile it stands on and is always solid. The hero reads it with Interact, and its text shows across the
 // top of the screen as the text of an Adventure Area does, and for as long: no page opens and the game does not pause.
@@ -8,8 +8,6 @@ import { advance, arena, face, interactableViews, newGame, playingView, signAt, 
 //
 // The hero stands at (3.5, 3.5) facing down. In most tests the sign is on the tile (3, 2), right above it. Area text
 // stays 4 seconds unless the content says otherwise, and 4 seconds are 240 steps.
-
-const INTERACT = { type: 'interact' } as const;
 
 const CLUE = 'The lever hides behind the old well.';
 const OTHER_CLUE = 'Two torches, one gate.';

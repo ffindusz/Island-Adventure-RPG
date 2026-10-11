@@ -10,16 +10,20 @@ import type {
 } from '../src/core';
 import {
   ARENA_LAYOUT,
+  CLOSE_AUTOMAP,
   FIELD_LAYOUT,
+  OPEN_AUTOMAP,
+  OPEN_STATS,
   advance,
   arena,
   biterAt,
+  continuedFrom,
   gameAtTitle,
   milestone,
   newGame,
   pickupAt,
   playingView,
-  throughStorage,
+  untilDefeated,
   walk,
 } from './fixtures';
 import type { ArenaOptions } from './fixtures';
@@ -36,9 +40,6 @@ import type { ArenaOptions } from './fixtures';
 //
 // A test reads the Automap as the picture the page shows of an area: the symbol of the terrain on each revealed tile
 // and a space on each tile that is hidden, so what is expected can be read off the layout.
-
-const OPEN_AUTOMAP = { type: 'open-page', page: 'automap' } as const;
-const CLOSE_AUTOMAP = { type: 'close-page', page: 'automap' } as const;
 
 /** What the terrain kinds of the arena look like in a picture: the symbols of its layout. */
 const SYMBOLS: Readonly<Record<string, string>> = { wall: '#', ground: '.', water: '~', sand: ',' };
@@ -152,16 +153,6 @@ const AROUND_THE_ENTRANCE = [
   ' ...   ',
   '       ',
 ];
-
-/** Steps the game until the hero is defeated, which has to happen within 300 steps. */
-function untilDefeated(game: Game): void {
-  for (let step = 0; step < 300; step += 1) {
-    if (game.step().some((event) => event.type === 'hero-defeated')) {
-      return;
-    }
-  }
-  throw new Error('The hero was not defeated within 300 steps');
-}
 
 describe('The Automap at the start of the adventure', () => {
   it('shows the terrain around the hero and nothing else of its area', () => {
@@ -498,8 +489,6 @@ describe('The Automap on arrival in another Adventure Area', () => {
 });
 
 describe('The Automap page', () => {
-  const OPEN_STATS = { type: 'open-page', page: 'stats' } as const;
-
   it('opens over the game when asked to and closes when asked to', () => {
     const game = newGame(route());
     expect(playingView(game).page).toBeNull();
@@ -576,25 +565,18 @@ describe('The Automap in a saved game', () => {
     return game;
   }
 
-  /** A game continued from the snapshot of another, which has been through storage as a saved game would be. */
-  function continuedFrom(game: Game): Game {
-    const continued = gameAtTitle(content());
-    continued.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
-    return continued;
-  }
-
   it('keeps every discovery when the game is saved and continued', () => {
     const game = exploredGame();
     expect(automap(game).areas.map((area) => area.discovered)).toEqual([true, true, false]);
 
-    expect(automap(continuedFrom(game))).toEqual(automap(game));
+    expect(automap(continuedFrom(content(), game.snapshot()))).toEqual(automap(game));
   });
 
   it('is open again when the game is saved with the page open', () => {
     const game = exploredGame();
     game.send(OPEN_AUTOMAP);
 
-    const continued = continuedFrom(game);
+    const continued = continuedFrom(content(), game.snapshot());
 
     expect(playingView(continued).page).toMatchObject({ id: 'automap' });
     expect(playingView(continued).page).toEqual(playingView(game).page);

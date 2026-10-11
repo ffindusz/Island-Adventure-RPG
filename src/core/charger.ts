@@ -1,20 +1,19 @@
 import { areaOf } from './content';
-import type { Content, ChargerMonsterType } from './content';
-import { EPSILON, expandBox, overlaps } from './geometry';
+import type { Content } from './content';
+import { EPSILON, overlaps } from './geometry';
 import type { Direction } from './geometry';
 import { hurtHero } from './hero-damage';
-import { interactableObstacles } from './interactables';
 import type { GameEvent } from './interface';
 import { laneAhead, laneLength } from './lanes';
-import { directionToward, walkMonster } from './monster-movement';
-import { heroBody, livingMonsters, monsterBody } from './state';
-import type { MonsterAction, MonsterState, PlayState } from './state';
+import type { ChargerMonsterType } from './monster-content';
+import { blockersOf, directionToward, noticesHero, stillRecovering, walkMonster, windUpEnds } from './monster-movement';
+import { heroBody } from './state';
+import type { MonsterAction, MonsterState, PlayState, WindingUp } from './state';
 import { sweepToward } from './sweep';
 
 // The charger: notices the hero, winds up with the lane of its dash shown, and dashes along that lane. The noticing
 // distance is measured from the monster's body, as a square around it.
 
-type WindingUp = Extract<MonsterAction, { type: 'winding-up' }>;
 type Dashing = Extract<MonsterAction, { type: 'dashing' }>;
 
 /** One fixed step of a charger. */
@@ -26,24 +25,19 @@ export function stepCharger(
 ): GameEvent[] {
   const action = monster.action;
   if (action.type === 'winding-up') {
-    action.elapsed += 1;
-    return action.elapsed >= action.length ? launchDash(monster, action) : [];
+    return windUpEnds(action) ? launchDash(monster, action) : [];
   }
   if (action.type === 'dashing') {
     return dash(monster, action, type, state, content);
   }
-  if (action.type === 'recovering') {
-    action.stepsLeft -= 1;
-    if (action.stepsLeft > 0) {
-      return [];
-    }
+  if (action.type === 'recovering' && stillRecovering(action)) {
+    return [];
   }
-  const body = monsterBody(monster, content);
-  const hero = heroBody(state, content);
-  if (!overlaps(hero, expandBox(body, type.noticingDistance))) {
+  if (!noticesHero(monster, type, state, content)) {
     monster.action = { type: 'idle' };
     return [];
   }
+  const hero = heroBody(state, content);
   const direction = directionToward(monster.position, state.hero.position);
   const lane = laneAhead(state, content, monster.position, type.size, direction, type.dashRange);
   if (overlaps(hero, lane)) {
@@ -112,19 +106,13 @@ export function dash(
   content: Content,
 ): GameEvent[] {
   const distance = Math.min(type.dashSpeedPerStep, dashing.rangeLeft);
-  const blockers = [
-    ...livingMonsters(state)
-      .filter((other) => other !== monster)
-      .map((other) => monsterBody(other, content)),
-    ...interactableObstacles(state, content),
-  ];
   const sweep = sweepToward(
     areaOf(content, state.areaId),
     monster.position,
     type.size,
     dashing.direction,
     distance,
-    blockers,
+    blockersOf(monster, state, content),
     heroBody(state, content),
   );
   monster.position = sweep.end;

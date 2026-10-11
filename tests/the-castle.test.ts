@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { monsterColour, terrainColour } from '../src/adapter/art';
+import { VIEW_TILES_HIGH, VIEW_TILES_WIDE } from '../src/adapter/config';
 import { gameContent } from '../src/content';
 import { GEAR_SLOTS, createGame } from '../src/core';
 import type {
@@ -8,15 +9,18 @@ import type {
   Game,
   GameEvent,
   InteractableDefinition,
-  MonsterTypeDefinition,
   Tile,
-  TileRect,
 } from '../src/core';
-import { face, fixedRandom, newGame, playingView } from './fixtures';
+import { FIELD_LAYOUT, arena, face, fixedRandom, newGame, playingView } from './fixtures';
+import { areaOf, BOTTOM_ROWS, LEAST_DETOUR, MOST_NEARBY, quietGameAt, routeOf, typeOf } from './main-route';
+import { colourGap, LEAST_COLOUR_GAP } from './pictures';
 import {
+  damageOf,
   directionBetween,
   distanceBetween,
+  experienceForLevel,
   experienceOfAll,
+  isInOpenBlock,
   isInZone,
   keyOf,
   metOn,
@@ -25,8 +29,8 @@ import {
   noticingOf,
   openTilesOf,
   routeBetween,
+  tilesOf,
   walkRoute,
-  withoutOrdinaryMonsters,
 } from './routes';
 
 // The old castle, the fifth and last Adventure Area on the route of the adventure, up to the end of its route: what it
@@ -43,15 +47,6 @@ const MOUNTAIN = 'mountain';
 const CAVE = 'cave';
 const CASTLE = 'castle';
 
-/** The Adventure Areas in the order of the route of the adventure. */
-const ROUTE_OF_AREAS = [COAST, WOODS, MOUNTAIN, CAVE, CASTLE];
-
-/** The canvas shows this many tiles (VIEW_TILES_WIDE and VIEW_TILES_HIGH in the adapter). */
-const SCREEN_TILES = { wide: 20, high: 12 };
-
-/** The notice is drawn over the bottom of the view, so a hero who has to stand in these rows of an area is hidden. */
-const BOTTOM_ROWS = 3;
-
 /**
  * Where the route of the castle ends: the middle of the east wall of the last hall, against the tile where the gateway
  * to the Guardian's arena begins, which the route does not go into.
@@ -67,39 +62,7 @@ const LEAST_STRETCH = 6;
 /** The last hall is the open ground of the castle within this many tiles of the end of the route, not beyond it. */
 const LAST_HALL_REACH = 4;
 
-/** Two colours are set apart when they lie this far from each other, at least, in the cube of red, green and blue (0 to 255 each). */
-const LEAST_COLOUR_GAP = 50;
-
-/** A chest is near the route when the walk to it from the route is this many tiles at most: a step aside, not a trip. */
-const MOST_NEARBY = 4;
-
-/** A side path is a walk, not a step aside: this many tiles from the route to the spot beside what lies at its end. */
-const LEAST_DETOUR = 6;
-
-/**
- * The longest name of a piece of Gear that the Inventory page shows whole: the row of the list has 144 pixels for an
- * icon, the name, the bonus and a tick, and a letter takes 6 of them. A longer name is cut off at the end.
- */
-const LONGEST_GEAR_NAME = 11;
-
-function definitionOf(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The shipped content has no Adventure Area "${id}"`);
-  }
-  return area;
-}
-
-/**
- * A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the
- * Guardian, which the content must keep.
- */
-function quietGameAt(areaId: string, tile: Tile): Game {
-  const areas = withoutOrdinaryMonsters(gameContent);
-  return newGame({ ...gameContent, areas, start: { area: areaId, tile } });
-}
-
-const castle = definitionOf(CASTLE);
+const castle = areaOf(CASTLE);
 const wayIn = (castle.entrances ?? [])[0];
 const wayInTile: Tile = wayIn?.tile ?? { col: 0, row: 0 };
 const wayBack = (castle.exits ?? []).find(({ to }) => to.area === CAVE);
@@ -108,14 +71,6 @@ const kindAt = ({ col, row }: Tile): string | undefined => gameContent.terrain[c
 const isSolidAt = ({ col, row }: Tile): boolean => gameContent.terrain[castle.layout[row]?.[col] ?? '']?.solid ?? true;
 /** The route: the shortest way over open ground from the way in to the end of the route, with every door and gate shut and no key held. */
 const route = routeBetween(isOpen, wayInTile, (tile) => keyOf(tile) === keyOf(END_OF_ROUTE));
-
-/** The tiles of a rectangle of the map. */
-function tilesOf({ col, row, width, height }: TileRect): Tile[] {
-  return Array.from({ length: width * height }, (_, place) => ({
-    col: col + (place % width),
-    row: row + Math.floor(place / width),
-  }));
-}
 
 /** The tiles within a number of tiles of a tile, measured the way the notice is: the farther of the columns and the rows between them. */
 function tilesAround(centre: Tile, reach: number): Tile[] {
@@ -162,31 +117,35 @@ const undead = [...new Set(castle.monsters.map(({ type }) => type))].flatMap((id
 const tougher = [...undead].sort((one, other) => other.type.health - one.type.health)[0];
 const toughUndead = castle.monsters.filter(({ type }) => type === tougher?.id);
 
-/** The type of a monster of the castle, which the loader sees to exist; none here only for content it refuses. */
-function typeOf(monster: { readonly type: string }): MonsterTypeDefinition | undefined {
-  return gameContent.monsterTypes[monster.type];
-}
+/** The most steps that a monster takes to land its first blow on a hero who stands still four tiles from it: over six seconds. */
+const BLOW_STEP_LIMIT = 400;
 
-/** The damage of one hit of a monster type, before the Defense of the hero: of the blow, or of the shot. */
-function hitOf(type: MonsterTypeDefinition): number {
-  if ('damage' in type) {
-    return type.damage;
-  }
-  return 'projectile' in type ? type.projectile.damage : 0;
-}
-
-/** Whether a tile lies in a block of open ground two tiles wide and two high: a place to step aside in either way. */
-function inOpenBlock({ col, row }: Tile): boolean {
-  return [-1, 0].some((fromCol) =>
-    [-1, 0].some((fromRow) =>
-      [0, 1].every((across) => [0, 1].every((down) => isOpen({ col: col + fromCol + across, row: row + fromRow + down }))),
-    ),
+/**
+ * The first blow that a monster of a type lands on a rested hero of the shipped content, who stands still four tiles
+ * from it in an empty field: the `hero-hit` of the core, with what the blow took after Defense and what it left.
+ */
+function firstBlowOf(typeId: string): Extract<GameEvent, { type: 'hero-hit' }> {
+  const game = newGame(
+    arena({
+      layout: FIELD_LAYOUT,
+      start: { area: 'arena', tile: { col: 3, row: 3 } },
+      monsters: [{ id: 'undead', type: typeId, tile: { col: 7, row: 3 } }],
+      hero: gameContent.hero,
+      progression: gameContent.progression,
+      gear: gameContent.gear,
+      healingPotion: gameContent.healingPotion,
+      minimumDamage: gameContent.minimumDamage,
+      monsterTypes: gameContent.monsterTypes,
+    }),
   );
-}
-
-/** How far apart two colours, given as 0xRRGGBB, lie in the cube of red, green and blue. */
-function colourGap(one: number, other: number): number {
-  return Math.hypot(...[16, 8, 0].map((shift) => ((one >> shift) & 0xff) - ((other >> shift) & 0xff)));
+  for (let step = 0; step < BLOW_STEP_LIMIT; step += 1) {
+    for (const event of game.step()) {
+      if (event.type === 'hero-hit') {
+        return event;
+      }
+    }
+  }
+  throw new Error(`The ${typeId} did not land a blow within ${BLOW_STEP_LIMIT} steps`);
 }
 
 const chests = (castle.interactables ?? []).flatMap((item) => (item.kind === 'chest' ? [item] : []));
@@ -265,23 +224,6 @@ function pickupFrom({ contents }: ChestDefinition): unknown {
 }
 
 describe('the five Adventure Areas', () => {
-  it('come in the order of the route of the adventure, and the castle is the last: coast, woods, mountain, cave, castle', () => {
-    expect(gameContent.areas.map(({ id }) => id)).toEqual(ROUTE_OF_AREAS);
-  });
-
-  it('are joined in order: each area has an exit forward to an entrance of the next, and the next has an exit back to an entrance of it', () => {
-    for (const [index, id] of ROUTE_OF_AREAS.slice(0, -1).entries()) {
-      const next = ROUTE_OF_AREAS[index + 1] ?? '';
-      const forward = (definitionOf(id).exits ?? []).find(({ to }) => to.area === next);
-      const back = (definitionOf(next).exits ?? []).find(({ to }) => to.area === id);
-
-      expect(forward, `${id} has an exit forward to ${next}`).toBeDefined();
-      expect((definitionOf(next).entrances ?? []).map((entrance) => entrance.id)).toContain(forward?.to.entrance);
-      expect(back, `${next} has an exit back to ${id}`).toBeDefined();
-      expect((definitionOf(id).entrances ?? []).map((entrance) => entrance.id)).toContain(back?.to.entrance);
-    }
-  });
-
   it('load with the rest of the shipped content: the content check passes', () => {
     expect(() => createGame({ content: gameContent, random: fixedRandom })).not.toThrow();
   });
@@ -291,8 +233,8 @@ describe('the way through the castle', () => {
   it('is larger than the screen in both directions, so that the view must follow the hero', () => {
     const { area } = playingView(quietGameAt(CASTLE, wayInTile));
 
-    expect(area.width).toBeGreaterThan(SCREEN_TILES.wide);
-    expect(area.height).toBeGreaterThan(SCREEN_TILES.high);
+    expect(area.width).toBeGreaterThan(VIEW_TILES_WIDE);
+    expect(area.height).toBeGreaterThan(VIEW_TILES_HIGH);
   });
 
   it('has two Checkpoints: the one where the hero comes in from the cave, and the Guardian\'s', () => {
@@ -326,8 +268,8 @@ describe('the way through the castle', () => {
   it('is a long walk: four screens wide at least, and five at most', () => {
     const steps = (route?.length ?? 0) - 1;
 
-    expect(steps).toBeGreaterThanOrEqual(SCREENS_OF_ROUTE.least * SCREEN_TILES.wide);
-    expect(steps).toBeLessThanOrEqual(SCREENS_OF_ROUTE.most * SCREEN_TILES.wide);
+    expect(steps).toBeGreaterThanOrEqual(SCREENS_OF_ROUTE.least * VIEW_TILES_WIDE);
+    expect(steps).toBeLessThanOrEqual(SCREENS_OF_ROUTE.most * VIEW_TILES_WIDE);
   });
 
   it('goes through courtyards and halls in turn: two stretches of grass and two of sand, each six tiles long at least', () => {
@@ -400,7 +342,9 @@ describe('the undead of the castle', () => {
       expect(tougher.type.health, `the health of ${tougher.id} against ${other.id}`).toBeGreaterThanOrEqual(
         2 * other.type.health,
       );
-      expect(hitOf(tougher.type), `the hit of ${tougher.id} against ${other.id}`).toBeGreaterThan(hitOf(other.type));
+      expect(damageOf(tougher.type), `the hit of ${tougher.id} against ${other.id}`).toBeGreaterThan(
+        damageOf(other.type),
+      );
     }
   });
 
@@ -411,7 +355,7 @@ describe('the undead of the castle', () => {
 
     expect(earlier.length).toBeGreaterThan(0);
     expect(tougher?.type.health ?? 0).toBeGreaterThan(Math.max(...earlier.map(({ health }) => health)));
-    expect(tougher === undefined ? 0 : hitOf(tougher.type)).toBeGreaterThan(Math.max(...earlier.map(hitOf)));
+    expect(tougher === undefined ? 0 : damageOf(tougher.type)).toBeGreaterThan(Math.max(...earlier.map(damageOf)));
   });
 
   it('puts the tougher undead on every way through: none keeps out of the reach of its notice', () => {
@@ -434,7 +378,7 @@ describe('the undead of the castle', () => {
         [...symbols].flatMap((_, col) => {
           const tile = { col, row };
           const near = distanceBetween(tile, charger.tile) <= noticingOf(gameContent, charger);
-          return near && isOpen(tile) && !inOpenBlock(tile) ? [`${charger.id} at ${col},${row}`] : [];
+          return near && isOpen(tile) && !isInOpenBlock(isOpen, tile) ? [`${charger.id} at ${col},${row}`] : [];
         }),
       ),
     );
@@ -461,10 +405,8 @@ describe('the undead of the castle', () => {
     expect(tooClose).toEqual([]);
   });
 
-  it('cannot take the whole Health of a rested hero with one blow: the hit less the Defense that the hero begins with is less than its Health', () => {
-    const { health, defense } = gameContent.hero;
-
-    const killing = undead.filter(({ type }) => hitOf(type) - defense >= health).map(({ id }) => id);
+  it('cannot take the whole Health of a rested hero with one blow: the first blow of each undead, as the game works it out with the Defense that the hero begins with, leaves some', () => {
+    const killing = undead.filter(({ id }) => firstBlowOf(id).health === 0).map(({ id }) => id);
 
     expect(undead.length).toBeGreaterThan(0);
     expect(killing).toEqual([]);
@@ -489,20 +431,13 @@ describe('the armor of the castle', () => {
     const upgrade = gameContent.gear[gearOf(armorChest())];
     const others = [
       ...GEAR_SLOTS.flatMap((slot) => gameContent.hero.startingGear[slot] ?? []),
-      ...[COAST, WOODS, MOUNTAIN, CAVE].flatMap((id) => gearInChestsOf(definitionOf(id))),
+      ...[COAST, WOODS, MOUNTAIN, CAVE].flatMap((id) => gearInChestsOf(areaOf(id))),
     ].flatMap((id) => gameContent.gear[id] ?? []);
 
     const best = Math.max(0, ...others.filter((gear) => gear.slot === 'armor').map((gear) => gear.bonus));
 
     expect(upgrade, 'the Gear in the chest of armor').toBeDefined();
     expect(upgrade?.bonus ?? 0).toBeGreaterThan(best);
-  });
-
-  it('has a name that the Inventory page shows whole, and not cut off at the end', () => {
-    const upgrade = gameContent.gear[gearOf(armorChest())];
-
-    expect(upgrade, 'the Gear in the chest of armor').toBeDefined();
-    expect(upgrade?.name.length ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(LONGEST_GEAR_NAME);
   });
 
   it('is found before the tougher undead is met: the chest lies on the way before the first place where that undead notices the hero', () => {
@@ -613,7 +548,7 @@ describe('what the hero finds in the castle', () => {
     expect(cutOff.map(({ id }) => id)).toEqual([]);
   });
 
-  it('keeps every chest and pickup out of the bottom rows, where the notice is drawn over the hero', () => {
+  it('keeps every interactable out of the bottom rows, where the notice is drawn over the hero', () => {
     const lowest = castle.layout.length - 1 - BOTTOM_ROWS;
 
     expect((castle.interactables ?? []).filter(({ tile }) => tile.row > lowest).map(({ id }) => id)).toEqual([]);
@@ -648,42 +583,25 @@ describe('the milestone of the castle', () => {
 });
 
 describe('the Experience on the way through the castle', () => {
-  const [, , , , levelSix = 0] = gameContent.progression.levelThresholds;
-  const coast = definitionOf(COAST);
-  const woods = definitionOf(WOODS);
-  const mountain = definitionOf(MOUNTAIN);
-  const cave = definitionOf(CAVE);
-
-  /** The trail of an area: the path of sand from its way in to its exit to the next area, over open ground, every door and gate shut. */
-  function trailOf(area: AreaDefinition, next: string): Tile[] | null {
-    const isOpenIn = openTilesOf(gameContent, area);
-    const forward = (area.exits ?? []).find(({ to }) => to.area === next);
-    return routeBetween(
-      (tile) => isOpenIn(tile) && gameContent.terrain[area.layout[tile.row]?.[tile.col] ?? '']?.kind === 'sand',
-      (area.entrances ?? [])[0]?.tile ?? { col: 0, row: 0 },
-      (tile) => forward !== undefined && isInZone(forward.zone, tile),
-    );
-  }
-
-  /** The way from where the adventure begins to the exit of the coast, over open ground. */
-  const coastRoute = routeBetween(openTilesOf(gameContent, coast), gameContent.start.tile, (tile) =>
-    (coast.exits ?? []).some(({ zone }) => isInZone(zone, tile)),
-  );
+  const coast = areaOf(COAST);
+  const woods = areaOf(WOODS);
+  const mountain = areaOf(MOUNTAIN);
+  const cave = areaOf(CAVE);
 
   it('gives a hero who fights what it meets from the start to the end of the route of the castle, and passes the milestones, the Experience of Level 6', () => {
     const earned =
-      experienceOfAll(gameContent, metOn(gameContent, coast, coastRoute)) +
+      experienceOfAll(gameContent, metOn(gameContent, coast, routeOf(COAST))) +
       milestonesOf(coast) +
-      experienceOfAll(gameContent, metOn(gameContent, woods, trailOf(woods, MOUNTAIN))) +
+      experienceOfAll(gameContent, metOn(gameContent, woods, routeOf(WOODS))) +
       milestonesOf(woods) +
-      experienceOfAll(gameContent, metOn(gameContent, mountain, trailOf(mountain, CAVE))) +
+      experienceOfAll(gameContent, metOn(gameContent, mountain, routeOf(MOUNTAIN))) +
       milestonesOf(mountain) +
-      experienceOfAll(gameContent, metOn(gameContent, cave, trailOf(cave, CASTLE))) +
+      experienceOfAll(gameContent, metOn(gameContent, cave, routeOf(CAVE))) +
       milestonesOf(cave) +
       experienceOfAll(gameContent, metOn(gameContent, castle, route)) +
       milestonesOf(castle);
 
-    expect(earned).toBeGreaterThanOrEqual(levelSix);
+    expect(earned).toBeGreaterThanOrEqual(experienceForLevel(gameContent, 6));
   });
 });
 

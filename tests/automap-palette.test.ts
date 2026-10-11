@@ -67,7 +67,8 @@ describe('the colours of the Automap', () => {
   it('has a colour for every kind of terrain in every area, so that none falls back to a flat one', () => {
     for (const areaId of AREA_IDS) {
       for (const kind of KINDS) {
-        expect(automapPalette(areaId)[kind], `${areaId}: ${kind}`).toBeDefined();
+        const colour = colourOf(areaId, kind);
+        expect(Number.isInteger(colour) && colour >= 0 && colour <= 0xffffff, `${areaId}: ${kind} is ${colour}`).toBe(true);
       }
     }
   });

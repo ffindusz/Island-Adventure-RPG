@@ -1,9 +1,11 @@
 import type { Area, Checkpoint, Content, Interactable } from './content';
 import type { MonsterPlacement } from './definitions';
 import { isGuardianGate } from './device-content';
-import { blockedTiles, keyOf, reachableFrom, sourcesOf } from './device-routes';
+import { blockedTiles, reachableFrom, sourcesOf } from './device-routes';
 import type { Place, Start } from './device-routes';
+import { tileKey } from './geometry';
 import type { Tile } from './geometry';
+import { monsterTypeOf } from './monster-content';
 import type { VesselSite } from './vessel-content';
 
 // Checking that the game's one Guardian has its place. Whatever the content, there is at most one Guardian, and a gate
@@ -26,11 +28,11 @@ export interface GuardianSite extends Place {
  * Throws an Error naming the second Guardian, or the gate that waits for something that is no Guardian of its own area.
  * Returns the Guardians the content places: none, or one.
  */
-export function checkGuardians(areas: readonly Area[], monsterTypes: Content['monsterTypes']): GuardianSite[] {
+export function checkGuardians(areas: readonly Area[], content: Pick<Content, 'monsterTypes'>): GuardianSite[] {
   const sites: GuardianSite[] = [];
   for (const area of areas) {
     for (const monster of area.monsters) {
-      if (behaviorOf(monsterTypes, monster.type) !== 'guardian') {
+      if (monsterTypeOf(content, monster.type).behavior !== 'guardian') {
         continue;
       }
       const first = sites[0];
@@ -49,19 +51,11 @@ export function checkGuardians(areas: readonly Area[], monsterTypes: Content['mo
       });
     }
   }
-  checkGatesNameTheirGuardians(areas, monsterTypes);
+  checkGatesNameTheirGuardians(areas, content);
   return sites;
 }
 
-function behaviorOf(monsterTypes: Content['monsterTypes'], name: string): string {
-  const type = monsterTypes[name];
-  if (type === undefined) {
-    throw new Error(`There is no monster type "${name}"`);
-  }
-  return type.behavior;
-}
-
-function checkGatesNameTheirGuardians(areas: readonly Area[], monsterTypes: Content['monsterTypes']): void {
+function checkGatesNameTheirGuardians(areas: readonly Area[], content: Pick<Content, 'monsterTypes'>): void {
   for (const area of areas) {
     for (const interactable of area.interactables) {
       if (!isGuardianGate(interactable)) {
@@ -77,7 +71,7 @@ function checkGatesNameTheirGuardians(areas: readonly Area[], monsterTypes: Cont
       if (owner.id !== area.id) {
         throw new Error(`${refusal} that monster is in area "${owner.id}", not in this one`);
       }
-      const behavior = behaviorOf(monsterTypes, placement.type);
+      const behavior = monsterTypeOf(content, placement.type).behavior;
       if (behavior !== 'guardian') {
         throw new Error(`${refusal} that monster is not a Guardian: its behavior is "${behavior}"`);
       }
@@ -119,17 +113,17 @@ export function checkGuardianPlace(
 function checkCheckpointBefore(guardian: GuardianSite, start: Start): void {
   const { area } = guardian;
   const refusal = `Area "${area.id}": ${guardian.what} has no Checkpoint immediately before it`;
-  const guardianKey = keyOf(guardian.tile);
+  const guardianKey = tileKey(guardian.tile);
   const blocked = blockedTiles(area, isGuardianGate);
   const reaching = sourcesOf(area, start).filter((source) => reachableFrom(area, source.tile, blocked).has(guardianKey));
   if (reaching.length === 0) {
     throw new Error(`${refusal}: no entrance and no start of the area leads to it`);
   }
   const onEveryWay = area.checkpoints.filter((checkpoint) => {
-    const checkpointKey = keyOf(checkpoint.tile);
+    const checkpointKey = tileKey(checkpoint.tile);
     const without = new Set([...blocked, checkpointKey]);
     return reaching.every(
-      (source) => keyOf(source.tile) === checkpointKey || !reachableFrom(area, source.tile, without).has(guardianKey),
+      (source) => tileKey(source.tile) === checkpointKey || !reachableFrom(area, source.tile, without).has(guardianKey),
     );
   });
   if (onEveryWay.length === 0) {
@@ -137,8 +131,8 @@ function checkCheckpointBefore(guardian: GuardianSite, start: Start): void {
   }
   const crowded: { checkpoint: Checkpoint; stray: MonsterPlacement; sideSize: number }[] = [];
   for (const checkpoint of onEveryWay) {
-    const side = reachableFrom(area, guardian.tile, new Set([...blocked, keyOf(checkpoint.tile)]));
-    const stray = area.monsters.find((monster) => monster.id !== guardian.monsterId && side.has(keyOf(monster.tile)));
+    const side = reachableFrom(area, guardian.tile, new Set([...blocked, tileKey(checkpoint.tile)]));
+    const stray = area.monsters.find((monster) => monster.id !== guardian.monsterId && side.has(tileKey(monster.tile)));
     if (stray === undefined) {
       return;
     }
@@ -180,13 +174,13 @@ function checkVesselPlace(guardian: GuardianSite, vessels: readonly VesselSite[]
   }
   const { area } = guardian;
   const reachedBefore = reachedFromSources(area, start, blockedTiles(area, isGuardianGate));
-  if (vessel.tiles.some((tile) => reachedBefore.has(keyOf(tile)))) {
+  if (vessel.tiles.some((tile) => reachedBefore.has(tileKey(tile)))) {
     throw new Error(
       `Area "${area.id}": ${vessel.what} can be reached before ${guardian.what} is defeated: the harbor must be out of reach until then`,
     );
   }
   const reachedAfter = reachedFromSources(area, start, blockedTiles(area, () => false));
-  if (!vessel.tiles.some((tile) => reachedAfter.has(keyOf(tile)))) {
+  if (!vessel.tiles.some((tile) => reachedAfter.has(tileKey(tile)))) {
     throw new Error(
       `Area "${area.id}": ${vessel.what} cannot be reached even when ${guardian.what} is defeated: the hero must be able to walk up to it`,
     );
@@ -207,12 +201,12 @@ export function tilesBehindGuardianGates(area: Area, start: Start): Tile[] {
   const gatesShut = reachedFromSources(area, start, blockedTiles(area, isGuardianGate));
   const everythingOpen = reachedFromSources(area, start, blockedTiles(area, () => false));
   const gates = new Set(
-    area.interactables.filter(isGuardianGate).map((gate) => keyOf({ col: gate.body.minX, row: gate.body.minY })),
+    area.interactables.filter(isGuardianGate).map((gate) => tileKey({ col: gate.body.minX, row: gate.body.minY })),
   );
   const tiles: Tile[] = [];
   for (let row = 0; row < area.height; row += 1) {
     for (let col = 0; col < area.width; col += 1) {
-      const key = keyOf({ col, row });
+      const key = tileKey({ col, row });
       if (everythingOpen.has(key) && !gatesShut.has(key) && !gates.has(key)) {
         tiles.push({ col, row });
       }

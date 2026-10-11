@@ -1,42 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
 import { STEPS_PER_SECOND, createGame } from '../src/core';
-import type {
-  AreaDefinition,
-  AutomapAreaView,
-  AutomapPageView,
-  Direction,
-  Game,
-  GameEvent,
-  GearSlot,
-  InventoryPageView,
-} from '../src/core';
-import { fixedRandom, playingView, walk } from './fixtures';
+import type { AutomapAreaView, AutomapPageView, Direction, Game, GameEvent, GearSlot } from '../src/core';
+import { CLOSE_AUTOMAP, OPEN_AUTOMAP, fixedRandom, inventoryOf, playingView, walk } from './fixtures';
+import { areaOf } from './main-route';
 import { isInZone, openTilesOf, quietGameOf, routeBetween, walkRoute } from './routes';
 
 // Only what must hold for any content the game ships with. The tests of the rules use purpose-built content
 // (fixtures.ts), so that changing what ships never breaks them.
 
-const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
-const CLOSE_INVENTORY = { type: 'close-page', page: 'inventory' } as const;
-const OPEN_AUTOMAP = { type: 'open-page', page: 'automap' } as const;
-const CLOSE_AUTOMAP = { type: 'close-page', page: 'automap' } as const;
-
 function newShippedGame() {
   const game = createGame({ content: gameContent, random: fixedRandom });
   game.send({ type: 'new-game' });
   return game;
-}
-
-/** What the inventory page shows now. It is closed again afterwards, so that the hero can walk. */
-function inventoryOf(game: Game): InventoryPageView {
-  game.send(OPEN_INVENTORY);
-  const { page } = playingView(game);
-  game.send(CLOSE_INVENTORY);
-  if (page?.id !== 'inventory') {
-    throw new Error('The inventory page did not open');
-  }
-  return page;
 }
 
 /** What the Automap page shows now. It is closed again afterwards, so that the hero can walk. */
@@ -54,14 +30,6 @@ function areaOnMap(page: AutomapPageView, id: string): AutomapAreaView {
   const area = page.areas.find((candidate) => candidate.id === id);
   if (area === undefined) {
     throw new Error(`The Automap shows no area "${id}"`);
-  }
-  return area;
-}
-
-function definitionOf(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The content has no area "${id}"`);
   }
   return area;
 }
@@ -149,6 +117,40 @@ describe('the content the game ships with', () => {
   });
 });
 
+/** The lines of the card that a new game begins with, as the core hands them out. */
+function openingOf(): readonly string[] {
+  const events = createGame({ content: gameContent, random: fixedRandom }).send({ type: 'new-game' });
+  for (const event of events) {
+    if (event.type === 'opening') {
+      return event.lines;
+    }
+  }
+  throw new Error('A new game did not begin with the opening');
+}
+
+/** The line of the opening that speaks of home, where the hero is told what to do. */
+function goalOf(lines: readonly string[]): string {
+  const goal = lines.find((line) => /\bhome\b/i.test(line));
+  if (goal === undefined) {
+    throw new Error(`No line of the opening speaks of home: ${lines.join(' / ')}`);
+  }
+  return goal;
+}
+
+describe('the opening the game ships with', () => {
+  // Story 7: it tells the player why the hero is stranded and what the hero must do.
+  it('tells the hero what to do as well as why it is stranded: a line says that there is a way home to find', () => {
+    const goal = goalOf(openingOf());
+
+    expect(goal).toMatch(/\bway home\b/i);
+    expect(goal).toMatch(/\bfind\b/i);
+  });
+
+  it('leaves what the hero has yet to discover to be discovered: the goal names no Guardian, castle, harbor or ship', () => {
+    expect(goalOf(openingOf())).not.toMatch(/guardian|castle|harbou?r|ship/i);
+  });
+});
+
 describe('what the hero can find in the content the game ships with', () => {
   const interactables = gameContent.areas.flatMap((area) => area.interactables ?? []);
   const gearInChests = interactables.flatMap((item) => {
@@ -180,7 +182,7 @@ describe('what the hero can find in the content the game ships with', () => {
 
 describe('the Automap of the content the game ships with', () => {
   const { area: startAreaId, tile: startTile } = gameContent.start;
-  const firstArea = definitionOf(startAreaId);
+  const firstArea = areaOf(startAreaId);
   const wayOut = firstArea.exits ?? [];
   const wayOutIds = wayOut.map(({ id }) => id);
   const routeOut = routeBetween(openTilesOf(gameContent, firstArea), startTile, (tile) =>
@@ -241,7 +243,7 @@ describe('the Automap of the content the game ships with', () => {
     const first = areaOnMap(page, startAreaId);
     expect(first).toMatchObject({ discovered: true, current: false, hero: null });
     const next = areaOnMap(page, nextAreaId);
-    expect(next).toMatchObject({ discovered: true, current: true, name: definitionOf(nextAreaId).name });
+    expect(next).toMatchObject({ discovered: true, current: true, name: areaOf(nextAreaId).name });
     expect(next.hero).toEqual(playingView(game).hero.position);
     expect(next.connections).toContain(startAreaId);
   });

@@ -7,7 +7,9 @@ import type {
   GameEvent,
   MilestoneDefinition,
   MonsterPlacement,
+  MonsterTypeDefinition,
   Tile,
+  TileRect,
 } from '../src/core';
 import { playingView } from './fixtures';
 import {
@@ -17,30 +19,63 @@ import {
   metOn,
   neighboursOf,
   openTilesOf,
+  quietGameOf,
   routeBetween,
   walkRoute,
 } from './routes';
 
-// The intended route of the adventure, read from the shipped content, for the tests of the balance pass: the legs a
-// first-time player walks, from the start of the coast to the Guardian's Checkpoint, with every door and gate shut.
-// Nothing here is a number of its own: the route, what it meets and what it earns all come from the content.
+// The intended route of the adventure, read from the shipped content, for the tests of the balance pass and of the
+// areas: the legs a first-time player walks, from the start of the coast to the Guardian's Checkpoint, with every door
+// and gate shut.
+// The route, what it meets and what it earns all come from the content: nothing here is a number of its own, but for
+// the few literals that the tests of several areas must agree on, which are declared once below (the ids of the
+// Guardian, its gate, its Checkpoint and the vessel, the arena, and the rows at the bottom of an area).
 
 /** The five Adventure Areas in the order of the adventure. */
 export const AREA_IDS = ['shipwreck-coast', 'woods', 'mountain', 'cave', 'castle'] as const;
 export type AreaId = (typeof AREA_IDS)[number];
 
-/** The areas whose route is the path of sand: the trail, as the area tests of the woods, the mountain and the cave take it. */
+/** The areas whose route is the path of sand: the trail, which the area tests of the woods, the mountain and the cave take from here. */
 const TRAIL_OF_SAND: readonly AreaId[] = ['woods', 'mountain', 'cave'];
 
 /** The Checkpoint where the route of the castle ends: the Guardian's, in the gateway to the arena. */
-const GUARDIAN_CHECKPOINT = 'guardian-checkpoint';
+export const GUARDIAN_CHECKPOINT = 'guardian-checkpoint';
 
+/** The Guardian of the island, who stands in the arena. */
+export const GUARDIAN_ID = 'arena-guardian';
+
+/** The gate in the far wall of the arena, which the defeat of the Guardian opens. */
+export const HARBOR_GATE_ID = 'harbor-gate';
+
+/** The old vessel in the harbor behind the gate. */
+export const VESSEL_ID = 'old-vessel';
+
+/** The arena: open floor sixteen tiles wide and nine high with a few pillars in it, walled in but for the gateway and the gate. */
+export const ARENA: TileRect = { col: 68, row: 7, width: 16, height: 9 };
+
+/** The notice is drawn over the bottom of the view, so a hero who has to stand in these rows of an area is hidden. */
+export const BOTTOM_ROWS = 3;
+
+/** The shipped Adventure Area with this id, for every test that needs one: a test of the content is wrong when there is none, so it throws. */
 export function areaOf(id: string): AreaDefinition {
   const found = gameContent.areas.find((candidate) => candidate.id === id);
   if (found === undefined) {
     throw new Error(`The content has no Adventure Area "${id}"`);
   }
   return found;
+}
+
+/** The type of a monster that the shipped content places: none only for content that the loader refuses. */
+export function typeOf(monster: { readonly type: string }): MonsterTypeDefinition | undefined {
+  return gameContent.monsterTypes[monster.type];
+}
+
+/**
+ * A new game of the shipped content in which the hero begins on a tile of an area, with every ordinary monster taken out
+ * but the Guardian, which the content must keep.
+ */
+export function quietGameAt(areaId: string, tile: Tile): Game {
+  return quietGameOf({ ...gameContent, start: { area: areaId, tile } });
 }
 
 /** The exit of an area that leads on to the next area of the adventure, or undefined in the last. */
@@ -121,18 +156,20 @@ export function experienceOnRoute(id: AreaId): number {
   );
 }
 
-/** The Level of a hero with some Experience, by the thresholds of the content: Level 1 below the first. */
-export function levelOf(experience: number): number {
-  return 1 + gameContent.progression.levelThresholds.filter((threshold) => experience >= threshold).length;
-}
-
 /** What a hero has earned on the way in to an area: the route of every area before it, monsters and milestones. */
 export function experienceBefore(id: AreaId): number {
   return AREA_IDS.slice(0, AREA_IDS.indexOf(id)).reduce((total, before) => total + experienceOnRoute(before), 0);
 }
 
-/** As in the area tests: something this many steps from the route or fewer is on it, for a hero who looks around. */
+/**
+ * A chest or a pickup is near the route when the walk to it from the route is this many tiles at most: a step aside,
+ * not a trip. The area tests hold what lies near the route to it, and the balance tools take what a hero who looks
+ * around picks up with it.
+ */
 export const MOST_NEARBY = 4;
+
+/** A side path is a walk, not a step aside: this many tiles at least from the route to the spot beside what lies at its end. */
+export const LEAST_DETOUR = 6;
 
 const detours = new Map<string, Map<string, number>>();
 

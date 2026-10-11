@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { StatId } from '../src/core';
 import {
+  CLOSE_INVENTORY,
   COOLDOWN_STEPS,
   FIELD_LAYOUT,
+  INTERACT,
+  OPEN_INVENTORY,
+  OPEN_STATS,
   STEPS_PER_TILE,
   advance,
   arena,
@@ -16,11 +20,6 @@ import {
   strike,
   walk,
 } from './fixtures';
-
-const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
-const CLOSE_INVENTORY = { type: 'close-page', page: 'inventory' } as const;
-const OPEN_STATS = { type: 'open-page', page: 'stats' } as const;
-const INTERACT = { type: 'interact' } as const;
 
 describe('the Gear the hero begins with', () => {
   it('is a basic sword and basic armor, both equipped, as the inventory page lists them', () => {

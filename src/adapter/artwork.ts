@@ -7,7 +7,7 @@
 import { CONSUMABLE_IDS } from '../core';
 import type { ConsumableId, ContentDefinition } from '../core';
 import { drawn, image, sheet } from './asset-manifest';
-import type { ArtManifest } from './asset-manifest';
+import type { ArtEntry, ArtManifest } from './asset-manifest';
 import { KNIGHT_ROWS, MAIL_ROWS, PACK_PALETTE, PLATE_ROWS, TUNIC_ROWS } from './drawn-icons';
 
 export const ARTWORK = {
@@ -116,6 +116,13 @@ export const ARTWORK = {
 /** The name of a picture the adapter itself asks for. */
 export type ArtName = keyof typeof ARTWORK;
 
+/** How big one frame of a sheet is, in pixels, so that what places a picture by its size reads the size from here. */
+export function frameSize(name: ArtName): { readonly width: number; readonly height: number } {
+  const entry: ArtEntry = ARTWORK[name];
+  if (entry.kind !== 'sheet') throw new Error(`The picture "${name}" is not a sheet, so it has no frames`);
+  return { width: entry.frameWidth, height: entry.frameHeight };
+}
+
 /** The name of the icon of the Gear with this id. */
 export function gearIcon(id: string): string {
   return `gear-${id}`;
@@ -129,8 +136,17 @@ export function consumableIcon(id: ConsumableId): string {
 /** The name of the icon of a key. Every key has the same one: the keys differ in their names. */
 export const KEY_ICON = 'key' satisfies ArtName;
 
-/** The name of the picture that terrain of this kind is drawn with. */
-export function terrainArt(kind: string): string {
+// The pictures that more than one part of the adapter draws, named once: the sword and the arrow, which the hero's
+// sprites and the HUD both show, and the heart, which the HUD and the notice both show.
+export const SWORD_HELD = 'sword-held' satisfies ArtName;
+export const ARROW = 'arrow' satisfies ArtName;
+export const HEART = 'ui-heart' satisfies ArtName;
+
+/**
+ * The name of the picture that terrain of this kind is drawn with. For a kind written out its type is the name itself, so
+ * that a look which asks for a sheet the manifest lacks does not compile (terrain-plan.ts).
+ */
+export function terrainArt<Kind extends string>(kind: Kind): `terrain-${Kind}` {
   return `terrain-${kind}`;
 }
 

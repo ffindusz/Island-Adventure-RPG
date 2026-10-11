@@ -1,17 +1,20 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { ARTWORK, FINAL_ART_AREAS, hasFinalArt, neededArt } from '../src/adapter/artwork';
+import { ARTWORK, FINAL_ART_AREAS, frameSize, hasFinalArt, neededArt } from '../src/adapter/artwork';
 import { manifestLookup, missingArt, requireArt } from '../src/adapter/asset-manifest';
 import type { ArtManifest } from '../src/adapter/asset-manifest';
+import { SHEET_COLUMNS } from '../src/adapter/config';
 import { describeStamp, planTerrain } from '../src/adapter/terrain-plan';
 import { gameContent } from '../src/content';
 import type { AreaDefinition, ContentDefinition } from '../src/core';
+import { areaOf } from './main-route';
 
 // The terrain and the monsters of the areas whose art is final are found by name, `terrain-<kind>` and
 // `monster-<type>`, and the game refuses to start while one is missing. Only the areas that are listed as final count: a
 // kind or a type that has only a colour (the mountain's, until its art is drawn) must not stop the game from starting.
-// This is the manifest check of ADR 0002 and nothing else of the drawing: the names, and that each picture a manifest
-// entry points at is a file of the right shape in public/art. The look is for the screenshots.
+// This is the manifest check of ADR 0002, and with it the files of public/art read from disk as ADR 0005 allows, and
+// nothing else of the drawing: the names, and that each picture a manifest entry points at is a file of the right shape.
+// The look is for the screenshots.
 
 const terrainOrMonster = (name: string): boolean => name.startsWith('terrain-') || name.startsWith('monster-');
 
@@ -41,12 +44,6 @@ function withLavaAndALizard(area: AreaDefinition, id: string = area.id): AreaDef
     layout: area.layout.map((row, index) => (index === 0 ? `^${row.slice(1)}` : row)),
     monsters: [...area.monsters, { id: `${id}-lizard`, type: 'lizard', tile: { col: 5, row: 9 } }],
   };
-}
-
-function shippedArea(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (!area) throw new Error(`the shipped content has no area "${id}"`);
-  return area;
 }
 
 describe('the art of the areas whose art is final', () => {
@@ -87,13 +84,13 @@ describe('the art of the areas whose art is final', () => {
   );
 
   it('is asked for as well when a listed area gets a kind of terrain and a type of monster that have no art yet', () => {
-    const content = withArea(withLavaAndALizard(shippedArea('shipwreck-coast')));
+    const content = withArea(withLavaAndALizard(areaOf('shipwreck-coast')));
 
     expect(missingArt(neededArt(content), manifestLookup(ARTWORK))).toEqual(['terrain-lava', 'monster-lizard']);
   });
 
   it('is not asked for a kind or a type that only an area outside the list uses, which keeps its colour', () => {
-    const content = withArea(withLavaAndALizard(shippedArea('woods'), 'unfinished-area'));
+    const content = withArea(withLavaAndALizard(areaOf('woods'), 'unfinished-area'));
 
     expect(FINAL_ART_AREAS).not.toContain('unfinished-area');
     expect(neededArt(content)).toEqual(neededArt(gameContent));
@@ -144,11 +141,36 @@ describe('the pictures of the manifest on disk', () => {
     else if (entry?.kind === 'image') expect(sizeOnDisk(entry.file).width).toBeGreaterThan(0);
     else throw new Error(`"${art}" is not a picture of the manifest`);
   });
+
+  it('has the sheet of the hero and of every monster as wide as the ways a character faces (SHEET_COLUMNS)', () => {
+    const characters = filed.filter((art) => art === 'hero' || art.startsWith('monster-'));
+
+    expect(characters.length).toBeGreaterThan(15);
+    for (const art of characters) {
+      const entry = (ARTWORK as ArtManifest)[art];
+      if (entry?.kind !== 'sheet') throw new Error(`"${art}" is not a sheet of the manifest`);
+      expect(sizeOnDisk(entry.file).width, `the width of ${entry.file}`).toBe(SHEET_COLUMNS * entry.frameWidth);
+    }
+  });
+});
+
+describe('the size of a frame of a sheet', () => {
+  it('is the one in the manifest, square unless the sheet says otherwise', () => {
+    expect(frameSize('hero')).toEqual({ width: 16, height: 16 });
+    expect(frameSize('fx-puff')).toEqual({ width: 32, height: 32 });
+    expect(frameSize('monster-wolf')).toEqual({ width: 18, height: 17 });
+    expect(frameSize('prop-gate')).toEqual({ width: 24, height: 25 });
+  });
+
+  it('is refused for a picture that is not a sheet, naming it', () => {
+    expect(() => frameSize('sword-held')).toThrow('"sword-held" is not a sheet');
+    expect(() => frameSize('gear-chain-mail')).toThrow('"gear-chain-mail" is not a sheet');
+  });
 });
 
 describe('the sheets of the terrain on disk', () => {
   it.each(FINAL_ART_AREAS)('hold a frame for every stamp planned for %s', (areaId) => {
-    const area = shippedArea(areaId);
+    const area = areaOf(areaId);
     const kinds = area.layout.map((row) => [...row].map((symbol) => gameContent.terrain[symbol]?.kind ?? '?'));
     const stamps = planTerrain(kinds);
     const frames = new Map<string, number>();

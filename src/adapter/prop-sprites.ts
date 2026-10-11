@@ -1,7 +1,8 @@
 import type Phaser from 'phaser';
 import type { AreaView, Box, ChestView, ConsumableId, Direction, InteractableView, PlayingView, Point } from '../core';
+import { frameSize } from './artwork';
 import type { ArtName } from './artwork';
-import { TILE_SIZE } from './config';
+import { px, TILE_SIZE } from './config';
 import { DEPTH } from './depths';
 
 // What every area shares, as sprites: chests and caches, what lies on the ground, Checkpoints, the marks of the way out,
@@ -58,8 +59,8 @@ const DOOR_OPEN_FRAME = 1;
 
 const GATE_SHUT_FRAME = 0;
 const GATE_OPEN_FRAME = 1;
-/** The arch of a gate stands on the rock on each side of the way: its picture reaches this many pixels past its tile on the left, and as many on the right. */
-const GATE_REACH = 4;
+/** The arch of a gate stands on the rock on each side of the way: its picture is wider than its tile by this many pixels on the left, and by as many on the right. */
+const GATE_REACH = (frameSize(GATE).width - TILE_SIZE) / 2;
 
 const LEVER_REST_FRAME = 0;
 const LEVER_PULLED_FRAME = 1;
@@ -67,11 +68,10 @@ const LEVER_PULLED_FRAME = 1;
 /** The vessel with its sail furled, as it is found, and with its sail hoisted once it is prepared. */
 const VESSEL_FURLED_FRAME = 0;
 const VESSEL_HOISTED_FRAME = 1;
-/**
- * The picture of the vessel is seven tiles tall and lies in the water beside the vessel's own tile, at the left of it: that
- * tile is the fifth from the top, so the picture reaches this many pixels below the bottom of the tile.
- */
-const VESSEL_REACH_BELOW = 2 * TILE_SIZE;
+/** The picture of the vessel lies in the water beside the vessel's own tile, at the left of it: that tile is the fifth from the top. */
+const VESSEL_ROWS_ABOVE = 4;
+/** So the picture reaches this many pixels below the bottom of the vessel's tile: what is left of its height under the tile's row. */
+const VESSEL_REACH_BELOW = frameSize(VESSEL).height - (VESSEL_ROWS_ABOVE + 1) * TILE_SIZE;
 
 /** Where a prop stands: the left edge and the bottom edge of its tile, in canvas pixels. */
 interface Foot {
@@ -82,14 +82,19 @@ interface Foot {
 /** The tile a body of this size is centred on. A tile's size is in tiles, and a prop's tile is as big as the grid's. */
 function footOf(centre: Point, size: number): Foot {
   return {
-    left: Math.round((centre.x - size / 2) * TILE_SIZE),
-    bottom: Math.round((centre.y + size / 2) * TILE_SIZE),
+    left: px(centre.x - size / 2),
+    bottom: px(centre.y + size / 2),
   };
 }
 
 /** Where the picture of the vessel stands for the vessel on the tile with this foot: its fifth row is the tile's row. */
 export function vesselFoot(foot: Foot): Foot {
   return { left: foot.left, bottom: foot.bottom + VESSEL_REACH_BELOW };
+}
+
+/** Where the picture of a gate stands for the gate on the tile with this foot: its way through is the tile. */
+export function gateFoot(foot: Foot): Foot {
+  return { left: foot.left - GATE_REACH, bottom: foot.bottom };
 }
 
 /** The way out of an exit, which is towards the nearest edge of the area: a tie goes to left, then right, then up. */
@@ -167,12 +172,7 @@ export class PropSprites {
         this.place(SIGN, DEPTH.prop, foot, null);
         return;
       case 'gate':
-        this.place(
-          GATE,
-          DEPTH.prop,
-          { left: foot.left - GATE_REACH, bottom: foot.bottom },
-          interactable.open ? GATE_OPEN_FRAME : GATE_SHUT_FRAME,
-        );
+        this.place(GATE, DEPTH.prop, gateFoot(foot), interactable.open ? GATE_OPEN_FRAME : GATE_SHUT_FRAME);
         return;
       case 'lever':
         this.place(LEVER, DEPTH.prop, foot, interactable.pulled ? LEVER_PULLED_FRAME : LEVER_REST_FRAME);
@@ -180,6 +180,9 @@ export class PropSprites {
       case 'vessel':
         this.place(VESSEL, DEPTH.prop, vesselFoot(foot), interactable.prepared ? VESSEL_HOISTED_FRAME : VESSEL_FURLED_FRAME);
         return;
+      default:
+        // A new kind of interactable does not compile until it has its picture here.
+        interactable satisfies never;
     }
   }
 

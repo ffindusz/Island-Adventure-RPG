@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { ARTWORK } from '../src/adapter/artwork';
 import type { ArtManifest } from '../src/adapter/asset-manifest';
+import { gateFoot } from '../src/adapter/prop-sprites';
 import { fileOf, frameOf, readPicture } from './pictures';
 import type { Pixel } from './pictures';
 
 // A gate and a lever are each a sheet of two frames, the way a door is (src/adapter/prop-sprites.ts): a gate shut and
 // then open, a lever at rest and then pulled. A gate's frame is its arch, which stands over the way and on the rock on
 // each side of it, with its bars in the way between its legs; a lever's frame is its whole tile, a niche in the rock.
-// That is the manifest check of ADR 0002 and the shape of the frames: how they look is for the screenshots.
+// That is the manifest check of ADR 0002 and, with the sheets read from disk as ADR 0005 allows, the shape of the frames:
+// how they look is for the screenshots.
 
 const GATE = 'prop-gate';
 const LEVER = 'prop-lever';
@@ -98,6 +100,17 @@ describe('a gate', () => {
 
     expect(barred).toBeGreaterThanOrEqual(tiles / 3);
     expect(barred).toBeLessThanOrEqual((tiles * 9) / 10);
+  });
+});
+
+describe('where the picture of a gate stands', () => {
+  it('has its way on the gate\'s own tile: the foot of the frame is the tile\'s, and the way begins where the tile does', () => {
+    const foot = { left: 5 * TILE, bottom: 7 * TILE };
+
+    const placed = gateFoot(foot);
+
+    expect(placed.left + WAY.left).toBe(foot.left);
+    expect(placed.bottom).toBe(foot.bottom);
   });
 });
 

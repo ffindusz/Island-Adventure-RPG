@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Game, GameEvent } from '../src/core';
-import { face, interactableViews, newGame, playingView, walk } from './fixtures';
+import { INTERACT, face, interactableViews, newGame, playingView, walk } from './fixtures';
 import { GUARDIAN } from './guardian-fixtures';
 import { harborContent, HARBOR_CREDITS, HARBOR_ENDING, VESSEL_ID } from './harbor-fixtures';
 
@@ -10,7 +10,6 @@ import { harborContent, HARBOR_CREDITS, HARBOR_ENDING, VESSEL_ID } from './harbo
 // "vessel-1" on (12, 3), all in the row of the hero, which begins on tile (5, 3) and attacks for 12, the Guardian's Health.
 // A hero that walks right has its centre at x = 7.75 at the gate while it is shut, and at x = 11.75 at the vessel.
 
-const INTERACT = { type: 'interact' } as const;
 const CONFIRM = { type: 'confirm-departure' } as const;
 
 /** A Guardian that never notices the hero, so that the hero can stand before its gate in peace. */

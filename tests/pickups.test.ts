@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { createGame } from '../src/core';
 import type { ContentDefinition, Game, InteractableDefinition } from '../src/core';
 import {
+  INTERACT,
   advance,
   arena,
   chestAt,
+  continuedFrom,
+  expectAccepted,
+  expectRefused,
   face,
-  fixedRandom,
-  gameAtTitle,
   newGame,
   pickupAt,
   playingView,
-  throughStorage,
   walk,
 } from './fixtures';
 
@@ -21,8 +21,6 @@ import {
 //
 // The hero stands at (3.5, 3.5) and walks 0.125 tile a step. Walking right, its body (0.5 wide) only touches the tile
 // (5, 3) after 10 steps, at x = 4.75, and overlaps it after 11, at x = 4.875.
-
-const INTERACT = { type: 'interact' } as const;
 
 const TWO_POTIONS_PICKED_UP = {
   type: 'pickup',
@@ -36,13 +34,6 @@ function potionsOf(game: Game): number {
 /** The content with two Healing Potions on the tile (5, 3), two tiles right of the tile the hero stands on. */
 function contentWithPotionsToTheRight(): ContentDefinition {
   return arena({ interactables: [pickupAt('potion-1', 5, 3, 2)] });
-}
-
-/** The game that a player gets by saving this one and continuing it later. */
-function continued(content: ContentDefinition, game: Game): Game {
-  const restored = gameAtTitle(content);
-  restored.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
-  return restored;
 }
 
 describe('a pickup', () => {
@@ -104,7 +95,7 @@ describe('a pickup', () => {
     const game = newGame(content);
     walk(game, 'right', 11);
 
-    const restored = continued(content, game);
+    const restored = continuedFrom(content, game.snapshot());
 
     expect(playingView(restored).interactables).toEqual([]);
     expect(advance(restored, 3), 'the hero stands where it lay, and takes nothing').toEqual([]);
@@ -114,7 +105,7 @@ describe('a pickup', () => {
   it('is part of a saved game: one that was not taken is still there to take', () => {
     const content = contentWithPotionsToTheRight();
 
-    const restored = continued(content, newGame(content));
+    const restored = continuedFrom(content, newGame(content).snapshot());
 
     expect(playingView(restored).interactables).toHaveLength(1);
     expect(walk(restored, 'right', 11)).toEqual([TWO_POTIONS_PICKED_UP]);
@@ -132,10 +123,6 @@ describe('a pickup that does not make sense is refused when the game is created'
       amount: 1,
       ...fields,
     }) as unknown as InteractableDefinition;
-
-  function expectRefused(content: ContentDefinition, message: string): void {
-    expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
-  }
 
   it.each([
     {
@@ -175,6 +162,6 @@ describe('a pickup that does not make sense is refused when the game is created'
   it('pickups of the same consumable are accepted: unlike Gear, there can be many', () => {
     const content = arena({ interactables: [pickupAt('potion-1', 1, 1, 1), pickupAt('potion-2', 5, 1, 1)] });
 
-    expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
+    expectAccepted(content);
   });
 });

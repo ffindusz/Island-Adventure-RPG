@@ -1,4 +1,7 @@
-import type { AreaDefinition } from '../../core';
+import type { AreaDefinition, Tile } from '../../core';
+
+// The way in from the coast: the Entrance and the Checkpoint of the woods share its tile.
+const WAY_IN: Tile = { col: 1, row: 14 };
 
 // The woods, the second area of the adventure, between the coast and the mountain: 48 by 28 tiles, larger than the
 // screen both ways (20 by 12), so that the view follows the hero. Trees (solid, T) fill most of it and the glades
@@ -17,10 +20,10 @@ export const woods: AreaDefinition = {
   name: 'The Woods',
   text: 'Tall trees close in. Follow the sand path.',
   entrances: [
-    { id: 'from-coast', tile: { col: 1, row: 14 } },
+    { id: 'from-coast', tile: WAY_IN },
     { id: 'from-mountain', tile: { col: 46, row: 18 } },
   ],
-  checkpoints: [{ id: 'woods-checkpoint', tile: { col: 1, row: 14 } }],
+  checkpoints: [{ id: 'woods-checkpoint', tile: WAY_IN }],
   exits: [
     {
       id: 'to-coast',

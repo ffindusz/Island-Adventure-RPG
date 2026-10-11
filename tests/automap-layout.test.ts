@@ -2,14 +2,19 @@ import { describe, expect, it } from 'vitest';
 import {
   edgeOf,
   exitRect,
+  exitSide,
   fitLabel,
   layoutRoute,
+  linkEnds,
   linkedWithNext,
   markerRect,
   routeLinks,
   tileRects,
 } from '../src/adapter/automap-layout';
-import type { Metrics, Place, Rect, RouteArea, RouteLayout } from '../src/adapter/automap-layout';
+import type { LinkEnds, Metrics, Place, RouteArea, RouteLayout } from '../src/adapter/automap-layout';
+import type { Rect } from '../src/adapter/pixel-font';
+import { gameContent } from '../src/content';
+import type { AreaDefinition } from '../src/core';
 
 // Where the Automap page puts the areas of the route, and the shapes it draws in them, as numbers: no drawing, so no
 // Phaser. Every number below is worked out by hand from the rules in the comments, not read back from the code.
@@ -398,6 +403,226 @@ describe('the links between the areas of the route', () => {
 
   it('draws nothing for areas that are not linked', () => {
     expect(routeLinks(THREE_THEN_TWO, [false, false, false, false], LINK)).toEqual([]);
+  });
+});
+
+describe('the side of its map that an exit is at', () => {
+  it('puts an exit in the first column at the left of its map, and one at the last column at the right', () => {
+    expect(exitSide({ col: 0, width: 1 }, 40)).toBe('left');
+    expect(exitSide({ col: 0, width: 3 }, 40)).toBe('left');
+    expect(exitSide({ col: 39, width: 1 }, 40)).toBe('right');
+    expect(exitSide({ col: 38, width: 2 }, 40)).toBe('right');
+  });
+
+  it('puts an exit that is not at the left or right edge, or is at both, on neither side', () => {
+    expect(exitSide({ col: 5, width: 2 }, 40)).toBeNull();
+    expect(exitSide({ col: 1, width: 1 }, 40)).toBeNull();
+    expect(exitSide({ col: 38, width: 1 }, 40)).toBeNull();
+    expect(exitSide({ col: 0, width: 40 }, 40)).toBeNull();
+  });
+});
+
+/** An area `width` tiles across and 3 down, with an exit for each of `exits`: where it leads, its column and width. */
+function areaWithExits(
+  id: string,
+  width: number,
+  exits: readonly (readonly [string, number, number])[] = [],
+): Pick<AreaDefinition, 'id' | 'layout' | 'exits'> {
+  return {
+    id,
+    layout: Array.from({ length: 3 }, () => '.'.repeat(width)),
+    exits: exits.map(([to, col, columns], index) => ({
+      id: `${id}-exit-${index}`,
+      zone: { col, row: 1, width: columns, height: 1 },
+      to: { area: to, entrance: `${to}-in` },
+    })),
+  };
+}
+
+describe('the sides of the maps that the links of the route are at', () => {
+  it('takes them from the exit of each area that leads to the other, on the width of its own map', () => {
+    const areas = [
+      areaWithExits('a', 10, [['b', 9, 1]]),
+      areaWithExits('b', 12, [
+        ['a', 0, 1],
+        ['c', 11, 1],
+      ]),
+      areaWithExits('c', 8, [['b', 0, 1]]),
+    ];
+
+    expect(linkEnds(['a', 'b', 'c'], areas)).toEqual([
+      { leave: 'right', arrive: 'left' },
+      { leave: 'right', arrive: 'left' },
+    ]);
+  });
+
+  it('tells the left side from the right: the way on at the left, and the way back at the right', () => {
+    const areas = [areaWithExits('a', 10, [['b', 0, 1]]), areaWithExits('b', 10, [['a', 9, 1]])];
+
+    expect(linkEnds(['a', 'b'], areas)).toEqual([{ leave: 'left', arrive: 'right' }]);
+  });
+
+  it('has no side for an area with no exit to the other, or whose exit is not at the left or right edge', () => {
+    const areas = [
+      { id: 'a', layout: ['..........'] },
+      areaWithExits('b', 10, [['c', 4, 1]]),
+      areaWithExits('c', 10, [['d', 5, 1]]),
+      areaWithExits('d', 10),
+    ];
+
+    expect(linkEnds(['a', 'b'], areas)).toEqual([{ leave: null, arrive: null }]);
+    expect(linkEnds(['b', 'c'], areas)).toEqual([{ leave: null, arrive: null }]);
+    expect(linkEnds(['c', 'd'], areas)).toEqual([{ leave: null, arrive: null }]);
+  });
+
+  it('goes by the first exit of an area that leads to the other when it has more than one', () => {
+    const areas = [
+      areaWithExits('a', 10, [
+        ['b', 9, 1],
+        ['b', 0, 1],
+      ]),
+      areaWithExits('b', 10, [
+        ['a', 0, 1],
+        ['a', 9, 1],
+      ]),
+    ];
+
+    expect(linkEnds(['a', 'b'], areas)).toEqual([{ leave: 'right', arrive: 'left' }]);
+  });
+
+  it('finds the areas by their ids, in whatever order the content lists them, and has no side for one it lacks', () => {
+    const areas = [areaWithExits('b', 10, [['a', 0, 1]]), areaWithExits('a', 10, [['b', 9, 1]])];
+
+    expect(linkEnds(['a', 'b'], areas)).toEqual([{ leave: 'right', arrive: 'left' }]);
+    expect(linkEnds(['a', 'x'], areas)).toEqual([{ leave: null, arrive: null }]);
+  });
+
+  it('has one pair for each link of the route, and none for a route of one area', () => {
+    const areas = [areaWithExits('a', 10), areaWithExits('b', 10), areaWithExits('c', 10)];
+
+    expect(linkEnds(['a', 'b', 'c'], areas)).toHaveLength(2);
+    expect(linkEnds(['a'], areas)).toEqual([]);
+  });
+
+  it('has each link of the shipped route leave by the east edge and come into the west edge of the next area', () => {
+    const route = gameContent.areas.map((area) => area.id);
+
+    expect(linkEnds(route, gameContent.areas)).toEqual(route.slice(1).map(() => ({ leave: 'right', arrive: 'left' })));
+  });
+});
+
+describe('the links of the route drawn at the sides where their exits are', () => {
+  const UNKNOWN: LinkEnds = { leave: null, arrive: null };
+  const EAST_TO_WEST: LinkEnds = { leave: 'right', arrive: 'left' };
+  const WEST_TO_EAST: LinkEnds = { leave: 'left', arrive: 'right' };
+
+  /** The strips of the one link out of area `index` of a layout, given where its exits are. */
+  function linkAt(index: number, ends: LinkEnds, layout: RouteLayout = THREE_THEN_TWO): Rect[] {
+    const links = layout.places.slice(1);
+    return routeLinks(
+      layout,
+      links.map((_, at) => at === index),
+      LINK,
+      links.map((_, at) => (at === index ? ends : UNKNOWN)),
+    );
+  }
+
+  it('draws a link between two maps of a row as the gap between them when its exits face one another', () => {
+    expect(linkAt(0, EAST_TO_WEST)).toEqual([{ left: 31, top: 32, width: 4, height: 2 }]);
+    // The second row runs back, so the maps face one another the other way round.
+    expect(linkAt(3, WEST_TO_EAST)).toEqual([{ left: 48, top: 66, width: 4, height: 2 }]);
+  });
+
+  it('draws a link round the end of the rows as before when its exits are on the side of the lane or not known', () => {
+    const round = [
+      { left: 99, top: 32, width: 6, height: 2 },
+      { left: 103, top: 32, width: 2, height: 36 },
+      { left: 82, top: 66, width: 23, height: 2 },
+    ];
+
+    expect(linkAt(2, UNKNOWN)).toEqual(round);
+    expect(linkAt(2, { leave: 'right', arrive: 'right' })).toEqual(round);
+    expect(linkAt(2, { leave: 'right', arrive: null })).toEqual(round);
+    expect(linkAt(2, { leave: null, arrive: 'right' })).toEqual(round);
+  });
+
+  it('draws a link round the left end of the rows as before when its exits are at the left', () => {
+    expect(linkAt(3, { leave: 'left', arrive: 'left' }, TWO_TWO_ONE)).toEqual([
+      { left: -3, top: 49, width: 6, height: 2 },
+      { left: -3, top: 49, width: 2, height: 36 },
+      { left: -3, top: 83, width: 23, height: 2 },
+    ]);
+  });
+
+  it('takes a link between rows out of the east side of one map and into the west side of the next', () => {
+    // The first row ends at 48 and the next starts at 52, so the way across runs on 49. The posts, where it goes up and
+    // down, are 4 pixels clear of the cards: at 103 to the right of the first, and at 46 to the left of the next.
+    expect(linkAt(2, EAST_TO_WEST)).toEqual([
+      { left: 99, top: 32, width: 6, height: 2 },
+      { left: 103, top: 32, width: 2, height: 19 },
+      { left: 46, top: 49, width: 59, height: 2 },
+      { left: 46, top: 49, width: 2, height: 19 },
+      { left: 46, top: 66, width: 6, height: 2 },
+    ]);
+  });
+
+  it('keeps the posts clear of the cards and the arms on the maps when the cards are wider than the maps', () => {
+    // The first row ends at 50 and the next starts at 80, so the way across runs on 50 + 14 = 64.
+    const layout = { scale: 1, places: [wide(0, 80, 30), wide(1, 80, 100)] };
+
+    expect(linkAt(0, EAST_TO_WEST, layout)).toEqual([
+      { left: 130, top: 29, width: 16, height: 2 },
+      { left: 144, top: 29, width: 2, height: 37 },
+      { left: 74, top: 64, width: 72, height: 2 },
+      { left: 74, top: 64, width: 2, height: 37 },
+      { left: 74, top: 99, width: 16, height: 2 },
+    ]);
+  });
+
+  it('takes a link between rows out of the west side and into the west side when both exits are there', () => {
+    expect(linkAt(2, { leave: 'left', arrive: 'left' })).toEqual([
+      { left: 63, top: 32, width: 6, height: 2 },
+      { left: 63, top: 32, width: 2, height: 19 },
+      { left: 46, top: 49, width: 19, height: 2 },
+      { left: 46, top: 49, width: 2, height: 19 },
+      { left: 46, top: 66, width: 6, height: 2 },
+    ]);
+  });
+
+  it('goes round the cards when only the side it leaves by is not the one the layout would give it', () => {
+    // It leaves the first map by the west side, the post to the left of its card is at 63, and it comes in from the
+    // post to the right of the next card, at 86, as a link that runs round the right end would.
+    expect(linkAt(2, WEST_TO_EAST)).toEqual([
+      { left: 63, top: 32, width: 6, height: 2 },
+      { left: 63, top: 32, width: 2, height: 19 },
+      { left: 63, top: 49, width: 25, height: 2 },
+      { left: 86, top: 49, width: 2, height: 19 },
+      { left: 82, top: 66, width: 6, height: 2 },
+    ]);
+  });
+
+  it('goes round below the row for a link in a row whose exits face away from one another', () => {
+    // The row ends at 82, so the way along runs 4 pixels below it, on 86; the posts are at 86 and 12.
+    expect(linkAt(3, EAST_TO_WEST)).toEqual([
+      { left: 82, top: 66, width: 6, height: 2 },
+      { left: 86, top: 66, width: 2, height: 22 },
+      { left: 12, top: 86, width: 76, height: 2 },
+      { left: 12, top: 66, width: 2, height: 22 },
+      { left: 12, top: 66, width: 6, height: 2 },
+    ]);
+  });
+
+  it('takes the ends of each link from its own place in the list', () => {
+    const ends = [UNKNOWN, UNKNOWN, EAST_TO_WEST, WEST_TO_EAST];
+
+    expect(routeLinks(THREE_THEN_TWO, [false, false, true, true], LINK, ends)).toEqual([
+      { left: 99, top: 32, width: 6, height: 2 },
+      { left: 103, top: 32, width: 2, height: 19 },
+      { left: 46, top: 49, width: 59, height: 2 },
+      { left: 46, top: 49, width: 2, height: 19 },
+      { left: 46, top: 66, width: 6, height: 2 },
+      { left: 48, top: 66, width: 4, height: 2 },
+    ]);
   });
 });
 

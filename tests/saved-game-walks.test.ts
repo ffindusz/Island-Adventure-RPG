@@ -22,6 +22,12 @@ import {
 
 const DIRECTIONS: readonly Direction[] = ['up', 'down', 'left', 'right'];
 
+/**
+ * A walk saves and checks the whole state at each of its steps, with what the hero has explored of every area in it,
+ * so it takes longer with every area the game ships, and longer still when the other test files run beside it.
+ */
+const WALK_TIMEOUT_MS = 30_000;
+
 function pickFrom<T>(items: readonly T[], random: RandomSource): T {
   return items[Math.floor(random() * items.length)] as T;
 }
@@ -130,25 +136,25 @@ describe('a hero among every kind of monster, doing anything at all', () => {
     checkpoints: [{ id: 'camp', tile: { col: 3, row: 3 } }],
   });
 
-  it('is saved in a state the checks accept, whatever the state, every time', () => {
-    const walk = newWalk();
+  it(
+    'is saved in a state the checks accept, whatever the state, every time',
+    () => {
+      const walk = newWalk();
 
-    for (const seed of [1, 2, 3]) {
-      walkAtRandom(gauntlet, seed, 600, walk);
-    }
+      for (const seed of [1, 2, 3]) {
+        walkAtRandom(gauntlet, seed, 600, walk);
+      }
 
-    expect(walk.refused).toEqual([]);
-    // The walks must have been through what the checks are about, or they prove nothing.
-    expect([...walk.actions].sort()).toEqual(['chasing', 'dashing', 'idle', 'recovering', 'winding-up']);
-    expect([...walk.arrows].sort()).toEqual(['hero', 'monster']);
-  });
+      expect(walk.refused).toEqual([]);
+      // The walks must have been through what the checks are about, or they prove nothing.
+      expect([...walk.actions].sort()).toEqual(['chasing', 'dashing', 'idle', 'recovering', 'winding-up']);
+      expect([...walk.arrows].sort()).toEqual(['hero', 'monster']);
+    },
+    WALK_TIMEOUT_MS,
+  );
 });
 
 describe('the game as shipped', () => {
-  // The walk saves and checks the whole state 500 times, with what the hero has explored of every area in it, so it
-  // takes longer with every area the game ships, and longer still when the other test files run beside it.
-  const WALK_TIMEOUT_MS = 30_000;
-
   it.each(gameContent.areas)('is saved in a state the checks accept when the hero begins in "$id"', (area) => {
     const [entrance] = area.entrances ?? [];
     if (entrance === undefined) {

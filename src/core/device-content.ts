@@ -1,6 +1,7 @@
 import type { Area, Interactable } from './content';
 import type { DoorDefinition, GateDefinition, KeyDefinition, LeverDefinition, SignDefinition } from './definitions';
-import type { Box, Tile } from './geometry';
+import { tileBox } from './geometry';
+import type { Box } from './geometry';
 
 // Loading the devices of an Adventure Area: the keys, and the doors, gates, levers and signs that go with them, which
 // make up its light puzzles and clues. content.ts calls these while it loads each interactable; the rules for what a
@@ -169,9 +170,4 @@ export function checkLeverTargets(areas: readonly Area[]): void {
 function listed(ids: readonly string[]): string {
   const quoted = ids.map((id) => `"${id}"`);
   return quoted.length < 2 ? quoted.join('') : `${quoted.slice(0, -1).join(', ')} and ${quoted[quoted.length - 1]}`;
-}
-
-/** The box of a tile, in tile units like the other bodies. */
-function tileBox({ col, row }: Tile): Box {
-  return { minX: col, minY: row, maxX: col + 1, maxY: row + 1 };
 }

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { ARTWORK } from '../src/adapter/artwork';
 import type { ArtManifest } from '../src/adapter/asset-manifest';
-import { bytesOf, fileOf, frameOf, readPicture } from './pictures';
+import { bytesOf, fileOf, frameOf, isOutline, isRed, isWhite, readPicture, sameShape } from './pictures';
 import type { Picture, Pixel } from './pictures';
 
 // The Guardian of the castle is drawn from a sheet of its own like the other monsters (src/adapter/monster-sprites.ts), but
@@ -18,7 +18,6 @@ const FACINGS = ['down', 'up', 'left', 'right'] as const;
 const WALK_ROWS = 6;
 const HIT_ROW = WALK_ROWS;
 const WIND_UP_ROW = WALK_ROWS + 1;
-const OUTLINE = [0x14, 0x1b, 0x1b];
 /** The colours of the pack's Giant Blue Samurai that the Guardian is not drawn in: its blue, its grey-green and its dark, its gold, its orange, its pink and its red. */
 const PACK_COLOURS: readonly (readonly number[])[] = [
   [0x79, 0xb8, 0xce],
@@ -38,17 +37,8 @@ const MIDDLE_DOWN = 4;
 /** The least that the red of a wind-up may change the colour of the monster, as the distance of the average colours (of 441 at most). The Guardian's is over 150. */
 const WIND_UP_SHOWS = 88;
 
-const isOutline = (pixel: Pixel): boolean => OUTLINE.every((channel, index) => channel === pixel[index]);
-const isWhite = (pixel: Pixel): boolean => pixel[0] === 255 && pixel[1] === 255 && pixel[2] === 255;
-/** The red that compose-art.py gives a wind-up: strong in the red, weak in the green and in the blue. */
-const isRed = (pixel: Pixel): boolean => pixel[0] >= 150 && pixel[1] <= 105 && pixel[2] <= 100;
-
 function cellOf(sheet: Picture, row: number, column: number): Map<string, Pixel> {
   return frameOf(sheet, row, column, CELL);
-}
-
-function sameShape(a: Map<string, Pixel>, b: Map<string, Pixel>): boolean {
-  return a.size === b.size && [...a.keys()].every((key) => b.has(key));
 }
 
 /** The middle of the opaque pixels of a frame. */

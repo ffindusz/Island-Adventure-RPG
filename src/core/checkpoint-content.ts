@@ -1,6 +1,7 @@
 import type { Checkpoint } from './content';
 import type { AreaDefinition } from './definitions';
-import type { Box, Tile } from './geometry';
+import { describeTile, tileBox } from './geometry';
+import type { Tile } from './geometry';
 
 // Loading the Checkpoints of an Adventure Area: the safe places the hero activates by touching them. content.ts calls
 // this while it loads each area; the rules for activating a Checkpoint and for defeat are in checkpoints.ts.
@@ -34,13 +35,4 @@ export function loadCheckpoints(
     }
     return { id: checkpoint.id, tile: checkpoint.tile, body: tileBox(checkpoint.tile) };
   });
-}
-
-function describeTile(tile: Tile): string {
-  return `(col ${tile.col}, row ${tile.row})`;
-}
-
-/** The box of a tile, in tile units like the other bodies. */
-function tileBox({ col, row }: Tile): Box {
-  return { minX: col, minY: row, maxX: col + 1, maxY: row + 1 };
 }

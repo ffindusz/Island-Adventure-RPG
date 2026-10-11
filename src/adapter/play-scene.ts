@@ -1,18 +1,10 @@
-import Phaser from 'phaser';
-import type { Command, Game, GameEvent, GameView, PlayingView } from '../core';
+import type Phaser from 'phaser';
+import type { AreaDefinition, Command, Game, GameEvent, GameView, PlayingView } from '../core';
 import { AreaBanner } from './area-banner';
-import {
-  drawInteractable,
-  drawMonster,
-  drawStrike,
-  drawTelegraph,
-  drawTerrain,
-} from './art';
-import { ARTWORK, hasFinalArt } from './artwork';
-import { buildDrawnArt, queueArt, requireLoadedArt } from './asset-loader';
+import { drawMonster, drawStrike, drawTelegraph, drawTerrain } from './art';
+import { hasFinalArt } from './artwork';
 import { AutomapPage } from './automap-page';
 import type { GameAudio } from './audio';
-import { AudioLine } from './audio-line';
 import { effectsOfFrame, fightAfter } from './audio-manifest';
 import { callsForSave } from './autosave';
 import { scrollFor } from './camera';
@@ -21,6 +13,7 @@ import { DEPTH } from './depths';
 import { Fall, FALL_FADE_OUT_MS } from './fall';
 import { Feedback } from './feedback';
 import { FixedStepClock } from './fixed-step';
+import { GameScene } from './game-scene';
 import { HeroSprite } from './hero-sprite';
 import { checkHudFootprint, Hud } from './hud';
 import { InventoryMenu } from './inventory-menu';
@@ -28,7 +21,7 @@ import { MonsterSprites } from './monster-sprites';
 import { Notice } from './notice';
 import { OpeningCard } from './opening-card';
 import { Overlay } from './overlay';
-import { PlayerInput } from './player-input';
+import { PickupRiseSprites } from './pickup-rise-sprites';
 import { byShooter } from './projectiles';
 import { ProjectileSprites } from './projectile-sprites';
 import { PropSprites } from './prop-sprites';
@@ -63,15 +56,16 @@ function playerIsWatching(): boolean {
  * service what the frame's events sound like and which place the music is for (audio.ts), and polls the keys of the
  * audio in every frame, the card, the falls and the pages included.
  */
-export class PlayScene extends Phaser.Scene {
+export class PlayScene extends GameScene {
   private readonly core: Game;
   private readonly saves: SaveStore;
-  private readonly audio: GameAudio;
+  /** The areas of the content: the Automap draws a link at the side of a map where the exit of its area is. */
+  private readonly areas: readonly AreaDefinition[];
   private clock!: FixedStepClock;
   private feedback!: Feedback;
   private readonly inventoryMenu = new InventoryMenu();
-  private playerInput!: PlayerInput;
   private heroSprite!: HeroSprite;
+  private pickupRiseSprites!: PickupRiseSprites;
   private monsterSprites!: MonsterSprites;
   private projectileSprites!: ProjectileSprites;
   private propSprites!: PropSprites;
@@ -80,7 +74,6 @@ export class PlayScene extends Phaser.Scene {
   private notice!: Notice;
   private overlay!: Overlay;
   private automapPage!: AutomapPage;
-  private audioLine!: AudioLine;
   private terrainLayer!: Phaser.GameObjects.Graphics;
   /** The ground of an area whose art is final, painted once (terrain-baker.ts); hidden for any other area. */
   private groundImage!: Phaser.GameObjects.Image;
@@ -103,11 +96,11 @@ export class PlayScene extends Phaser.Scene {
   /** Whether the fight with the Guardian is on, which the music of the fight plays for (audio-manifest.ts, `fightAfter`). */
   private fight = false;
 
-  constructor(core: Game, saves: SaveStore, audio: GameAudio) {
-    super(SCENE_KEYS.play);
+  constructor(core: Game, saves: SaveStore, audio: GameAudio, areas: readonly AreaDefinition[]) {
+    super(SCENE_KEYS.play, audio);
     this.core = core;
     this.saves = saves;
-    this.audio = audio;
+    this.areas = areas;
   }
 
   init(start: PlayStart): void {
@@ -120,23 +113,16 @@ export class PlayScene extends Phaser.Scene {
     this.fight = false;
   }
 
-  preload(): void {
-    queueArt(this.load, ARTWORK);
-    this.audio.queue(this);
-  }
-
   create(): void {
-    buildDrawnArt(this.textures, ARTWORK);
-    requireLoadedArt(this.textures, ARTWORK);
-    this.audio.requireLoaded();
+    this.requireFiles();
     checkHudFootprint();
     // The ground is added first, at the lowest depth: in colours, or the picture of it where the art is final. Everything
     // above it has its depth in depths.ts: the marks of the exits and the props are sprites, then the telegraphs of
     // monster attacks, then the flat shapes of what has no picture yet, then the monsters of final art, what they shoot,
-    // and the hero and its arrows, which are sprites too, and the strikes of the monsters above those. The HUD draws above
-    // them all, then the text of the area, the notice above that, and the overlay above that, which shares its place
-    // with the Automap page. The world scrolls with the camera; the HUD, the text, the notice, the overlay and the
-    // Automap page do not.
+    // and the hero and its arrows, which are sprites too, and the strikes of the monsters above those, and above them the
+    // picture of what the hero just picked up, rising over its head. The HUD draws above them all, then the text of the
+    // area, the notice above that, and the overlay above that, which shares its place with the Automap page. The world
+    // scrolls with the camera; the HUD, the text, the notice, the overlay and the Automap page do not.
     this.terrainLayer = this.add.graphics();
     this.groundImage = this.add.image(0, 0, '__WHITE').setOrigin(0, 0).setVisible(false);
     this.drawnAreaId = null;
@@ -149,23 +135,19 @@ export class PlayScene extends Phaser.Scene {
     this.projectileSprites = new ProjectileSprites(this);
     this.heroSprite = new HeroSprite(this);
     this.effectLayer = this.add.graphics().setDepth(DEPTH.effects);
+    this.pickupRiseSprites = new PickupRiseSprites(this);
     this.hud = new Hud(this);
     this.banner = new AreaBanner(this);
     this.notice = new Notice(this);
     this.overlay = new Overlay(this);
-    this.automapPage = new AutomapPage(this);
-    this.audioLine = new AudioLine(this);
-    const keyboard = this.input.keyboard;
-    if (keyboard === null) {
-      throw new Error('The keyboard plugin is not available, so nothing could control the hero.');
-    }
-    this.playerInput = new PlayerInput(keyboard);
+    this.automapPage = new AutomapPage(this, this.areas);
+    this.useKeyboard('control the hero');
     this.card = this.openingLines.length > 0 ? new OpeningCard(this, this.openingLines) : null;
   }
 
   override update(time: number, frameMs: number): void {
     // The keys of the audio work in every frame of this screen: the opening card, a fall, a page and a Stat Point wait.
-    this.audioLine.update(this.audio.press(this.playerInput.pollAudio()), frameMs);
+    this.pollAudioKeys(frameMs);
     if (this.card !== null) {
       this.holdForOpening(this.card);
       return;
@@ -210,11 +192,7 @@ export class PlayScene extends Phaser.Scene {
         break;
       }
     }
-    this.feedback.age(frameMs);
-    this.heroSprite.age(frameMs);
-    this.monsterSprites.age(frameMs);
-    this.projectileSprites.age(frameMs);
-    this.propSprites.age(frameMs);
+    this.letTimePass(frameMs);
     this.feedback.show(events);
     this.heroSprite.show(events);
     this.monsterSprites.show(events);
@@ -300,16 +278,21 @@ export class PlayScene extends Phaser.Scene {
     }
   }
 
-  /** One frame of a fall: the world stands still with the hero lying in it, and at the end the screen fades out. */
-  private showFall(fall: Fall, frameMs: number, watching: boolean, time: number): void {
-    // What the player presses meanwhile does not count. The walk keys are read again when the fall is over.
-    this.playerInput.pollMenu();
-    this.playerInput.pollActions();
+  /** Lets one frame's time pass for the feedback and for every sprite: in a frame of the game and in one of a fall alike. */
+  private letTimePass(frameMs: number): void {
     this.feedback.age(frameMs);
     this.heroSprite.age(frameMs);
     this.monsterSprites.age(frameMs);
     this.projectileSprites.age(frameMs);
     this.propSprites.age(frameMs);
+  }
+
+  /** One frame of a fall: the world stands still with the hero lying in it, and at the end the screen fades out. */
+  private showFall(fall: Fall, frameMs: number, watching: boolean, time: number): void {
+    // What the player presses meanwhile does not count. The walk keys are read again when the fall is over.
+    this.playerInput.pollMenu();
+    this.playerInput.pollActions();
+    this.letTimePass(frameMs);
     if (fall.stage === 'fading-out' && !this.fadingOut) {
       this.fadingOut = true;
       this.cameras.main.fadeOut(FALL_FADE_OUT_MS, 0, 0, 0);
@@ -358,9 +341,6 @@ export class PlayScene extends Phaser.Scene {
     this.telegraphLayer.clear();
     this.entityLayer.clear();
     this.propSprites.draw(view);
-    for (const interactable of view.interactables) {
-      drawInteractable(this.entityLayer, interactable);
-    }
     const monstersAreSprites = hasFinalArt(view.area.id);
     for (const monster of view.monsters) {
       if (monster.action.type === 'winding-up') {
@@ -382,6 +362,7 @@ export class PlayScene extends Phaser.Scene {
     for (const zone of this.feedback.strikeZones()) {
       drawStrike(this.effectLayer, zone);
     }
+    this.pickupRiseSprites.draw(this.feedback.pickupRises(), view.hero.position);
     this.hud.draw(view);
     // A page or a Stat Point covers the text of the area; the core keeps its time frozen, so it is back afterwards.
     this.banner.draw(gameIsWaiting(view) ? null : view.areaText);

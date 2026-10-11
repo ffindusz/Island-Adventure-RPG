@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import type { Game, Snapshot } from '../src/core';
+import type { Game } from '../src/core';
 import {
+  ATTACK,
   advance,
+  continuedFrom,
   face,
-  gameAtTitle,
   monsterAction,
   monsterNamed,
   newGame,
   playingView,
-  throughStorage,
   walk,
 } from './fixtures';
 import { enemyContent, enemyField, shooterAt, SNIPER, untilFired } from './enemy-fixtures';
@@ -17,8 +17,6 @@ import { enemyContent, enemyField, shooterAt, SNIPER, untilFired } from './enemy
 // The wind-up begins in step 1 and the shot is fired in step 31. It flies 0.0625 tile a step and meets a hero who stays
 // where it is in step 89. The shot flies along the row of the shooter: its body, 0.25 wide, spans y 3.375 to 3.625. The
 // hero walks 0.125 tile a step, and its body, 0.5 wide, is out of that row after three steps sideways.
-
-const ATTACK = { type: 'attack' } as const;
 
 describe('avoiding a shooter', () => {
   it.each(['up', 'down'] as const)('costs the hero nothing to step out of the line of fire %s during the wind-up', (side) => {
@@ -160,12 +158,6 @@ describe('a tougher shooter is a change of data', () => {
 describe('the snapshot of a shooter', () => {
   const content = enemyContent([shooterAt('shooter-1', 2, 3)], { hero: { health: 20 } });
 
-  function continuedFrom(snapshot: Snapshot): Game {
-    const game = gameAtTitle(content);
-    game.send({ type: 'continue', snapshot: throughStorage(snapshot) });
-    return game;
-  }
-
   it.each([
     { stage: 'wind-up', steps: 10 },
     { stage: 'shot in the air', steps: 50 },
@@ -174,7 +166,7 @@ describe('the snapshot of a shooter', () => {
     const original = newGame(content);
     advance(original, steps);
 
-    const restored = continuedFrom(original.snapshot());
+    const restored = continuedFrom(content, original.snapshot());
 
     expect(restored.view()).toEqual(original.view());
     expect(advance(restored, 100)).toEqual(advance(original, 100));
@@ -185,7 +177,7 @@ describe('the snapshot of a shooter', () => {
     const original = newGame(content);
     advance(original, 50);
 
-    const restored = continuedFrom(original.snapshot());
+    const restored = continuedFrom(content, original.snapshot());
 
     expect(playingView(restored).arrows).toEqual([
       { position: { x: 3.6875, y: 3.5 }, direction: 'right', size: 0.25, shooter: 'monster' },

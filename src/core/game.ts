@@ -120,10 +120,6 @@ export function createGame(options: GameOptions): Game {
         return [...milestoneEvents, ...pickupEvents, ...checkpointEvents, ...arrowEvents, ...areaEvents, ...arrivalEvents];
       }
       const monsterEvents = stepMonsters(state, content);
-      if (monsterEvents.some((event) => event.type === 'hero-defeated')) {
-        // Defeat sends the hero back and the monsters back to where they began: the arrows of that life do not fly on.
-        state.arrows = [];
-      }
       return [...milestoneEvents, ...pickupEvents, ...checkpointEvents, ...arrowEvents, ...monsterEvents];
     },
     view: () => buildView(state, content),

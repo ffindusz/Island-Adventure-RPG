@@ -1,4 +1,5 @@
-import type { AutomapAreaView, Box, Point } from '../core';
+import type { AreaDefinition, AutomapAreaView, Box, Point } from '../core';
+import type { Rect } from './pixel-font';
 
 // Where the Automap page puts the areas of the route, and the shapes it draws in them, as plain numbers in canvas
 // pixels, so that the arithmetic can be tested without Phaser. The page draws what this module works out.
@@ -7,13 +8,6 @@ import type { AutomapAreaView, Box, Point } from '../core';
 // turn back along the next row when the row is full, like a path on a board, so that each area is next to the one that
 // comes after it. Every map is drawn at the same scale: the largest of 8, 7 ... 1 pixels per tile that makes the
 // whole route fit, or else a fraction of a pixel per tile.
-
-export interface Rect {
-  readonly left: number;
-  readonly top: number;
-  readonly width: number;
-  readonly height: number;
-}
 
 /** What the layout needs to know of an area: the size of its map in tiles, and how wide its name is in pixels. */
 export interface RouteArea {
@@ -197,18 +191,153 @@ export function linkedWithNext(areas: readonly Pick<AutomapAreaView, 'id' | 'con
   });
 }
 
+/** A side of a map: where a link leaves it, or comes into it. */
+export type Side = 'left' | 'right';
+
 /**
- * The strips that draw the links, as rectangles to fill. Two maps in a row are linked across the space between them.
- * Two in different rows are linked round the end of the rows where the route turns, clear of the cards by `laneGap`.
- * `linked[i]` says whether area i is linked to area i + 1.
+ * By which side of its map the route leaves an area for the next one, and by which side of the next map it comes in:
+ * the sides where the exits are. A side that is null is not known, and the link takes the side that suits the layout.
+ */
+export interface LinkEnds {
+  readonly leave: Side | null;
+  readonly arrive: Side | null;
+}
+
+/**
+ * The side of a map `tilesWide` tiles across that an exit with this zone is at: the left when it is in the first
+ * column and the right when it ends at the last. An exit anywhere else, or at both, is at neither side.
+ */
+export function exitSide(zone: { readonly col: number; readonly width: number }, tilesWide: number): Side | null {
+  const atLeft = zone.col === 0;
+  const atRight = zone.col + zone.width === tilesWide;
+  if (atLeft === atRight) {
+    return null;
+  }
+  return atLeft ? 'left' : 'right';
+}
+
+type ExitsOfArea = Pick<AreaDefinition, 'id' | 'layout' | 'exits'>;
+
+/** The side of the map of `area` that its first exit to the area `target` is at, if it has one at a side. */
+function sideOfExitTo(area: ExitsOfArea | undefined, target: string): Side | null {
+  const exit = area?.exits?.find((candidate) => candidate.to.area === target);
+  return area === undefined || exit === undefined ? null : exitSide(exit.zone, area.layout[0]?.length ?? 0);
+}
+
+/**
+ * For each link of the route, where its two ends are, as the exits of the content put them: the first exit of an area
+ * that leads to the next one, and the first exit of the next one that leads back. `route` is the ids of the areas in
+ * order, and `areas` are those of the content, in any order.
+ */
+export function linkEnds(route: readonly string[], areas: readonly ExitsOfArea[]): LinkEnds[] {
+  const byId = new Map(areas.map((area): [string, ExitsOfArea] => [area.id, area]));
+  return route.slice(1).map((next, index) => {
+    const previous = route[index] ?? '';
+    return { leave: sideOfExitTo(byId.get(previous), next), arrive: sideOfExitTo(byId.get(next), previous) };
+  });
+}
+
+interface LinkLook {
+  readonly thickness: number;
+  readonly laneGap: number;
+}
+
+/** The top of a strip that runs along the middle line of a map's row. */
+function middleTop(place: Place, look: LinkLook): number {
+  return place.midY - Math.floor(look.thickness / 2);
+}
+
+/** The strip across the gap between two maps of a row, on the middle line. */
+function straightLink(from: Place, to: Place, look: LinkLook): Rect {
+  const [first, second] = from.map.left < to.map.left ? [from, to] : [to, from];
+  const left = first.map.left + first.map.width;
+  return { left, top: middleTop(from, look), width: second.map.left - left, height: look.thickness };
+}
+
+/** The column of the post, where a link goes up or down, clear of the card by `laneGap`, on one side of it. */
+function postOf(place: Place, side: Side, look: LinkLook): number {
+  return side === 'right'
+    ? place.card.left + place.card.width + look.laneGap
+    : place.card.left - look.laneGap - look.thickness;
+}
+
+/** The arm from the side of a map, across to a post (or from it), on the middle line of the map's row. */
+function armOf(place: Place, side: Side, post: number, look: LinkLook): Rect {
+  const edge = side === 'right' ? place.map.left + place.map.width : place.map.left;
+  const start = Math.min(edge, post);
+  const end = Math.max(edge, post + look.thickness);
+  return { left: start, top: middleTop(place, look), width: end - start, height: look.thickness };
+}
+
+/** The strip that goes up or down at a post, from the top of one horizontal strip to the top of another. */
+function uprightAt(post: number, fromTop: number, toTop: number, look: LinkLook): Rect {
+  const top = Math.min(fromTop, toTop);
+  return { left: post, top, width: look.thickness, height: Math.max(fromTop, toTop) - top + look.thickness };
+}
+
+/** A link round the end of the rows, out of one lane that both maps share, which is beyond the cards. */
+function linkRoundTheEnd(from: Place, to: Place, side: Side, look: LinkLook): Rect[] {
+  const lane =
+    side === 'right'
+      ? Math.max(from.card.left + from.card.width, to.card.left + to.card.width) + look.laneGap
+      : Math.min(from.card.left, to.card.left) - look.laneGap - look.thickness;
+  return [
+    armOf(from, side, lane, look),
+    uprightAt(lane, middleTop(from, look), middleTop(to, look), look),
+    armOf(to, side, lane, look),
+  ];
+}
+
+/**
+ * A link that leaves one map by `leave` and comes into the other by `arrive`, where that is not what the layout would
+ * give it: out by an arm to a post clear of the card, along a way that runs clear of the cards, and in from a post of
+ * the other card by its arm. The way runs in the middle of the gap between the rows, or, for two maps of a row, below
+ * the row by `laneGap`. Two links that run along the same gap between rows may run over one another.
+ */
+function linkAroundTheCards(from: Place, to: Place, leave: Side, arrive: Side, look: LinkLook): Rect[] {
+  const leavePost = postOf(from, leave, look);
+  const arrivePost = postOf(to, arrive, look);
+  const rowBottom = from.card.top + from.card.height;
+  const way =
+    from.row === to.row
+      ? rowBottom + look.laneGap
+      : rowBottom + Math.floor((to.card.top - rowBottom - look.thickness) / 2);
+  return [
+    armOf(from, leave, leavePost, look),
+    uprightAt(leavePost, middleTop(from, look), way, look),
+    {
+      left: Math.min(leavePost, arrivePost),
+      top: way,
+      width: Math.abs(arrivePost - leavePost) + look.thickness,
+      height: look.thickness,
+    },
+    uprightAt(arrivePost, way, middleTop(to, look), look),
+    armOf(to, arrive, arrivePost, look),
+  ];
+}
+
+/** The sides that the layout puts the ends of a link at: facing one another in a row, and both where the rows turn. */
+function facingSides(from: Place, to: Place): { readonly leave: Side; readonly arrive: Side } {
+  if (from.row !== to.row) {
+    const turn: Side = from.row % 2 === 0 ? 'right' : 'left';
+    return { leave: turn, arrive: turn };
+  }
+  return from.map.left < to.map.left ? { leave: 'right', arrive: 'left' } : { leave: 'left', arrive: 'right' };
+}
+
+/**
+ * The strips that draw the links, as rectangles to fill. `linked[i]` says whether area i is linked to area i + 1, and
+ * `ends[i]` where that link meets the two maps. Where the exits are at the sides that face one another, two maps in a
+ * row are linked across the space between them, and two in different rows round the end of the rows where the route
+ * turns, clear of the cards by `laneGap`. A link that meets a map at another side goes round the cards to it. An end
+ * that is not given or not known is taken to be at the side that suits the layout.
  */
 export function routeLinks(
   layout: RouteLayout,
   linked: readonly boolean[],
-  look: { readonly thickness: number; readonly laneGap: number },
+  look: LinkLook,
+  ends: readonly LinkEnds[] = [],
 ): Rect[] {
-  const { thickness, laneGap } = look;
-  const half = Math.floor(thickness / 2);
   const strips: Rect[] = [];
   linked.forEach((isLinked, index) => {
     const from = layout.places[index];
@@ -216,30 +345,16 @@ export function routeLinks(
     if (!isLinked || from === undefined || to === undefined) {
       return;
     }
-    if (from.row === to.row) {
-      const [first, second] = from.map.left < to.map.left ? [from, to] : [to, from];
-      const left = first.map.left + first.map.width;
-      strips.push({ left, top: from.midY - half, width: second.map.left - left, height: thickness });
-      return;
+    const facing = facingSides(from, to);
+    const leave = ends[index]?.leave ?? facing.leave;
+    const arrive = ends[index]?.arrive ?? facing.arrive;
+    if (leave !== facing.leave || arrive !== facing.arrive) {
+      strips.push(...linkAroundTheCards(from, to, leave, arrive, look));
+    } else if (from.row === to.row) {
+      strips.push(straightLink(from, to, look));
+    } else {
+      strips.push(...linkRoundTheEnd(from, to, leave, look));
     }
-    const atRight = from.row % 2 === 0;
-    const lane = atRight
-      ? Math.max(from.card.left + from.card.width, to.card.left + to.card.width) + laneGap
-      : Math.min(from.card.left, to.card.left) - laneGap - thickness;
-    // The arm from a map's side that faces the lane, across to the lane.
-    const arm = (place: Place): Rect => {
-      const side = atRight ? place.map.left + place.map.width : place.map.left;
-      const start = Math.min(side, lane);
-      const end = Math.max(side, lane + thickness);
-      return { left: start, top: place.midY - half, width: end - start, height: thickness };
-    };
-    strips.push(arm(from), {
-      left: lane,
-      top: from.midY - half,
-      width: thickness,
-      height: to.midY - from.midY + thickness,
-    });
-    strips.push(arm(to));
   });
   return strips;
 }

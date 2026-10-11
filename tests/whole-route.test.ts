@@ -3,7 +3,7 @@ import { gameContent } from '../src/content';
 import type { AreaDefinition, ExitDefinition, InteractableDefinition, Tile } from '../src/core';
 import { playingView } from './fixtures';
 import { AREA_IDS, type AreaId, areaOf, routeOf, walkAssigning, wayInOf } from './main-route';
-import { keyOf, neighboursOf, openTilesOf, quietGameOf, routeBetween } from './routes';
+import { keyOf, neighboursOf, openTilesOf, quietGameOf, reachableFrom, routeBetween } from './routes';
 
 // The criterion of whole-route validation, read in one place over the content the game ships with: five Adventure Areas
 // in order, exits both ways, an entrance Checkpoint in every area and one immediately before the Guardian, exactly one
@@ -56,21 +56,6 @@ function openButTheGate(area: AreaDefinition, gate: InteractableDefinition): (ti
   return (tile) => everyDoorOpen(tile) && keyOf(tile) !== keyOf(gate.tile);
 }
 
-/** Every tile the hero can walk to from a tile over open ground, as "col,row". */
-function reachableFrom(isOpen: (tile: Tile) => boolean, from: Tile): Set<string> {
-  const reached = new Set([keyOf(from)]);
-  const frontier = [from];
-  for (const tile of frontier) {
-    for (const next of neighboursOf(tile)) {
-      if (!reached.has(keyOf(next)) && isOpen(next)) {
-        reached.add(keyOf(next));
-        frontier.push(next);
-      }
-    }
-  }
-  return reached;
-}
-
 /** Where the hero comes into an area on the main route, for an area of the adventure. */
 function wayInTo(area: AreaDefinition): Tile {
   const id = AREA_IDS.find((candidate) => candidate === area.id);
@@ -116,12 +101,12 @@ function puzzlesOn(area: AreaDefinition, route: readonly Tile[]): string[] {
 }
 
 describe('the whole route of the adventure', () => {
-  it('has five Adventure Areas, and the exits lead on from the start through them in order', () => {
+  it('has five Adventure Areas, listed in the order of the route, and the exits lead on from the start through them in order', () => {
     const { areas, forks } = chainFromStart();
 
     expect(areas).toEqual([...AREA_IDS]);
     expect(forks).toEqual([]);
-    expect(gameContent.areas.map(({ id }) => id).sort()).toEqual([...AREA_IDS].sort());
+    expect(gameContent.areas.map(({ id }) => id)).toEqual([...AREA_IDS]);
   });
 
   it.each(PAIRS)(

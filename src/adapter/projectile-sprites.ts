@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import type { ArrowView, Direction } from '../core';
-import { TILE_SIZE } from './config';
+import type { ArtName } from './artwork';
+import { px } from './config';
 import { DEPTH } from './depths';
 
 // What the monsters shoot, as sprites: the energy orb of the pack, in purple, four frames that pulse. It is a round
@@ -8,6 +9,7 @@ import { DEPTH } from './depths';
 // bigger than the 0.3 tile body the Game core flies, so a shot that grazes the picture can still miss. All of it is
 // cosmetic: it runs on frame time from the Game core's view.
 
+const ORB = 'projectile-orb' satisfies ArtName;
 const FRAMES = 4;
 const FRAME_MS = 80;
 /** The orb is drawn with its tail down, so a shot that flies up needs no turn. How far each direction turns it, in degrees. */
@@ -32,7 +34,7 @@ export class ProjectileSprites {
     const frame = Math.floor(this.ageMs / FRAME_MS) % FRAMES;
     shots.forEach((shot, index) => {
       this.spriteAt(index)
-        .setPosition(Math.round(shot.position.x * TILE_SIZE), Math.round(shot.position.y * TILE_SIZE))
+        .setPosition(px(shot.position.x), px(shot.position.y))
         .setFrame(frame)
         .setRotation((TURN_DEGREES[shot.direction] * Math.PI) / 180)
         .setVisible(true);
@@ -45,7 +47,7 @@ export class ProjectileSprites {
   private spriteAt(index: number): Phaser.GameObjects.Sprite {
     let sprite = this.sprites[index];
     if (sprite === undefined) {
-      sprite = this.scene.add.sprite(0, 0, 'projectile-orb', 0).setDepth(DEPTH.monsterShot);
+      sprite = this.scene.add.sprite(0, 0, ORB, 0).setDepth(DEPTH.monsterShot);
       this.sprites[index] = sprite;
     }
     return sprite;

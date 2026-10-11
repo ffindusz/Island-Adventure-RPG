@@ -1,4 +1,7 @@
-import type { AreaDefinition } from '../../core';
+import type { AreaDefinition, Tile } from '../../core';
+
+// The way in from the mountain: the Entrance and the Checkpoint of the cave share its tile.
+const WAY_IN: Tile = { col: 1, row: 6 };
 
 // The cave, the fourth area of the adventure, between the mountain and the old castle: 48 by 34 tiles, larger than the
 // screen both ways (20 by 12), so that the view follows the hero. Rock (solid, #) is most of it, and the chambers and
@@ -26,10 +29,10 @@ export const cave: AreaDefinition = {
   name: 'The Cave',
   text: 'Cold air breathes out of the dark. Follow the sand.',
   entrances: [
-    { id: 'from-mountain', tile: { col: 1, row: 6 } },
+    { id: 'from-mountain', tile: WAY_IN },
     { id: 'from-castle', tile: { col: 46, row: 9 } },
   ],
-  checkpoints: [{ id: 'cave-checkpoint', tile: { col: 1, row: 6 } }],
+  checkpoints: [{ id: 'cave-checkpoint', tile: WAY_IN }],
   exits: [
     {
       id: 'to-mountain',

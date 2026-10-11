@@ -1,11 +1,11 @@
 import type { ContentDefinition, GameEvent, GameView } from '../core';
-import type { ArtLookup } from './asset-manifest';
 
 // The audio manifest: every sound the adapter can play is registered here by name, and the scenes ask for sounds by those
-// names only, which are also the keys of Phaser's audio cache. Like the asset manifest, it is pure: the check for a sound
-// that is needed but not registered, which sound a place or an event calls for, and the files and volumes of the sounds
-// are all here, to be tested and edited without Phaser; the Phaser side is audio.ts. The sounds come from the Ninja
-// Adventure pack (entry A1 of docs/assets/licences.md), and each file is named there.
+// names only, which are also the keys of Phaser's audio cache. Like the asset manifest, it is pure: which sounds the
+// content needs (checked with the asset manifest's `requireArt`, as the pictures are), which sound a place or an event
+// calls for, and the files and volumes of the sounds are all here, to be tested and edited without Phaser; the Phaser
+// side is audio.ts. The sounds come from the Ninja Adventure pack (entry A1 of docs/assets/licences.md), and each file is
+// named there.
 //
 // To swap a sound for another of the pack: copy its file under public/audio/music/ or public/audio/sfx/, change the file
 // of the entry below, and say so in the licence record in the same commit; tests/shipped-audio.test.ts checks that the
@@ -104,11 +104,6 @@ export const AUDIO: AudioManifest = {
   [effectKey('switch')]: effect('move3.wav', 0.6),
   [effectKey('victory')]: effect('bonus.wav', 1),
 };
-
-/** Says whether a sound is registered, through the same small question that the asset manifest and Phaser's audio cache answer. */
-export function soundLookup(manifest: AudioManifest): ArtLookup {
-  return { exists: (name) => Object.hasOwn(manifest, name) };
-}
 
 /**
  * Every sound that the content needs, by name: the title, the music of each of its Adventure Areas, the fight, the ending,

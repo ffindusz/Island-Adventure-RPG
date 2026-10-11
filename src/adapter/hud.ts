@@ -1,17 +1,17 @@
 import type Phaser from 'phaser';
 import { COVERED_CORNER } from '../core';
 import type { PlayingView, WeaponSlot } from '../core';
-import { consumableIcon, gearIcon } from './artwork';
+import { ARROW, consumableIcon, gearIcon, HEART, SWORD_HELD } from './artwork';
+import { ChangeGuard } from './change-guard';
 import { TILE_SIZE } from './config';
+import { DEPTH } from './depths';
+import { experienceShare, healthText } from './labels';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import { INK, UiLayer } from './ui-layer';
 
 // The heads-up display: what the player must always see, drawn from the Game core's view and nothing else. It is a dark
 // panel at the top left, fixed to the screen, with pictures of the pack and the bitmap font on it. Text objects blur
 // at this size, so the numbers are drawn with rectangles, which stay sharp at every zoom.
-
-/** Above everything the play screen draws. */
-const HUD_DEPTH = 100;
 
 /** Distance from the screen's edge to the panel, and from the panel's edge to what it holds, in canvas pixels. */
 const MARGIN = 2;
@@ -62,7 +62,7 @@ const COUNT_ROOM = textWidthOf('00');
  * flat and read as a bowl here.
  */
 const WEAPON_ICONS: Readonly<Record<WeaponSlot, { readonly texture: string; readonly flipped: boolean }>> = {
-  'melee-weapon': { texture: 'sword-held', flipped: true },
+  'melee-weapon': { texture: SWORD_HELD, flipped: true },
   'ranged-weapon': { texture: gearIcon('short-bow'), flipped: false },
 };
 
@@ -89,44 +89,39 @@ export function checkHudFootprint(): void {
  */
 export class Hud {
   private readonly layer: UiLayer;
-  private shown = 'nothing';
+  private readonly shown = new ChangeGuard();
 
   constructor(scene: Phaser.Scene) {
-    this.layer = new UiLayer(scene, HUD_DEPTH);
+    this.layer = new UiLayer(scene, DEPTH.hud);
   }
 
   /** Shows what the view says. It draws again only when what it shows has changed. */
   draw(view: PlayingView): void {
     const { hero, progress } = view;
-    const key = JSON.stringify([hero.health, hero.maxHealth, hero.activeWeapon, hero.consumables, progress]);
-    if (key === this.shown) {
+    if (!this.shown.changed([hero.health, hero.maxHealth, hero.activeWeapon, hero.consumables, progress])) {
       return;
     }
-    this.shown = key;
     const layer = this.layer;
     const { health, maxHealth, activeWeapon, consumables } = hero;
     layer.clear();
     layer.frame('panel', MARGIN, MARGIN, HUD_WIDTH, HUD_HEIGHT);
 
-    layer.icon('ui-heart', LEFT, MARGIN + PADDING);
-    // Health is rounded up, so a hero that is still standing never reads as 0.
+    layer.icon(HEART, LEFT, MARGIN + PADDING);
     const textTop = MARGIN + PADDING + Math.ceil((HEALTH_ROW_HEIGHT - TEXT_HEIGHT) / 2);
-    layer.text(`${Math.ceil(health)}/${Math.ceil(maxHealth)}`, LEFT + HEART_ROOM, textTop, INK.text);
+    layer.text(healthText(health, maxHealth), LEFT + HEART_ROOM, textTop, INK.text);
     const level = `LV ${progress.level}`;
     layer.text(level, INSIDE_RIGHT - textWidthOf(level), textTop, INK.title);
 
     const barWidth = INSIDE_RIGHT - LEFT;
     layer.bar(LEFT, HEALTH_BAR_TOP, barWidth, BAR_HEIGHT, health / maxHealth, INK.health);
-    // At the highest Level there is no next one, and the bar stays full.
-    const experience = progress.experience;
-    const experienceShare = experience === null ? 1 : experience.earned / experience.needed;
-    layer.bar(LEFT, EXPERIENCE_BAR_TOP, barWidth, EXPERIENCE_BAR_HEIGHT, experienceShare, INK.experience);
+    const toNextLevel = experienceShare(progress.experience);
+    layer.bar(LEFT, EXPERIENCE_BAR_TOP, barWidth, EXPERIENCE_BAR_HEIGHT, toNextLevel, INK.experience);
 
     const countTop = SUPPLY_TOP + Math.floor((SUPPLY_HEIGHT - TEXT_HEIGHT) / 2);
     const weapon = WEAPON_ICONS[activeWeapon];
     layer.icon(weapon.texture, LEFT, SUPPLY_TOP, WEAPON_ROOM, SUPPLY_HEIGHT, weapon.flipped);
     const arrowLeft = LEFT + WEAPON_ROOM + 4;
-    layer.icon('arrow', arrowLeft, SUPPLY_TOP, ARROW_ROOM, SUPPLY_HEIGHT);
+    layer.icon(ARROW, arrowLeft, SUPPLY_TOP, ARROW_ROOM, SUPPLY_HEIGHT);
     const ammunition = String(consumables.ammunition);
     const ammunitionLeft = arrowLeft + ARROW_ROOM + GAP;
     layer.text(ammunition, ammunitionLeft, countTop, countColour(consumables.ammunition));

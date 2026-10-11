@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { AreaDefinition, ContentDefinition, EntranceDefinition, ExitDefinition, Game } from '../src/core';
+import type { ContentDefinition, Game } from '../src/core';
+import { world } from './cellar-fixtures';
 import {
-  ARENA_LAYOUT,
+  INTERACT,
   arena,
   doorAt,
   face,
@@ -21,8 +22,6 @@ import {
 // The hero stands at (3.5, 3.5) facing down. In most tests the door is on the tile (3, 4), right below it, and its key
 // on the tile (2, 3), beside it: the hero's body overlaps that tile after 3 steps to the left (its left edge is then
 // at x = 3.25 - 3 * 0.125 = 2.875, inside the tile, which spans x 2 to 3), and 3 steps to the right bring it back.
-
-const INTERACT = { type: 'interact' } as const;
 
 const LOCKED = { type: 'door-locked', doorId: 'cellar-door', keyName: 'Rusty Key' } as const;
 const OPENED = { type: 'door-opened', doorId: 'cellar-door', keyName: 'Rusty Key' } as const;
@@ -119,39 +118,16 @@ describe('a locked door', () => {
 });
 
 describe('a locked door whose key lies in another Adventure Area', () => {
-  // The arena and a cellar, as in area-connections.test.ts: the hero walks right into the cellar and arrives at
+  // The arena and a cellar (cellar-fixtures.ts): the hero walks right into the cellar and arrives at
   // (2.5, 3.5), where the key lies on the tile (3, 3), and walks left through the cellar's exit, on the tile (1, 3),
   // back into the arena at (4.5, 3.5). The door is on the tile (4, 4) of the arena, right below that tile.
-  const FROM_CELLAR: EntranceDefinition = { id: 'from-cellar', tile: { col: 4, row: 3 } };
-  const TO_CELLAR: ExitDefinition = {
-    id: 'to-cellar',
-    zone: { col: 5, row: 3, width: 1, height: 1 },
-    to: { area: 'cellar', entrance: 'from-arena' },
-  };
-  const CELLAR: AreaDefinition = {
-    id: 'cellar',
-    name: 'Cellar',
-    layout: ARENA_LAYOUT,
-    monsters: [],
-    interactables: [keyAt('rusty-key', 3, 3, 'Rusty Key')],
-    entrances: [{ id: 'from-arena', tile: { col: 2, row: 3 } }],
-    exits: [
-      {
-        id: 'to-arena',
-        zone: { col: 1, row: 3, width: 1, height: 1 },
-        to: { area: 'arena', entrance: 'from-cellar' },
-      },
-    ],
-  };
 
   it('opens for the hero that brings the key from there, and takes it', () => {
     const game = newGame(
-      arena({
-        entrances: [FROM_CELLAR],
-        exits: [TO_CELLAR],
-        interactables: [doorAt('cellar-door', 4, 4, 'rusty-key')],
-        otherAreas: [CELLAR],
-      }),
+      world(
+        { interactables: [doorAt('cellar-door', 4, 4, 'rusty-key')] },
+        { interactables: [keyAt('rusty-key', 3, 3, 'Rusty Key')] },
+      ),
     );
     walk(game, 'right', 11);
     expect(playingView(game).area.id).toBe('cellar');

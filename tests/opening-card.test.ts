@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { VIEW_HEIGHT, VIEW_WIDTH } from '../src/adapter/config';
 import { layoutCard, OPENING_HINT } from '../src/adapter/opening-card';
-import { drawText, TEXT_HEIGHT, textWidthOf } from '../src/adapter/pixel-font';
-import type { Graphics } from '../src/adapter/pixel-font';
+import { TEXT_HEIGHT, textWidthOf } from '../src/adapter/pixel-font';
 import { gameContent } from '../src/content';
+import { charactersTheFontLacks } from './drawn-text';
 
 // The card of the opening, as it is laid out on the screen. Drawing it is not tested; where its text goes is.
 
@@ -12,20 +12,6 @@ const SHIPPED = gameContent.opening ?? [];
 const WIDE_LINE = 'Sea and storm and sand '.repeat(3).trim();
 /** The longest opening the core takes: four lines, each wider than the card and longer than the content keeps one. */
 const FOUR_LONG_LINES = Array.from({ length: 4 }, (_, at) => `${WIDE_LINE} ${at}`);
-
-/** How many rectangles the pixel font draws for the text: none for a character it does not have. */
-function rectanglesDrawnFor(text: string): number {
-  let rectangles = 0;
-  const graphics = {
-    fillStyle: () => graphics,
-    fillRect: () => {
-      rectangles += 1;
-      return graphics;
-    },
-  } as unknown as Graphics;
-  drawText(graphics, text, 0, 0, 0xffffff);
-  return rectangles;
-}
 
 /** From the top of the first row to the top of the second, for lines that lay out as two rows. */
 function stepOfTwoRows(lines: readonly string[]): number {
@@ -121,9 +107,7 @@ describe('the card of the opening', () => {
 
   it('shows every character of the opening the game ships with: the pixel font draws each one', () => {
     for (const line of SHIPPED) {
-      for (const character of line.replaceAll(' ', '')) {
-        expect(rectanglesDrawnFor(character), `the pixel font has no '${character}' in "${line}"`).toBeGreaterThan(0);
-      }
+      expect(charactersTheFontLacks(line), `the pixel font lacks characters of "${line}"`).toEqual([]);
     }
   });
 });

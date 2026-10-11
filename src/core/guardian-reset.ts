@@ -1,5 +1,6 @@
-import { areaOf, monsterTypeOf } from './content';
+import { areaOf } from './content';
 import type { Area, Content } from './content';
+import { monsterTypeOf } from './monster-content';
 import { freshMonster } from './state';
 import type { MonsterState, PlayState } from './state';
 

@@ -18,7 +18,9 @@ export const ending: readonly string[] = [
 /**
  * The title, the tools the game is made with, the credits text of each asset of docs/assets/licences.md that is in use
  * (tests/the-credits.test.ts reads the record, and asks for the text of every entry that says it is in use), and thanks.
- * No person is named: a line for the author goes after the title, when there is a name to give.
+ * The title is the name that the title screen draws (GAME_TITLE in src/adapter/title-layout.ts): the content imports
+ * nothing of the adapter, so the same test keeps the two the same. No person is named: a line for the author goes after
+ * the title, when there is a name to give.
  */
 export const credits: readonly string[] = [
   'ISLAND ADVENTURE',

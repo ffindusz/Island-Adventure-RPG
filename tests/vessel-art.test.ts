@@ -10,9 +10,9 @@ import type { Pixel } from './pictures';
 // The old vessel of the harbor is a sheet of two frames (src/adapter/prop-sprites.ts): the vessel as it is found, its sail
 // furled on the mast, and the vessel prepared, its sail hoisted. A frame is three tiles wide and seven tall: the vessel lies
 // in the water beside its own tile, the last of the quay, and its mast and sail stand over the rock above. The vessel's own
-// tile is at the left of the fifth row. These tests are the manifest check of ADR 0002 and the ties between the picture and
-// the harbor it is made for, so that moving the vessel or the water cannot leave it drawn on the wrong tiles. How it looks is
-// for the screenshots.
+// tile is at the left of the fifth row. These tests are the manifest check of ADR 0002 and, with the sheet read from disk
+// as ADR 0005 allows, the ties between the picture and the harbor it is made for, so that moving the vessel or the water
+// cannot leave it drawn on the wrong tiles. How it looks is for the screenshots.
 
 const VESSEL = 'prop-vessel';
 const TILE = 16;

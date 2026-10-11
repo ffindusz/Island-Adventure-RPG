@@ -5,13 +5,12 @@ import {
   ARENA_LAYOUT,
   arena,
   biterAt,
+  continuedFrom,
   dummyAt,
-  gameAtTitle,
   milestone,
   monsterNamed,
   newGame,
   playingView,
-  throughStorage,
 } from './fixtures';
 
 // A milestone is a block of tiles that gives its reward the first time the hero's body overlaps it. In the arena the
@@ -157,8 +156,7 @@ describe('what the game remembers about milestones', () => {
     const game = newGame(content);
     advance(game, 1);
 
-    const continued = gameAtTitle(content);
-    continued.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
+    const continued = continuedFrom(content, game.snapshot());
 
     expect(advance(continued, 5)).toEqual([]);
     expect(earned(continued)).toBe(4);

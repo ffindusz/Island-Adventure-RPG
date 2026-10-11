@@ -1,6 +1,7 @@
 import type { LineCorner } from './audio-line';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
+import type { Rect } from './pixel-font';
 
 // Where the title screen puts its big name and its menu window, in canvas pixels, and nothing else: the title scene
 // draws them where this says, and the rules about room are here so that they can be tested without a screen. The name
@@ -8,7 +9,11 @@ import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 // inside a canvas pixel and blur it), and the window is in the middle of the room that is left under it, so that a
 // window with more rows (a message about the saved game, the hints) grows upward and never over the name.
 
-/** What the screen is called. */
+/**
+ * What the game is called: the name across the top of the title screen. The credits begin with it too
+ * (src/content/ending.ts). The content and the adapter import nothing of each other, so tests/the-credits.test.ts keeps
+ * the two the same.
+ */
 export const GAME_TITLE = 'ISLAND ADVENTURE';
 
 /** How many times the font's own size the name may be, the biggest that fits first. */
@@ -44,12 +49,8 @@ export const LOGO_OUTLINE_OFFSETS: readonly Offset[] = Array.from(
 );
 
 /** The name as the title screen draws it: the letters' own box, with the whole-number scale they are drawn at. */
-export interface Logo {
+export interface Logo extends Rect {
   readonly scale: number;
-  readonly left: number;
-  readonly top: number;
-  readonly width: number;
-  readonly height: number;
 }
 
 /** Where the name goes: the biggest whole scale that leaves room at both sides, in the middle of the screen's width. */

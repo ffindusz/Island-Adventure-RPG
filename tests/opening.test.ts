@@ -1,17 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { createGame } from '../src/core';
-import type { ContentDefinition } from '../src/core';
-import { arena, fixedRandom, gameAtTitle, newGame, playingView, throughStorage, walk } from './fixtures';
+import { arena, expectAccepted, expectRefused, gameAtTitle, newGame, playingView, throughStorage, walk } from './fixtures';
 
 // The opening is the short card the player reads once, as a new game begins, before the hero can move. The core only
 // says what it is: an event with the lines of the content. Holding the game while the card is up is the caller's job.
 
 const OPENING = ['The storm broke the ship.', 'The sea carried you ashore.'];
 const WRECK = 'The wreck.';
-
-function expectRefused(content: ContentDefinition, message: string): void {
-  expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
-}
 
 describe('the opening of a new game', () => {
   it('is the first event of the new game, with the lines the content gives, before the text of the first area', () => {
@@ -55,10 +49,8 @@ describe('the opening of a new game', () => {
 
 describe('the opening in the content', () => {
   it('may be one line, or as many as four', () => {
-    expect(() => createGame({ content: arena({ opening: ['One.'] }), random: fixedRandom })).not.toThrow();
-    expect(() =>
-      createGame({ content: arena({ opening: ['One.', 'Two.', 'Three.', 'Four.'] }), random: fixedRandom }),
-    ).not.toThrow();
+    expectAccepted(arena({ opening: ['One.'] }));
+    expectAccepted(arena({ opening: ['One.', 'Two.', 'Three.', 'Four.'] }));
   });
 
   it('is refused with no line at all: leave it out for none', () => {

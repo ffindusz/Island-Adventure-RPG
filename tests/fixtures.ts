@@ -1,3 +1,4 @@
+import { expect } from 'vitest';
 import { createGame } from '../src/core';
 import type {
   AreaDefinition,
@@ -62,6 +63,16 @@ import type {
 export const HERO_STEP = 0.125;
 export const STEPS_PER_TILE = 8;
 export const COOLDOWN_STEPS = 24;
+
+/** The commands the tests send most, those of the field and those that open and close the pages; a test that needs another declares it itself. */
+export const ATTACK = { type: 'attack' } as const;
+export const INTERACT = { type: 'interact' } as const;
+export const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
+export const CLOSE_INVENTORY = { type: 'close-page', page: 'inventory' } as const;
+export const OPEN_STATS = { type: 'open-page', page: 'stats' } as const;
+export const CLOSE_STATS = { type: 'close-page', page: 'stats' } as const;
+export const OPEN_AUTOMAP = { type: 'open-page', page: 'automap' } as const;
+export const CLOSE_AUTOMAP = { type: 'close-page', page: 'automap' } as const;
 
 export const ARENA_LAYOUT = ['#######', '#.....#', '#.~...#', '#.....#', '#...,.#', '#######'];
 
@@ -419,6 +430,16 @@ export function gameAtTitle(content: ContentDefinition = arena(), random: Random
   return createGame({ content, random });
 }
 
+/** The game refuses to be created from this content, and the error says why. */
+export function expectRefused(content: ContentDefinition, message: string): void {
+  expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
+}
+
+/** The game is created from this content without complaint. */
+export function expectAccepted(content: ContentDefinition): void {
+  expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
+}
+
 export function newGameWithMonsters(...monsters: MonsterPlacement[]): Game {
   return newGame(arena({ monsters }));
 }
@@ -432,6 +453,29 @@ export function advance(game: Game, steps: number): GameEvent[] {
   return events;
 }
 
+/** Steps the game until the hero is defeated, which has to happen within `limit` steps. Returns the events of that step. */
+export function untilDefeated(game: Game, limit = 300): readonly GameEvent[] {
+  for (let step = 0; step < limit; step += 1) {
+    const events = game.step();
+    if (events.some((event) => event.type === 'hero-defeated')) {
+      return events;
+    }
+  }
+  throw new Error(`The hero was not defeated within ${limit} steps`);
+}
+
+/** Steps the game until the hero is defeated, which has to happen within `limit` steps. Returns the events of all of them. */
+export function eventsUntilDefeated(game: Game, limit = 300): GameEvent[] {
+  const events: GameEvent[] = [];
+  for (let step = 0; step < limit; step += 1) {
+    events.push(...game.step());
+    if (events.some((event) => event.type === 'hero-defeated')) {
+      return events;
+    }
+  }
+  throw new Error(`The hero was not defeated within ${limit} steps`);
+}
+
 /** Presses a direction key, holds it for some steps, and releases it. Returns the events of those steps. */
 export function walk(game: Game, direction: Direction, steps: number): GameEvent[] {
   game.send({ type: 'move', direction });
@@ -443,7 +487,7 @@ export function walk(game: Game, direction: Direction, steps: number): GameEvent
 /** Waits out the attack cooldown, then strikes. Returns the strike's events. */
 export function strike(game: Game): readonly GameEvent[] {
   advance(game, COOLDOWN_STEPS);
-  return game.send({ type: 'attack' });
+  return game.send(ATTACK);
 }
 
 /** Turns the hero on the spot: the key goes down and up again before any step, so the hero does not move. */
@@ -477,9 +521,9 @@ export function interactableViews<K extends InteractableView['kind']>(
 
 /** The inventory page as the player reads it: the page is opened and closed again. */
 export function inventoryOf(game: Game): InventoryPageView {
-  game.send({ type: 'open-page', page: 'inventory' });
+  game.send(OPEN_INVENTORY);
   const page = playingView(game).page;
-  game.send({ type: 'close-page', page: 'inventory' });
+  game.send(CLOSE_INVENTORY);
   if (page?.id !== 'inventory') {
     throw new Error('Expected the inventory page to open');
   }
@@ -503,4 +547,11 @@ export function monsterAction(game: Game, id: string): MonsterView['action'] {
 /** What the snapshot looks like after a trip through storage. */
 export function throughStorage(snapshot: Snapshot): Snapshot {
   return JSON.parse(JSON.stringify(snapshot)) as Snapshot;
+}
+
+/** A game of this content that has been continued from the snapshot as storage gives it back: text, not the object. */
+export function continuedFrom(content: ContentDefinition, snapshot: Snapshot): Game {
+  const game = gameAtTitle(content);
+  game.send({ type: 'continue', snapshot: throughStorage(snapshot) });
+  return game;
 }

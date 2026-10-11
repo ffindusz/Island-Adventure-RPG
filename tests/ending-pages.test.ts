@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { wrapText } from '../src/adapter/area-banner';
 import { VIEW_HEIGHT, VIEW_WIDTH } from '../src/adapter/config';
 import {
   breakIntoRows,
@@ -46,11 +45,17 @@ describe('a line of the ending broken into rows', () => {
     expect(breakIntoRows('Thank you for playing!', CARD_TEXT_WIDTH)).toEqual(['Thank you for playing!']);
   });
 
-  it('breaks at spaces, as the opening does, when every word fits a row', () => {
+  it('breaks at spaces, with as many words on a row as fit, when every word fits a row', () => {
+    // Worked by hand: the text of the card is 272 pixels wide and a letter takes 6 of them, less 1 after the last, so
+    // a row holds 45 letters (269 pixels; a 46th would make 275). "Sea and storm and sand" is 22 letters, and two of
+    // them with a space between are 45: the rows are two of them, two of them, and the one that is left.
     const line = 'Sea and storm and sand '.repeat(5).trim();
 
-    expect(breakIntoRows(line, CARD_TEXT_WIDTH)).toEqual(wrapText(line, CARD_TEXT_WIDTH));
-    expect(breakIntoRows(line, CARD_TEXT_WIDTH).length).toBeGreaterThan(1);
+    expect(breakIntoRows(line, CARD_TEXT_WIDTH)).toEqual([
+      'Sea and storm and sand Sea and storm and sand',
+      'Sea and storm and sand Sea and storm and sand',
+      'Sea and storm and sand',
+    ]);
   });
 
   it('breaks a word that is wider than a row after a slash, a hyphen or a dot, and every row is narrow enough', () => {

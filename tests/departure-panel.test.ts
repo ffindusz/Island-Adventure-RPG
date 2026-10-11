@@ -1,14 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
-import { PADDING, panelFor } from '../src/adapter/overlay';
+import { describe, expect, it } from 'vitest';
+import { panelFor } from '../src/adapter/overlay';
 import type { Panel } from '../src/adapter/overlay';
 import { textWidthOf } from '../src/adapter/pixel-font';
+import { WINDOW_PADDING } from '../src/adapter/ui-layer';
 import { charactersTheFontLacks } from './drawn-text';
 import { playingView } from './fixtures';
 import { askingGame, harborGame, preparedGame, VESSEL_ID } from './harbor-fixtures';
-
-// The overlay's key labels come from player-input.ts, which imports Phaser, and Phaser cannot load without a window.
-// None of its keyboard code runs here, so an empty Phaser is enough.
-vi.mock('phaser', () => ({ default: {} }));
 
 // The question whether to sail home, as the overlay shows it: the game is paused behind it, as it is behind a page.
 
@@ -36,7 +33,7 @@ describe('the question whether to sail home, on the overlay', () => {
   it('is made of lines that fit its window', () => {
     expect(question).not.toBeNull();
     for (const text of textsOf(question)) {
-      expect(textWidthOf(text), text).toBeLessThanOrEqual((question?.width ?? 0) - 2 * PADDING);
+      expect(textWidthOf(text), text).toBeLessThanOrEqual((question?.width ?? 0) - 2 * WINDOW_PADDING);
     }
   });
 

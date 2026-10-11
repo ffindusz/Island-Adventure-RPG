@@ -12,35 +12,12 @@ import {
 } from '../src/adapter/audio-settings';
 import type { AudioChange, AudioSettings } from '../src/adapter/audio-settings';
 import { SAVE_KEY, createSaveStore } from '../src/adapter/save-store';
-import type { SaveStorage } from '../src/adapter/save-store';
+import { MemoryStorage } from './memory-storage';
 import { adventureAfter, adventureContent } from './saved-adventure';
 
-// The sound settings of the player, which the game keeps in the browser apart from the saved game. The one adapter test
-// that ADR 0002 allows for this: the parsing of what the storage holds, which may be anything.
-
-/** The part of localStorage the game uses, in memory. The tests look at what it holds and what was asked of it, and make it fail. */
-class MemoryStorage implements SaveStorage {
-  readonly items = new Map<string, string>();
-  readonly keysAskedFor: string[] = [];
-  refuseReads: Error | null = null;
-  refuseWrites: Error | null = null;
-
-  getItem(key: string): string | null {
-    this.keysAskedFor.push(key);
-    if (this.refuseReads !== null) {
-      throw this.refuseReads;
-    }
-    return this.items.get(key) ?? null;
-  }
-
-  setItem(key: string, value: string): void {
-    this.keysAskedFor.push(key);
-    if (this.refuseWrites !== null) {
-      throw this.refuseWrites;
-    }
-    this.items.set(key, value);
-  }
-}
+// The sound settings of the player, which the game keeps in the browser apart from the saved game. This is the settings
+// boundary of ADR 0002 (the parsing of what the storage holds, which may be anything), and with it, as ADR 0005 allows
+// for the adapter's pure functions, the three changes and the store over a storage in memory.
 
 const DEFAULT = DEFAULT_AUDIO_SETTINGS;
 const json = (value: unknown): string => JSON.stringify(value);

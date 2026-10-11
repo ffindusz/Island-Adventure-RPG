@@ -1,4 +1,5 @@
 import { terrainArt } from './artwork';
+import type { ArtName } from './artwork';
 
 // Which picture goes where on the ground of an Adventure Area. This is pure planning, with no Phaser in it: it turns the
 // kinds of terrain on the map into a list of stamps, each a frame of a terrain sheet (see docs/assets/compose-art.py for
@@ -64,26 +65,26 @@ const FOUNTAIN_SIDE = 3;
  * its kind, so the frames are the same: a look changes the picture of a frame and never which frame goes where.
  */
 export interface TerrainLook {
-  readonly sand: string;
-  readonly grass: string;
-  readonly rock: string;
+  readonly sand: ArtName;
+  readonly grass: ArtName;
+  readonly rock: ArtName;
   /**
    * The sheet of boulders. When there is one, a rock with no rock above it and none below it is a boulder, not the face of
    * a cliff; when there is none, it is a cliff like any other.
    */
-  readonly boulders?: string;
+  readonly boulders?: ArtName;
   /** The sheet of water, laid out like the standard one; the standard water when there is none. */
-  readonly water?: string;
+  readonly water?: ArtName;
   /**
    * The sheet of weathered planks. When there is one, sand within DOCK_REACH tiles of water is a quay of planks. The
    * planks have no gap in them: a gap on a tile to walk on would read as a hole to avoid.
    */
-  readonly dock?: string;
+  readonly dock?: ArtName;
   /**
    * The sheet of a fountain, three pieces by three. When there is one, a block of rock exactly three tiles by three with
    * no rock in the ring of tiles around it is a fountain, not a wall.
    */
-  readonly fountain?: string;
+  readonly fountain?: ArtName;
 }
 
 /** The look of the coast and of the woods, and of every area that has no look of its own. */
@@ -159,8 +160,12 @@ const CORNERS: readonly Corner[] = [
 
 type KindAt = (x: number, y: number) => string | undefined;
 
-/** A number that depends only on where it is asked for, so that the same map is always dressed the same way. */
-function scatter(x: number, y: number, salt: number): number {
+/**
+ * A number that depends only on where it is asked for, so that the same map is always dressed the same way.
+ * docs/assets/compose-art.py has this formula again in Python, to dress the sand of the two backdrops as the planner dresses the
+ * coast's; both check the same numbers (see tests/terrain-plan.test.ts), so change them together.
+ */
+export function scatter(x: number, y: number, salt: number): number {
   let h = Math.imul(x + 1, 374761393) ^ Math.imul(y + 1, 668265263) ^ Math.imul(salt + 1, 1103515245);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return (h ^ (h >>> 16)) >>> 0;

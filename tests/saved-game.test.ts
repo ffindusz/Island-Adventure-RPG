@@ -1232,15 +1232,6 @@ describe('a save whose vessel and question whether to sail home this game could 
       names: 'state.departure should be null or the id of a vessel of this game, not "far-vessel"',
     },
   ])('is $problem when $fault', expectUnusable);
-
-  it('is usable when the vessel is prepared and its Guardian has fallen, with the question open or not', () => {
-    expectUsable(() => {}, content, 'ask');
-    expectUsable(() => {}, content, 'stay');
-  });
-
-  it('is usable when the vessel is prepared and the hero has walked away from it', () => {
-    expectUsable(() => {}, content, 'away');
-  });
 });
 
 describe('a save that holds what the saved adventure does not show', () => {

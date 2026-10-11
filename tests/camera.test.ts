@@ -49,12 +49,11 @@ describe('the camera', () => {
   });
 
   it('follows the hero along the direction an area is larger than the screen and centres it along the other', () => {
+    // 30 tiles wide, 8 high. The hero is at 15 tiles, which is 240 pixels, 160 of them to the middle of a screen 320
+    // pixels wide. The area is 128 pixels high in a screen of 192, so 64 pixels are left over, 32 above and 32 below.
     const wideAndShort = { width: VIEW_TILES_WIDE + 10, height: 8 };
 
-    const scroll = scrollFor({ x: 15, y: 3 }, wideAndShort);
-
-    expect(scroll.x).toBe(15 * TILE_SIZE - VIEW_WIDTH / 2);
-    expect(scroll.y).toBe(Math.floor((wideAndShort.height * TILE_SIZE - VIEW_HEIGHT) / 2));
+    expect(scrollFor({ x: 15, y: 3 }, wideAndShort)).toEqual({ x: 80, y: -32 });
   });
 
   it('moves by whole pixels only, so that the pixel art stays crisp', () => {

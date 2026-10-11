@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fightTheGuardian, type FightResult } from './dodging-bot';
+import { DRINK_AT_SHARE, fightTheGuardian, type FightResult } from './dodging-bot';
 import { GUARDIAN_HEROES, guardianTable, PLAYS, renderGuardianTable } from './guardian-table';
 import {
   gameAtTheGuardian,
@@ -21,7 +21,7 @@ import {
 // relations the fight is to have, and the numbers that come out of them are written up in docs/balance.md.
 
 function fight(hero: HeroProfile, reactionMs: number, missEvery: number): FightResult {
-  return fightTheGuardian(gameAtTheGuardian(hero), { reactionMs, missEvery, drinkAtShare: 0.5 });
+  return fightTheGuardian(gameAtTheGuardian(hero), { reactionMs, missEvery, drinkAtShare: DRINK_AT_SHARE });
 }
 
 function damageOf(result: FightResult): number {

@@ -1,6 +1,7 @@
 import type { Area } from './content';
 import { isGuardianGate } from './device-content';
 import type { Door, Gate } from './device-content';
+import { tileKey } from './geometry';
 import type { Box, Tile } from './geometry';
 import { stopsWalkers } from './obstacles';
 
@@ -101,19 +102,19 @@ export function blockedTiles(area: Area, isShut: (device: Door | Gate) => boolea
   return new Set(
     area.interactables
       .filter((interactable) => stopsWalkers(interactable, isShut))
-      .map((interactable) => keyOf({ col: interactable.body.minX, row: interactable.body.minY })),
+      .map((interactable) => tileKey({ col: interactable.body.minX, row: interactable.body.minY })),
   );
 }
 
 /** Every tile the hero can walk to from a tile, past solid terrain and the `blocked` tiles. */
 export function reachableFrom(area: Area, from: Tile, blocked: ReadonlySet<string>): Set<string> {
-  const reached = new Set([keyOf(from)]);
+  const reached = new Set([tileKey(from)]);
   const frontier = [from];
   for (const tile of frontier) {
     for (const step of STEPS) {
       const next = { col: tile.col + step.col, row: tile.row + step.row };
-      if (area.solid[next.row]?.[next.col] === false && !blocked.has(keyOf(next)) && !reached.has(keyOf(next))) {
-        reached.add(keyOf(next));
+      if (area.solid[next.row]?.[next.col] === false && !blocked.has(tileKey(next)) && !reached.has(tileKey(next))) {
+        reached.add(tileKey(next));
         frontier.push(next);
       }
     }
@@ -122,9 +123,5 @@ export function reachableFrom(area: Area, from: Tile, blocked: ReadonlySet<strin
 }
 
 function isReached(destination: Destination, reached: ReadonlySet<string>): boolean {
-  return destination.tiles.some((tile) => reached.has(keyOf(tile)));
-}
-
-export function keyOf(tile: Tile): string {
-  return `${tile.col},${tile.row}`;
+  return destination.tiles.some((tile) => reached.has(tileKey(tile)));
 }

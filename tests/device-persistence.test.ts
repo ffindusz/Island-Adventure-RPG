@@ -1,22 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import type {
-  AreaDefinition,
-  ContentDefinition,
-  EntranceDefinition,
-  ExitDefinition,
-  Game,
-  InteractableDefinition,
-  Snapshot,
-} from '../src/core';
+import type { ContentDefinition, Game, InteractableDefinition } from '../src/core';
+import { world } from './cellar-fixtures';
 import {
-  ARENA_LAYOUT,
+  INTERACT,
   arena,
   biterAt,
   cacheAt,
   chestViews,
+  continuedFrom,
   doorAt,
   face,
-  gameAtTitle,
   gateAt,
   interactableViews,
   inventoryOf,
@@ -24,7 +17,7 @@ import {
   leverAt,
   newGame,
   playingView,
-  throughStorage,
+  untilDefeated,
   walk,
 } from './fixtures';
 
@@ -43,8 +36,6 @@ import {
 // In the tests about defeat a biter stands on the tile (4, 3), beside the hero, which has 5 Health: it starts its wind-up
 // on the first step and bites for 5 on the 31st. A hero that has touched no Checkpoint is sent back to where it began.
 
-const INTERACT = { type: 'interact' } as const;
-
 const RUSTY_KEY_HELD = { id: 'rusty-key', name: 'Rusty Key' };
 const OPENED = { type: 'door-opened', doorId: 'cellar-door', keyName: 'Rusty Key' } as const;
 const PULLED = { type: 'lever-toggled', leverId: 'switch', pulled: true } as const;
@@ -54,16 +45,6 @@ const RUSTY_KEY = keyAt('rusty-key', 2, 3, 'Rusty Key');
 const CELLAR_DOOR = doorAt('cellar-door', 3, 4, 'rusty-key');
 const SWITCH = leverAt('switch', 3, 2, ['portcullis']);
 const PORTCULLIS = gateAt('portcullis', 1, 2);
-
-/** Steps the game until the hero is defeated, which has to happen within 300 steps. */
-function untilDefeated(game: Game): void {
-  for (let step = 0; step < 300; step += 1) {
-    if (game.step().some((event) => event.type === 'hero-defeated')) {
-      return;
-    }
-  }
-  throw new Error('The hero was not defeated within 300 steps');
-}
 
 /** The hero takes the key beside it and comes back to where it began, facing down. */
 function takeKey(game: Game): void {
@@ -145,37 +126,12 @@ describe('when the hero is defeated', () => {
   });
 });
 
-// The arena and a cellar, as in area-connections.test.ts: the hero walks right 11 steps from where it begins, into the
-// cellar, where it arrives at (2.5, 3.5), and 3 steps to the left take it back into the arena, at (4.5, 3.5).
-const FROM_CELLAR: EntranceDefinition = { id: 'from-cellar', tile: { col: 4, row: 3 } };
-const TO_CELLAR: ExitDefinition = {
-  id: 'to-cellar',
-  zone: { col: 5, row: 3, width: 1, height: 1 },
-  to: { area: 'cellar', entrance: 'from-arena' },
-};
-const CELLAR: AreaDefinition = {
-  id: 'cellar',
-  name: 'Cellar',
-  layout: ARENA_LAYOUT,
-  monsters: [],
-  entrances: [{ id: 'from-arena', tile: { col: 2, row: 3 } }],
-  exits: [
-    {
-      id: 'to-arena',
-      zone: { col: 1, row: 3, width: 1, height: 1 },
-      to: { area: 'arena', entrance: 'from-cellar' },
-    },
-  ],
-};
+// The arena and a cellar (cellar-fixtures.ts): the hero walks right 11 steps from where it begins, into the cellar, where it
+// arrives at (2.5, 3.5), and 3 steps to the left take it back into the arena, at (4.5, 3.5).
 
 /** The arena with its key, door, switch and portcullis, and the cellar beside it. */
 function worldOfDevices(): ContentDefinition {
-  return arena({
-    entrances: [FROM_CELLAR],
-    exits: [TO_CELLAR],
-    interactables: [RUSTY_KEY, CELLAR_DOOR, SWITCH, PORTCULLIS],
-    otherAreas: [CELLAR],
-  });
+  return world({ interactables: [RUSTY_KEY, CELLAR_DOOR, SWITCH, PORTCULLIS] });
 }
 
 function intoTheCellar(game: Game): void {
@@ -232,16 +188,10 @@ describe('when the hero leaves an Adventure Area and comes back', () => {
 });
 
 describe('in a saved game', () => {
-  function continuedFrom(snapshot: Snapshot): Game {
-    const game = gameAtTitle(worldOfDevices());
-    game.send({ type: 'continue', snapshot: throughStorage(snapshot) });
-    return game;
-  }
-
   it('keeps a key lying where it lies, a door locked, a lever not pulled and a gate shut', () => {
     const original = newGame(worldOfDevices());
 
-    const restored = continuedFrom(original.snapshot());
+    const restored = continuedFrom(worldOfDevices(), original.snapshot());
 
     expect(restored.view()).toEqual(original.view());
     expect(interactableViews(restored, 'key')).toMatchObject([{ id: 'rusty-key' }]);
@@ -256,7 +206,7 @@ describe('in a saved game', () => {
     const original = newGame(worldOfDevices());
     takeKey(original);
 
-    const restored = continuedFrom(original.snapshot());
+    const restored = continuedFrom(worldOfDevices(), original.snapshot());
 
     expect(restored.view()).toEqual(original.view());
     expect(inventoryOf(restored).keys).toEqual([RUSTY_KEY_HELD]);
@@ -272,7 +222,7 @@ describe('in a saved game', () => {
     useSwitch(original);
     intoTheCellar(original);
 
-    const restored = continuedFrom(original.snapshot());
+    const restored = continuedFrom(worldOfDevices(), original.snapshot());
 
     expect(restored.view()).toEqual(original.view());
     backToTheArena(restored);

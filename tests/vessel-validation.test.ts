@@ -1,7 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { createGame } from '../src/core';
+import { describe, it } from 'vitest';
 import type { AreaDefinition, ContentDefinition, EntranceDefinition } from '../src/core';
-import { doorAt, FIELD_LAYOUT, fixedRandom, gateAt, keyAt, signAt } from './fixtures';
+import { doorAt, expectAccepted, expectRefused, FIELD_LAYOUT, gateAt, keyAt, signAt } from './fixtures';
 import type { ArenaOptions } from './fixtures';
 import { guardianAt, guardianContent, guardianGateAt } from './guardian-fixtures';
 import { HARBOR_CREDITS, HARBOR_ENDING, vesselAt } from './harbor-fixtures';
@@ -86,14 +85,6 @@ function castle(options: ArenaOptions = {}): ContentDefinition {
 /** The same content, which does not ask for a Guardian. */
 function notAskingForOne(content: ContentDefinition): ContentDefinition {
   return { ...content, requireGuardian: false };
-}
-
-function expectRefused(content: ContentDefinition, message: string): void {
-  expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
-}
-
-function expectAccepted(content: ContentDefinition): void {
-  expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
 }
 
 const NO_VESSEL = 'The content places no vessel, but exactly one is required';

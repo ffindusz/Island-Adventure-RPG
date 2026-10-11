@@ -5,6 +5,7 @@ import type { ArtManifest } from '../src/adapter/asset-manifest';
 import { describeStamp, lookOf, planTerrain, STANDARD_LOOK } from '../src/adapter/terrain-plan';
 import type { Stamp, TerrainLook } from '../src/adapter/terrain-plan';
 import { gameContent } from '../src/content';
+import { areaOf } from './main-route';
 
 // How the ground of the mountain and of the cave is dressed, which is not how the coast and the woods are: the mountain
 // has cliffs of slate and boulders where a rock stands alone, the cave has cliffs of a darker stone and a floor of sand and
@@ -32,9 +33,7 @@ function onTile(stamps: readonly Stamp[], x: number, y: number): string[] {
 }
 
 function areaKinds(areaId: string): string[][] {
-  const area = gameContent.areas.find((candidate) => candidate.id === areaId);
-  if (!area) throw new Error(`the shipped content has no area "${areaId}"`);
-  return area.layout.map((row) => [...row].map((symbol) => gameContent.terrain[symbol]?.kind ?? '?'));
+  return areaOf(areaId).layout.map((row) => [...row].map((symbol) => gameContent.terrain[symbol]?.kind ?? '?'));
 }
 
 function sizeOnDisk(file: string): { width: number; height: number } {

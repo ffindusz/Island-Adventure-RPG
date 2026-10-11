@@ -1,14 +1,30 @@
-import type { Box, GameEvent } from '../core';
+import type { Box, GameEvent, PickedUpItem } from '../core';
 import type { NoticeContent } from './notice';
 
 /** How long each kind of feedback stays on screen, in milliseconds. */
 const HIT_FLASH_MS = 100;
 const STRIKE_MS = 160;
 const NOTICE_MS = 3000;
+const PICKUP_RISE_MS = 500;
 
 interface ZoneFlash {
   readonly zone: Box;
   readonly msLeft: number;
+}
+
+interface Rising {
+  readonly item: PickedUpItem;
+  readonly msIn: number;
+  readonly lane: number;
+}
+
+/** The picture of what the hero picked up, rising over it: what it shows, how far through its time it is, and where. */
+export interface PickupRise {
+  readonly item: PickedUpItem;
+  /** 0 as the picture starts, and under 1 for as long as it shows. */
+  readonly progress: number;
+  /** The place beside the pictures that rise together, 0 for the first. A picture keeps its place until it is gone. */
+  readonly lane: number;
 }
 
 /**
@@ -19,7 +35,9 @@ export class Feedback {
   private strikes: ZoneFlash[] = [];
   private readonly flashes = new Map<string, number>();
   private told: { readonly content: NoticeContent; readonly msLeft: number } | null = null;
+  private rises: Rising[] = [];
   private falling = false;
+  private saveFailureTold = false;
 
   /** Starts the feedback for events the Game core just reported. */
   show(events: readonly GameEvent[]): void {
@@ -36,6 +54,7 @@ export class Feedback {
           break;
         case 'pickup':
           this.told = { content: { kind: 'pickup', item: event.item }, msLeft: NOTICE_MS };
+          this.rises.push({ item: event.item, msIn: 0, lane: this.freeLane() });
           break;
         case 'out-of-ammunition':
           this.told = { content: { kind: 'out-of-ammunition' }, msLeft: NOTICE_MS };
@@ -67,9 +86,10 @@ export class Feedback {
         case 'hero-defeated':
           // The blow that did it stays on the screen while the hero lies where it fell, and the fight goes at endFall.
           // The notice told of what happened before the fall, and what the hero found since the Checkpoint is back where
-          // it was, so it goes now.
+          // it was, so the notice goes now, and the pictures of what it found with it.
           this.falling = true;
           this.told = null;
+          this.rises = [];
           break;
       }
     }
@@ -90,6 +110,9 @@ export class Feedback {
   /** Lets one frame's time pass; feedback that has run out disappears. */
   age(frameMs: number): void {
     this.strikes = remaining(this.strikes, frameMs);
+    this.rises = this.rises
+      .map((rise) => ({ item: rise.item, msIn: rise.msIn + frameMs, lane: rise.lane }))
+      .filter((rise) => rise.msIn < PICKUP_RISE_MS);
     if (this.told !== null) {
       const { content, msLeft } = this.told;
       this.told = msLeft > frameMs ? { content, msLeft: msLeft - frameMs } : null;
@@ -112,6 +135,20 @@ export class Feedback {
     return this.flashes.has(monsterId);
   }
 
+  /** The pictures of what the hero just picked up that are rising now, the oldest first. */
+  pickupRises(): PickupRise[] {
+    return this.rises.map(({ item, msIn, lane }) => ({ item, progress: msIn / PICKUP_RISE_MS, lane }));
+  }
+
+  /** The first place beside the pictures that are rising which none of them has. */
+  private freeLane(): number {
+    let lane = 0;
+    while (this.rises.some((rise) => rise.lane === lane)) {
+      lane += 1;
+    }
+    return lane;
+  }
+
   /**
    * What the player is being told about: the latest of what the hero found, a Checkpoint touched, the empty bow, a door,
    * a lever, the fall of the Guardian, or the vessel made ready.
@@ -125,8 +162,16 @@ export class Feedback {
     this.told = null;
   }
 
-  /** Tells the player that the game could not be saved, over whatever the notice told. */
+  /**
+   * Tells the player that the game could not be saved, over whatever the notice told. Only the first save that fails in
+   * a play is told: with no storage at all every save fails, and the title has already said so, so the rest would cover
+   * the notice of each Checkpoint.
+   */
   saveFailed(): void {
+    if (this.saveFailureTold) {
+      return;
+    }
+    this.saveFailureTold = true;
     this.told = { content: { kind: 'save-failed' }, msLeft: NOTICE_MS };
   }
 }

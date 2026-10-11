@@ -1,9 +1,10 @@
-import type { Content, MonsterType } from './content';
-import { monsterTypeOf } from './content';
+import type { Content } from './content';
 import { stepChaser } from './chaser';
 import { stepCharger } from './charger';
 import { stepGuardian } from './guardian';
 import type { GameEvent } from './interface';
+import { monsterTypeOf } from './monster-content';
+import type { MonsterType } from './monster-content';
 import { stepRanged } from './ranged';
 import type { MonsterState, PlayState } from './state';
 import { livingMonsters } from './state';
@@ -12,8 +13,8 @@ import { livingMonsters } from './state';
 // each fixed step. Several monster types can share one behavior, each with its own numbers.
 //
 // To add a behavior:
-//   1. add its definition to MonsterTypeDefinition (definitions.ts) and its loaded form to MonsterType (content.ts),
-//      and have loadMonsterType in content.ts convert and check the one from the other;
+//   1. add its definition to MonsterTypeDefinition (definitions.ts) and its loaded form to MonsterType
+//      (monster-content.ts), and have loadMonsterType there convert and check the one from the other;
 //   2. write a function that takes the monster, its type, the state and the content, changes the monster and the
 //      hero through the state, and returns the events that happened;
 //   3. add it to BEHAVIORS below. The compiler refuses a behavior that is missing from the registry.

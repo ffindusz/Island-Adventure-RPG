@@ -1,6 +1,18 @@
-import type { Box, ContentDefinition, Direction, Game, GameEvent, PlayingView, Point, Tile } from '../src/core';
+import type {
+  Box,
+  ContentDefinition,
+  Direction,
+  Game,
+  GameEvent,
+  HeroView,
+  MeleeWeaponDefinition,
+  PlayingView,
+  Point,
+  Tile,
+} from '../src/core';
 import { STEP_MS } from '../src/core';
 import { gameContent } from '../src/content';
+import { CLOSE_INVENTORY, OPEN_INVENTORY } from './fixtures';
 import { openTilesOf } from './routes';
 
 // A player of the Guardian's fight, as a program: it reads the view and sends the commands that a player's keys send,
@@ -21,6 +33,9 @@ export interface BotSettings {
   /** It drinks a Healing Potion when its Health is this share of its most, or less. */
   readonly drinkAtShare: number;
 }
+
+/** The share of its Health at or under which a player of the fights drinks a Healing Potion, if it has one. */
+export const DRINK_AT_SHARE = 0.5;
 
 /** A telegraph of the fight, and what became of the hero under it. */
 export interface Telegraph {
@@ -86,7 +101,12 @@ function fitsOn(open: (tile: Tile) => boolean, box: Box): boolean {
 }
 
 /** The area in front of a hero that its blow covers, as the weapon's reach and width give it. */
-export function strikeZone(hero: Point, size: number, direction: Direction, reach: number, width: number): Box {
+export function strikeZone(
+  hero: Point,
+  size: number,
+  direction: Direction,
+  { reach, width }: MeleeWeaponDefinition,
+): Box {
   const half = size / 2;
   const side = width / 2;
   switch (direction) {
@@ -148,8 +168,7 @@ type Tally = { -readonly [K in keyof Omit<FightResult, 'steps' | 'telegraphs'>]:
 export function wayToStrike(
   view: PlayingView,
   guardian: { readonly position: Point; readonly size: number },
-  reach: number,
-  width: number,
+  { reach, width }: MeleeWeaponDefinition,
 ): Direction | null {
   const { hero } = view;
   const dx = guardian.position.x - hero.position.x;
@@ -166,6 +185,36 @@ export function wayToStrike(
     return toward;
   }
   return hero.facing === toward ? null : toward;
+}
+
+/** The keys of a player who holds one direction at a time: the key let go and the key pressed are sent when it changes. */
+export function keyHolder(game: Game): (direction: Direction | null) => void {
+  let held: Direction | null = null;
+  return (direction) => {
+    if (direction === held) {
+      return;
+    }
+    if (held !== null) {
+      game.send({ type: 'stop', direction: held });
+    }
+    if (direction !== null) {
+      game.send({ type: 'move', direction });
+    }
+    held = direction;
+  };
+}
+
+/** Whether a player drinks a Healing Potion now: it has one, and its Health is `share` of its most or less. */
+export function wantsAPotion(hero: HeroView, share: number): boolean {
+  return hero.health <= Math.ceil(hero.maxHealth * share) && hero.consumables['healing-potion'] > 0;
+}
+
+/** A player drinks a Healing Potion by its keys: the inventory is opened, the potion used, the inventory closed. */
+export function drinkHealingPotion(game: Game): readonly GameEvent[] {
+  game.send(OPEN_INVENTORY);
+  const events = game.send({ type: 'use-healing-potion' });
+  game.send(CLOSE_INVENTORY);
+  return events;
 }
 
 /**
@@ -198,22 +247,10 @@ export function fightTheGuardian(
   const tally: Tally = { outcome: 'timed-out', healthLeft: 0, lowestHealth: Infinity, potionsDrunk: 0, blows: 0 };
   let running: Running | null = null;
   let shown = 0;
-  let held: Direction | null = null;
   let wayOut: Direction | null = null;
   let step = 0;
 
-  const hold = (direction: Direction | null): void => {
-    if (direction === held) {
-      return;
-    }
-    if (held !== null) {
-      game.send({ type: 'stop', direction: held });
-    }
-    if (direction !== null) {
-      game.send({ type: 'move', direction });
-    }
-    held = direction;
-  };
+  const hold = keyHolder(game);
   const finish = (): void => {
     if (running !== null) {
       telegraphs.push({ pattern: patternOf(running.windUpSteps), seen: running.seen, damage: running.damage });
@@ -272,10 +309,8 @@ export function fightTheGuardian(
       finish();
     }
 
-    if (hero.health <= Math.ceil(hero.maxHealth * settings.drinkAtShare) && hero.consumables['healing-potion'] > 0) {
-      game.send({ type: 'open-page', page: 'inventory' });
-      take(game.send({ type: 'use-healing-potion' }));
-      game.send({ type: 'close-page', page: 'inventory' });
+    if (wantsAPotion(hero, settings.drinkAtShare)) {
+      take(drinkHealingPotion(game));
     }
 
     const body = boxAround(hero.position, hero.size);
@@ -291,10 +326,10 @@ export function fightTheGuardian(
       }
     } else {
       wayOut = null;
-      hold(wayToStrike(view, guardian, meleeWeapon.reach, meleeWeapon.width));
+      hold(wayToStrike(view, guardian, meleeWeapon));
     }
 
-    const blow = strikeZone(hero.position, hero.size, hero.facing, meleeWeapon.reach, meleeWeapon.width);
+    const blow = strikeZone(hero.position, hero.size, hero.facing, meleeWeapon);
     if (overlaps(blow, guardianBody)) {
       take(game.send({ type: 'attack' }));
     }

@@ -1,23 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import type { CheckpointDefinition, ContentDefinition, ExitDefinition, Game, GameEvent, MonsterPlacement } from '../src/core';
-import { FIELD_LAYOUT, advance, biterAt, face, frailMonster, monsterAction, monsterNamed, newGame, playingView, strike, walk } from './fixtures';
+import type { CheckpointDefinition, ContentDefinition, ExitDefinition, Game, MonsterPlacement } from '../src/core';
+import { CELLAR } from './cellar-fixtures';
+import { FIELD_LAYOUT, advance, biterAt, face, frailMonster, monsterAction, monsterNamed, newGame, playingView, strike, untilDefeated, walk } from './fixtures';
 import { chargerAt, enemyContent, enemyField, shooterAt } from './enemy-fixtures';
 
 // Chargers and ranged attackers with the Checkpoints and the defeat of Checkpoints (checkpoints.test.ts). The timelines
 // are those of charger.test.ts and projectile.test.ts: a charger or a shooter in the tile (2, 3) launches its dash or
 // fires in step 31, the dash, 0.25 tile a step, would meet a hero who stays at (6.5, 3.5) in step 45 and the shot, 0.0625
 // tile a step, in step 89.
-
-/** Steps the game until the hero is defeated, which has to happen within 300 steps. Returns the events of that step. */
-function untilDefeated(game: Game): readonly GameEvent[] {
-  for (let step = 0; step < 300; step += 1) {
-    const events = game.step();
-    if (events.some((event) => event.type === 'hero-defeated')) {
-      return events;
-    }
-  }
-  throw new Error('The hero was not defeated within 300 steps');
-}
 
 const CAMP: CheckpointDefinition = { id: 'camp', tile: { col: 5, row: 3 } };
 const CAMP_ACTIVATED = { type: 'checkpoint-activated', checkpointId: 'camp' } as const;
@@ -61,7 +51,8 @@ describe('a hero who comes onto a Checkpoint as a monster defeats it', () => {
   });
 });
 
-// The world of the falls below: the arena is the wide field of enemy-fixtures.ts and the cellar a second one.
+// The world of the falls below: the arena is the wide field of enemy-fixtures.ts and the cellar, that of
+// cellar-fixtures.ts, a second one.
 //
 //   arena   the hero begins at (6.5, 3.5); a weakling stands on the tile (5, 3) and the hero strikes it down first; the
 //           camp, a Checkpoint, is on the tile (7, 3), the exit "to-cellar" on the tile (8, 3) and the entrance
@@ -82,11 +73,6 @@ const TO_CELLAR: ExitDefinition = {
   zone: { col: 8, row: 3, width: 1, height: 1 },
   to: { area: 'cellar', entrance: 'from-arena' },
 };
-const TO_ARENA: ExitDefinition = {
-  id: 'to-arena',
-  zone: { col: 1, row: 3, width: 1, height: 1 },
-  to: { area: 'arena', entrance: 'from-cellar' },
-};
 
 function world(
   cellar: readonly MonsterPlacement[],
@@ -100,17 +86,7 @@ function world(
     entrances: [{ id: 'from-cellar', tile: { col: 11, row: 3 } }],
     exits: [TO_CELLAR],
     monsterTypes: { weakling: frailMonster(0) },
-    otherAreas: [
-      {
-        id: 'cellar',
-        name: 'Cellar',
-        layout: FIELD_LAYOUT,
-        monsters: cellar,
-        entrances: [{ id: 'from-arena', tile: { col: 2, row: 3 } }],
-        exits: [TO_ARENA],
-        checkpoints: [cellarCheckpoint],
-      },
-    ],
+    otherAreas: [{ ...CELLAR, layout: FIELD_LAYOUT, monsters: cellar, checkpoints: [cellarCheckpoint] }],
   });
 }
 

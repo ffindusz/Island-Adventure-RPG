@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import type { ArrowView, Direction, GameEvent, HeroView, Point } from '../core';
-import { TILE_SIZE } from './config';
+import { ARROW, SWORD_HELD } from './artwork';
+import type { ArtName } from './artwork';
+import { FACING_COLUMN, FACING_STEP, px, SHEET_COLUMNS, TILE_SIZE } from './config';
 import { DEPTH } from './depths';
 import { byShooter } from './projectiles';
 
@@ -9,14 +11,15 @@ import { byShooter } from './projectiles';
 // hit are added here. It is all cosmetic: it runs on frame time from the Game core's view and events, and nothing the
 // Game core decides depends on it.
 
-/** The column of each direction, the same in every row of the hero's sheet. */
-const COLUMN: Readonly<Record<Direction, number>> = { down: 0, up: 1, left: 2, right: 3 };
-const COLUMNS = 4;
+const HERO = 'hero' satisfies ArtName;
+const BOW_HELD = 'bow-held' satisfies ArtName;
+const SLASH = 'slash' satisfies ArtName;
+
 /** The rows of the sheet: four of walking, of which the first also stands still, then the attack pose. */
 const WALK_ROWS = 4;
 const ATTACK_ROW = 4;
 /** The cell of the hero lying defeated: the first of the seventh row. */
-const DEAD_FRAME = 6 * COLUMNS;
+const DEAD_FRAME = 6 * SHEET_COLUMNS;
 const SLASH_FRAMES = 4;
 
 const WALK_FRAME_MS = 110;
@@ -42,12 +45,6 @@ const SWORD_SWEEP_DEGREES: readonly number[] = [45, 0, -45];
 const SLASH_REACH = 8;
 const BOW_REACH = 10;
 
-const STEP: Readonly<Record<Direction, Point>> = {
-  up: { x: 0, y: -1 },
-  down: { x: 0, y: 1 },
-  left: { x: -1, y: 0 },
-  right: { x: 1, y: 0 },
-};
 /** The way each direction points on the screen, clockwise from the right, in degrees. */
 const FACING_DEGREES: Readonly<Record<Direction, number>> = { right: 0, down: 90, left: 180, up: 270 };
 
@@ -61,10 +58,6 @@ interface Pose {
 
 function radians(degrees: number): number {
   return (degrees * Math.PI) / 180;
-}
-
-function px(tiles: number): number {
-  return Math.round(tiles * TILE_SIZE);
 }
 
 export class HeroSprite {
@@ -83,11 +76,11 @@ export class HeroSprite {
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
-    this.figure = scene.add.sprite(0, 0, 'hero', 0).setDepth(DEPTH.hero).setVisible(false);
+    this.figure = scene.add.sprite(0, 0, HERO, 0).setDepth(DEPTH.hero).setVisible(false);
     // The sword is held by the top of its guard, so it turns about the hand.
-    this.sword = scene.add.image(0, 0, 'sword-held').setOrigin(0.5, 1 / 11).setVisible(false);
-    this.bow = scene.add.image(0, 0, 'bow-held').setVisible(false);
-    this.slash = scene.add.sprite(0, 0, 'slash', 0).setDepth(DEPTH.slash).setVisible(false);
+    this.sword = scene.add.image(0, 0, SWORD_HELD).setOrigin(0.5, 1 / 11).setVisible(false);
+    this.bow = scene.add.image(0, 0, BOW_HELD).setVisible(false);
+    this.slash = scene.add.sprite(0, 0, SLASH, 0).setDepth(DEPTH.slash).setVisible(false);
   }
 
   /** Starts what the events the Game core just reported look like on the hero. */
@@ -181,10 +174,10 @@ export class HeroSprite {
       return DEAD_FRAME;
     }
     if (this.pose !== null) {
-      return ATTACK_ROW * COLUMNS + COLUMN[this.pose.direction];
+      return ATTACK_ROW * SHEET_COLUMNS + FACING_COLUMN[this.pose.direction];
     }
     const row = this.movingMsLeft > 0 ? Math.floor(this.walkMs / WALK_FRAME_MS) % WALK_ROWS : 0;
-    return row * COLUMNS + COLUMN[facing];
+    return row * SHEET_COLUMNS + FACING_COLUMN[facing];
   }
 
   /** The hero blinks red from a hit: a flat colour over the whole picture, on and off. */
@@ -211,7 +204,7 @@ export class HeroSprite {
       .setRotation(radians(blade - 90))
       .setDepth(DEPTH.heroWeapon)
       .setVisible(true);
-    const front = STEP[direction];
+    const front = FACING_STEP[direction];
     this.slash
       .setPosition(middle.x + front.x * SLASH_REACH, middle.y + front.y * SLASH_REACH)
       .setFrame(Math.min(SLASH_FRAMES - 1, Math.floor(msIn / SLASH_FRAME_MS)))
@@ -222,7 +215,7 @@ export class HeroSprite {
   /** The bow is held out in front, its belly towards where the arrow goes. */
   private drawBow(middle: Point, pose: Pose): void {
     const { direction } = pose;
-    const front = STEP[direction];
+    const front = FACING_STEP[direction];
     // The bow is 15 by 7 pixels, odd both ways, so its middle sits on the middle of a pixel to keep its edges whole.
     this.bow
       .setPosition(middle.x + front.x * BOW_REACH + 0.5, middle.y + front.y * BOW_REACH + 0.5)
@@ -235,7 +228,7 @@ export class HeroSprite {
   private drawArrows(arrows: readonly ArrowView[]): void {
     arrows.forEach((arrow, index) => {
       const sprite = this.arrowSprite(index);
-      const front = STEP[arrow.direction];
+      const front = FACING_STEP[arrow.direction];
       const back = sprite.width / 2 - (arrow.size * TILE_SIZE) / 2;
       // The picture is 13 by 5 pixels, odd both ways, so its middle sits on the middle of a pixel to keep its edges whole.
       sprite
@@ -254,7 +247,7 @@ export class HeroSprite {
   private arrowSprite(index: number): Phaser.GameObjects.Image {
     let sprite = this.arrows[index];
     if (sprite === undefined) {
-      sprite = this.scene.add.image(0, 0, 'arrow').setDepth(DEPTH.arrow);
+      sprite = this.scene.add.image(0, 0, ARROW).setDepth(DEPTH.arrow);
       this.arrows[index] = sprite;
     }
     return sprite;

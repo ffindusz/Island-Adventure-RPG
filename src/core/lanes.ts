@@ -1,6 +1,6 @@
 import { areaOf } from './content';
 import type { Content } from './content';
-import { zoneInFront } from './geometry';
+import { travelledBetween, zoneInFront } from './geometry';
 import type { Box, Direction, Point } from './geometry';
 import { interactableObstacles } from './interactables';
 import { moveBody } from './movement';
@@ -28,7 +28,7 @@ export function laneAhead(
     range,
     interactableObstacles(state, content),
   );
-  const length = Math.abs(end.x - position.x) + Math.abs(end.y - position.y);
+  const length = travelledBetween(position, end);
   return zoneInFront(position, size, direction, length, size);
 }
 

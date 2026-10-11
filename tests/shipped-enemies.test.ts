@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
-import type { AreaDefinition, GuardianPatternDefinition, MonsterTypeDefinition } from '../src/core';
+import type { GuardianPatternDefinition, MonsterTypeDefinition } from '../src/core';
+import { areaOf } from './main-route';
+import { isWithinAwareness } from './routes';
 
 // What must hold for the monsters the game ships with. The rules of the charger and the ranged attacker are tested on
 // purpose-built content (charger*.test.ts, ranged-*.test.ts, projectile.test.ts), so that changing what ships never
@@ -12,70 +14,12 @@ const BEHAVIORS = ['chaser', 'charger', 'ranged', 'guardian'] as const;
 
 const { hero } = gameContent;
 
-function areaNamed(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The shipped content has no Adventure Area "${id}"`);
-  }
-  return area;
-}
-
 function typeNamed(name: string): MonsterTypeDefinition {
   const type = gameContent.monsterTypes[name];
   if (type === undefined) {
     throw new Error(`The shipped content has no monster type "${name}"`);
   }
   return type;
-}
-
-interface Box {
-  readonly left: number;
-  readonly top: number;
-  readonly right: number;
-  readonly bottom: number;
-}
-
-/** The body of something of `size` standing in the middle of a tile. */
-function bodyIn(tile: { readonly col: number; readonly row: number }, size: number): Box {
-  const x = tile.col + 0.5;
-  const y = tile.row + 0.5;
-  return { left: x - size / 2, top: y - size / 2, right: x + size / 2, bottom: y + size / 2 };
-}
-
-function grown(box: Box, by: number): Box {
-  return { left: box.left - by, top: box.top - by, right: box.right + by, bottom: box.bottom + by };
-}
-
-/** Bodies that only touch do not overlap, as in the rules. */
-function overlap(a: Box, b: Box): boolean {
-  return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
-}
-
-/** How far from its body a monster takes the hero in, before it starts to act on it. A stationary monster never does. */
-function awarenessOf(type: MonsterTypeDefinition): number {
-  switch (type.behavior) {
-    case 'stationary':
-      return 0;
-    case 'chaser':
-      return Math.max(type.noticingDistance, type.reach);
-    case 'charger':
-    case 'ranged':
-      return type.noticingDistance;
-    case 'guardian':
-      return Math.max(
-        type.noticingDistance,
-        ...type.patterns.map((pattern) => {
-          switch (pattern.kind) {
-            case 'sweep':
-              return pattern.reach;
-            case 'charge':
-              return pattern.dashRange;
-            case 'smite':
-              return pattern.range;
-          }
-        }),
-      );
-  }
 }
 
 // The places where the hero is put down: it starts, arrives, or, defeated, comes back to a Checkpoint among new monsters.
@@ -130,13 +74,8 @@ describe('the monsters the game ships with', () => {
   });
 
   it.each(SPOTS)('keeps every monster from noticing a hero who stands on $what of $area', ({ area, tile }) => {
-    const standing = bodyIn(tile, hero.size);
-
-    const noticing = areaNamed(area)
-      .monsters.filter((monster) => {
-        const type = typeNamed(monster.type);
-        return overlap(grown(bodyIn(monster.tile, type.size), awarenessOf(type)), standing);
-      })
+    const noticing = areaOf(area)
+      .monsters.filter((monster) => isWithinAwareness(typeNamed(monster.type), monster.tile, hero.size, tile))
       .map((monster) => monster.id);
 
     expect(noticing).toEqual([]);

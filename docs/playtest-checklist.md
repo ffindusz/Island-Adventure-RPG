@@ -16,8 +16,9 @@ are in `docs/balance.md`, the keys in the README.
 ## The opening
 
 - [ ] The title: the name of the game, New Game chosen, Continue greyed out (in a browser with no save), four hint rows.
-- [ ] New Game shows the card of the opening (three lines, ENTER TO BEGIN), then you wake on the coast with the banner
-      "Wreckage litters the shore. Follow the beach east." Is it clear what to do in the first minute?
+- [ ] New Game shows the card of the opening (four lines, the last one the goal, a way home to find; ENTER TO BEGIN),
+      then you wake on the coast with the banner
+      "Wreckage lines the shore. Follow the beach east." Is it clear what to do in the first minute?
 
 ## The five areas, in the order of the route
 
@@ -39,6 +40,22 @@ enough without grinding? Did the Level-ups come about where listed (a Stat Point
 - [ ] **The Old Castle** (Level 6 by the arena): skeleton, ghoul (charges), wraith (shoots); the knight is the tougher
       fight, 65 steps from the Checkpoint (the longest way back 89). The Knight Mail lies in the armory, two tiles off
       the trail; the tower and the crypt are side paths. A Checkpoint stands in the gateway, just before the arena.
+
+## The pages, the bow and the potions
+
+These keys are in the README's Controls table, and nothing above makes you press them.
+
+- [ ] **C** opens the stat page (Level, Experience, Health, Attack, Defense) and Esc closes it. After a level-up, the
+      stat you chose has gone up on it.
+- [ ] **M** opens the Automap: every area of the route, what you have found of each, where you are and the exits you
+      have found; Esc closes it. Does it help you find the way?
+- [ ] **The bow:** equip the Short Bow in the inventory (I, then Enter on its line; that does not take it in hand).
+      Q takes it in hand and Q again takes the sword back; Q does nothing before a bow is equipped. With the bow in
+      hand, Space shoots one arrow the way you face and the Ammunition on the HUD goes down by one; with none left the
+      notice says OUT OF AMMUNITION.
+- [ ] **A Healing Potion:** I opens the inventory, Down goes past the Gear to the Healing Potion line and Enter drinks
+      one: Health rises by 5 at most (never above the maximum) and the count falls by one. At full Health nothing
+      happens and no potion is used up.
 
 ## A defeat and its recovery
 
@@ -148,18 +165,27 @@ Tick one when you accept it as it is; otherwise write what to change.
       Do you want a second one in the castle? That is a map change, and nothing was done about it.
 - [ ] **The cave's one-tile gate** has no corner assist (see "The optional puzzles").
 - [ ] **The two-press departure** at the vessel (the first press prepares it, the second asks).
-- [ ] **The Automap** joins the areas by schematic links, and draws the quay as sand.
+- [ ] **The Automap** joins the areas by schematic links, and draws the quay as sand. A link meets each map at the side
+      where its exit is (the mountain's east edge to the cave's west edge, the cave's east edge to the castle's west
+      edge, which makes two links that go round the cards): look that no link runs over a map or a name.
 - [ ] **The HUD and the hero's hand** show one weapon icon for each slot, not for each piece (a piece's own icon needs a
       field of the Game core, `hero.equipped`).
 - [ ] **A notice at the bottom of the view** can cover the hero in the last rows of a scrolling area. The area banner
       comes back after Continue.
+- [ ] **A find rises over the hero:** the picture of what you found (a chest, a cache, a key, a potion, a drop) lifts 12
+      pixels in half a second and fades, beside the notice. The size, the time and the place are a first draft made
+      without a playtest; for that half second it can hide what is just above the hero, and in the top row of an area
+      it leaves the screen as it fades.
 - [ ] **Stand-in art:** the crab is a red mollusc, the wolf a black dog, the spitter a mushroom, the raiders pack
       ninjas and a knight, the bat reads as a droplet or a crab, and one violet orb is every monster's shot. The
       castle's skeleton, ghoul, wraith and knight, and the Guardian, are recoloured figures of the pack (no strike
       pose and no glow; the Guardian's back view is its front mirrored).
-- [ ] **Composed pictures:** the wreck, the vessel, the quay, the pillars, the fountain, the two backdrops and the
-      logo are made from the pack's pieces; the ship of the ending is a recipe drawing, and the Knight Mail's icon is
-      drawn in code. A real side-view ship (candidate S4 in `docs/assets/licences.md`) needs your permission: take it?
+- [ ] **Composed pictures:** the wreck, the vessel and the quay are made from the pack's pieces, with what the pack lacks
+      drawn by the recipe. The two backdrops are put together from pack pieces too (the title's has the pack's sea, sand,
+      wreck, crab and Hunter, the ending's the pack's quay planks) under skies, a sun, gulls and a sea that the recipe
+      draws. The pillars and the fountain are drawn entirely by the recipe; the logo is the project's own pixel font,
+      drawn by code; the ship of the ending is a recipe drawing, and the Knight Mail's icon is drawn in code. A real
+      side-view ship (candidate S4 in `docs/assets/licences.md`) needs your permission: take it?
 - [ ] **Words:** the credits name no person; the four lines of the ending are a first draft; the Knight Mail was
       renamed from "Knight's Armor" so that its name fits the inventory.
 - [ ] **Sound:** the music and effects were chosen by name, size and loudness, not by ear; the loop seams were not
@@ -172,5 +198,5 @@ Tick one when you accept it as it is; otherwise write what to change.
 - [ ] **`?debug`** in the address bar gives the page the Game core, in a build for the public too. Keep it, or switch it
       off in a shipped build?
 - [ ] **No LICENSE file** is in the repository, so the project's own code, drawings and bitmap font state no licence.
-- [ ] **The tests** that read files from disk, and the first ones that stand in for Phaser, step outside the test seam
-      of ADR 0002. They are listed in the Comments of ticket 26 ("Suggestions and proposals") for your veto.
+- [ ] **The tests** that read files from disk, and those that call the adapter's pure functions directly, step outside
+      the test seam of ADR 0002. ADR 0005 records them and lists them for your veto; no test stands in for Phaser.

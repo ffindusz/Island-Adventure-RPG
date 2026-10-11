@@ -1,4 +1,7 @@
-import type { AreaDefinition } from '../../core';
+import type { AreaDefinition, Tile } from '../../core';
+
+// The way in from the cave: the Entrance and the first Checkpoint of the castle share its tile.
+const WAY_IN: Tile = { col: 1, row: 6 };
 
 // The old castle, the fifth and last area of the adventure, beyond the cave: 92 by 30 tiles, more than four screens wide
 // and more than two high (20 by 12), so that the view follows the hero. Rock (solid, #) is the walls and all that lies
@@ -45,9 +48,9 @@ export const castle: AreaDefinition = {
   id: 'castle',
   name: 'The Old Castle',
   text: 'The old castle waits in silence.',
-  entrances: [{ id: 'from-cave', tile: { col: 1, row: 6 } }],
+  entrances: [{ id: 'from-cave', tile: WAY_IN }],
   checkpoints: [
-    { id: 'castle-checkpoint', tile: { col: 1, row: 6 } },
+    { id: 'castle-checkpoint', tile: WAY_IN },
     // The Guardian's Checkpoint, in the one-tile gateway to its arena, which no way to the Guardian goes round, three
     // tiles from the arena.
     { id: 'guardian-checkpoint', tile: { col: 65, row: 11 } },

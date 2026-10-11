@@ -5,6 +5,10 @@ Every number of the game lives in `src/content`. The tests pin the *relations* t
 the numbers that the measurements give are written here, with how they were measured and what they rest on. A tuning
 that moves them a little breaks no test; one that breaks a relation does.
 
+The tables below are a snapshot of what those tests printed when the balance pass was made. No test compares them with
+the numbers of the content, so after a tuning they stay as they were until someone prints them again and writes them
+in.
+
 To print the tables again after a tuning:
 
 - `npx vitest run tests/fights.test.ts --silent=false`: the fight table, the Gear steps and the supplies.
@@ -149,7 +153,8 @@ lands. The arrow's Attack is the hero's with the bow it has by then.
 
 The arrows near the route are at least 2.25 times what the shots need, counted at two arrows to a shot that lands (the
 all-in-Health hero in the castle, who has the weakest arrows; elsewhere, three times and more), so a hero that shoots
-does not run short: 60 arrows lie near the route in all, and 24 more on the side paths. The Guardian takes 25 shots
+does not run short: 60 arrows lie near the route in all, and 32 more on the side paths (four caches of 8, one in each of
+the mountain and the cave and two in the castle). The Guardian takes 25 shots
 from a hero whose arrows have Attack 4 (a split hero with the Short Bow): 50 arrows at a hit in two, which the 60
 near the route cover; an all-in-Health hero, with arrows of Attack 2, would need 100, more than lie near the route, so
 the sword is its way.

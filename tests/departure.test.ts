@@ -3,11 +3,12 @@ import type { Game } from '../src/core';
 import {
   advance,
   biterAt,
+  continuedFrom,
   face,
   gameAtTitle,
+  INTERACT,
   interactableViews,
   playingView,
-  throughStorage,
   walk,
   WITH_BOW,
 } from './fixtures';
@@ -17,7 +18,6 @@ import { askingGame, harborContent, harborGame, preparedGame, VESSEL_ID } from '
 // prepared opens the question, which is part of the game state as an open page is, and pauses the game in the same way
 // until the player answers it. The answers are two commands: to decline, and to sail.
 
-const INTERACT = { type: 'interact' } as const;
 const CANCEL = { type: 'cancel-departure' } as const;
 const ASKED_ABOUT_THE_VESSEL = { vesselId: VESSEL_ID };
 
@@ -53,8 +53,7 @@ describe('Interact on a vessel that is prepared asks whether to sail home', () =
   it('is part of the state that is saved, and still open when the game is continued', () => {
     const game = askingGame();
 
-    const continued = gameAtTitle(harborContent());
-    continued.send({ type: 'continue', snapshot: throughStorage(game.snapshot()) });
+    const continued = continuedFrom(harborContent(), game.snapshot());
 
     expect(game.snapshot().state.departure).toBe(VESSEL_ID);
     expect(playingView(continued).departure).toEqual(ASKED_ABOUT_THE_VESSEL);
@@ -163,8 +162,7 @@ describe('declining to sail home', () => {
 
   it('declines the question of a game that was continued with it open', () => {
     const asking = askingGame();
-    const continued = gameAtTitle(harborContent());
-    continued.send({ type: 'continue', snapshot: throughStorage(asking.snapshot()) });
+    const continued = continuedFrom(harborContent(), asking.snapshot());
 
     continued.send(CANCEL);
 

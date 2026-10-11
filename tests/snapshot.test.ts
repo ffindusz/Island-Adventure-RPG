@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { Snapshot } from '../src/core';
 import {
   advance,
   arena,
   biterAt,
+  continuedFrom,
   dummyAt,
   face,
   gameAtTitle,
@@ -33,13 +33,6 @@ function gameWithHistory() {
   return game;
 }
 
-/** A game that was begun from a snapshot that has been through storage, as a saved game would be. */
-function continuedFrom(snapshot: Snapshot) {
-  const game = gameAtTitle(content);
-  game.send({ type: 'continue', snapshot: throughStorage(snapshot) });
-  return game;
-}
-
 describe('the snapshot', () => {
   it('survives storage as it is: plain data that JSON keeps unchanged', () => {
     const snapshot = gameWithHistory().snapshot();
@@ -50,7 +43,7 @@ describe('the snapshot', () => {
   it('restores the game exactly: continuing from a stored snapshot shows the same state', () => {
     const original = gameWithHistory();
 
-    const restored = continuedFrom(original.snapshot());
+    const restored = continuedFrom(content, original.snapshot());
 
     expect(restored.view()).toEqual(original.view());
     expect(playingView(restored).monsters.map((monster) => [monster.id, monster.health])).toEqual([
@@ -60,7 +53,7 @@ describe('the snapshot', () => {
   });
 
   it('restores the attack cooldown: a strike stays refused until the 14 steps that were left are over', () => {
-    const restored = continuedFrom(gameWithHistory().snapshot());
+    const restored = continuedFrom(content, gameWithHistory().snapshot());
     face(restored, 'up');
 
     advance(restored, 13);
@@ -78,7 +71,7 @@ describe('the snapshot', () => {
 
     walk(game, 'right', 8);
 
-    expect(playingView(continuedFrom(earlier)).hero.position).toEqual({ x: 3.5, y: 3.5 });
+    expect(playingView(continuedFrom(content, earlier)).hero.position).toEqual({ x: 3.5, y: 3.5 });
   });
 
   it('is not adopted by the game restored from it: playing on leaves the snapshot as it was', () => {
@@ -104,17 +97,11 @@ describe('the snapshot of a fight', () => {
   // 20 Health, so that it survives the hits.
   const fightContent = arena({ hero: { health: 20 }, monsters: [biterAt('biter-1', 4, 3)] });
 
-  function continuedFromFight(snapshot: Snapshot) {
-    const game = gameAtTitle(fightContent);
-    game.send({ type: 'continue', snapshot: throughStorage(snapshot) });
-    return game;
-  }
-
   it('restores a wind-up in progress: the telegraph looks the same and the damage lands when it would have', () => {
     const original = newGame(fightContent);
     advance(original, 10); // 9 of the 30 wind-up steps are over
 
-    const restored = continuedFromFight(original.snapshot());
+    const restored = continuedFrom(fightContent, original.snapshot());
 
     expect(restored.view()).toEqual(original.view());
     expect(monsterAction(restored, 'biter-1')).toMatchObject({
@@ -130,7 +117,7 @@ describe('the snapshot of a fight', () => {
     const original = newGame(fightContent);
     advance(original, 40); // 9 of the 24 recovery steps are over
 
-    const restored = continuedFromFight(original.snapshot());
+    const restored = continuedFrom(fightContent, original.snapshot());
 
     expect(monsterAction(restored, 'biter-1')).toEqual({ type: 'recovering' });
     advance(restored, 14); // step 54
@@ -142,7 +129,7 @@ describe('the snapshot of a fight', () => {
   it('plays on exactly as the game it was taken from does', () => {
     const original = newGame(fightContent);
     advance(original, 17);
-    const restored = continuedFromFight(original.snapshot());
+    const restored = continuedFrom(fightContent, original.snapshot());
 
     expect(advance(restored, 100)).toEqual(advance(original, 100));
     expect(restored.view()).toEqual(original.view());

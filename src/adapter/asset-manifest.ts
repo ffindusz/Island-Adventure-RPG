@@ -28,14 +28,15 @@ export function drawn(rows: readonly string[], palette: Readonly<Record<string, 
 }
 
 /**
- * Anything that can say whether a picture is there. The manifest answers "is it registered?" and Phaser's texture
- * manager answers "is it loaded?", through the same small question.
+ * Anything that can say whether a picture or a sound is there. A manifest answers "is it registered?" and Phaser's
+ * texture manager or audio cache answers "is it loaded?", through the same small question.
  */
 export interface ArtLookup {
   exists(name: string): boolean;
 }
 
-export function manifestLookup(manifest: ArtManifest): ArtLookup {
+/** Asks "is it registered?" of a manifest of pictures (this one) or of sounds (audio-manifest.ts). */
+export function manifestLookup(manifest: Readonly<Record<string, unknown>>): ArtLookup {
   return { exists: (name) => Object.hasOwn(manifest, name) };
 }
 

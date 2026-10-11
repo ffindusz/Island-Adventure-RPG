@@ -15,12 +15,12 @@ import {
   arena,
   cacheAt,
   chestAt,
+  continuedFrom,
   doorAt,
   dummyAt,
   face,
   fixedRandom,
   frailMonster,
-  gameAtTitle,
   gateAt,
   keyAt,
   leverAt,
@@ -28,7 +28,6 @@ import {
   newGame,
   pickupAt,
   signAt,
-  throughStorage,
   walk,
 } from './fixtures';
 import { GUARDIAN, guardianAt, guardianGateAt } from './guardian-fixtures';
@@ -408,10 +407,8 @@ export function adventureAfter(lastChapter?: string, random = fixedRandom): Game
 }
 
 /** A game of the saved adventure restored from the snapshot as storage gives it back: text, not the object. */
-export function restoredFrom(snapshot: Snapshot, random = fixedRandom): Game {
-  const game = gameAtTitle(adventureContent(), random);
-  game.send({ type: 'continue', snapshot: throughStorage(snapshot) });
-  return game;
+export function restoredFrom(snapshot: Snapshot): Game {
+  return continuedFrom(adventureContent(), snapshot);
 }
 
 /** What one call to a game left behind: what it returned and what the game looks like and holds after it. */

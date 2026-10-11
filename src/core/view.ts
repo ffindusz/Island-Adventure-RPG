@@ -1,5 +1,5 @@
 import { arrowSizeOf } from './arrows';
-import { areaOf, monsterTypeOf } from './content';
+import { areaOf } from './content';
 import type { Content, Interactable } from './content';
 import { automapPage } from './automap';
 import { isActive } from './checkpoints';
@@ -7,7 +7,9 @@ import { STAT_IDS } from './definitions';
 import { heldKeys } from './devices';
 import { carriedGear } from './gear';
 import { centerOfBox } from './geometry';
+import type { Box, Point } from './geometry';
 import type { GameView, InteractableView, LevelUpView, MonsterActionView, PageView } from './interface';
+import { monsterTypeOf } from './monster-content';
 import {
   experienceProgress,
   heroAttack,
@@ -33,8 +35,7 @@ export function buildView(state: GameState, content: Content): GameView {
     exits: area.exits.map((exit) => ({ id: exit.id, zone: { ...exit.zone } })),
     checkpoints: area.checkpoints.map((checkpoint) => ({
       id: checkpoint.id,
-      position: centerOfBox(checkpoint.body),
-      size: checkpoint.body.maxX - checkpoint.body.minX,
+      ...positionAndSizeOf(checkpoint.body),
       active: isActive(state, area.id, checkpoint),
     })),
     areaText: state.areaText?.text ?? null,
@@ -75,6 +76,11 @@ export function buildView(state: GameState, content: Content): GameView {
   };
 }
 
+/** What a view says of a thing that has a square body: where it stands and how wide it is. */
+function positionAndSizeOf(body: Box): { position: Point; size: number } {
+  return { position: centerOfBox(body), size: body.maxX - body.minX };
+}
+
 /** What shows an interactable: nothing for a pickup or a key the hero has taken, since it no longer lies there. */
 function interactableView(interactable: Interactable, state: PlayState): InteractableView | null {
   switch (interactable.kind) {
@@ -82,8 +88,7 @@ function interactableView(interactable: Interactable, state: PlayState): Interac
       return {
         kind: 'chest',
         id: interactable.id,
-        position: centerOfBox(interactable.body),
-        size: interactable.body.maxX - interactable.body.minX,
+        ...positionAndSizeOf(interactable.body),
         opened: interactableStateOf(state, interactable).opened,
         holds: interactable.contents.kind === 'gear' ? 'gear' : interactable.contents.consumable,
       };
@@ -93,8 +98,7 @@ function interactableView(interactable: Interactable, state: PlayState): Interac
         : {
             kind: 'pickup',
             id: interactable.id,
-            position: centerOfBox(interactable.body),
-            size: interactable.body.maxX - interactable.body.minX,
+            ...positionAndSizeOf(interactable.body),
             consumable: interactable.consumable,
           };
     case 'key':
@@ -103,46 +107,40 @@ function interactableView(interactable: Interactable, state: PlayState): Interac
         : {
             kind: 'key',
             id: interactable.id,
-            position: centerOfBox(interactable.body),
-            size: interactable.body.maxX - interactable.body.minX,
+            ...positionAndSizeOf(interactable.body),
           };
     case 'door':
       return {
         kind: 'door',
         id: interactable.id,
-        position: centerOfBox(interactable.body),
-        size: interactable.body.maxX - interactable.body.minX,
+        ...positionAndSizeOf(interactable.body),
         open: interactableStateOf(state, interactable).open,
       };
     case 'gate':
       return {
         kind: 'gate',
         id: interactable.id,
-        position: centerOfBox(interactable.body),
-        size: interactable.body.maxX - interactable.body.minX,
+        ...positionAndSizeOf(interactable.body),
         open: interactableStateOf(state, interactable).open,
       };
     case 'lever':
       return {
         kind: 'lever',
         id: interactable.id,
-        position: centerOfBox(interactable.body),
-        size: interactable.body.maxX - interactable.body.minX,
+        ...positionAndSizeOf(interactable.body),
         pulled: interactableStateOf(state, interactable).pulled,
       };
     case 'sign':
       return {
         kind: 'sign',
         id: interactable.id,
-        position: centerOfBox(interactable.body),
-        size: interactable.body.maxX - interactable.body.minX,
+        ...positionAndSizeOf(interactable.body),
       };
     case 'vessel':
       return {
         kind: 'vessel',
         id: interactable.id,
-        position: centerOfBox(interactable.body),
-        size: interactable.body.maxX - interactable.body.minX,
+        ...positionAndSizeOf(interactable.body),
         prepared: interactableStateOf(state, interactable).prepared,
       };
   }

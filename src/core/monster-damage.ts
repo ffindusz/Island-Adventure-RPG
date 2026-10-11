@@ -1,8 +1,8 @@
 import type { Content } from './content';
-import { monsterTypeOf } from './content';
 import { openGatesOfGuardian } from './devices';
 import { rollDrops } from './drops';
 import type { GameEvent, RandomSource } from './interface';
+import { monsterTypeOf } from './monster-content';
 import { gainExperience } from './progression';
 import type { MonsterState, PlayState } from './state';
 

@@ -10,13 +10,24 @@ import type {
   StatPageView,
 } from '../core';
 import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
+import { ChangeGuard } from './change-guard';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
+import { closePageKeyLabel, confirmKeyLabel, statKeyLabel } from './controls';
+import { DEPTH } from './depths';
 import { potionLineOf } from './inventory-menu';
-import { CONSUMABLE_NAMES, GEAR_STAT_ABBREVIATIONS, shown, STAT_NAMES } from './labels';
+import {
+  CONSUMABLE_NAMES,
+  experienceShare,
+  GEAR_STAT_ABBREVIATIONS,
+  healthText,
+  numberText,
+  STAT_NAMES,
+} from './labels';
 import { bitmapHeight, bitmapWidth, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Bitmap, Graphics } from './pixel-font';
-import { statKeyLabel } from './player-input';
-import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
+import { stackHeight, stackRows } from './row-stack';
+import type { RowRules } from './row-stack';
+import { INK, UiLayer, WINDOW_PADDING } from './ui-layer';
 
 // The overlay: what covers the game while it waits for the player. It shows the level-up choice, the page that is open
 // or the question whether to sail home, or says the game is paused when the window has lost focus. It is drawn from
@@ -24,13 +35,8 @@ import { INK, UiLayer, WINDOW_FRAME } from './ui-layer';
 // gives: it works out nothing. The one thing it is given besides the view is where the player's cursor is on the
 // inventory page.
 
-/** Above the HUD. The dimming sits just under the window. */
-const OVERLAY_DEPTH = 200;
-
 const WIDE_WINDOW = 160;
 const NARROW_WINDOW = 96;
-/** From a window's edge to what it holds, the window's frame being the first 4 pixels of it. */
-export const PADDING = 12;
 /** The space between rows, the height of a bar, and the space between a stat's value and its gain. */
 const ROW_GAP = 4;
 const BAR_HEIGHT = 5;
@@ -43,7 +49,7 @@ const COLUMN_GAP = 8;
 const GEAR_COLUMN = 144;
 const SUPPLY_COLUMN = 122;
 const COLUMN_SPACING = 8;
-const INVENTORY_WINDOW = GEAR_COLUMN + COLUMN_SPACING + SUPPLY_COLUMN + 2 * PADDING;
+const INVENTORY_WINDOW = GEAR_COLUMN + COLUMN_SPACING + SUPPLY_COLUMN + 2 * WINDOW_PADDING;
 
 /** How many pieces of Gear the inventory page lists at once. A longer list scrolls to keep the cursor in view. */
 const VISIBLE_GEAR = 5;
@@ -63,6 +69,32 @@ const BACKDROP_ALPHA = 0.55;
 
 /** The tick behind a piece of Gear that is equipped. */
 const TICK: Bitmap = ['......#', '.....#.', '#...#..', '.#.#...', '..#....'];
+
+/** Where the parts of a piece of Gear's line start: its name, its bonus and its tick, and the room the name has. */
+interface GearLine {
+  readonly nameLeft: number;
+  readonly nameRoom: number;
+  readonly bonusLeft: number;
+  readonly tickLeft: number;
+}
+
+/**
+ * The line of a piece of Gear between two edges: the picture and the name from the left, and from the right edge the
+ * tick, the bonus before it and the room for the name before that, with a gap in front of each.
+ */
+function gearLineOf(left: number, right: number, bonus: string): GearLine {
+  const tickLeft = right - TEXT_OUTDENT - bitmapWidth(TICK);
+  const bonusLeft = tickLeft - TEXT_OUTDENT - textWidthOf(bonus);
+  const nameLeft = left + TEXT_INDENT;
+  return { nameLeft, nameRoom: bonusLeft - TEXT_OUTDENT - nameLeft, bonusLeft, tickLeft };
+}
+
+/**
+ * The most characters that a piece of Gear's name can have to be shown whole on the inventory page: on its line in the
+ * Gear column it has what the picture, a bonus of one digit such as "+2 ATK" and the tick leave. `fitted` cuts a longer
+ * name off at the end without a word, so every piece of Gear in the content must keep to this.
+ */
+export const LONGEST_GEAR_NAME = fitted('W'.repeat(GEAR_COLUMN), gearLineOf(0, GEAR_COLUMN, '+9 ATK').nameRoom).length;
 
 type Row =
   /** Centred. */
@@ -109,21 +141,20 @@ export interface Panel {
 export class Overlay {
   private readonly backdrop: Graphics;
   private readonly layer: UiLayer;
-  private shown = 'nothing';
+  private readonly shown = new ChangeGuard();
 
   constructor(scene: Phaser.Scene) {
-    this.backdrop = scene.add.graphics().setScrollFactor(0).setDepth(OVERLAY_DEPTH - 1);
-    this.layer = new UiLayer(scene, OVERLAY_DEPTH);
+    // The dimming sits just under the window.
+    this.backdrop = scene.add.graphics().setScrollFactor(0).setDepth(DEPTH.overlay - 1);
+    this.layer = new UiLayer(scene, DEPTH.overlay);
   }
 
   /** Shows what the view says. It draws again only when what it shows has changed. */
   draw(view: PlayingView, focused: boolean, inventoryCursor: number): void {
     const panel = panelFor(view, focused, inventoryCursor);
-    const key = JSON.stringify(panel);
-    if (key === this.shown) {
+    if (!this.shown.changed(panel)) {
       return;
     }
-    this.shown = key;
     this.backdrop.clear();
     this.layer.clear();
     if (panel !== null) {
@@ -163,8 +194,8 @@ function departurePanel(): Panel {
       { kind: 'text', text: 'SAIL HOME?', colour: INK.title },
       { kind: 'text', text: 'THE ADVENTURE ENDS.', colour: INK.warning },
       { kind: 'space', height: 0 },
-      { kind: 'text', text: 'ENTER TO SAIL', colour: INK.text },
-      { kind: 'text', text: 'ESC TO STAY', colour: INK.text },
+      { kind: 'text', text: `${confirmKeyLabel()} TO SAIL`, colour: INK.text },
+      { kind: 'text', text: `${closePageKeyLabel()} TO STAY`, colour: INK.text },
     ],
   };
 }
@@ -178,8 +209,8 @@ function levelUpPanel(levelUp: LevelUpView): Panel {
       (option): Row => ({
         kind: 'stat',
         label: `${statKeyLabel(option.stat)} ${STAT_NAMES[option.stat]}`,
-        value: shown(option.value),
-        gain: `+${shown(option.gain)}`,
+        value: numberText(option.value),
+        gain: `+${numberText(option.gain)}`,
       }),
     ),
     { kind: 'space', height: 0 },
@@ -228,7 +259,7 @@ function inventoryPagePanel(page: InventoryPageView, hero: HeroView, cursor: num
       kind: 'gear',
       icon: gearIcon(piece.id),
       name: piece.name,
-      bonus: `+${shown(piece.bonus)} ${GEAR_STAT_ABBREVIATIONS[piece.stat]}`,
+      bonus: `+${numberText(piece.bonus)} ${GEAR_STAT_ABBREVIATIONS[piece.stat]}`,
       equipped: piece.equipped,
       highlighted: first + offset === cursor,
     }),
@@ -246,15 +277,7 @@ function inventoryPagePanel(page: InventoryPageView, hero: HeroView, cursor: num
     ...CONSUMABLE_IDS.map((id): Row => consumableRow(id, page, cursor)),
     ...keyRows,
     { kind: 'space', height: 0 },
-    // Health is rounded up, as on the HUD, so a hero that is still standing never reads as 0.
-    {
-      kind: 'stat',
-      label: STAT_NAMES.health,
-      value: `${Math.ceil(hero.health)}/${Math.ceil(hero.maxHealth)}`,
-      gain: null,
-    },
-    { kind: 'stat', label: STAT_NAMES.attack, value: shown(page.attack), gain: null },
-    { kind: 'stat', label: STAT_NAMES.defense, value: shown(page.defense), gain: null },
+    ...statRows({ health: hero.health, maxHealth: hero.maxHealth, attack: page.attack, defense: page.defense }),
   ];
   const rows: Row[] = [
     { kind: 'text', text: inventoryTitle(gear.length, cursor), colour: INK.title },
@@ -263,12 +286,21 @@ function inventoryPagePanel(page: InventoryPageView, hero: HeroView, cursor: num
     { kind: 'space', height: 0 },
     {
       kind: 'text',
-      text: cursor === potionLineOf(page) ? 'UP/DOWN PICK ENTER USE' : 'UP/DOWN PICK ENTER EQUIP',
+      text: `UP/DOWN PICK ${confirmKeyLabel()} ${cursor === potionLineOf(page) ? 'USE' : 'EQUIP'}`,
       colour: INK.hint,
     },
-    { kind: 'text', text: 'ESC TO CLOSE', colour: INK.hint },
+    { kind: 'text', text: `${closePageKeyLabel()} TO CLOSE`, colour: INK.hint },
   ];
   return { width: INVENTORY_WINDOW, rows };
+}
+
+/** The three stats as the inventory and the stat page both show them: Health, then Attack, then Defense. */
+function statRows(stats: Pick<StatPageView, 'health' | 'maxHealth' | 'attack' | 'defense'>): Row[] {
+  return [
+    { kind: 'stat', label: STAT_NAMES.health, value: healthText(stats.health, stats.maxHealth), gain: null },
+    { kind: 'stat', label: STAT_NAMES.attack, value: numberText(stats.attack), gain: null },
+    { kind: 'stat', label: STAT_NAMES.defense, value: numberText(stats.defense), gain: null },
+  ];
 }
 
 function statPagePanel(page: StatPageView): Panel {
@@ -282,16 +314,13 @@ function statPagePanel(page: StatPageView): Panel {
       {
         kind: 'stat',
         label: 'EXP',
-        value: experience === null ? 'MAX' : `${shown(experience.earned)}/${shown(experience.needed)}`,
+        value: experience === null ? 'MAX' : `${numberText(experience.earned)}/${numberText(experience.needed)}`,
         gain: null,
       },
-      { kind: 'bar', share: experience === null ? 1 : experience.earned / experience.needed },
-      // Health is rounded up, as on the HUD, so a hero that is still standing never reads as 0.
-      { kind: 'stat', label: 'HEALTH', value: `${Math.ceil(page.health)}/${Math.ceil(page.maxHealth)}`, gain: null },
-      { kind: 'stat', label: 'ATTACK', value: shown(page.attack), gain: null },
-      { kind: 'stat', label: 'DEFENSE', value: shown(page.defense), gain: null },
+      { kind: 'bar', share: experienceShare(experience) },
+      ...statRows(page),
       { kind: 'space', height: 0 },
-      { kind: 'text', text: 'ESC TO CLOSE', colour: INK.hint },
+      { kind: 'text', text: `${closePageKeyLabel()} TO CLOSE`, colour: INK.hint },
     ],
   };
 }
@@ -319,7 +348,7 @@ function heightOf(row: Row): number {
     case 'space':
       return row.height;
     case 'columns':
-      return Math.max(stackHeight(row.left), stackHeight(row.right));
+      return Math.max(stackHeight(row.left, ROW_RULES), stackHeight(row.right, ROW_RULES));
   }
 }
 
@@ -332,24 +361,19 @@ function gapBetween(above: Row, below: Row): number {
   return isItem(above) && isItem(below) ? 0 : ROW_GAP;
 }
 
-function stackHeight(rows: readonly Row[]): number {
-  let height = 0;
-  let above: Row | null = null;
-  for (const row of rows) {
-    height += (above === null ? 0 : gapBetween(above, row)) + heightOf(row);
-    above = row;
-  }
-  return height;
-}
+const ROW_RULES: RowRules<Row> = { heightOf, gapBetween };
 
 function drawPanel(layer: UiLayer, panel: Panel): void {
   const { width, rows } = panel;
-  const height = stackHeight(rows) + 2 * PADDING;
+  const height = stackHeight(rows, ROW_RULES) + 2 * WINDOW_PADDING;
   const left = Math.floor((VIEW_WIDTH - width) / 2);
   const top = Math.floor((VIEW_HEIGHT - height) / 2);
-  layer.frame('window', left, top, width, height);
-  layer.frame('panel', left + WINDOW_FRAME, top + WINDOW_FRAME, width - 2 * WINDOW_FRAME, height - 2 * WINDOW_FRAME);
-  drawStack(layer, rows, { left: left + PADDING, right: left + width - PADDING, top: top + PADDING });
+  layer.window(left, top, width, height);
+  drawStack(layer, rows, {
+    left: left + WINDOW_PADDING,
+    right: left + width - WINDOW_PADDING,
+    top: top + WINDOW_PADDING,
+  });
 }
 
 interface RowSpace {
@@ -365,15 +389,8 @@ function drawStack(layer: UiLayer, rows: readonly Row[], space: RowSpace): void 
     0,
     ...rows.map((row) => (row.kind === 'stat' && row.gain !== null ? textWidthOf(row.gain) + COLUMN_GAP : 0)),
   );
-  let top = space.top;
-  let above: Row | null = null;
-  for (const row of rows) {
-    if (above !== null) {
-      top += gapBetween(above, row);
-    }
-    drawRow(layer, row, { left: space.left, right: space.right, top }, gainColumn);
-    top += heightOf(row);
-    above = row;
+  for (const placed of stackRows(rows, space.top, ROW_RULES)) {
+    drawRow(layer, placed.row, { left: space.left, right: space.right, top: placed.top }, gainColumn);
   }
 }
 
@@ -402,13 +419,12 @@ function drawRow(layer: UiLayer, row: Row, space: RowSpace, gainColumn: number):
       drawItemBase(layer, row.icon, row.highlighted, space);
       const ink = row.highlighted ? INK.onButton : row.equipped ? INK.gain : INK.text;
       const textTop = top + Math.floor((ITEM_HEIGHT - TEXT_HEIGHT) / 2);
-      const tickLeft = right - TEXT_OUTDENT - bitmapWidth(TICK);
+      const line = gearLineOf(left, right, row.bonus);
       if (row.equipped) {
-        layer.bitmap(TICK, tickLeft, top + Math.floor((ITEM_HEIGHT - bitmapHeight(TICK)) / 2), ink);
+        layer.bitmap(TICK, line.tickLeft, top + Math.floor((ITEM_HEIGHT - bitmapHeight(TICK)) / 2), ink);
       }
-      const bonusLeft = tickLeft - TEXT_OUTDENT - textWidthOf(row.bonus);
-      layer.text(row.bonus, bonusLeft, textTop, ink);
-      layer.text(fitted(row.name, bonusLeft - TEXT_OUTDENT - (left + TEXT_INDENT)), left + TEXT_INDENT, textTop, ink);
+      layer.text(row.bonus, line.bonusLeft, textTop, ink);
+      layer.text(fitted(row.name, line.nameRoom), line.nameLeft, textTop, ink);
       return;
     }
     case 'consumable': {

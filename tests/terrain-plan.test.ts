@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { describeStamp, planTerrain } from '../src/adapter/terrain-plan';
+import { describeStamp, planTerrain, scatter } from '../src/adapter/terrain-plan';
 import type { Stamp } from '../src/adapter/terrain-plan';
 import { gameContent } from '../src/content';
+import { areaOf } from './main-route';
 
 const KINDS: Readonly<Record<string, string>> = {
   '~': 'water',
@@ -191,8 +192,14 @@ describe('the ground of woodland', () => {
     expect(onTile(meadow, 2, 2)).toEqual([expect.stringMatching(/^grass\./), expect.stringMatching(/^tree\.small/)]);
   });
 
-  it('gives the same trees to the same map every time, and others to a map that differs', () => {
+  it('gives the same trees to the same map every time, and not the same tree to every block of a forest', () => {
     expect(plan('TTTT', 'TTTT')).toEqual(plan('TTTT', 'TTTT'));
+
+    const wood = plan(...Array.from({ length: 8 }, () => 'TTTTTTTT'));
+    const bigTrees = wood.map(describeStamp).filter((name) => /^tree\.\d\.nw$/.test(name));
+
+    expect(bigTrees).toHaveLength(16);
+    expect(new Set(bigTrees).size).toBeGreaterThan(1);
   });
 });
 
@@ -244,6 +251,10 @@ describe('the ground of a wreck', () => {
     expect(deckOn(stamps, 8, 3)).toEqual(['wreck.deck.C@nw', 'wreck.deck.INE@ne', 'wreck.deck.C@sw', 'wreck.deck.C@se']);
     expect(deckOn(stamps, 9, 4)).toEqual(['wreck.deck.C@nw', 'wreck.deck.INE@ne', 'wreck.deck.C@sw', 'wreck.deck.ISE@se']);
     expect(deckOn(stamps, 10, 4)).toEqual(['wreck.deck.T@nw', 'wreck.deck.TR@ne', 'wreck.deck.B@sw', 'wreck.deck.BR@se']);
+
+    // The thirteenth piece, the inner corner at the south west, is where the south side of the hull is notched.
+    const notched = plan('~~~~~~~~', '~~~~~~~~', '~~WWWWW~', '~~~WWWWW', '~~~~~~~~');
+    expect(deckOn(notched, 3, 2)).toEqual(['wreck.deck.T@nw', 'wreck.deck.T@ne', 'wreck.deck.ISW@sw', 'wreck.deck.C@se']);
   });
 
   it('is plain planks, a hole or a piece of cargo on a tile with no edge, one picture for the tile', () => {
@@ -321,8 +332,7 @@ describe('the ground of a little wreckage', () => {
 });
 
 describe('the ground of the shipwreck coast, which has a wreck and a little wreckage', () => {
-  const coast = gameContent.areas.find((area) => area.id === 'shipwreck-coast');
-  if (!coast) throw new Error('the shipped content has no shipwreck coast');
+  const coast = areaOf('shipwreck-coast');
   const kinds = coast.layout.map((row) => [...row].map((symbol) => gameContent.terrain[symbol]?.kind ?? '?'));
   const stamps = planTerrain(kinds);
 
@@ -379,5 +389,21 @@ describe('the plan of a whole map', () => {
         expect(onTile(stamps, x, y).length).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+// docs/assets/compose-art.py keeps a copy of the formula to dress the sand of the title and ending backdrops, and checks the
+// same numbers each time it runs: if one copy changes without the other, one of the two checks fails.
+describe('the scatter that dresses the ground', () => {
+  it.each([
+    [0, 0, 0, 1003020413],
+    [1, 0, 0, 597366888],
+    [0, 1, 0, 4041187058],
+    [0, 0, 1, 2280609883],
+    [5, 7, 2, 4145784892],
+    [63, 42, 11, 3497004711],
+    [120, 95, 6, 2176068382],
+  ])('is the same number as in the picture script at x %i, y %i, salt %i', (x, y, salt, expected) => {
+    expect(scatter(x, y, salt)).toBe(expected);
   });
 });

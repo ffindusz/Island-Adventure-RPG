@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { VIEW_TILES_HIGH, VIEW_TILES_WIDE } from '../src/adapter/config';
 import { gameContent } from '../src/content';
 import { GEAR_SLOTS, createGame } from '../src/core';
 import type {
@@ -7,14 +8,17 @@ import type {
   Game,
   GameEvent,
   InteractableDefinition,
-  MonsterTypeDefinition,
   Tile,
 } from '../src/core';
-import { face, fixedRandom, newGame, playingView } from './fixtures';
+import { face, fixedRandom, playingView } from './fixtures';
+import { areaOf, BOTTOM_ROWS, LEAST_DETOUR, MOST_NEARBY, quietGameAt, routeOf, typeOf } from './main-route';
 import {
+  damageOf,
   directionBetween,
   distanceBetween,
+  experienceForLevel,
   experienceOfAll,
+  isInOpenBlock,
   isInZone,
   keyOf,
   metOn,
@@ -24,7 +28,6 @@ import {
   openTilesOf,
   routeBetween,
   walkRoute,
-  withoutOrdinaryMonsters,
 } from './routes';
 
 // The mountain, the third area on the route of the adventure, between the woods and the cave: what it has to be to be
@@ -39,40 +42,11 @@ const WOODS = 'woods';
 const MOUNTAIN = 'mountain';
 const CAVE = 'cave';
 
-/** The canvas shows this many tiles (VIEW_TILES_WIDE and VIEW_TILES_HIGH in the adapter). */
-const SCREEN_TILES = { wide: 20, high: 12 };
-
-/** The notice is drawn over the bottom of the view, so a hero who has to stand in these rows of an area is hidden. */
-const BOTTOM_ROWS = 3;
-
 /** A pass is narrow when the way is this many tiles wide or fewer, and it is a pass for this many tiles in a row. */
 const NARROW = 2;
 const PASS_LENGTH = 3;
 
-/** A chest is near the trail when the walk to it from the trail is this many tiles at most: a step aside, not a trip. */
-const MOST_NEARBY = 4;
-
-/** A side path is a walk, not a step aside: this many tiles from the trail to the spot beside what lies at its end. */
-const LEAST_DETOUR = 6;
-
-function definitionOf(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The shipped content has no Adventure Area "${id}"`);
-  }
-  return area;
-}
-
-/**
- * A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the
- * Guardian, which the content must keep.
- */
-function quietGameAt(areaId: string, tile: Tile): Game {
-  const areas = withoutOrdinaryMonsters(gameContent);
-  return newGame({ ...gameContent, areas, start: { area: areaId, tile } });
-}
-
-const mountain = definitionOf(MOUNTAIN);
+const mountain = areaOf(MOUNTAIN);
 const wayIn = (mountain.entrances ?? [])[0];
 const wayInTile: Tile = wayIn?.tile ?? { col: 0, row: 0 };
 const wayForward = (mountain.exits ?? []).find(({ to }) => to.area === CAVE);
@@ -80,8 +54,8 @@ const isOpen = openTilesOf(gameContent, mountain);
 const isWayForward = (tile: Tile): boolean => wayForward !== undefined && isInZone(wayForward.zone, tile);
 const kindAt = ({ col, row }: Tile): string | undefined => gameContent.terrain[mountain.layout[row]?.[col] ?? '']?.kind;
 /** The trail: the path of sand from the way in to the exit forward, over open ground, every door shut and no key held. */
-const trail = routeBetween((tile) => isOpen(tile) && kindAt(tile) === 'sand', wayInTile, isWayForward);
-const onTrail = new Set((trail ?? []).map(keyOf));
+const trail = routeOf(MOUNTAIN);
+const onTrail = new Set(trail.map(keyOf));
 
 const interactables = mountain.interactables ?? [];
 const chests = interactables.flatMap((item) => (item.kind === 'chest' ? [item] : []));
@@ -128,7 +102,7 @@ function walkToTrail(spot: Tile): Tile[] | null {
 /** How far along the trail a spot lies: the place of the trail tile that is the shortest walk from it, or null when it cannot be walked to. */
 function placeOnTrail(spot: Tile): number | null {
   const reached = walkToTrail(spot)?.at(-1);
-  return reached === undefined ? null : (trail ?? []).findIndex((tile) => keyOf(tile) === keyOf(reached));
+  return reached === undefined ? null : trail.findIndex((tile) => keyOf(tile) === keyOf(reached));
 }
 
 /** How many tiles of walking lie between the trail and a spot, or null when the spot cannot be walked to. */
@@ -177,33 +151,7 @@ function widthAt(tile: Tile): number {
   return Math.min(runAlong(1, 0), runAlong(0, 1));
 }
 
-/** The type of a monster of the mountain, which the loader sees to exist; none here only for content it refuses. */
-function typeOf(monster: { readonly type: string }): MonsterTypeDefinition | undefined {
-  return gameContent.monsterTypes[monster.type];
-}
-
-/** The damage of one hit of a monster type, before the Defense of the hero: of the blow, or of the shot. */
-function hitOf(type: MonsterTypeDefinition): number {
-  if ('damage' in type) {
-    return type.damage;
-  }
-  return 'projectile' in type ? type.projectile.damage : 0;
-}
-
-/** Whether a tile lies in a block of open ground two tiles wide and two high: a place to step aside in either way. */
-function inOpenBlock({ col, row }: Tile): boolean {
-  return [-1, 0].some((fromCol) =>
-    [-1, 0].some((fromRow) =>
-      [0, 1].every((across) => [0, 1].every((down) => isOpen({ col: col + fromCol + across, row: row + fromRow + down }))),
-    ),
-  );
-}
-
 describe('the way through the mountain', () => {
-  it('comes third on the route of the adventure: after the coast and the woods, before the cave', () => {
-    expect(gameContent.areas.slice(0, 4).map(({ id }) => id)).toEqual([COAST, WOODS, MOUNTAIN, CAVE]);
-  });
-
   it('loads with the rest of the shipped content: the content check passes', () => {
     expect(() => createGame({ content: gameContent, random: fixedRandom })).not.toThrow();
   });
@@ -211,21 +159,23 @@ describe('the way through the mountain', () => {
   it('is larger than the screen in both directions, so that the view must follow the hero', () => {
     const { area } = playingView(quietGameAt(MOUNTAIN, wayInTile));
 
-    expect(area.width).toBeGreaterThan(SCREEN_TILES.wide);
-    expect(area.height).toBeGreaterThan(SCREEN_TILES.high);
+    expect(area.width).toBeGreaterThan(VIEW_TILES_WIDE);
+    expect(area.height).toBeGreaterThan(VIEW_TILES_HIGH);
   });
 
   it('leads along a path of sand from the way in to the exit forward, over open ground, with every door shut and no key held', () => {
     expect(wayIn?.id).toBe('from-woods');
     expect(wayForward, 'the mountain has an exit to the cave').toBeDefined();
     expect(wayForward?.to.entrance).toBe('from-mountain');
-    expect(trail).not.toBeNull();
+    expect(trail[0]).toEqual(wayInTile);
+    expect(isWayForward(trail.at(-1) ?? wayInTile)).toBe(true);
+    expect(trail.slice(1).filter((tile) => !isOpen(tile) || kindAt(tile) !== 'sand')).toEqual([]);
   });
 
   it('lets the hero walk it into the cave, where it touches the Checkpoint of the cave', () => {
     const game = quietGameAt(MOUNTAIN, wayInTile);
 
-    const events = walkRoute(game, trail ?? []);
+    const events = walkRoute(game, trail);
 
     expect(events).toContainEqual({ type: 'area-changed', areaId: CAVE });
     expect(playingView(game).area.id).toBe(CAVE);
@@ -233,7 +183,7 @@ describe('the way through the mountain', () => {
   });
 
   it('climbs through a narrow pass: three tiles in a row of the trail where the way is two tiles wide at most', () => {
-    const narrow = (trail ?? []).map((tile) => widthAt(tile) <= NARROW);
+    const narrow = trail.map((tile) => widthAt(tile) <= NARROW);
 
     const passes = narrow.filter((_, place) => narrow.slice(place, place + PASS_LENGTH).filter(Boolean).length === PASS_LENGTH);
 
@@ -269,7 +219,7 @@ describe('the way through the mountain', () => {
   it('gives the milestone to a hero who walks the trail', () => {
     const [milestone] = mountain.milestones ?? [];
 
-    const events = walkRoute(quietGameAt(MOUNTAIN, wayInTile), trail ?? []);
+    const events = walkRoute(quietGameAt(MOUNTAIN, wayInTile), trail);
 
     expect(events).toContainEqual({ type: 'milestone-reached', milestoneId: milestone?.id });
   });
@@ -313,7 +263,9 @@ describe('the raiders of the mountain', () => {
       expect(tougher.type.health, `the health of ${tougher.id} against ${other.id}`).toBeGreaterThanOrEqual(
         2 * other.type.health,
       );
-      expect(hitOf(tougher.type), `the hit of ${tougher.id} against ${other.id}`).toBeGreaterThan(hitOf(other.type));
+      expect(damageOf(tougher.type), `the hit of ${tougher.id} against ${other.id}`).toBeGreaterThan(
+        damageOf(other.type),
+      );
     }
   });
 
@@ -337,7 +289,7 @@ describe('the raiders of the mountain', () => {
         [...symbols].flatMap((_, col) => {
           const tile = { col, row };
           const near = distanceBetween(tile, charger.tile) <= noticingOf(gameContent, charger);
-          return near && isOpen(tile) && !inOpenBlock(tile) ? [`${charger.id} at ${col},${row}`] : [];
+          return near && isOpen(tile) && !isInOpenBlock(isOpen, tile) ? [`${charger.id} at ${col},${row}`] : [];
         }),
       ),
     );
@@ -365,8 +317,8 @@ describe('the armor of the mountain', () => {
     const upgrade = gameContent.gear[gearOf(armorChest())];
     const others = [
       ...GEAR_SLOTS.flatMap((slot) => gameContent.hero.startingGear[slot] ?? []),
-      ...gearInChestsOf(definitionOf(COAST)),
-      ...gearInChestsOf(definitionOf(WOODS)),
+      ...gearInChestsOf(areaOf(COAST)),
+      ...gearInChestsOf(areaOf(WOODS)),
     ].flatMap((id) => gameContent.gear[id] ?? []);
 
     const best = Math.max(0, ...others.filter((gear) => gear.slot === 'armor').map((gear) => gear.bonus));
@@ -376,7 +328,7 @@ describe('the armor of the mountain', () => {
   });
 
   it('is found before the tougher raider is met: the chest lies on the way before the first place where that raider notices the hero', () => {
-    const firstMet = (trail ?? []).findIndex((tile) =>
+    const firstMet = trail.findIndex((tile) =>
       toughRaiders.some((raider) => distanceBetween(tile, raider.tile) <= noticingOf(gameContent, raider)),
     );
 
@@ -468,7 +420,7 @@ describe('what the hero finds on the mountain', () => {
     expect(guards.filter(({ id }) => metOnTrail.has(id))).toEqual([]);
   });
 
-  it('keeps every chest and pickup out of the bottom rows, where the notice is drawn over the hero', () => {
+  it('keeps every interactable out of the bottom rows, where the notice is drawn over the hero', () => {
     const lowest = mountain.layout.length - 1 - BOTTOM_ROWS;
 
     expect(interactables.filter(({ tile }) => tile.row > lowest).map(({ id }) => id)).toEqual([]);
@@ -476,32 +428,19 @@ describe('what the hero finds on the mountain', () => {
 });
 
 describe('the Experience on the way through the mountain', () => {
-  const [, , levelFour = 0, levelFive = 0] = gameContent.progression.levelThresholds;
-  const coast = definitionOf(COAST);
-  const woods = definitionOf(WOODS);
-  const woodsOpen = openTilesOf(gameContent, woods);
-  const woodsForward = (woods.exits ?? []).find(({ to }) => to.area === MOUNTAIN);
-  /** The way from where the adventure begins to the exit of the coast, over open ground. */
-  const coastRoute = routeBetween(openTilesOf(gameContent, coast), gameContent.start.tile, (tile) =>
-    (coast.exits ?? []).some(({ zone }) => isInZone(zone, tile)),
-  );
-  /** The trail of the woods, the path of sand from the way in to the exit to the mountain. */
-  const woodsTrail = routeBetween(
-    (tile) => woodsOpen(tile) && gameContent.terrain[woods.layout[tile.row]?.[tile.col] ?? '']?.kind === 'sand',
-    (woods.entrances ?? [])[0]?.tile ?? { col: 0, row: 0 },
-    (tile) => woodsForward !== undefined && isInZone(woodsForward.zone, tile),
-  );
+  const coast = areaOf(COAST);
+  const woods = areaOf(WOODS);
 
   it('gives a hero who fights what it meets from the start to the exit of the mountain, and passes the milestones, the Experience of Level 4', () => {
     const earned =
-      experienceOfAll(gameContent, metOn(gameContent, coast, coastRoute)) +
+      experienceOfAll(gameContent, metOn(gameContent, coast, routeOf(COAST))) +
       milestonesOf(coast) +
-      experienceOfAll(gameContent, metOn(gameContent, woods, woodsTrail)) +
+      experienceOfAll(gameContent, metOn(gameContent, woods, routeOf(WOODS))) +
       milestonesOf(woods) +
       experienceOfAll(gameContent, metOn(gameContent, mountain, trail)) +
       milestonesOf(mountain);
 
-    expect(earned).toBeGreaterThanOrEqual(levelFour);
+    expect(earned).toBeGreaterThanOrEqual(experienceForLevel(gameContent, 4));
   });
 
   it('does not give a hero who clears the coast, the woods and the mountain the Experience of Level 5: nobody has to grind', () => {
@@ -513,7 +452,7 @@ describe('the Experience on the way through the mountain', () => {
       experienceOfAll(gameContent, mountain.monsters) +
       milestonesOf(mountain);
 
-    expect(everything).toBeLessThan(levelFive);
+    expect(everything).toBeLessThan(experienceForLevel(gameContent, 5));
   });
 });
 

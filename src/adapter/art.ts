@@ -1,13 +1,16 @@
 import type Phaser from 'phaser';
-import type { AreaView, Box, Direction, InteractableView, MonsterView, Point } from '../core';
-import { TILE_SIZE } from './config';
+import type { AreaView, Box, Direction, MonsterView, Point } from '../core';
+import { FACING_STEP, px, TILE_SIZE } from './config';
+import { DASH_TRAIL_ALPHAS, HEALTH_COLOUR, OUTLINE_COLOUR, warnsNow } from './monster-look';
+import type { Rect } from './pixel-font';
 
 // The flat shapes of what has no picture yet, and the colours of every kind of terrain and type of monster. Drawn here
 // from the state view: the ground and the monsters of an area whose art is not final, and the telegraphs and the strikes
 // of the monster attacks, which stay flat shapes. The pictures are elsewhere: the baked ground (terrain-baker.ts), the
 // monsters of final art and what they shoot (monster-sprites.ts, projectile-sprites.ts), the props (prop-sprites.ts: what
-// every area shares, and the old vessel), and the hero and its arrows (hero-sprite.ts). The rest of the adapter only calls
-// the draw functions below.
+// every area shares, and the old vessel), and the hero and its arrows (hero-sprite.ts). What a flat monster shares with a
+// pictured one, such as the flashes of its wind-up, is in monster-look.ts. The rest of the adapter only calls the draw
+// functions below.
 
 type Graphics = Phaser.GameObjects.Graphics;
 
@@ -51,51 +54,24 @@ const MONSTER_COLOURS: Readonly<Record<string, number>> = {
 /** Anything the art has no colour for is drawn in this colour, so a missing one cannot be overlooked. */
 const UNKNOWN_COLOUR = 0xff00ff;
 
-const OUTLINE_COLOUR = 0x1b1b24;
 const HIT_FLASH_COLOUR = 0xffffff;
-const HEALTH_COLOUR = 0x7bd35f;
 const TELEGRAPH_COLOUR = 0xe0392e;
 const STRIKE_COLOUR = 0xff8a3d;
 const WIND_UP_COLOUR = 0xff6b5b;
 
-/** A monster that warns by flashing alternates on and off over this many equal parts of its wind-up, ending on. */
-const WIND_UP_FLASH_PARTS = 7;
-
 /** How far, in tiles, a zone's edge may lie beyond a body's and still be the body's edge: it absorbs rounding. */
 const EDGE_TOLERANCE = 1e-6;
 
-/** The faded copies of a dashing monster's body left behind it, nearest first, by how much of its colour shows. */
-const DASH_TRAIL_ALPHAS: readonly number[] = [0.5, 0.3, 0.15];
-
-const FACING_STEP: Readonly<Record<Direction, Point>> = {
-  up: { x: 0, y: -1 },
-  down: { x: 0, y: 1 },
-  left: { x: -1, y: 0 },
-  right: { x: 1, y: 0 },
-};
-
-interface Rect {
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
-}
-
-/** Tiles to whole canvas pixels, so every shape lands exactly on pixels and stays crisp. */
-function px(tiles: number): number {
-  return Math.round(tiles * TILE_SIZE);
-}
-
 /** A body's rectangle in pixels. Its size is fixed, so it never flickers between sizes as it moves. */
 function bodyRect(position: Point, size: number): Rect {
-  return { x: px(position.x - size / 2), y: px(position.y - size / 2), width: px(size), height: px(size) };
+  return { left: px(position.x - size / 2), top: px(position.y - size / 2), width: px(size), height: px(size) };
 }
 
 function fillWithOutline(graphics: Graphics, rect: Rect, fill: number, outline: number = OUTLINE_COLOUR): void {
   graphics.fillStyle(outline);
-  graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
+  graphics.fillRect(rect.left, rect.top, rect.width, rect.height);
   graphics.fillStyle(fill);
-  graphics.fillRect(rect.x + 1, rect.y + 1, rect.width - 2, rect.height - 2);
+  graphics.fillRect(rect.left + 1, rect.top + 1, rect.width - 2, rect.height - 2);
 }
 
 /** The flat colour of a kind of terrain: the ground of an area with no art, and what the Automap (automap-palette.ts) uses for a kind its palette lacks. */
@@ -126,27 +102,6 @@ export function drawTerrain(graphics: Graphics, area: AreaView): void {
 }
 
 /**
- * Draws what the hero can interact with that has no picture, as flat shapes. Every kind has its picture now
- * (prop-sprites.ts), so nothing is drawn here: a new kind of interactable does not compile until it is listed here, and
- * one that has no picture yet is drawn here until it has.
- */
-export function drawInteractable(_graphics: Graphics, interactable: InteractableView): void {
-  switch (interactable.kind) {
-    case 'chest':
-    case 'pickup':
-    case 'key':
-    case 'door':
-    case 'gate':
-    case 'lever':
-    case 'sign':
-    case 'vessel':
-      return;
-    default:
-      interactable satisfies never;
-  }
-}
-
-/**
  * Draws a monster as a square: white while it flashes from a hit, dimmed while it rests after an attack, with a Health
  * bar once it is hurt. While it winds up an attack that has no area to show, it flashes red; while it dashes, faded
  * copies of it trail behind.
@@ -164,9 +119,9 @@ export function drawMonster(graphics: Graphics, monster: MonsterView, flashing: 
   if (monster.health < monster.maxHealth) {
     const innerWidth = body.width - 2;
     graphics.fillStyle(OUTLINE_COLOUR);
-    graphics.fillRect(body.x, body.y - 5, body.width, 4);
+    graphics.fillRect(body.left, body.top - 5, body.width, 4);
     graphics.fillStyle(HEALTH_COLOUR);
-    graphics.fillRect(body.x + 1, body.y - 4, Math.max(1, Math.round((innerWidth * monster.health) / monster.maxHealth)), 2);
+    graphics.fillRect(body.left + 1, body.top - 4, Math.max(1, Math.round((innerWidth * monster.health) / monster.maxHealth)), 2);
   }
 }
 
@@ -188,7 +143,7 @@ function flashesToWarn(monster: MonsterView): boolean {
     zone.maxX <= position.x + half + EDGE_TOLERANCE &&
     zone.minY >= position.y - half - EDGE_TOLERANCE &&
     zone.maxY <= position.y + half + EDGE_TOLERANCE;
-  return withinBody && Math.floor(action.progress * WIND_UP_FLASH_PARTS) % 2 === 0;
+  return withinBody && warnsNow(action.progress);
 }
 
 /** Behind a dashing monster: faded copies of its body, so that its speed shows. */
@@ -198,7 +153,7 @@ function drawDashTrail(graphics: Graphics, body: Rect, direction: Direction, col
   DASH_TRAIL_ALPHAS.forEach((alpha, index) => {
     const behind = gap * (index + 1);
     graphics.fillStyle(colour, alpha);
-    graphics.fillRect(body.x - step.x * behind, body.y - step.y * behind, body.width, body.height);
+    graphics.fillRect(body.left - step.x * behind, body.top - step.y * behind, body.width, body.height);
   });
 }
 
@@ -211,28 +166,28 @@ export function drawTelegraph(graphics: Graphics, zone: Box, progress: number): 
   const rect = zoneRect(zone);
   const done = Math.min(1, Math.max(0, progress));
   graphics.fillStyle(TELEGRAPH_COLOUR, 0.18);
-  graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
+  graphics.fillRect(rect.left, rect.top, rect.width, rect.height);
   const inset = Math.round(((1 - done) * Math.min(rect.width, rect.height)) / 2);
   graphics.fillStyle(TELEGRAPH_COLOUR, 0.55);
-  graphics.fillRect(rect.x + inset, rect.y + inset, rect.width - 2 * inset, rect.height - 2 * inset);
+  graphics.fillRect(rect.left + inset, rect.top + inset, rect.width - 2 * inset, rect.height - 2 * inset);
   graphics.fillStyle(TELEGRAPH_COLOUR, 1);
-  graphics.fillRect(rect.x, rect.y, rect.width, 1);
-  graphics.fillRect(rect.x, rect.y + rect.height - 1, rect.width, 1);
-  graphics.fillRect(rect.x, rect.y + 1, 1, rect.height - 2);
-  graphics.fillRect(rect.x + rect.width - 1, rect.y + 1, 1, rect.height - 2);
+  graphics.fillRect(rect.left, rect.top, rect.width, 1);
+  graphics.fillRect(rect.left, rect.top + rect.height - 1, rect.width, 1);
+  graphics.fillRect(rect.left, rect.top + 1, 1, rect.height - 2);
+  graphics.fillRect(rect.left + rect.width - 1, rect.top + 1, 1, rect.height - 2);
 }
 
 /** Shows where a monster's attack landed, for the moment of impact: the zone the Game core says it covered. */
 export function drawStrike(graphics: Graphics, zone: Box): void {
   const rect = zoneRect(zone);
   graphics.fillStyle(STRIKE_COLOUR, 0.7);
-  graphics.fillRect(rect.x, rect.y, rect.width, rect.height);
+  graphics.fillRect(rect.left, rect.top, rect.width, rect.height);
 }
 
 function zoneRect(zone: Box): Rect {
-  const x = px(zone.minX);
-  const y = px(zone.minY);
-  return { x, y, width: px(zone.maxX) - x, height: px(zone.maxY) - y };
+  const left = px(zone.minX);
+  const top = px(zone.minY);
+  return { left, top, width: px(zone.maxX) - left, height: px(zone.maxY) - top };
 }
 
 /** The colour at half the brightness. */

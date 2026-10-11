@@ -3,23 +3,31 @@ import { monsterColour, terrainColour } from '../src/adapter/art';
 import { gameContent } from '../src/content';
 import { createGame } from '../src/core';
 import type {
-  AreaDefinition,
   Direction,
   Game,
-  GearSlot,
   GuardianMonsterDefinition,
   GuardianPatternDefinition,
   MonsterPlacement,
-  MonsterTypeDefinition,
   PlayState,
   Point,
-  Snapshot,
-  StatId,
   Tile,
   TileRect,
 } from '../src/core';
-import { fixedRandom, gameAtTitle, interactableViews, monsterNamed, newGame, playingView, walk } from './fixtures';
-import { isInZone, keyOf, neighboursOf, openTilesOf, routeBetween, walkRoute, withoutOrdinaryMonsters } from './routes';
+import { fixedRandom, interactableViews, monsterNamed, playingView, walk } from './fixtures';
+import { areaOf, ARENA, GUARDIAN_CHECKPOINT, GUARDIAN_ID, HARBOR_GATE_ID, quietGameAt, VESSEL_ID } from './main-route';
+import { colourGap, LEAST_COLOUR_GAP } from './pictures';
+import { gameWithHero, heroAt, type HeroProfile, QUIET } from './profile-heroes';
+import {
+  damageOf,
+  isInZone,
+  isWithinAwareness,
+  keyOf,
+  openTilesOf,
+  reachableFrom,
+  routeBetween,
+  tilesOf,
+  walkRoute,
+} from './routes';
 
 // The Guardian of the island, the one monster that the game ships with besides the creatures of the five Adventure Areas,
 // and what lies around it at the east end of the castle: the gateway that leads to it, the Checkpoint in the gateway,
@@ -35,19 +43,12 @@ import { isInZone, keyOf, neighboursOf, openTilesOf, routeBetween, walkRoute, wi
 // has spent, and the Gear of the main route, or with the best that the island holds.
 
 const CASTLE = 'castle';
-const GUARDIAN_ID = 'arena-guardian';
-const GATE_ID = 'harbor-gate';
-const VESSEL_ID = 'old-vessel';
-const CHECKPOINT_ID = 'guardian-checkpoint';
 
 /** The gateway: one tile wide and five long, in the row where the route of the castle ends, east of the wall of the last hall. */
 const GATEWAY: TileRect = { col: 63, row: 11, width: 5, height: 1 };
 
 /** The Guardian's Checkpoint, in the gateway, three tiles from the arena. */
 const CHECKPOINT_TILE: Tile = { col: 65, row: 11 };
-
-/** The arena: open floor sixteen tiles wide and nine high with a few pillars in it, walled in but for the gateway and the gate. */
-const ARENA: TileRect = { col: 68, row: 7, width: 16, height: 9 };
 
 /** The Guardian's gate: the one gap in the far wall of the arena, in the row of the gateway. */
 const GATE_TILE: Tile = { col: 84, row: 11 };
@@ -64,22 +65,11 @@ const MOST_PILLAR_SHARE = 0.1;
 /** A harbor has room for the vessel and for the hero beside it: this many open tiles besides the vessel's, at least. */
 const LEAST_HARBOR_TILES = 8;
 
-/** Two colours are set apart when they lie this far from each other, at least, in the cube of red, green and blue (0 to 255 each). */
-const LEAST_COLOUR_GAP = 50;
-
 /** A fight lasts as many strikes as a hero needs to take the Guardian's Health: not a pushover and not a grind. */
 const STRIKES_TO_DEFEAT = { least: 12, most: 40 };
 
 /** A hit takes this long at most to land from the first step of its wind-up, so that a scene can end where it must: well over the longest. */
 const SCENE_STEP_LIMIT = 240;
-
-function definitionOf(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The shipped content has no Adventure Area "${id}"`);
-  }
-  return area;
-}
 
 /** The Guardian's type, which the content must give to the monster it places. */
 function guardianTypeOf(placement: MonsterPlacement | undefined): GuardianMonsterDefinition {
@@ -90,7 +80,7 @@ function guardianTypeOf(placement: MonsterPlacement | undefined): GuardianMonste
   return type;
 }
 
-const castle = definitionOf(CASTLE);
+const castle = areaOf(CASTLE);
 const wayIn = (castle.entrances ?? [])[0];
 const wayInTile: Tile = wayIn?.tile ?? { col: 0, row: 0 };
 const guardian = castle.monsters.find(({ id }) => id === GUARDIAN_ID);
@@ -106,35 +96,12 @@ function tileOf({ x, y }: Point): Tile {
   return { col: Math.floor(x), row: Math.floor(y) };
 }
 
-/** The tiles of a rectangle of the map. */
-function tilesOf({ col, row, width, height }: TileRect): Tile[] {
-  return Array.from({ length: width * height }, (_, place) => ({
-    col: col + (place % width),
-    row: row + Math.floor(place / width),
-  }));
-}
-
 /** The tiles that surround a rectangle of the map, one tile wide, corners included. */
 function ringAround(rectangle: TileRect): Tile[] {
   const { col, row, width, height } = rectangle;
   return tilesOf({ col: col - 1, row: row - 1, width: width + 2, height: height + 2 }).filter(
     (tile) => !isInZone(rectangle, tile),
   );
-}
-
-/** Every tile that can be walked to from a tile over open ground, the tile itself included. */
-function regionFrom(isOpenGround: (tile: Tile) => boolean, from: Tile): Tile[] {
-  const seen = new Set([keyOf(from)]);
-  const region = [from];
-  for (const tile of region) {
-    for (const next of neighboursOf(tile)) {
-      if (!seen.has(keyOf(next)) && isOpenGround(next)) {
-        seen.add(keyOf(next));
-        region.push(next);
-      }
-    }
-  }
-  return region;
 }
 
 /** Everything placed on the map of the castle, by id, with the tiles it takes: a zone takes all of its tiles. */
@@ -150,27 +117,6 @@ const placed = [
 /** The ids of what is placed on the tiles of a rectangle. */
 function placedIn(rectangle: TileRect): string[] {
   return placed.filter(({ tiles }) => tiles.some((tile) => isInZone(rectangle, tile))).map(({ id }) => id);
-}
-
-/** The damage of one hit of a monster type, before the Defense of the hero: of its hardest pattern, when it has patterns. */
-function hitOf(type: MonsterTypeDefinition): number {
-  if (type.behavior === 'guardian') {
-    return Math.max(...type.patterns.map(({ damage }) => damage));
-  }
-  if ('damage' in type) {
-    return type.damage;
-  }
-  return 'projectile' in type ? type.projectile.damage : 0;
-}
-
-/** How far apart two colours, given as 0xRRGGBB, lie in the cube of red, green and blue. */
-function colourGap(one: number, other: number): number {
-  return Math.hypot(...[16, 8, 0].map((shift) => ((one >> shift) & 0xff) - ((other >> shift) & 0xff)));
-}
-
-/** A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the Guardian. */
-function quietGameAt(areaId: string, tile: Tile): Game {
-  return newGame({ ...gameContent, areas: withoutOrdinaryMonsters(gameContent), start: { area: areaId, tile } });
 }
 
 describe('the Guardian of the castle', () => {
@@ -196,22 +142,7 @@ describe('the Guardian of the castle', () => {
 
   it('takes notice of nobody outside the arena: no open ground of the castle but the arena lies where it can notice a hero, or reach one', () => {
     const type = guardianTypeOf(guardian);
-    const awareness = Math.max(
-      type.noticingDistance,
-      ...type.patterns.map((pattern) => {
-        switch (pattern.kind) {
-          case 'sweep':
-            return pattern.reach;
-          case 'charge':
-            return pattern.dashRange;
-          case 'smite':
-            return pattern.range;
-        }
-      }),
-    );
-    const inAwareness = ({ col, row }: Tile): boolean =>
-      Math.abs(col - guardianTile.col) < (type.size + hero.size) / 2 + awareness &&
-      Math.abs(row - guardianTile.row) < (type.size + hero.size) / 2 + awareness;
+    const inAwareness = (tile: Tile): boolean => isWithinAwareness(type, guardianTile, hero.size, tile);
 
     const outside = castle.layout.flatMap((symbols, row) =>
       [...symbols].flatMap((_, col) => {
@@ -258,19 +189,19 @@ describe('the way to the Guardian', () => {
   });
 
   it('has the Guardian\'s Checkpoint in the gateway, at least two tiles from the arena, and no other Checkpoint but the one at the way in', () => {
-    const checkpoint = (castle.checkpoints ?? []).find(({ id }) => id === CHECKPOINT_ID);
+    const checkpoint = (castle.checkpoints ?? []).find(({ id }) => id === GUARDIAN_CHECKPOINT);
 
     expect(checkpoint?.tile).toEqual(CHECKPOINT_TILE);
     expect(isInZone(GATEWAY, CHECKPOINT_TILE)).toBe(true);
     expect(ARENA.col - CHECKPOINT_TILE.col).toBeGreaterThanOrEqual(2);
-    expect((castle.checkpoints ?? []).map(({ id }) => id).sort()).toEqual(['castle-checkpoint', CHECKPOINT_ID]);
+    expect((castle.checkpoints ?? []).map(({ id }) => id).sort()).toEqual(['castle-checkpoint', GUARDIAN_CHECKPOINT]);
   });
 
   it('gives the game six Checkpoints in all: one at each of the five ways into an area, and the Guardian\'s', () => {
     const all = gameContent.areas.flatMap((area) => area.checkpoints ?? []);
 
     expect(all).toHaveLength(6);
-    expect(all.filter(({ id }) => id === CHECKPOINT_ID)).toHaveLength(1);
+    expect(all.filter(({ id }) => id === GUARDIAN_CHECKPOINT)).toHaveLength(1);
   });
 
   it('leads over open ground from the way in to the Guardian with every door and gate shut and no key held, through the gateway and over the Checkpoint', () => {
@@ -290,21 +221,24 @@ describe('the way to the Guardian', () => {
 
   it('keeps every ordinary monster on the way\'s side of the Checkpoint: none can be walked to from the Guardian without stepping on it', () => {
     const fromGuardian = (tile: Tile) => isOpenOnceOpened(tile) && keyOf(tile) !== keyOf(CHECKPOINT_TILE);
-    const beyond = regionFrom(fromGuardian, guardianTile).map(keyOf);
+    const beyond = [...reachableFrom(fromGuardian, guardianTile)];
 
     expect(beyond).toContain(keyOf({ col: ARENA.col, row: GATEWAY.row }));
     expect(castle.monsters.filter(({ id, tile }) => id !== GUARDIAN_ID && beyond.includes(keyOf(tile))).map(({ id }) => id)).toEqual([]);
   });
 
-  it('lets the hero walk it with nothing opened: the Checkpoint is touched on the way, and the Guardian takes notice of the hero only once it is in the arena', () => {
+  it('lets the hero walk it with nothing opened: the Checkpoint is touched on the way, and the Guardian takes notice of the hero only once it is in the arena, which the core tells once', () => {
     const game = quietGameAt(CASTLE, wayInTile);
     const route = routeBetween(isOpen, wayInTile, (tile) => keyOf(tile) === keyOf(guardianTile));
 
     const events = walkRoute(game, route ?? [], () => monsterNamed(game, GUARDIAN_ID).action.type === 'idle');
 
-    expect(events).toContainEqual({ type: 'checkpoint-activated', checkpointId: CHECKPOINT_ID });
+    expect(events).toContainEqual({ type: 'checkpoint-activated', checkpointId: GUARDIAN_CHECKPOINT });
     expect(isInZone(ARENA, tileOf(playingView(game).hero.position))).toBe(true);
     expect(monsterNamed(game, GUARDIAN_ID).action.type).not.toBe('idle');
+    expect(events.filter(({ type }) => type === 'guardian-engaged')).toEqual([
+      { type: 'guardian-engaged', monsterId: GUARDIAN_ID },
+    ]);
     expect(events.filter(({ type }) => type === 'hero-hit')).toEqual([]);
   });
 });
@@ -317,11 +251,11 @@ describe('the harbor behind the gate', () => {
     routeBetween(isOpenGround, wayInTile, (tile) => isInZone(HARBOR, tile));
 
   it('has the Guardian\'s gate in the gap of the arena\'s far wall, next to the first tile of the stub, and it begins shut', () => {
-    const gate = (castle.interactables ?? []).find(({ id }) => id === GATE_ID);
+    const gate = (castle.interactables ?? []).find(({ id }) => id === HARBOR_GATE_ID);
 
     expect(gate).toMatchObject({ kind: 'gate', tile: GATE_TILE, opensWhenDefeated: GUARDIAN_ID });
     expect(isInZone(HARBOR, { col: GATE_TILE.col + 1, row: GATE_TILE.row })).toBe(true);
-    expect(interactableViews(quietGameAt(CASTLE, wayInTile), 'gate').find(({ id }) => id === GATE_ID)?.open).toBe(false);
+    expect(interactableViews(quietGameAt(CASTLE, wayInTile), 'gate').find(({ id }) => id === HARBOR_GATE_ID)?.open).toBe(false);
   });
 
   it('is out of reach of the hero while the gate is shut: no way leads to any tile of the stub', () => {
@@ -338,10 +272,10 @@ describe('the harbor behind the gate', () => {
   it('has room for the vessel and for the hero beside it: eight open tiles besides the vessel\'s, which nothing but the gate leads out of', () => {
     const closedIn = (tile: Tile) => isOpenOnceOpened(tile) && keyOf(tile) !== keyOf(GATE_TILE);
     const first = quay[0];
-    const region = first === undefined ? [] : regionFrom(closedIn, first);
+    const region = first === undefined ? [] : [...reachableFrom(closedIn, first)];
 
     expect(quay.length).toBeGreaterThanOrEqual(LEAST_HARBOR_TILES);
-    expect(region.map(keyOf).sort()).toEqual(quay.map(keyOf).sort());
+    expect(region.sort()).toEqual(quay.map(keyOf).sort());
   });
 
   it('holds the vessel and nothing else: no monster, chest, pickup, device, Checkpoint, entrance, exit or milestone is placed in it', () => {
@@ -350,17 +284,9 @@ describe('the harbor behind the gate', () => {
 });
 
 // The scenes below put the hero where the test needs it in the real arena and play the Guardian of the shipped content
-// against it, with every ordinary monster taken out. They begin from a snapshot that the test patches (the walk to the
-// arena says nothing that they need), the way a save would put the game back.
-
-const QUIET = { ...gameContent, areas: withoutOrdinaryMonsters(gameContent) };
-
-/** What a hero is, as far as the fight goes: its Experience, the Stat Points it has spent, and the Gear it holds. */
-interface HeroBuild {
-  readonly experience: number;
-  readonly points: Readonly<Record<StatId, number>>;
-  readonly gear: Readonly<Partial<Record<GearSlot, string>>>;
-}
+// against it, with every ordinary monster taken out. They begin from a game continued from a save, the way a save would
+// put the game back (the walk to the arena says nothing that they need). The core has no command to set the Guardian's
+// Health or the pattern that it tries next, so the scene changes those two in the save before the game continues.
 
 type PatternKind = GuardianPatternDefinition['kind'];
 
@@ -377,8 +303,6 @@ const STANDING: Readonly<Record<PatternKind, Point>> = {
 /** Next to the Guardian, to its west, in reach of a strike to the right. */
 const BESIDE_GUARDIAN: Point = STANDING.sweep;
 
-let saved: Snapshot | undefined;
-
 interface Scene {
   readonly at?: Point;
   readonly facing?: Direction;
@@ -388,25 +312,13 @@ interface Scene {
 }
 
 /** A game of the shipped content in the arena: the hero as `build` says, and the Guardian as the scene says, idle on its own tile. */
-function sceneOf(build: HeroBuild, scene: Scene = {}): Game {
-  saved ??= newGame(QUIET).snapshot();
-  const snapshot = structuredClone(saved);
-  const { state } = snapshot;
-  const carried = Object.values(build.gear).filter((id): id is string => id !== undefined);
-  state.areaId = CASTLE;
-  state.hero.position = scene.at ?? BESIDE_GUARDIAN;
-  state.hero.facing = scene.facing ?? 'right';
-  state.hero.experience = build.experience;
-  state.hero.statPoints = { ...build.points };
-  state.hero.gear = [...new Set([...state.hero.gear, ...carried])];
-  state.hero.equipped = { ...build.gear };
-  state.hero.health = maxHealthOf(build);
-  const monster = guardianOf(state);
-  monster.health = scene.guardianHealth ?? monster.health;
-  monster.nextPattern = scene.nextPattern ?? monster.nextPattern;
-  const game = gameAtTitle(QUIET);
-  game.send({ type: 'continue', snapshot });
-  return game;
+function sceneOf(build: HeroProfile, scene: Scene = {}): Game {
+  const place = { areaId: CASTLE, position: scene.at ?? BESIDE_GUARDIAN, facing: scene.facing ?? 'right' };
+  return gameWithHero(QUIET, build, place, ({ state }) => {
+    const monster = guardianOf(state);
+    monster.health = scene.guardianHealth ?? monster.health;
+    monster.nextPattern = scene.nextPattern ?? monster.nextPattern;
+  });
 }
 
 function guardianOf(state: PlayState) {
@@ -417,40 +329,23 @@ function guardianOf(state: PlayState) {
   return monster;
 }
 
-/** The most Health a hero of this build has: the base Health and what the Stat Points spent on Health add. */
-function maxHealthOf({ points }: HeroBuild): number {
-  return hero.health + points.health * gameContent.progression.statPointValue.health;
-}
-
 /** Hero A: of Level 6 with the Stat Points spent as 2 Health, 2 Attack and 1 Defense, the Steel Sword, and the armor it began with. */
-const MAIN_ROUTE: HeroBuild = {
-  experience: 100,
-  points: { health: 2, attack: 2, defense: 1 },
-  gear: { 'melee-weapon': 'steel-sword', armor: 'basic-armor' },
-};
+const MAIN_ROUTE = heroAt(6, { health: 2, attack: 2, defense: 1 }, { 'melee-weapon': 'steel-sword', armor: 'basic-armor' }, 0);
 
 /** Hero B: the same Level and Stat Points with the best that the island holds, the Katana and the Knight Mail. */
-const BEST_GEAR: HeroBuild = {
+const BEST_GEAR: HeroProfile = {
   ...MAIN_ROUTE,
-  gear: { 'melee-weapon': 'katana', armor: 'knight-mail' },
+  equipped: { 'melee-weapon': 'katana', armor: 'knight-mail' },
 };
 
 /** Hero C: of Level 4, with its three Stat Points spent as one each, and the Steel Sword: the least hero that a player who has hurried might be. */
-const HURRIED: HeroBuild = {
-  experience: 45,
-  points: { health: 1, attack: 1, defense: 1 },
-  gear: { 'melee-weapon': 'steel-sword', armor: 'basic-armor' },
-};
+const HURRIED = heroAt(4, { health: 1, attack: 1, defense: 1 }, { 'melee-weapon': 'steel-sword', armor: 'basic-armor' }, 0);
 
 /** Hero D: of Level 5 with the four Stat Points of it spent: it lacks 30 Experience of the cap, as much as the Guardian is worth. */
-const SHORT_OF_CAP: HeroBuild = {
-  experience: 70,
-  points: { health: 1, attack: 1, defense: 2 },
-  gear: { 'melee-weapon': 'steel-sword', armor: 'basic-armor' },
-};
+const SHORT_OF_CAP = heroAt(5, { health: 1, attack: 1, defense: 2 }, { 'melee-weapon': 'steel-sword', armor: 'basic-armor' }, 0);
 
 /** How much one strike of a hero takes of the Guardian's Health, read from the strike itself. */
-function strikeOf(build: HeroBuild): number {
+function strikeOf(build: HeroProfile): number {
   const events = sceneOf(build).send({ type: 'attack' });
   const hit = events.find((event) => event.type === 'monster-hit');
   if (hit?.type !== 'monster-hit') {
@@ -460,7 +355,7 @@ function strikeOf(build: HeroBuild): number {
 }
 
 /** What the pattern of a kind takes from a hero who stands where it lands and does nothing, after Defense, read from the hit itself. */
-function takenFrom(build: HeroBuild, kind: PatternKind): number {
+function takenFrom(build: HeroProfile, kind: PatternKind): number {
   const type = guardianTypeOf(guardian);
   const game = sceneOf(build, {
     at: STANDING[kind],
@@ -492,7 +387,7 @@ describe('the numbers of the Guardian', () => {
   });
 
   it('hits harder than any other monster does, with its hardest pattern', () => {
-    expect(hitOf(type)).toBeGreaterThan(Math.max(...others.map(hitOf)));
+    expect(damageOf(type)).toBeGreaterThan(Math.max(...others.map(damageOf)));
   });
 
   it('walks more slowly than the hero, who can always get away', () => {
@@ -612,7 +507,7 @@ describe('the fight against the reference heroes', () => {
 
   it('opens its gate with its fall: the gate is shut until the strike that takes its last Health, and the hero then walks through it into the harbor', () => {
     const game = sceneOf(MAIN_ROUTE, { guardianHealth: 1 });
-    const gate = () => interactableViews(game, 'gate').find(({ id }) => id === GATE_ID);
+    const gate = () => interactableViews(game, 'gate').find(({ id }) => id === HARBOR_GATE_ID);
     expect(gate()?.open).toBe(false);
 
     const events = game.send({ type: 'attack' });
@@ -629,7 +524,7 @@ describe('the fight against the reference heroes', () => {
     const events = walk(game, 'right', 24);
 
     expect(playingView(game).hero.position.x).toBeLessThanOrEqual(GATE_TILE.col - hero.size / 2);
-    expect(interactableViews(game, 'gate').find(({ id }) => id === GATE_ID)?.open).toBe(false);
+    expect(interactableViews(game, 'gate').find(({ id }) => id === HARBOR_GATE_ID)?.open).toBe(false);
     expect(events.filter(({ type }) => type === 'hero-hit')).toEqual([]);
   });
 });

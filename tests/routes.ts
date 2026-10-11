@@ -5,6 +5,7 @@ import type {
   Game,
   GameEvent,
   MonsterPlacement,
+  MonsterTypeDefinition,
   Tile,
   TileRect,
 } from '../src/core';
@@ -56,6 +57,14 @@ export function isInZone(zone: TileRect, { col, row }: Tile): boolean {
   return col >= zone.col && col < zone.col + zone.width && row >= zone.row && row < zone.row + zone.height;
 }
 
+/** The tiles of a rectangle of the map, row by row from the top left. */
+export function tilesOf({ col, row, width, height }: TileRect): Tile[] {
+  return Array.from({ length: width * height }, (_, place) => ({
+    col: col + (place % width),
+    row: row + Math.floor(place / width),
+  }));
+}
+
 /** What stops the hero whatever its state, and what stops it only while it is shut. */
 const ALWAYS_SOLID_KINDS: readonly string[] = ['chest', 'lever', 'sign', 'vessel'];
 const SOLID_WHILE_SHUT_KINDS: readonly string[] = ['door', 'gate'];
@@ -80,6 +89,30 @@ export function openTilesOf(
     const symbol = area.layout[tile.row]?.[tile.col];
     return symbol !== undefined && content.terrain[symbol]?.solid === false && !blocked.has(keyOf(tile));
   };
+}
+
+/** Whether a tile lies in a block of open ground two tiles wide and two high: a place to step aside in either way. */
+export function isInOpenBlock(isOpen: (tile: Tile) => boolean, { col, row }: Tile): boolean {
+  return [-1, 0].some((fromCol) =>
+    [-1, 0].some((fromRow) =>
+      [0, 1].every((across) => [0, 1].every((down) => isOpen({ col: col + fromCol + across, row: row + fromRow + down }))),
+    ),
+  );
+}
+
+/** Every tile that can be walked to from a tile over open ground, the tile itself included, as "col,row" keys. */
+export function reachableFrom(isOpen: (tile: Tile) => boolean, from: Tile): Set<string> {
+  const reached = new Set([keyOf(from)]);
+  const frontier = [from];
+  for (const tile of frontier) {
+    for (const next of neighboursOf(tile)) {
+      if (!reached.has(keyOf(next)) && isOpen(next)) {
+        reached.add(keyOf(next));
+        frontier.push(next);
+      }
+    }
+  }
+  return reached;
 }
 
 /**
@@ -180,6 +213,64 @@ export function distanceBetween(one: Tile, other: Tile): number {
 }
 
 /**
+ * How far from its body a monster of a type takes the hero in, in tiles, before it acts on it: how far it notices, or
+ * how far its farthest attack reaches when that is farther. A stationary monster never does.
+ */
+export function awarenessOf(type: MonsterTypeDefinition): number {
+  switch (type.behavior) {
+    case 'stationary':
+      return 0;
+    case 'chaser':
+      return Math.max(type.noticingDistance, type.reach);
+    case 'charger':
+    case 'ranged':
+      return type.noticingDistance;
+    case 'guardian':
+      return Math.max(
+        type.noticingDistance,
+        ...type.patterns.map((pattern) => {
+          switch (pattern.kind) {
+            case 'sweep':
+              return pattern.reach;
+            case 'charge':
+              return pattern.dashRange;
+            case 'smite':
+              return pattern.range;
+          }
+        }),
+      );
+  }
+}
+
+/**
+ * What one hit of a monster of a type does, before the Defense of the hero: its blow, its shot, or for a Guardian its
+ * hardest pattern. A stationary monster never hits.
+ */
+export function damageOf(type: MonsterTypeDefinition): number {
+  switch (type.behavior) {
+    case 'stationary':
+      return 0;
+    case 'chaser':
+    case 'charger':
+      return type.damage;
+    case 'ranged':
+      return type.projectile.damage;
+    case 'guardian':
+      return Math.max(...type.patterns.map(({ damage }) => damage));
+  }
+}
+
+/**
+ * Whether a hero of `heroSize` standing in the middle of `tile` is within the awareness of a monster of a type standing
+ * in the middle of `monsterTile`: the body of the monster, grown by its awareness on every side, overlaps the hero's.
+ * Bodies that only touch do not overlap, as in the rules.
+ */
+export function isWithinAwareness(type: MonsterTypeDefinition, monsterTile: Tile, heroSize: number, tile: Tile): boolean {
+  const apart = (type.size + heroSize) / 2 + awarenessOf(type);
+  return Math.abs(tile.col - monsterTile.col) < apart && Math.abs(tile.row - monsterTile.row) < apart;
+}
+
+/**
  * The monsters of an area that a hero meets on a route. A monster notices a hero in the square round its body that its
  * noticing distance makes, so a hero on a route meets it when a tile of the route lies in that square. A route that
  * is not there meets nothing.
@@ -201,4 +292,16 @@ export function experienceOfAll(content: ContentDefinition, monsters: readonly {
 /** What the milestones of an area give together, in Experience. */
 export function milestonesOf(area: AreaDefinition): number {
   return (area.milestones ?? []).reduce((total, { reward }) => total + reward.experience, 0);
+}
+
+/**
+ * The Experience that raises a hero to a Level 2 or higher, by the thresholds of the content. A Level the content does
+ * not have is a mistake of the test, so it throws: an Experience of 0 would make "at least this Level" true of anyone.
+ */
+export function experienceForLevel(content: ContentDefinition, level: number): number {
+  const threshold = content.progression.levelThresholds[level - 2];
+  if (threshold === undefined) {
+    throw new Error(`The content has no Experience for Level ${level}`);
+  }
+  return threshold;
 }

@@ -15,33 +15,30 @@ import { checkRoutesStayOpen } from './device-routes';
 import { checkGuardianPlace, checkGuardians } from './guardian-content';
 import { checkVessels, loadVessel } from './vessel-content';
 import type { Vessel } from './vessel-content';
-import { CONSUMABLE_IDS, GEAR_SLOTS, STAT_IDS } from './definitions';
+import { GEAR_SLOTS, STAT_IDS } from './definitions';
 import type {
   AreaDefinition,
-  ChaserMonsterDefinition,
-  ChargerMonsterDefinition,
   ChestContents,
   ChestDefinition,
   ConsumableId,
   ContentDefinition,
-  DropDefinition,
   GearDefinition,
   GearSlot,
-  GuardianMonsterDefinition,
-  GuardianPatternDefinition,
   HealingPotionDefinition,
   InteractableDefinition,
   MeleeWeaponDefinition,
   MilestoneDefinition,
   MilestoneReward,
   MonsterPlacement,
-  MonsterTypeDefinition,
   PickupDefinition,
   ProgressionDefinition,
-  RangedMonsterDefinition,
   RangedWeaponDefinition,
 } from './definitions';
+import { describeTile, tileBox, tileKey } from './geometry';
 import type { Box, Tile } from './geometry';
+import { loadMonsterType } from './monster-content';
+import type { MonsterType } from './monster-content';
+import { isConsumableId, requireMoreThanZero, requireWholeNumberOfOneOrMore, requireZeroOrMore } from './requirements';
 import { msToSteps, STEP_MS, STEPS_PER_SECOND } from './time';
 import { zoneBox } from './zones';
 
@@ -129,129 +126,6 @@ export interface Area {
   readonly text: string | null;
 }
 
-/** A stationary monster type as the rules use it. */
-export interface StationaryMonsterType {
-  readonly behavior: 'stationary';
-  readonly health: number;
-  readonly size: number;
-  readonly experience: number;
-  /** Never absent: a type without a drop table has an empty one. */
-  readonly drops: readonly DropDefinition[];
-}
-
-export interface ChaserMonsterType {
-  readonly behavior: 'chaser';
-  readonly health: number;
-  readonly size: number;
-  readonly experience: number;
-  /** Never absent: a type without a drop table has an empty one. */
-  readonly drops: readonly DropDefinition[];
-  readonly damage: number;
-  /** Tiles walked in one fixed step. */
-  readonly speedPerStep: number;
-  readonly noticingDistance: number;
-  readonly reach: number;
-  readonly windUpSteps: number;
-  readonly recoverySteps: number;
-}
-
-export interface ChargerMonsterType {
-  readonly behavior: 'charger';
-  readonly health: number;
-  readonly size: number;
-  readonly experience: number;
-  /** Never absent: a type without a drop table has an empty one. */
-  readonly drops: readonly DropDefinition[];
-  readonly damage: number;
-  /** Tiles walked in one fixed step to line up with the hero. */
-  readonly speedPerStep: number;
-  readonly noticingDistance: number;
-  readonly windUpSteps: number;
-  /** Tiles dashed in one fixed step. */
-  readonly dashSpeedPerStep: number;
-  /** The farthest the dash goes, in tiles. */
-  readonly dashRange: number;
-  readonly recoverySteps: number;
-}
-
-/** How the projectile of a ranged attacker flies and what it does, as the rules use it. */
-export interface MonsterProjectile {
-  readonly damage: number;
-  /** Tiles it flies in one fixed step. */
-  readonly speedPerStep: number;
-  /** Tiles it flies from the shooter's centre before it falls. */
-  readonly range: number;
-  readonly size: number;
-}
-
-export interface RangedMonsterType {
-  readonly behavior: 'ranged';
-  readonly health: number;
-  readonly size: number;
-  readonly experience: number;
-  /** Never absent: a type without a drop table has an empty one. */
-  readonly drops: readonly DropDefinition[];
-  readonly noticingDistance: number;
-  readonly windUpSteps: number;
-  readonly recoverySteps: number;
-  readonly projectile: MonsterProjectile;
-  /** How it keeps its distance from the hero, or null when it stands still. */
-  readonly keepsDistance: {
-    readonly preferredDistance: number;
-    /** Tiles walked in one fixed step. */
-    readonly speedPerStep: number;
-  } | null;
-}
-
-/** What every pattern of a Guardian has, as the rules use it. */
-interface GuardianPatternBase {
-  readonly damage: number;
-  readonly windUpSteps: number;
-  readonly recoverySteps: number;
-}
-
-export interface GuardianSweep extends GuardianPatternBase {
-  readonly kind: 'sweep';
-  readonly reach: number;
-}
-
-export interface GuardianCharge extends GuardianPatternBase {
-  readonly kind: 'charge';
-  /** Tiles dashed in one fixed step. */
-  readonly dashSpeedPerStep: number;
-  readonly dashRange: number;
-}
-
-export interface GuardianSmite extends GuardianPatternBase {
-  readonly kind: 'smite';
-  readonly size: number;
-  readonly range: number;
-}
-
-export type GuardianPattern = GuardianSweep | GuardianCharge | GuardianSmite;
-
-export interface GuardianMonsterType {
-  readonly behavior: 'guardian';
-  readonly health: number;
-  readonly size: number;
-  readonly experience: number;
-  /** Never absent: a type without a drop table has an empty one. */
-  readonly drops: readonly DropDefinition[];
-  /** Tiles walked in one fixed step toward the hero. */
-  readonly speedPerStep: number;
-  readonly noticingDistance: number;
-  /** In the order of the turns. */
-  readonly patterns: readonly GuardianPattern[];
-}
-
-/** A monster type as the rules use it, one member for each behavior. */
-export type MonsterType =
-  | StationaryMonsterType
-  | ChaserMonsterType
-  | ChargerMonsterType
-  | RangedMonsterType
-  | GuardianMonsterType;
-
 /** The hero's Ranged Weapon as the rules use it. */
 export interface RangedWeapon {
   /** Tiles an arrow flies in one fixed step. */
@@ -307,12 +181,19 @@ export interface Content {
 
 /** Throws an Error that says what is wrong when the definition does not make sense. */
 export function loadContent(definition: ContentDefinition): Content {
+  // The size comes first: the hero's arrow, checked below, must fit in it.
+  requireMoreThanZero("The hero's size", definition.hero.size);
+  requireMoreThanZero("The hero's speed", definition.hero.speedTilesPerSecond);
   requireMoreThanZero("The hero's health", definition.hero.health);
   requireZeroOrMore("The hero's defense", definition.hero.defense);
+  requireZeroOrMore("The hero's attack", definition.hero.attack);
+  requireZeroOrMore("The hero's attack cooldown", definition.hero.attackCooldownMs);
+  requireMoreThanZero("The hero's Melee Weapon reach", definition.hero.meleeWeapon.reach);
+  requireMoreThanZero("The hero's Melee Weapon width", definition.hero.meleeWeapon.width);
   requireMoreThanZero("The hero's interaction reach", definition.hero.interactionReach);
   const rangedWeapon = loadRangedWeapon(definition.hero.rangedWeapon, definition.hero.size);
   const minimumDamage = definition.minimumDamage ?? DEFAULT_MINIMUM_DAMAGE;
-  requireZeroOrMore('The minimum damage', minimumDamage);
+  requireOneOrMore('The minimum damage', minimumDamage);
   const areaTextMs = definition.areaTextMs ?? DEFAULT_AREA_TEXT_MS;
   if (!(areaTextMs >= STEP_MS)) {
     throw new Error(
@@ -362,7 +243,7 @@ export function loadContent(definition: ContentDefinition): Content {
   checkKeysAndDoors(Object.values(areas));
   checkLeverTargets(Object.values(areas));
   const start = { areaId: startArea.id, tile: definition.start.tile };
-  const guardians = checkGuardians(Object.values(areas), monsterTypes);
+  const guardians = checkGuardians(Object.values(areas), { monsterTypes });
   const vessels = checkVessels(Object.values(areas), ending !== null);
   checkRoutesStayOpen(Object.values(areas), start, [...guardians, ...vessels]);
   checkGuardianPlace(start, guardians, vessels, definition.requireGuardian === true);
@@ -437,248 +318,10 @@ function loadProgression(definition: ProgressionDefinition): ProgressionDefiniti
   return { levelThresholds: [...levelThresholds], statPointValue: { health, attack, defense } };
 }
 
-function loadMonsterType(name: string, definition: MonsterTypeDefinition): MonsterType {
-  requireZeroOrMore(`Monster type "${name}": experience`, definition.experience);
-  const drops = loadDrops(name, definition.drops ?? []);
-  switch (definition.behavior) {
-    case 'stationary':
-      return {
-        behavior: 'stationary',
-        health: definition.health,
-        size: definition.size,
-        experience: definition.experience,
-        drops,
-      };
-    case 'chaser':
-      return loadChaser(name, definition, drops);
-    case 'charger':
-      return loadCharger(name, definition, drops);
-    case 'ranged':
-      return loadRanged(name, definition, drops);
-    case 'guardian':
-      return loadGuardian(name, definition, drops);
-    default:
-      return refuseBehavior(name, definition);
-  }
-}
-
-function loadDrops(name: string, definitions: readonly DropDefinition[]): readonly DropDefinition[] {
-  return definitions.map((drop, index) => {
-    const field = (fieldName: string) => `Monster type "${name}": drops[${index}]${fieldName}`;
-    if (!isConsumableId(drop.consumable)) {
-      throw new Error(`${field('')} gives unknown consumable "${String(drop.consumable)}"`);
-    }
-    if (!(drop.chance >= 0 && drop.chance <= 1)) {
-      throw new Error(`${field('.chance')} must be from 0 to 1, but it is ${drop.chance}`);
-    }
-    requireWholeNumberOfOneOrMore(field('.amount'), drop.amount);
-    return { consumable: drop.consumable, chance: drop.chance, amount: drop.amount };
-  });
-}
-
-/** Only content that got past the compiler gets here. Its parameter type makes a behavior without a case a compile error. */
-function refuseBehavior(name: string, definition: never): never {
-  const { behavior } = definition as { behavior?: unknown };
-  throw new Error(`Monster type "${name}" has unknown behavior "${String(behavior)}"`);
-}
-
-function loadChaser(
-  name: string,
-  definition: ChaserMonsterDefinition,
-  drops: readonly DropDefinition[],
-): ChaserMonsterType {
-  const field = (fieldName: string) => `Monster type "${name}": ${fieldName}`;
-  requireMoreThanZero(field('damage'), definition.damage);
-  requireZeroOrMore(field('speedTilesPerSecond'), definition.speedTilesPerSecond);
-  requireZeroOrMore(field('noticingDistance'), definition.noticingDistance);
-  requireMoreThanZero(field('reach'), definition.reach);
-  requireZeroOrMore(field('recoveryMs'), definition.recoveryMs);
-  requireAtLeastOneStep(field('windUpMs'), definition.windUpMs);
-  return {
-    behavior: 'chaser',
-    health: definition.health,
-    size: definition.size,
-    experience: definition.experience,
-    drops,
-    damage: definition.damage,
-    speedPerStep: definition.speedTilesPerSecond / STEPS_PER_SECOND,
-    noticingDistance: definition.noticingDistance,
-    reach: definition.reach,
-    windUpSteps: msToSteps(definition.windUpMs),
-    recoverySteps: msToSteps(definition.recoveryMs),
-  };
-}
-
-function loadCharger(
-  name: string,
-  definition: ChargerMonsterDefinition,
-  drops: readonly DropDefinition[],
-): ChargerMonsterType {
-  const field = (fieldName: string) => `Monster type "${name}": ${fieldName}`;
-  requireMoreThanZero(field('damage'), definition.damage);
-  requireZeroOrMore(field('speedTilesPerSecond'), definition.speedTilesPerSecond);
-  requireZeroOrMore(field('noticingDistance'), definition.noticingDistance);
-  requireAtLeastOneStep(field('windUpMs'), definition.windUpMs);
-  requireMoreThanZero(field('dashSpeedTilesPerSecond'), definition.dashSpeedTilesPerSecond);
-  requireMoreThanZero(field('dashRange'), definition.dashRange);
-  requireZeroOrMore(field('recoveryMs'), definition.recoveryMs);
-  return {
-    behavior: 'charger',
-    health: definition.health,
-    size: definition.size,
-    experience: definition.experience,
-    drops,
-    damage: definition.damage,
-    speedPerStep: definition.speedTilesPerSecond / STEPS_PER_SECOND,
-    noticingDistance: definition.noticingDistance,
-    windUpSteps: msToSteps(definition.windUpMs),
-    dashSpeedPerStep: definition.dashSpeedTilesPerSecond / STEPS_PER_SECOND,
-    dashRange: definition.dashRange,
-    recoverySteps: msToSteps(definition.recoveryMs),
-  };
-}
-
-function loadRanged(
-  name: string,
-  definition: RangedMonsterDefinition,
-  drops: readonly DropDefinition[],
-): RangedMonsterType {
-  const field = (fieldName: string) => `Monster type "${name}": ${fieldName}`;
-  requireZeroOrMore(field('noticingDistance'), definition.noticingDistance);
-  requireAtLeastOneStep(field('windUpMs'), definition.windUpMs);
-  requireZeroOrMore(field('recoveryMs'), definition.recoveryMs);
-  const { projectile, keepsDistance } = definition;
-  requireMoreThanZero(field('projectile.damage'), projectile.damage);
-  requireMoreThanZero(field('projectile.speedTilesPerSecond'), projectile.speedTilesPerSecond);
-  requireMoreThanZero(field('projectile.range'), projectile.range);
-  requireMoreThanZero(field('projectile.size'), projectile.size);
-  // It leaves from the shooter's centre, so a larger one would begin inside whatever the shooter stands against.
-  if (projectile.size > definition.size) {
-    throw new Error(
-      `${field('projectile.size')} must be at most the monster's size of ${definition.size}, but it is ${projectile.size}`,
-    );
-  }
-  if (keepsDistance !== undefined) {
-    requireZeroOrMore(field('keepsDistance.preferredDistance'), keepsDistance.preferredDistance);
-    requireMoreThanZero(field('keepsDistance.speedTilesPerSecond'), keepsDistance.speedTilesPerSecond);
-  }
-  return {
-    behavior: 'ranged',
-    health: definition.health,
-    size: definition.size,
-    experience: definition.experience,
-    drops,
-    noticingDistance: definition.noticingDistance,
-    windUpSteps: msToSteps(definition.windUpMs),
-    recoverySteps: msToSteps(definition.recoveryMs),
-    projectile: {
-      damage: projectile.damage,
-      speedPerStep: projectile.speedTilesPerSecond / STEPS_PER_SECOND,
-      range: projectile.range,
-      size: projectile.size,
-    },
-    keepsDistance:
-      keepsDistance === undefined
-        ? null
-        : {
-            preferredDistance: keepsDistance.preferredDistance,
-            speedPerStep: keepsDistance.speedTilesPerSecond / STEPS_PER_SECOND,
-          },
-  };
-}
-
-function loadGuardian(
-  name: string,
-  definition: GuardianMonsterDefinition,
-  drops: readonly DropDefinition[],
-): GuardianMonsterType {
-  const field = (fieldName: string) => `Monster type "${name}": ${fieldName}`;
-  requireZeroOrMore(field('speedTilesPerSecond'), definition.speedTilesPerSecond);
-  requireZeroOrMore(field('noticingDistance'), definition.noticingDistance);
-  const { patterns } = definition;
-  if (patterns.length < 2) {
-    throw new Error(`${field('patterns')} must hold at least two patterns, but it holds ${patterns.length}`);
-  }
-  const kinds = new Set(patterns.map((pattern) => pattern.kind));
-  if (kinds.size < 2) {
-    throw new Error(
-      `${field('patterns')} must hold at least two different kinds of pattern, but all are ${[...kinds].join(', ')}`,
-    );
-  }
-  return {
-    behavior: 'guardian',
-    health: definition.health,
-    size: definition.size,
-    experience: definition.experience,
-    drops,
-    speedPerStep: definition.speedTilesPerSecond / STEPS_PER_SECOND,
-    noticingDistance: definition.noticingDistance,
-    patterns: patterns.map((pattern, index) => loadGuardianPattern(name, index, pattern)),
-  };
-}
-
-function loadGuardianPattern(name: string, index: number, definition: GuardianPatternDefinition): GuardianPattern {
-  const field = (fieldName: string) => `Monster type "${name}": patterns[${index}].${fieldName}`;
-  requireMoreThanZero(field('damage'), definition.damage);
-  requireAtLeastOneStep(field('windUpMs'), definition.windUpMs);
-  // Unlike the other behaviors, which may attack again at once: the hero must always have a moment to hit this one freely.
-  requireAtLeastOneStep(field('recoveryMs'), definition.recoveryMs);
-  const common = {
-    damage: definition.damage,
-    windUpSteps: msToSteps(definition.windUpMs),
-    recoverySteps: msToSteps(definition.recoveryMs),
-  };
-  switch (definition.kind) {
-    case 'sweep':
-      requireMoreThanZero(field('reach'), definition.reach);
-      return { kind: 'sweep', ...common, reach: definition.reach };
-    case 'charge':
-      requireMoreThanZero(field('dashSpeedTilesPerSecond'), definition.dashSpeedTilesPerSecond);
-      requireMoreThanZero(field('dashRange'), definition.dashRange);
-      return {
-        kind: 'charge',
-        ...common,
-        dashSpeedPerStep: definition.dashSpeedTilesPerSecond / STEPS_PER_SECOND,
-        dashRange: definition.dashRange,
-      };
-    case 'smite':
-      requireMoreThanZero(field('size'), definition.size);
-      requireMoreThanZero(field('range'), definition.range);
-      return { kind: 'smite', ...common, size: definition.size, range: definition.range };
-    default:
-      return refusePattern(name, index, definition);
-  }
-}
-
-/** Only content that got past the compiler gets here. Its parameter type makes a kind of pattern without a case a compile error. */
-function refusePattern(name: string, index: number, definition: never): never {
-  const { kind } = definition as { kind?: unknown };
-  throw new Error(`Monster type "${name}": patterns[${index}] has unknown kind "${String(kind)}"`);
-}
-
-/** A wind-up shorter than one fixed step would be over before it showed: the telegraph needs at least one. */
-function requireAtLeastOneStep(what: string, ms: number): void {
-  if (!(ms >= STEP_MS)) {
-    throw new Error(`${what} must be at least one fixed step (${STEP_MS.toFixed(1)} ms), but it is ${ms}`);
-  }
-}
-
-// These also refuse NaN, which no comparison with a number is true for.
-function requireMoreThanZero(what: string, value: number): void {
-  if (!(value > 0)) {
-    throw new Error(`${what} must be more than 0, but it is ${value}`);
-  }
-}
-
-function requireZeroOrMore(what: string, value: number): void {
-  if (!(value >= 0)) {
-    throw new Error(`${what} must be 0 or more, but it is ${value}`);
-  }
-}
-
-function requireWholeNumberOfOneOrMore(what: string, value: number): void {
-  if (!Number.isInteger(value) || value < 1) {
-    throw new Error(`${what} must be a whole number of 1 or more, but it is ${value}`);
+/** Defense can never reduce a hit to nothing, so the floor under the damage the hero takes is a whole Health or more. */
+function requireOneOrMore(what: string, value: number): void {
+  if (!(value >= 1)) {
+    throw new Error(`${what} must be 1 or more, but it is ${value}`);
   }
 }
 
@@ -903,10 +546,6 @@ function loadInteractables(
   });
 }
 
-function tileKey(tile: Tile): string {
-  return `${tile.col},${tile.row}`;
-}
-
 /** One case for each kind of interactable: it checks the definition and converts it into the form the rules use. */
 function loadInteractable(
   areaId: string,
@@ -971,11 +610,6 @@ function loadPickup(areaId: string, definition: PickupDefinition): Pickup {
   };
 }
 
-/** The box of a tile, in tile units like the other bodies. */
-function tileBox({ col, row }: Tile): Box {
-  return { minX: col, minY: row, maxX: col + 1, maxY: row + 1 };
-}
-
 /** One case for each kind of chest contents. */
 function loadChestContents(
   areaId: string,
@@ -1004,20 +638,11 @@ function loadChestContents(
   }
 }
 
-/** Content read from a file could name a consumable that does not exist, and the compiler would not notice. */
-function isConsumableId(id: string): id is ConsumableId {
-  return (CONSUMABLE_IDS as readonly string[]).includes(id);
-}
-
 function refuseContents(what: string, kind: never): never {
   throw new Error(`${what} holds unknown contents "${String(kind)}"`);
 }
 
 const NOT_WALKABLE = 'solid terrain or outside the map';
-
-function describeTile(tile: Tile): string {
-  return `(col ${tile.col}, row ${tile.row})`;
-}
 
 /** Whether a tile blocks movement. Tiles beyond the map count as solid. */
 export function isSolid(area: Pick<Area, 'solid'>, tile: Tile): boolean {
@@ -1031,14 +656,6 @@ export function areaOf(content: Content, areaId: string): Area {
     throw new Error(`Unknown area "${areaId}"`);
   }
   return area;
-}
-
-export function monsterTypeOf(content: Content, type: string): MonsterType {
-  const found = content.monsterTypes[type];
-  if (found === undefined) {
-    throw new Error(`Unknown monster type "${type}"`);
-  }
-  return found;
 }
 
 export function gearOf(content: Content, id: string): GearDefinition {

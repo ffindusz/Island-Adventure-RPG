@@ -9,6 +9,8 @@ import type {
 } from '../src/core';
 import {
   FIELD_LAYOUT,
+  INTERACT,
+  OPEN_INVENTORY,
   advance,
   arena,
   biterAt,
@@ -35,8 +37,6 @@ import type { ArenaOptions } from './fixtures';
 // The hero stands at (3.5, 3.5) facing down, with 10 Health. What stands on the tile (3, 4), right below it, is in
 // reach: a chest opens with Interact, and a monster there is defeated by a strike.
 
-const INTERACT = { type: 'interact' } as const;
-const OPEN_INVENTORY = { type: 'open-page', page: 'inventory' } as const;
 const USE = { type: 'use-healing-potion' } as const;
 
 function potionsOf(game: Game): number {
@@ -219,6 +219,7 @@ describe('using a Healing Potion', () => {
   const notFromTheInventory: { when: string; prepare: (game: Game) => void }[] = [
     { when: 'no page is open', prepare: () => undefined },
     { when: 'the stat page is open', prepare: (game) => void game.send({ type: 'open-page', page: 'stats' }) },
+    { when: 'the Automap page is open', prepare: (game) => void game.send({ type: 'open-page', page: 'automap' }) },
     {
       when: 'the inventory page has been closed',
       prepare: (game) => {

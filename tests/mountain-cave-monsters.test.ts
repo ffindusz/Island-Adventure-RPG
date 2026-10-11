@@ -2,14 +2,15 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { ARTWORK } from '../src/adapter/artwork';
 import type { ArtManifest } from '../src/adapter/asset-manifest';
-import { gameContent } from '../src/content';
-import { bytesOf, fileOf, frameOf, readPicture } from './pictures';
+import { areaOf } from './main-route';
+import { bytesOf, fileOf, frameOf, isOutline, isRed, isWhite, readPicture, sameShape } from './pictures';
 import type { Picture, Pixel } from './pictures';
 
 // The raiders of the mountain and the creatures of the cave are drawn from sheets of their own, the way the monsters of
 // the coast and the woods are (src/adapter/monster-sprites.ts): four columns, the way each faces (down, up, left, right),
 // the frames of its walk, then a row of a white shape for a hit and a row of a red one for a wind-up. That is the manifest
-// check of ADR 0002 and the shape of the sheets: what each one looks like is for the screenshots.
+// check of ADR 0002 and, with the sheets read from disk as ADR 0005 allows, their shape: what each one looks like is for
+// the screenshots.
 
 const MOUNTAIN = ['raider', 'raider-charger', 'raider-archer', 'raider-veteran'];
 const CAVE = ['cave-bat', 'cave-lizard', 'cave-eye', 'cave-bear'];
@@ -19,26 +20,14 @@ const FACINGS = ['down', 'up', 'left', 'right'] as const;
 const WALK_FRAMES = 4;
 const HIT_ROW = WALK_FRAMES;
 const WIND_UP_ROW = WALK_FRAMES + 1;
-const OUTLINE = [0x14, 0x1b, 0x1b];
 
 function typesOf(areaId: string): string[] {
-  const area = gameContent.areas.find((candidate) => candidate.id === areaId);
-  if (!area) throw new Error(`the shipped content has no area "${areaId}"`);
-  return [...new Set(area.monsters.map((monster) => monster.type))].sort();
+  return [...new Set(areaOf(areaId).monsters.map((monster) => monster.type))].sort();
 }
 
 /** The opaque pixels of the cell in this row and column of a sheet, as a map from "x,y" to the pixel. */
 function cellOf(sheet: Picture, row: number, column: number): Map<string, Pixel> {
   return frameOf(sheet, row, column, CELL);
-}
-
-const isOutline = (pixel: Pixel): boolean => OUTLINE.every((channel, index) => channel === pixel[index]);
-const isWhite = (pixel: Pixel): boolean => pixel[0] === 255 && pixel[1] === 255 && pixel[2] === 255;
-/** The red that compose-art.py gives a wind-up: strong in the red, weak in the green and in the blue. */
-const isRed = (pixel: Pixel): boolean => pixel[0] >= 150 && pixel[1] <= 105 && pixel[2] <= 100;
-
-function sameShape(a: Map<string, Pixel>, b: Map<string, Pixel>): boolean {
-  return a.size === b.size && [...a.keys()].every((key) => b.has(key));
 }
 
 /** The least that the red of a wind-up may change a monster, as the mean distance of its colours (of 441 at most). The pack's red bear is 81 and a red eye 71; the eight monsters are 94 and over. */

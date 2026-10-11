@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { layoutCard } from '../src/adapter/opening-card';
+import { GAME_TITLE } from '../src/adapter/title-layout';
 import { gameContent } from '../src/content';
 import { charactersTheFontLacks } from './drawn-text';
 import { creditsOwedBy, recordOnDisk } from './licence-record';
@@ -10,9 +11,6 @@ import { creditsOwedBy, recordOnDisk } from './licence-record';
 
 const ENDING = gameContent.ending ?? [];
 const CREDITS = gameContent.credits ?? [];
-
-/** What the title screen calls the game, which the credits begin with. */
-const TITLE = 'ISLAND ADVENTURE';
 
 /** The tools the game is made with, which one line of the credits names. */
 const TOOLS = ['Phaser', 'TypeScript', 'Vite'];
@@ -53,7 +51,7 @@ describe('the credits of the game', () => {
   });
 
   it('begin with the title of the game, as the title screen shows it', () => {
-    expect(CREDITS[0]).toBe(TITLE);
+    expect(CREDITS[0]).toBe(GAME_TITLE);
   });
 
   it('name the tools the game is made with, Phaser, TypeScript and Vite, in one line', () => {
@@ -74,76 +72,7 @@ describe('the credits of the game', () => {
 // The licence record says that the credits draw from the "Credits text" lines of the entries that are in use. This
 // reads the record from disk, as final-art.test.ts reads the pictures, so that an entry put in use without its text in
 // the credits turns this red: a ticket that copies an asset in adds its text to src/content/ending.ts in the same commit.
-
-const RECORD = [
-  '# Asset licence record',
-  '',
-  'Nothing is copied in without an entry whose status is "In use".',
-  '',
-  '## Summary',
-  '',
-  '| ID | Source | Licence | Checked | Status |',
-  '| --- | --- | --- | --- | --- |',
-  '| A1 | The art pack | CC0 | 2026-01-01 | Approved base; in use: the hero and the interface |',
-  '| B2 | A song | CC0 | 2026-01-01 | In use |',
-  '| C3 | A font | Not free | 2026-01-01 | Do not use |',
-  '| D4 | A tileset | CC0 | 2026-01-01 | Candidate |',
-  '',
-  '## Entries',
-  '',
-  '### A1. The art pack',
-  '',
-  '- **Source:** https://example.com/art',
-  '- **Credits text (a courtesy, not required; the page asks for a link):** "The art pack by Someone (CC0), https://example.com/art"',
-  '- **Limits of CC0:** none.',
-  '',
-  '### B2. A song',
-  '',
-  '- **Source:** https://example.com/song',
-  '',
-  '### C3. A font',
-  '',
-  '- **Credits text if used:** "The font by Nobody"',
-  '',
-  '### D4. A tileset',
-  '',
-  '- **Credits text if used:** "The tileset by Somebody (CC0), https://example.com/tiles".',
-].join('\n');
-
-describe('the reading of the licence record', () => {
-  it('finds each entry whose status says it is in use, with the credits text of its section', () => {
-    expect(creditsOwedBy(RECORD).find(({ id }) => id === 'A1')).toEqual({
-      id: 'A1',
-      text: 'The art pack by Someone (CC0), https://example.com/art',
-    });
-  });
-
-  it('finds an entry that is in use and has no credits text, and says so by leaving the text out', () => {
-    expect(creditsOwedBy(RECORD).find(({ id }) => id === 'B2')).toEqual({ id: 'B2', text: undefined });
-  });
-
-  it('leaves out the entries that are not in use, whatever else they say, and the sentence above the table', () => {
-    expect(creditsOwedBy(RECORD).map(({ id }) => id)).toEqual(['A1', 'B2']);
-  });
-
-  it('takes the text of an entry that was a candidate and is in use now, whatever its label said', () => {
-    const candidate = '| D4 | A tileset | CC0 | 2026-01-01 | Candidate |';
-    const switched = RECORD.replace(candidate, candidate.replace('Candidate', 'IN USE: the ground'));
-
-    expect(creditsOwedBy(switched).find(({ id }) => id === 'D4')).toEqual({
-      id: 'D4',
-      text: 'The tileset by Somebody (CC0), https://example.com/tiles',
-    });
-  });
-
-  it('reads a record whose lines end the way Windows ends them', () => {
-    expect(creditsOwedBy(RECORD.replaceAll('\n', '\r\n'))).toEqual(creditsOwedBy(RECORD));
-  });
-
-  it('finds nothing in a record that has no table', () => {
-    expect(creditsOwedBy('# Asset licence record\n\nNothing is in use.\n')).toEqual([]);
-  });
-});
+// licence-record.test.ts tests the reading of the record, on records made for it.
 
 describe('the credits and the licence record', () => {
   const owed = creditsOwedBy(recordOnDisk());

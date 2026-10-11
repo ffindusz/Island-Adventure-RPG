@@ -1,33 +1,30 @@
-import type Phaser from 'phaser';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import type { AudioChange } from '../src/adapter/audio-settings';
 import { PlayerInput } from '../src/adapter/player-input';
 
-// player-input.ts imports Phaser, and Phaser cannot load without a window. All it takes from Phaser here is the rule of
-// `JustDown`, copied below, and the keys, which FakeKey copies in the parts that the rule reads. Whether the real keys
-// behave like these is looked at in the browser.
-vi.mock('phaser', () => ({
-  default: {
-    Input: {
-      Keyboard: {
-        JustDown: (key: { _justDown: boolean }) => {
-          const pressed = key._justDown;
-          key._justDown = false;
-          return pressed;
-        },
-      },
-    },
-  },
-}));
+// player-input.ts is given the keys by the scene that makes it, and Phaser's rule of when a key went down (`JustDown`).
+// FakeKey copies the parts of Phaser's `Key` that the player's input reads, and `justDown` below copies the rule. Whether
+// the real keys behave like these is looked at in the browser.
+
+/** Phaser's `JustDown`: whether the key went down since the last time it was asked. Asking uses the press up. */
+function justDown(key: FakeKey): boolean {
+  const pressed = key._justDown;
+  key._justDown = false;
+  return pressed;
+}
 
 /** What Phaser's `Key` keeps of a press, with the rules of its `onDown` and `onUp`. */
 class FakeKey {
   isDown = false;
   _justDown = false;
-  originalEvent: { repeat: boolean } | undefined;
+  originalEvent = { repeat: false, ctrlKey: false, metaKey: false };
 
-  /** The browser's key-down event. `repeat` is true for the repeats of a key that is held down. */
-  down(repeat = false): void {
-    this.originalEvent = { repeat };
+  /**
+   * The browser's key-down event. `repeat` is true for the repeats of a key that is held down, and `modifiers` are the
+   * Ctrl and Cmd keys that the event says are held with it.
+   */
+  down(repeat = false, modifiers: { ctrlKey?: boolean; metaKey?: boolean } = {}): void {
+    this.originalEvent = { repeat, ctrlKey: false, metaKey: false, ...modifiers };
     if (!this.isDown) {
       this.isDown = true;
       this._justDown = true;
@@ -35,14 +32,14 @@ class FakeKey {
   }
 
   up(): void {
-    this.originalEvent = { repeat: false };
+    this.originalEvent = { repeat: false, ctrlKey: false, metaKey: false };
     this.isDown = false;
     this._justDown = false;
   }
 }
 
 /** A player input over fake keys, as a screen that has just begun has it, and the keys by the name Phaser gives them. */
-function newScreen(): { input: PlayerInput; key: (name: string) => FakeKey } {
+function newScreen(): { input: PlayerInput<FakeKey>; key: (name: string) => FakeKey } {
   const keys = new Map<string, FakeKey>();
   const keyboard = {
     addKey: (name: string) => {
@@ -50,7 +47,7 @@ function newScreen(): { input: PlayerInput; key: (name: string) => FakeKey } {
       keys.set(name, key);
       return key;
     },
-  } as unknown as Phaser.Input.Keyboard.KeyboardPlugin;
+  };
   const key = (name: string): FakeKey => {
     const found = keys.get(name);
     if (found === undefined) {
@@ -58,11 +55,11 @@ function newScreen(): { input: PlayerInput; key: (name: string) => FakeKey } {
     }
     return found;
   };
-  return { input: new PlayerInput(keyboard), key };
+  return { input: new PlayerInput(keyboard, justDown), key };
 }
 
 /** The keys that more than one screen reads, and how each reports that it went down again. */
-const READS: readonly { name: string; says: string; read: (input: PlayerInput) => boolean }[] = [
+const READS: readonly { name: string; says: string; read: (input: PlayerInput<FakeKey>) => boolean }[] = [
   { name: 'ENTER', says: 'a confirm', read: (input) => input.pollMenu().confirm },
   { name: 'UP', says: 'a step up', read: (input) => input.pollMenu().step === -1 },
   { name: 'W', says: 'a step up', read: (input) => input.pollMenu().step === -1 },
@@ -74,6 +71,7 @@ const READS: readonly { name: string; says: string; read: (input: PlayerInput) =
     says: 'a Stat Point for health',
     read: (input) => input.pollActions().some((command) => command.type === 'assign-stat-point'),
   },
+  { name: 'N', says: 'a change of the audio', read: (input) => input.pollAudio().length > 0 },
 ];
 
 describe.each(READS)('the $name key', ({ name, says, read }) => {
@@ -137,5 +135,42 @@ describe('two keys that mean the same pressed together', () => {
     key('NUMPAD_ONE').down();
     expect(input.pollActions().filter((command) => command.type === 'assign-stat-point')).toHaveLength(1);
     expect(input.pollActions().filter((command) => command.type === 'assign-stat-point')).toHaveLength(0);
+  });
+
+  it('are one change of the audio, and neither is left over for the next look', () => {
+    const { input, key } = newScreen();
+    key('MINUS').down();
+    key('NUMPAD_SUBTRACT').down();
+    expect(input.pollAudio()).toEqual<AudioChange[]>(['lower']);
+    expect(input.pollAudio()).toEqual<AudioChange[]>([]);
+  });
+});
+
+describe('the keys of the audio', () => {
+  it('ask for their changes in the order of the changes, whichever was pressed first', () => {
+    const { input, key } = newScreen();
+    key('NUMPAD_ADD').down();
+    key('N').down();
+    expect(input.pollAudio()).toEqual<AudioChange[]>(['toggle-mute', 'raise']);
+  });
+
+  // Ctrl and minus zooms the page, and Ctrl and plus too: those presses are the browser's, and change nothing here.
+  it.each([
+    ['Ctrl', { ctrlKey: true }],
+    ['Cmd', { metaKey: true }],
+  ])('ask for nothing when they are pressed with %s', (_held, modifiers) => {
+    const { input, key } = newScreen();
+    key('MINUS').down(false, modifiers);
+    key('NUMPAD_ADD').down(false, modifiers);
+    expect(input.pollAudio()).toEqual<AudioChange[]>([]);
+  });
+
+  it('ask again when the key is let go and pressed without Ctrl after a press with it', () => {
+    const { input, key } = newScreen();
+    key('MINUS').down(false, { ctrlKey: true });
+    input.pollAudio();
+    key('MINUS').up();
+    key('MINUS').down();
+    expect(input.pollAudio()).toEqual<AudioChange[]>(['lower']);
   });
 });

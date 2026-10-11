@@ -250,7 +250,10 @@ export interface GuardianSmiteDefinition extends GuardianPatternBase {
   readonly range: number;
 }
 
-/** One attack of a Guardian. Adding a pattern means adding a member here and a case in guardian.ts and in content.ts. */
+/**
+ * One attack of a Guardian. Adding a pattern means adding a member here and a case in guardian.ts and in
+ * monster-content.ts.
+ */
 export type GuardianPatternDefinition =
   | GuardianSweepDefinition
   | GuardianChargeDefinition
@@ -565,7 +568,10 @@ export interface ContentDefinition {
   readonly hero: HeroDefinition;
   /** How the hero's Levels are reached, and what they are worth. */
   readonly progression: ProgressionDefinition;
-  /** The least damage a hit does to the hero, however high its Defense. Leave it out for the default of 1. */
+  /**
+   * The least damage a hit does to the hero, however high its Defense: 1 or more, since Defense never takes a hit away
+   * whole. Leave it out for the default of 1.
+   */
   readonly minimumDamage?: number;
   /** What a Healing Potion does when the hero uses it. */
   readonly healingPotion: HealingPotionDefinition;

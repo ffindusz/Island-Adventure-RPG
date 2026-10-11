@@ -3,13 +3,13 @@ import type { ContentDefinition, Game } from '../core';
 import { ARTWORK, neededArt } from './artwork';
 import { manifestLookup, requireArt } from './asset-manifest';
 import { GameAudio } from './audio';
-import { AUDIO, neededAudio, soundLookup } from './audio-manifest';
+import { AUDIO, neededAudio } from './audio-manifest';
 import { createAudioSettingsStore } from './audio-settings';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
+import { checkAudioKeys } from './controls';
 import { requireDrawableEnding } from './ending-pages';
 import { EndingScene } from './ending-scene';
 import { PlayScene } from './play-scene';
-import { checkAudioKeys } from './player-input';
 import { createSaveStore } from './save-store';
 import type { SaveStorage } from './save-store';
 import { TitleScene } from './title-scene';
@@ -23,9 +23,9 @@ import { TitleScene } from './title-scene';
  */
 export function startAdapter(core: Game, content: ContentDefinition, storage: SaveStorage | null): Phaser.Game {
   requireArt(neededArt(content), manifestLookup(ARTWORK), 'The content needs pictures that the asset manifest lacks');
-  requireArt(neededAudio(content), soundLookup(AUDIO), 'The content needs sounds that the audio manifest lacks');
+  requireArt(neededAudio(content), manifestLookup(AUDIO), 'The content needs sounds that the audio manifest lacks');
   requireDrawableEnding(content);
-  checkAudioKeys();
+  checkAudioKeys((name) => (Phaser.Input.Keyboard.KeyCodes as Record<string, number | undefined>)[name.toUpperCase()]);
   const saves = createSaveStore(storage, content);
   // One for the whole game: sounds outlive a scene, so every scene is given the same service.
   const audio = new GameAudio(createAudioSettingsStore(storage));
@@ -41,7 +41,11 @@ export function startAdapter(core: Game, content: ContentDefinition, storage: Sa
     scale: { mode: Phaser.Scale.NONE, zoom: Phaser.Scale.MAX_ZOOM, autoCenter: Phaser.Scale.CENTER_BOTH },
     // The first scene is the one that starts: the title, which starts the play screen; the play screen starts the ending
     // when the hero sails home, and both go back to the title.
-    scene: [new TitleScene(core, saves, audio), new PlayScene(core, saves, audio), new EndingScene(audio)],
+    scene: [
+      new TitleScene(core, saves, audio),
+      new PlayScene(core, saves, audio, content.areas),
+      new EndingScene(audio),
+    ],
   });
   // The zoom above is only chosen at start-up, so choose it again whenever the window changes size.
   game.scale.on(Phaser.Scale.Events.RESIZE, () => {

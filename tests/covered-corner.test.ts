@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { COVERED_CORNER, SCREEN_TILES, createGame } from '../src/core';
+import { VIEW_TILES_HIGH, VIEW_TILES_WIDE } from '../src/adapter/config';
+import { COVERED_CORNER, createGame } from '../src/core';
 import type { AreaDefinition, ContentDefinition, Tile } from '../src/core';
 import { arena, fixedRandom } from './fixtures';
 
@@ -7,13 +8,14 @@ import { arena, fixedRandom } from './fixtures';
 // screen shows all of it, so the HUD covers the map's own top-left tiles whatever its size, and a hero standing on one
 // would be hidden behind it. Content that asks for the check (`checkCoveredCorner`, which the game's own content does)
 // must keep those tiles solid in every area, and loading it says so when it does not. The small maps of other tests
-// do not ask: it is a rule about the game that ships, and the tests of the shipped content check that it asks.
+// do not ask: it is a rule about the game that ships, and the tests of the shipped content check that it asks. The
+// sizes below are measured against the screen of the adapter, because the corner is the same on a map of any size.
 
 const HERO_TILE: Tile = { col: 10, row: 6 };
-const BIGGER = { wide: SCREEN_TILES.wide + 4, high: SCREEN_TILES.high + 3 };
+const BIGGER = { wide: VIEW_TILES_WIDE + 4, high: VIEW_TILES_HIGH + 3 };
 const SIZES: Array<[string, { wide: number; high: number }]> = [
   ['smaller than the screen', { wide: 12, high: 8 }],
-  ['exactly the size of the screen', { wide: SCREEN_TILES.wide, high: SCREEN_TILES.high }],
+  ['exactly the size of the screen', { wide: VIEW_TILES_WIDE, high: VIEW_TILES_HIGH }],
   ['larger than the screen', BIGGER],
 ];
 

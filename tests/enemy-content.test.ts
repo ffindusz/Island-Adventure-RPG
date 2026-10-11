@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { createGame } from '../src/core';
-import type { ChargerMonsterDefinition, ContentDefinition, RangedMonsterDefinition } from '../src/core';
-import { advance, fixedRandom, monsterNamed } from './fixtures';
+import type { ChargerMonsterDefinition, RangedMonsterDefinition } from '../src/core';
+import { advance, expectAccepted, expectRefused, monsterNamed } from './fixtures';
 import { CHARGER, chargerAt, enemyContent, enemyField, HEAVY, SHOOTER, shooterAt, SNIPER } from './enemy-fixtures';
-
-function expectRefused(content: ContentDefinition, message: string): void {
-  expect(() => createGame({ content, random: fixedRandom })).toThrow(message);
-}
 
 describe('chargers and ranged attackers the rules cannot work with are refused when the game is created', () => {
   const chargerWith = (changes: Partial<ChargerMonsterDefinition>) =>
@@ -149,7 +144,7 @@ describe('chargers and ranged attackers the rules cannot work with are refused w
       },
     });
 
-    expect(() => createGame({ content, random: fixedRandom })).not.toThrow();
+    expectAccepted(content);
   });
 });
 

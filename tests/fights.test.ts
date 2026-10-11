@@ -42,6 +42,21 @@ describe('the fights of the adventure', () => {
     }
   }, 60_000);
 
+  it('cost a hero the hit that the table gives for the monster every time it lands one, in the fights the hero wins', () => {
+    let landed = 0;
+    for (const row of fightTable()) {
+      for (const { spend, result, damagePerHit } of row.builds) {
+        if (result.outcome === 'won') {
+          expect(result.healthLost, `${row.type} against a hero ${spend}: ${result.hits} hits of ${damagePerHit}`).toBe(
+            result.hits * damagePerHit,
+          );
+          landed += result.hits;
+        }
+      }
+    }
+    expect(landed).toBeGreaterThan(0);
+  }, 60_000);
+
   it('are in the table, every ordinary monster type of the content once: run this file with --silent=false to print it', () => {
     const table = fightTable();
     const types = Object.entries(gameContent.monsterTypes)

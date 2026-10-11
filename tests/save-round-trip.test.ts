@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Game, GameEvent, PlayState } from '../src/core';
-import { advance, playingView } from './fixtures';
+import type { PlayState } from '../src/core';
+import { advance, eventsUntilDefeated, playingView } from './fixtures';
 import { CHAPTERS, NOTICE_TEXT, adventureAfter, recorded, restoredFrom } from './saved-adventure';
 import type { Frame } from './saved-adventure';
 
@@ -367,24 +367,16 @@ describe('a defeat after Continue', () => {
   // After the chapter "hits" the hero has 2 of its 8 Health left, in the ruins, and the most recent Checkpoint is the
   // camp in the arena. The charger rests after its first hit and the next one defeats the hero.
 
-  function untilDefeated(game: Game): GameEvent[] {
-    const events: GameEvent[] = [];
-    for (let step = 0; step < 500; step++) {
-      events.push(...game.step());
-      if (events.some((event) => event.type === 'hero-defeated')) {
-        return events;
-      }
-    }
-    throw new Error('The hero was not defeated in 500 steps');
-  }
+  /** The steps within which the hero has to be defeated. */
+  const DEFEAT_WITHIN = 500;
 
   it('goes exactly as it goes in the game that was never saved', () => {
     const never = adventureAfter('hits');
     const restored = restoredFrom(never.snapshot());
 
-    const events = untilDefeated(never);
+    const events = eventsUntilDefeated(never, DEFEAT_WITHIN);
 
-    expect(untilDefeated(restored)).toEqual(events);
+    expect(eventsUntilDefeated(restored, DEFEAT_WITHIN)).toEqual(events);
     expect(restored.view()).toEqual(never.view());
     expect(restored.snapshot()).toEqual(never.snapshot());
   });
@@ -392,7 +384,7 @@ describe('a defeat after Continue', () => {
   it('sends the hero back to the Checkpoint with what it had there, and keeps what it earned since', () => {
     const restored = restoredFrom(adventureAfter('hits').snapshot());
 
-    const events = untilDefeated(restored);
+    const events = eventsUntilDefeated(restored, DEFEAT_WITHIN);
 
     expect(events.map((event) => event.type).slice(-3)).toEqual(['hero-hit', 'hero-defeated', 'area-changed']);
     const view = playingView(restored);

@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { drawText } from '../src/adapter/pixel-font';
-import type { Graphics } from '../src/adapter/pixel-font';
 import { gameContent } from '../src/content';
 import { STEPS_PER_SECOND, createGame } from '../src/core';
 import type {
@@ -12,9 +10,11 @@ import type {
   GameEvent,
   InteractableDefinition,
   Tile,
-  TileRect,
 } from '../src/core';
+import { charactersTheFontLacks } from './drawn-text';
 import { face, fixedRandom, interactableViews, inventoryOf, playingView, throughStorage, walk } from './fixtures';
+import { areaOf } from './main-route';
+import { tilesOf } from './routes';
 
 // The light puzzle the game ships with, in the woods: a cabin behind a locked door whose key lies in the north woods.
 // What a key, a door, a lever and a gate do is tested on purpose-built content (keys, doors, levers), and that no route
@@ -34,14 +34,6 @@ const NEIGHBOURS: readonly (readonly [Direction, Tile])[] = [
   ['left', { col: -1, row: 0 }],
   ['right', { col: 1, row: 0 }],
 ];
-
-function areaNamed(id: string): AreaDefinition {
-  const area = gameContent.areas.find((candidate) => candidate.id === id);
-  if (area === undefined) {
-    throw new Error(`The shipped content has no Adventure Area "${id}"`);
-  }
-  return area;
-}
 
 function firstEntranceOf(area: AreaDefinition): EntranceDefinition {
   const entrance = area.entrances?.[0];
@@ -70,16 +62,6 @@ const tileKey = ({ col, row }: Tile): string => `${col},${row}`;
 
 function tileOf(point: { x: number; y: number }): Tile {
   return { col: Math.floor(point.x), row: Math.floor(point.y) };
-}
-
-function tilesOf(zone: TileRect): Tile[] {
-  const tiles = [];
-  for (let row = zone.row; row < zone.row + zone.height; row += 1) {
-    for (let col = zone.col; col < zone.col + zone.width; col += 1) {
-      tiles.push({ col, row });
-    }
-  }
-  return tiles;
 }
 
 function isSolidTerrain(area: AreaDefinition, { col, row }: Tile): boolean {
@@ -122,13 +104,13 @@ function standsBeside(routes: ReadonlyMap<string, unknown>, tile: Tile): boolean
 
 /** The walks to every tile the hero can reach in the shipped woods from their way in, with these doors and gates open. */
 function woodsRoutes(...open: string[]): Map<string, Direction[]> {
-  const woods = areaNamed(WOODS);
+  const woods = areaOf(WOODS);
   return routesFrom(woods, firstEntranceOf(woods).tile, blockedByPlacements(woods, open));
 }
 
 /** The shipped content, with the hero beginning at the way in to the woods and the monsters of the woods taken out. */
 function quietWoodsContent(): ContentDefinition {
-  const woods = areaNamed(WOODS);
+  const woods = areaOf(WOODS);
   const areas = gameContent.areas.map((area) => (area.id === WOODS ? { ...area, monsters: [] } : area));
   return { ...gameContent, areas, start: { area: WOODS, tile: firstEntranceOf(woods).tile } };
 }
@@ -148,7 +130,7 @@ function routesInGame(game: Game): Map<string, Direction[]> {
       .filter((item) => stopsHero(item.kind, 'open' in item && item.open))
       .map((item) => tileKey(tileOf(item.position))),
   );
-  return routesFrom(areaNamed(WOODS), tileOf(view.hero.position), blocked);
+  return routesFrom(areaOf(WOODS), tileOf(view.hero.position), blocked);
 }
 
 function walkAlong(game: Game, route: readonly Direction[]): GameEvent[] {
@@ -178,19 +160,6 @@ function interactWith(game: Game, tile: Tile): readonly GameEvent[] {
   walkAlong(game, nearest.route);
   face(game, nearest.facing);
   return game.send({ type: 'interact' });
-}
-
-/** How many rectangles the pixel font draws for a piece of text: none when it has no picture for it. */
-function drawnRectangles(text: string): number {
-  let rectangles = 0;
-  const recorder = {
-    fillStyle: () => undefined,
-    fillRect: () => {
-      rectangles += 1;
-    },
-  };
-  drawText(recorder as unknown as Graphics, text, 0, 0, 0xffffff);
-  return rectangles;
 }
 
 describe('the cabin in the woods', () => {
@@ -246,7 +215,7 @@ describe('what the game ships with', () => {
   it.each(gameContent.areas.map((area) => area.id))(
     'keeps the entrances and the exits of %s free of chests, pickups and devices',
     (id) => {
-      const area = areaNamed(id);
+      const area = areaOf(id);
       const kept = new Set([
         ...(area.entrances ?? []).map((entrance) => tileKey(entrance.tile)),
         ...(area.exits ?? []).flatMap((exit) => tilesOf(exit.zone).map(tileKey)),
@@ -267,9 +236,7 @@ describe('what the game ships with', () => {
 
   // The core cannot tell what the pixel font draws, and a letter that it leaves out is a gap in a clue.
   it.each(texts)('has $of in letters the pixel font can draw', ({ text }) => {
-    const undrawable = [...new Set(text)].filter((character) => character !== ' ' && drawnRectangles(character) === 0);
-
-    expect(undrawable).toEqual([]);
+    expect(charactersTheFontLacks(text)).toEqual([]);
   });
 });
 

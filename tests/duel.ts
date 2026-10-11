@@ -1,6 +1,15 @@
 import { gameContent } from '../src/content';
-import type { ContentDefinition, Direction, Game, GameEvent, MonsterTypeDefinition } from '../src/core';
-import { boxAround, overlaps, strikeZone, wayToStrike } from './dodging-bot';
+import type { ContentDefinition, Game, GameEvent, MonsterTypeDefinition } from '../src/core';
+import {
+  boxAround,
+  DRINK_AT_SHARE,
+  drinkHealingPotion,
+  keyHolder,
+  overlaps,
+  strikeZone,
+  wantsAPotion,
+  wayToStrike,
+} from './dodging-bot';
 import { arena } from './fixtures';
 import { gameWithHero, type HeroProfile, maxHealthOf, statsOf } from './profile-heroes';
 
@@ -25,11 +34,12 @@ export interface DuelResult {
   readonly defense: number;
   /** The Healing Potions the hero drank: it drinks one when it is at half its Health or less. */
   readonly potionsUsed: number;
+  /** The hits of the monster that landed on the hero, as the core reports them. */
+  readonly hits: number;
+  /** The blows of the hero that hit the monster, as the core reports them: all that the fight took when the hero won. */
+  readonly blows: number;
   readonly steps: number;
 }
-
-/** The share of its Health at or under which the hero drinks a Healing Potion, if it has one: as the Guardian's bot does. */
-const DRINK_AT_SHARE = 0.5;
 
 /** The room of the duel: the hero on the left of the middle row and the monster a number of tiles on, at its wall. */
 function roomOf(monsterType: string, apart: number): ContentDefinition {
@@ -44,7 +54,7 @@ function roomOf(monsterType: string, apart: number): ContentDefinition {
     progression: gameContent.progression,
     gear: gameContent.gear,
     healingPotion: gameContent.healingPotion,
-    minimumDamage: gameContent.minimumDamage ?? 1,
+    minimumDamage: gameContent.minimumDamage,
     monsterTypes: gameContent.monsterTypes,
   });
 }
@@ -55,44 +65,59 @@ function apartFor(type: MonsterTypeDefinition): number {
   return Math.max(2, Math.floor(noticing) - 1);
 }
 
-/** The hero of the profile against one monster of the shipped content, until one of them falls or a minute is up. */
-export function duel(monsterType: string, profile: HeroProfile): DuelResult {
+/** The room of a duel with the hero of the profile at its place in it and a monster of the type a few tiles off. */
+function startDuel(monsterType: string, profile: HeroProfile): { readonly game: Game; readonly content: ContentDefinition } {
   const type = gameContent.monsterTypes[monsterType];
   if (type === undefined) {
     throw new Error(`The content has no monster type "${monsterType}"`);
   }
   const content = roomOf(monsterType, apartFor(type));
-  const game: Game = gameWithHero(content, profile, {
+  const game = gameWithHero(content, profile, {
     areaId: 'arena',
     position: { x: HERO_TILE.col + 0.5, y: HERO_TILE.row + 0.5 },
     facing: 'right',
   });
+  return { game, content };
+}
+
+/**
+ * What one hit of the monster takes from the hero of the profile, after Defense: the hero stands where it is put and
+ * does nothing, and the damage of the first hit that lands is read from the core's event. A monster has one hit.
+ */
+export function hitOf(monsterType: string, profile: HeroProfile): number {
+  const { game } = startDuel(monsterType, profile);
+  for (let step = 0; step < LIMIT_SECONDS * 60; step += 1) {
+    for (const event of game.step()) {
+      if (event.type === 'hero-hit') {
+        return event.damage;
+      }
+    }
+  }
+  throw new Error(`A ${monsterType} does not hit a hero who stands and waits, in ${LIMIT_SECONDS} seconds`);
+}
+
+/** The hero of the profile against one monster of the shipped content, until one of them falls or a minute is up. */
+export function duel(monsterType: string, profile: HeroProfile): DuelResult {
+  const { game, content } = startDuel(monsterType, profile);
   const { attack, defense } = statsOf(game);
   const maxHealth = maxHealthOf(profile.points, content);
-  const { reach, width } = content.hero.meleeWeapon;
+  const { meleeWeapon } = content.hero;
 
-  const tally: { outcome: DuelResult['outcome']; healthLost: number; potionsUsed: number } = {
+  const tally: { outcome: DuelResult['outcome']; healthLost: number; potionsUsed: number; hits: number; blows: number } = {
     outcome: 'timed-out',
     healthLost: 0,
     potionsUsed: 0,
+    hits: 0,
+    blows: 0,
   };
-  let held: Direction | null = null;
-  const hold = (direction: Direction | null): void => {
-    if (direction === held) {
-      return;
-    }
-    if (held !== null) {
-      game.send({ type: 'stop', direction: held });
-    }
-    if (direction !== null) {
-      game.send({ type: 'move', direction });
-    }
-    held = direction;
-  };
+  const hold = keyHolder(game);
   const take = (events: readonly GameEvent[]): void => {
     for (const event of events) {
       if (event.type === 'hero-hit') {
         tally.healthLost += event.damage;
+        tally.hits += 1;
+      } else if (event.type === 'monster-hit') {
+        tally.blows += 1;
       } else if (event.type === 'monster-defeated') {
         tally.outcome = 'won';
       } else if (event.type === 'hero-defeated') {
@@ -113,14 +138,12 @@ export function duel(monsterType: string, profile: HeroProfile): DuelResult {
       tally.outcome = 'won';
       break;
     }
-    hold(wayToStrike(view, monster, reach, width));
-    if (view.hero.health <= Math.ceil(view.hero.maxHealth * DRINK_AT_SHARE) && view.hero.consumables['healing-potion'] > 0) {
-      game.send({ type: 'open-page', page: 'inventory' });
-      game.send({ type: 'use-healing-potion' });
-      game.send({ type: 'close-page', page: 'inventory' });
+    hold(wayToStrike(view, monster, meleeWeapon));
+    if (wantsAPotion(view.hero, DRINK_AT_SHARE)) {
+      drinkHealingPotion(game);
       tally.potionsUsed += 1;
     }
-    const blow = strikeZone(view.hero.position, view.hero.size, view.hero.facing, reach, width);
+    const blow = strikeZone(view.hero.position, view.hero.size, view.hero.facing, meleeWeapon);
     if (overlaps(blow, boxAround(monster.position, monster.size))) {
       take(game.send({ type: 'attack' }));
     }
