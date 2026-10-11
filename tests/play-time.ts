@@ -1,6 +1,6 @@
 import { gameContent } from '../src/content';
 import { type MonsterPlacement, STEP_MS } from '../src/core';
-import { type FightResult, fightTheGuardian } from './dodging-bot';
+import { DRINK_AT_SHARE, type FightResult, fightTheGuardian } from './dodging-bot';
 import { buildAt, fightTable } from './fight-table';
 import { AREA_IDS, type AreaId, areaOf, detourTo, MOST_NEARBY, monstersOnRoute, routeOf } from './main-route';
 import { markdownTable } from './markdown-table';
@@ -217,7 +217,7 @@ function hardFights(): Measured['hardFights'] {
 }
 
 /** How a first-time player plays the Guardian's fight: one telegraph in three goes unseen, the rest are answered late. */
-const PLAY_OF_THE_GUARDIAN = { reactionMs: 450, missEvery: 3, drinkAtShare: 0.5 };
+const PLAY_OF_THE_GUARDIAN = { reactionMs: 450, missEvery: 3, drinkAtShare: DRINK_AT_SHARE };
 
 let attempt: FightResult | undefined;
 

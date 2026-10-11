@@ -1,6 +1,15 @@
 import { gameContent } from '../src/content';
-import type { ContentDefinition, Direction, Game, GameEvent, MonsterTypeDefinition } from '../src/core';
-import { boxAround, overlaps, strikeZone, wayToStrike } from './dodging-bot';
+import type { ContentDefinition, Game, GameEvent, MonsterTypeDefinition } from '../src/core';
+import {
+  boxAround,
+  DRINK_AT_SHARE,
+  drinkHealingPotion,
+  keyHolder,
+  overlaps,
+  strikeZone,
+  wantsAPotion,
+  wayToStrike,
+} from './dodging-bot';
 import { arena } from './fixtures';
 import { gameWithHero, type HeroProfile, maxHealthOf, statsOf } from './profile-heroes';
 
@@ -31,9 +40,6 @@ export interface DuelResult {
   readonly blows: number;
   readonly steps: number;
 }
-
-/** The share of its Health at or under which the hero drinks a Healing Potion, if it has one: as the Guardian's bot does. */
-const DRINK_AT_SHARE = 0.5;
 
 /** The room of the duel: the hero on the left of the middle row and the monster a number of tiles on, at its wall. */
 function roomOf(monsterType: string, apart: number): ContentDefinition {
@@ -95,7 +101,7 @@ export function duel(monsterType: string, profile: HeroProfile): DuelResult {
   const { game, content } = startDuel(monsterType, profile);
   const { attack, defense } = statsOf(game);
   const maxHealth = maxHealthOf(profile.points, content);
-  const { reach, width } = content.hero.meleeWeapon;
+  const { meleeWeapon } = content.hero;
 
   const tally: { outcome: DuelResult['outcome']; healthLost: number; potionsUsed: number; hits: number; blows: number } = {
     outcome: 'timed-out',
@@ -104,19 +110,7 @@ export function duel(monsterType: string, profile: HeroProfile): DuelResult {
     hits: 0,
     blows: 0,
   };
-  let held: Direction | null = null;
-  const hold = (direction: Direction | null): void => {
-    if (direction === held) {
-      return;
-    }
-    if (held !== null) {
-      game.send({ type: 'stop', direction: held });
-    }
-    if (direction !== null) {
-      game.send({ type: 'move', direction });
-    }
-    held = direction;
-  };
+  const hold = keyHolder(game);
   const take = (events: readonly GameEvent[]): void => {
     for (const event of events) {
       if (event.type === 'hero-hit') {
@@ -144,14 +138,12 @@ export function duel(monsterType: string, profile: HeroProfile): DuelResult {
       tally.outcome = 'won';
       break;
     }
-    hold(wayToStrike(view, monster, reach, width));
-    if (view.hero.health <= Math.ceil(view.hero.maxHealth * DRINK_AT_SHARE) && view.hero.consumables['healing-potion'] > 0) {
-      game.send({ type: 'open-page', page: 'inventory' });
-      game.send({ type: 'use-healing-potion' });
-      game.send({ type: 'close-page', page: 'inventory' });
+    hold(wayToStrike(view, monster, meleeWeapon));
+    if (wantsAPotion(view.hero, DRINK_AT_SHARE)) {
+      drinkHealingPotion(game);
       tally.potionsUsed += 1;
     }
-    const blow = strikeZone(view.hero.position, view.hero.size, view.hero.facing, reach, width);
+    const blow = strikeZone(view.hero.position, view.hero.size, view.hero.facing, meleeWeapon);
     if (overlaps(blow, boxAround(monster.position, monster.size))) {
       take(game.send({ type: 'attack' }));
     }
