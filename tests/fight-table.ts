@@ -1,8 +1,9 @@
 import { gameContent } from '../src/content';
-import type { GearSlot, MonsterTypeDefinition, StatId } from '../src/core';
+import type { GearSlot, StatId } from '../src/core';
 import { duel, type DuelResult, hitOf } from './duel';
 import { AREA_IDS, type AreaId, areaOf, experienceBefore, findsOf, MOST_NEARBY, monstersOnRoute } from './main-route';
 import { heroAt, levelOf, type HeroProfile, type Points } from './profile-heroes';
+import { damageOf } from './routes';
 
 // The fights of the adventure, one monster type at a time, for the balance pass: what a hero who has gone the route
 // meets it with, and what a plain fight against it costs. Everything is read from the content and measured through the
@@ -136,14 +137,6 @@ export interface FightRow {
   /** The build the fight costs most: the one that lost the largest share of its Health. */
   readonly worst: Build;
   readonly demanding: boolean;
-}
-
-/** The damage of one hit of a monster type, before Defense, and zero for one that never attacks. */
-export function damageOf(type: MonsterTypeDefinition): number {
-  if (type.behavior === 'chaser' || type.behavior === 'charger') {
-    return type.damage;
-  }
-  return type.behavior === 'ranged' ? type.projectile.damage : 0;
 }
 
 /** The ordinary monsters, by type: the Guardian has a fight of its own. */

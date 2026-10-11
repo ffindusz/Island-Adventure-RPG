@@ -8,16 +8,17 @@ import type {
   Game,
   GameEvent,
   InteractableDefinition,
-  MonsterTypeDefinition,
   Tile,
 } from '../src/core';
-import { face, fixedRandom, newGame, playingView } from './fixtures';
-import { areaOf, LEAST_DETOUR, MOST_NEARBY, routeOf } from './main-route';
+import { face, fixedRandom, playingView } from './fixtures';
+import { areaOf, LEAST_DETOUR, MOST_NEARBY, quietGameAt, routeOf, typeOf } from './main-route';
 import {
+  damageOf,
   directionBetween,
   distanceBetween,
   experienceForLevel,
   experienceOfAll,
+  isInOpenBlock,
   isInZone,
   keyOf,
   metOn,
@@ -27,7 +28,6 @@ import {
   openTilesOf,
   routeBetween,
   walkRoute,
-  withoutOrdinaryMonsters,
 } from './routes';
 
 // The mountain, the third area on the route of the adventure, between the woods and the cave: what it has to be to be
@@ -48,15 +48,6 @@ const BOTTOM_ROWS = 3;
 /** A pass is narrow when the way is this many tiles wide or fewer, and it is a pass for this many tiles in a row. */
 const NARROW = 2;
 const PASS_LENGTH = 3;
-
-/**
- * A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the
- * Guardian, which the content must keep.
- */
-function quietGameAt(areaId: string, tile: Tile): Game {
-  const areas = withoutOrdinaryMonsters(gameContent);
-  return newGame({ ...gameContent, areas, start: { area: areaId, tile } });
-}
 
 const mountain = areaOf(MOUNTAIN);
 const wayIn = (mountain.entrances ?? [])[0];
@@ -161,28 +152,6 @@ function widthAt(tile: Tile): number {
     return length;
   };
   return Math.min(runAlong(1, 0), runAlong(0, 1));
-}
-
-/** The type of a monster of the mountain, which the loader sees to exist; none here only for content it refuses. */
-function typeOf(monster: { readonly type: string }): MonsterTypeDefinition | undefined {
-  return gameContent.monsterTypes[monster.type];
-}
-
-/** The damage of one hit of a monster type, before the Defense of the hero: of the blow, or of the shot. */
-function hitOf(type: MonsterTypeDefinition): number {
-  if ('damage' in type) {
-    return type.damage;
-  }
-  return 'projectile' in type ? type.projectile.damage : 0;
-}
-
-/** Whether a tile lies in a block of open ground two tiles wide and two high: a place to step aside in either way. */
-function inOpenBlock({ col, row }: Tile): boolean {
-  return [-1, 0].some((fromCol) =>
-    [-1, 0].some((fromRow) =>
-      [0, 1].every((across) => [0, 1].every((down) => isOpen({ col: col + fromCol + across, row: row + fromRow + down }))),
-    ),
-  );
 }
 
 describe('the way through the mountain', () => {
@@ -301,7 +270,9 @@ describe('the raiders of the mountain', () => {
       expect(tougher.type.health, `the health of ${tougher.id} against ${other.id}`).toBeGreaterThanOrEqual(
         2 * other.type.health,
       );
-      expect(hitOf(tougher.type), `the hit of ${tougher.id} against ${other.id}`).toBeGreaterThan(hitOf(other.type));
+      expect(damageOf(tougher.type), `the hit of ${tougher.id} against ${other.id}`).toBeGreaterThan(
+        damageOf(other.type),
+      );
     }
   });
 
@@ -325,7 +296,7 @@ describe('the raiders of the mountain', () => {
         [...symbols].flatMap((_, col) => {
           const tile = { col, row };
           const near = distanceBetween(tile, charger.tile) <= noticingOf(gameContent, charger);
-          return near && isOpen(tile) && !inOpenBlock(tile) ? [`${charger.id} at ${col},${row}`] : [];
+          return near && isOpen(tile) && !isInOpenBlock(isOpen, tile) ? [`${charger.id} at ${col},${row}`] : [];
         }),
       ),
     );

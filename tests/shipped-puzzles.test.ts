@@ -10,11 +10,11 @@ import type {
   GameEvent,
   InteractableDefinition,
   Tile,
-  TileRect,
 } from '../src/core';
 import { charactersTheFontLacks } from './drawn-text';
 import { face, fixedRandom, interactableViews, inventoryOf, playingView, throughStorage, walk } from './fixtures';
 import { areaOf } from './main-route';
+import { tilesOf } from './routes';
 
 // The light puzzle the game ships with, in the woods: a cabin behind a locked door whose key lies in the north woods.
 // What a key, a door, a lever and a gate do is tested on purpose-built content (keys, doors, levers), and that no route
@@ -62,16 +62,6 @@ const tileKey = ({ col, row }: Tile): string => `${col},${row}`;
 
 function tileOf(point: { x: number; y: number }): Tile {
   return { col: Math.floor(point.x), row: Math.floor(point.y) };
-}
-
-function tilesOf(zone: TileRect): Tile[] {
-  const tiles = [];
-  for (let row = zone.row; row < zone.row + zone.height; row += 1) {
-    for (let col = zone.col; col < zone.col + zone.width; col += 1) {
-      tiles.push({ col, row });
-    }
-  }
-  return tiles;
 }
 
 function isSolidTerrain(area: AreaDefinition, { col, row }: Tile): boolean {

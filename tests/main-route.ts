@@ -7,6 +7,7 @@ import type {
   GameEvent,
   MilestoneDefinition,
   MonsterPlacement,
+  MonsterTypeDefinition,
   Tile,
 } from '../src/core';
 import { playingView } from './fixtures';
@@ -17,6 +18,7 @@ import {
   metOn,
   neighboursOf,
   openTilesOf,
+  quietGameOf,
   routeBetween,
   walkRoute,
 } from './routes';
@@ -43,6 +45,19 @@ export function areaOf(id: string): AreaDefinition {
     throw new Error(`The content has no Adventure Area "${id}"`);
   }
   return found;
+}
+
+/** The type of a monster that the shipped content places: none only for content that the loader refuses. */
+export function typeOf(monster: { readonly type: string }): MonsterTypeDefinition | undefined {
+  return gameContent.monsterTypes[monster.type];
+}
+
+/**
+ * A new game of the shipped content in which the hero begins on a tile of an area, with every ordinary monster taken out
+ * but the Guardian, which the content must keep.
+ */
+export function quietGameAt(areaId: string, tile: Tile): Game {
+  return quietGameOf({ ...gameContent, start: { area: areaId, tile } });
 }
 
 /** The exit of an area that leads on to the next area of the adventure, or undefined in the last. */

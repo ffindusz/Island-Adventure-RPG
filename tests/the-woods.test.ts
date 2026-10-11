@@ -10,8 +10,8 @@ import type {
   InteractableDefinition,
   Tile,
 } from '../src/core';
-import { face, fixedRandom, newGame, playingView } from './fixtures';
-import { areaOf, LEAST_DETOUR, routeOf } from './main-route';
+import { face, fixedRandom, playingView } from './fixtures';
+import { areaOf, LEAST_DETOUR, quietGameAt, routeOf } from './main-route';
 import {
   directionBetween,
   experienceForLevel,
@@ -24,7 +24,6 @@ import {
   openTilesOf,
   routeBetween,
   walkRoute,
-  withoutOrdinaryMonsters,
 } from './routes';
 
 // The woods, the second area on the route of the adventure, between the coast and the mountain: what they have to be
@@ -44,15 +43,6 @@ function chaserNamed(name: string): ChaserMonsterDefinition {
     throw new Error(`The shipped content has no chasing monster type "${name}"`);
   }
   return type;
-}
-
-/**
- * A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the
- * Guardian, which the content must keep.
- */
-function quietGameAt(areaId: string, tile: Tile): Game {
-  const areas = withoutOrdinaryMonsters(gameContent);
-  return newGame({ ...gameContent, areas, start: { area: areaId, tile } });
 }
 
 const woods = areaOf(WOODS);

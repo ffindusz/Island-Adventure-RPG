@@ -19,14 +19,18 @@ import {
 import { CHARGE, GUARDIAN, SMITE, SWEEP } from './guardian-fixtures';
 import {
   awarenessOf,
+  damageOf,
   distanceBetween,
   experienceOf,
   experienceOfAll,
+  isInOpenBlock,
   isWithinAwareness,
   metOn,
   milestonesOf,
   noticingOf,
   openTilesOf,
+  reachableFrom,
+  tilesOf,
 } from './routes';
 
 // The tests of the shipped content walk the hero over the tiles that `openTilesOf` counts as open, so what it counts as
@@ -144,19 +148,19 @@ describe('the Experience of a stretch of the adventure, for the tests that tune 
   });
 });
 
+const stationary: MonsterTypeDefinition = { behavior: 'stationary', health: 3, size: 0.5, experience: 5 };
+const guardianOf = (noticingDistance: number, ...patterns: (typeof GUARDIAN)['patterns']): MonsterTypeDefinition => ({
+  ...GUARDIAN,
+  noticingDistance,
+  patterns,
+});
+
 // The tests that keep the shipped layout clear of the monsters ask where a monster takes the hero in. The numbers are
 // worked by hand from the fixtures: a biter (size 0.5) notices within 2 tiles and its attack reaches 0.75; the charger
 // notices within 5 and dashes 6; the shooter notices within 6 and shoots 5; the Guardian's sweep reaches 1, its charge 6
 // and its smite 4.
 
 describe('where a monster takes the hero in, for the tests that keep the layout clear of it', () => {
-  const stationary: MonsterTypeDefinition = { behavior: 'stationary', health: 3, size: 0.5, experience: 5 };
-  const guardianOf = (noticingDistance: number, ...patterns: (typeof GUARDIAN)['patterns']): MonsterTypeDefinition => ({
-    ...GUARDIAN,
-    noticingDistance,
-    patterns,
-  });
-
   it.each([
     ['none for a stationary monster', stationary, 0],
     ['how far a chaser notices', BITER, 2],
@@ -197,6 +201,113 @@ describe('where a monster takes the hero in, for the tests that keep the layout 
     expect(isWithinAwareness(biter, at, 2, { col: 13, row: 10 })).toBe(true);
     expect(isWithinAwareness(biter, at, 2, { col: 14, row: 10 })).toBe(false);
     expect(isWithinAwareness(biter, at, 1, { col: 13, row: 10 })).toBe(false);
+  });
+});
+
+// What one hit does is worked by hand from the same fixtures: the biter's blow is 5, the charger's 6, the shooter's shot
+// 4, and the patterns of the Guardian hit for 4 (sweep), 6 (charge) and 5 (smite).
+
+describe('what one hit of a monster does, for the tests that rank the monsters of an area', () => {
+  it.each([
+    ['none for a stationary monster', stationary, 0],
+    ['the blow of a chaser', BITER, 5],
+    ['the blow of a charger', CHARGER, 6],
+    ['the damage of the shot of a ranged attacker', SHOOTER, 4],
+    ['the hardest pattern of a Guardian, wherever it stands in the list of patterns', GUARDIAN, 6],
+    ['the one pattern of a Guardian that has but one', guardianOf(6, SMITE), 5],
+  ])('makes the damage of one hit: %s', (_what, type, damage) => {
+    expect(damageOf(type)).toBe(damage);
+  });
+});
+
+// The grids below are drawn by hand, one string a row, `.` for open ground and `#` for rock, and what the helpers say of
+// them is worked out by counting.
+
+/** Which tiles of a grid drawn row by row are open: the `.`, and nothing outside the grid. */
+function openIn(rows: readonly string[]): (tile: Tile) => boolean {
+  return ({ col, row }) => rows[row]?.[col] === '.';
+}
+
+describe('the tiles of a rectangle, for the tests that walk or check a zone', () => {
+  it('lists them row by row from the top left', () => {
+    expect(tilesOf({ col: 2, row: 3, width: 3, height: 2 })).toEqual([
+      { col: 2, row: 3 },
+      { col: 3, row: 3 },
+      { col: 4, row: 3 },
+      { col: 2, row: 4 },
+      { col: 3, row: 4 },
+      { col: 4, row: 4 },
+    ]);
+  });
+
+  it('lists the one tile of a rectangle of one, and none for a rectangle without width or without height', () => {
+    expect(tilesOf({ col: 5, row: 6, width: 1, height: 1 })).toEqual([{ col: 5, row: 6 }]);
+    expect(tilesOf({ col: 5, row: 6, width: 0, height: 4 })).toEqual([]);
+    expect(tilesOf({ col: 5, row: 6, width: 4, height: 0 })).toEqual([]);
+  });
+});
+
+describe('the tiles that the hero can walk to over open ground, for the tests that look for a way', () => {
+  it('reaches every open tile of a map that has a way round its wall, the tile it begins on included', () => {
+    // Thirteen tiles are open: four a row beside the wall in the top two rows, and all five of the bottom row.
+    const isOpen = openIn(['..#..', '..#..', '.....']);
+
+    expect([...reachableFrom(isOpen, { col: 0, row: 0 })].sort()).toEqual([
+      '0,0',
+      '0,1',
+      '0,2',
+      '1,0',
+      '1,1',
+      '1,2',
+      '2,2',
+      '3,0',
+      '3,1',
+      '3,2',
+      '4,0',
+      '4,1',
+      '4,2',
+    ]);
+  });
+
+  it('reaches only its own side of a wall that closes the map, from either side', () => {
+    const isOpen = openIn(['..#..', '..#..', '..#..']);
+
+    expect([...reachableFrom(isOpen, { col: 0, row: 0 })].sort()).toEqual(['0,0', '0,1', '0,2', '1,0', '1,1', '1,2']);
+    expect([...reachableFrom(isOpen, { col: 4, row: 2 })].sort()).toEqual(['3,0', '3,1', '3,2', '4,0', '4,1', '4,2']);
+  });
+
+  it('counts the tile it begins on even where that is not open ground, and goes on from it', () => {
+    expect([...reachableFrom(openIn(['#.']), { col: 0, row: 0 })].sort()).toEqual(['0,0', '1,0']);
+  });
+});
+
+describe('the blocks of open ground two tiles wide and two high, for the tests that look for a place to step aside', () => {
+  // Nine tiles are open: (0,0) (1,0) (3,0) (0,1) (1,1) (3,1) (0,2) (2,2) (3,2). Only the four at the top left make a
+  // block; the rest are a bend of a passage one tile wide and a tile under the block that has a rock beside it.
+  const isOpen = openIn(['..#.', '..#.', '.#..']);
+
+  it.each([
+    ['top left', 0, 0],
+    ['top right', 1, 0],
+    ['bottom left', 0, 1],
+    ['bottom right', 1, 1],
+  ])('counts the %s tile of a block of four open tiles as in it', (_corner, col, row) => {
+    expect(isInOpenBlock(isOpen, { col, row })).toBe(true);
+  });
+
+  it.each([
+    ['the open tile under the block, which has rock beside it', 0, 2],
+    ['the top of a passage one tile wide', 3, 0],
+    ['the middle of a passage one tile wide', 3, 1],
+    ['the corner where that passage bends', 3, 2],
+    ['the end of that passage after the bend', 2, 2],
+    ['rock beside the block', 2, 0],
+    ['rock between the block and the passage', 2, 1],
+    ['rock under the block', 1, 2],
+    ['a tile left of the map', -1, 0],
+    ['a tile right of the map', 4, 1],
+  ])('does not count %s as in a block', (_what, col, row) => {
+    expect(isInOpenBlock(isOpen, { col, row })).toBe(false);
   });
 });
 

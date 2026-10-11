@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { VIEW_TILES_HIGH, VIEW_TILES_WIDE } from '../src/adapter/config';
 import { gameContent } from '../src/content';
 import { STEPS_PER_SECOND, createGame } from '../src/core';
-import type { AreaDefinition, Direction, EntranceDefinition, Game, GameEvent, TileRect } from '../src/core';
+import type { AreaDefinition, Direction, EntranceDefinition, Game, GameEvent } from '../src/core';
 import { advance, fixedRandom, playingView } from './fixtures';
 import { areaOf } from './main-route';
-import { keyOf, neighboursOf, openTilesOf } from './routes';
+import { keyOf, neighboursOf, openTilesOf, reachableFrom, tilesOf } from './routes';
 
 // What must hold for the Adventure Areas the game ships with and the ways between them. The rules of moving between
 // areas are tested on purpose-built content (area-connections.test.ts), so that changing what ships never breaks them.
@@ -62,16 +62,6 @@ function isWalkable(area: AreaDefinition, col: number, row: number): boolean {
   return symbol !== undefined && gameContent.terrain[symbol]?.solid === false;
 }
 
-function tilesOf(zone: TileRect): { col: number; row: number }[] {
-  const tiles = [];
-  for (let row = zone.row; row < zone.row + zone.height; row += 1) {
-    for (let col = zone.col; col < zone.col + zone.width; col += 1) {
-      tiles.push({ col, row });
-    }
-  }
-  return tiles;
-}
-
 /**
  * The tiles the hero can stand on, as "col,row", that no path of such tiles leads to from the first entrance. A chest is
  * solid like rock, and so are a lever and a sign; the doors and gates are counted open, because the rooms behind them
@@ -84,16 +74,7 @@ function unreachableTiles(area: AreaDefinition): string[] {
     throw new Error(`The Adventure Area "${area.id}" has no entrance`);
   }
   const isOpen = openTilesOf(gameContent, area, true);
-  const reached = new Set([keyOf(first.tile)]);
-  const frontier = [first.tile];
-  for (const tile of frontier) {
-    for (const next of neighboursOf(tile)) {
-      if (isOpen(next) && !reached.has(keyOf(next))) {
-        reached.add(keyOf(next));
-        frontier.push(next);
-      }
-    }
-  }
+  const reached = reachableFrom(isOpen, first.tile);
   return area.layout.flatMap((line, row) =>
     [...line].flatMap((_, col) => (isOpen({ col, row }) && !reached.has(keyOf({ col, row })) ? [keyOf({ col, row })] : [])),
   );

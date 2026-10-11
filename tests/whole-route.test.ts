@@ -3,7 +3,7 @@ import { gameContent } from '../src/content';
 import type { AreaDefinition, ExitDefinition, InteractableDefinition, Tile } from '../src/core';
 import { playingView } from './fixtures';
 import { AREA_IDS, type AreaId, areaOf, routeOf, walkAssigning, wayInOf } from './main-route';
-import { keyOf, neighboursOf, openTilesOf, quietGameOf, routeBetween } from './routes';
+import { keyOf, neighboursOf, openTilesOf, quietGameOf, reachableFrom, routeBetween } from './routes';
 
 // The criterion of whole-route validation, read in one place over the content the game ships with: five Adventure Areas
 // in order, exits both ways, an entrance Checkpoint in every area and one immediately before the Guardian, exactly one
@@ -54,21 +54,6 @@ function harborOf(): {
 function openButTheGate(area: AreaDefinition, gate: InteractableDefinition): (tile: Tile) => boolean {
   const everyDoorOpen = openTilesOf(gameContent, area, true);
   return (tile) => everyDoorOpen(tile) && keyOf(tile) !== keyOf(gate.tile);
-}
-
-/** Every tile the hero can walk to from a tile over open ground, as "col,row". */
-function reachableFrom(isOpen: (tile: Tile) => boolean, from: Tile): Set<string> {
-  const reached = new Set([keyOf(from)]);
-  const frontier = [from];
-  for (const tile of frontier) {
-    for (const next of neighboursOf(tile)) {
-      if (!reached.has(keyOf(next)) && isOpen(next)) {
-        reached.add(keyOf(next));
-        frontier.push(next);
-      }
-    }
-  }
-  return reached;
 }
 
 /** Where the hero comes into an area on the main route, for an area of the adventure. */

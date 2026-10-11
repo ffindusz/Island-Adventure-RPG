@@ -5,8 +5,8 @@ import { ARTWORK } from '../src/adapter/artwork';
 import type { ArtManifest } from '../src/adapter/asset-manifest';
 
 // What the tests of the pictures in public/art share: where a sheet of the manifest is, its pixels, read from the 8-bit
-// RGBA PNGs that docs/assets/compose-art.py saves, and the colours and shapes that the tests of the monsters' sheets look
-// for.
+// RGBA PNGs that docs/assets/compose-art.py saves, the colours and shapes that the tests of the monsters' sheets look
+// for, and how far apart two colours of the flat palette lie.
 
 export type Pixel = readonly [number, number, number, number];
 
@@ -93,4 +93,12 @@ export const isRed = (pixel: Pixel): boolean => pixel[0] >= 150 && pixel[1] <= 1
 /** The two frames fill the same pixels, whatever their colours. */
 export function sameShape(a: Map<string, Pixel>, b: Map<string, Pixel>): boolean {
   return a.size === b.size && [...a.keys()].every((key) => b.has(key));
+}
+
+/** Two colours are set apart when they lie this far from each other, at least, in the cube of red, green and blue (0 to 255 each). */
+export const LEAST_COLOUR_GAP = 50;
+
+/** How far apart two colours, given as 0xRRGGBB, lie in the cube of red, green and blue. */
+export function colourGap(one: number, other: number): number {
+  return Math.hypot(...[16, 8, 0].map((shift) => ((one >> shift) & 0xff) - ((other >> shift) & 0xff)));
 }

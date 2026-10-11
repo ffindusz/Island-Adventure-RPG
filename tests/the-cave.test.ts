@@ -9,17 +9,18 @@ import type {
   Game,
   GameEvent,
   InteractableDefinition,
-  MonsterTypeDefinition,
   Tile,
-  TileRect,
 } from '../src/core';
-import { STEPS_PER_TILE, face, fixedRandom, interactableViews, newGame, playingView, walk } from './fixtures';
-import { areaOf, LEAST_DETOUR, MOST_NEARBY, routeOf } from './main-route';
+import { STEPS_PER_TILE, face, fixedRandom, interactableViews, playingView, walk } from './fixtures';
+import { areaOf, LEAST_DETOUR, MOST_NEARBY, quietGameAt, routeOf, typeOf } from './main-route';
+import { colourGap, LEAST_COLOUR_GAP } from './pictures';
 import {
+  damageOf,
   directionBetween,
   distanceBetween,
   experienceForLevel,
   experienceOfAll,
+  isInOpenBlock,
   isInZone,
   keyOf,
   metOn,
@@ -27,9 +28,10 @@ import {
   neighboursOf,
   noticingOf,
   openTilesOf,
+  reachableFrom,
   routeBetween,
+  tilesOf,
   walkRoute,
-  withoutOrdinaryMonsters,
 } from './routes';
 
 // The cave, the fourth area on the route of the adventure, between the mountain and the old castle: what it has to be to
@@ -51,23 +53,11 @@ const BOTTOM_ROWS = 3;
 /** A way winds when it is this many times as long as the straight line from its start to its end, at least. */
 const LEAST_WINDING = 1.5;
 
-/** Two colours are set apart when they lie this far from each other, at least, in the cube of red, green and blue (0 to 255 each). */
-const LEAST_COLOUR_GAP = 50;
-
 /** A gate is in sight of the hero who follows the trail when it lies this many tiles from it, at most: the view is twelve tiles high. */
 const IN_SIGHT = 5;
 
 /** A sign is by the gate it speaks of when it stands this many tiles from it, at most. */
 const BY_THE_GATE = 2;
-
-/**
- * A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the
- * Guardian, which the content must keep.
- */
-function quietGameAt(areaId: string, tile: Tile): Game {
-  const areas = withoutOrdinaryMonsters(gameContent);
-  return newGame({ ...gameContent, areas, start: { area: areaId, tile } });
-}
 
 const cave = areaOf(CAVE);
 const wayIn = (cave.entrances ?? [])[0];
@@ -84,14 +74,6 @@ const shortestWay = routeBetween(isOpen, wayInTile, isWayForward);
 /** How far apart two tiles are along the lines of the grid, which is the way the hero walks. */
 function straightLine(from: Tile, to: Tile): number {
   return Math.abs(from.col - to.col) + Math.abs(from.row - to.row);
-}
-
-/** The tiles of a rectangle of the map. */
-function tilesOf({ col, row, width, height }: TileRect): Tile[] {
-  return Array.from({ length: width * height }, (_, place) => ({
-    col: col + (place % width),
-    row: row + Math.floor(place / width),
-  }));
 }
 
 /** The tiles of the exit forward. */
@@ -146,53 +128,11 @@ const theSign = () => theOnly('signs', signs);
 const weaponChest = (): ChestDefinition => theOnly('chests of Gear', chests.filter(({ contents }) => contents.kind === 'gear'));
 const gearIn = ({ contents }: ChestDefinition): string => (contents.kind === 'gear' ? contents.gear : '');
 
-/** The type of a monster of the cave, which the loader sees to exist; none here only for content it refuses. */
-function typeOf(monster: { readonly type: string }): MonsterTypeDefinition | undefined {
-  return gameContent.monsterTypes[monster.type];
-}
-
-/** The damage of one hit of a monster type, before the Defense of the hero: of the blow, or of the shot. */
-function hitOf(type: MonsterTypeDefinition): number {
-  if ('damage' in type) {
-    return type.damage;
-  }
-  return 'projectile' in type ? type.projectile.damage : 0;
-}
-
-/** Whether a tile lies in a block of open ground two tiles wide and two high: a place to step aside in either way. */
-function inOpenBlock({ col, row }: Tile): boolean {
-  return [-1, 0].some((fromCol) =>
-    [-1, 0].some((fromRow) =>
-      [0, 1].every((across) => [0, 1].every((down) => isOpen({ col: col + fromCol + across, row: row + fromRow + down }))),
-    ),
-  );
-}
-
-/** How far apart two colours, given as 0xRRGGBB, lie in the cube of red, green and blue. */
-function colourGap(one: number, other: number): number {
-  return Math.hypot(...[16, 8, 0].map((shift) => ((one >> shift) & 0xff) - ((other >> shift) & 0xff)));
-}
-
 /** The ids of the Gear that the chests of an area hold. */
 function gearInChestsOf(area: AreaDefinition): string[] {
   return (area.interactables ?? []).flatMap((item) =>
     item.kind === 'chest' && item.contents.kind === 'gear' ? [item.contents.gear] : [],
   );
-}
-
-/** Every tile that the hero can walk to from a tile over open ground, as their keys. */
-function reachableFrom(isWalkable: (tile: Tile) => boolean, from: Tile): Set<string> {
-  const reached = new Set([keyOf(from)]);
-  const frontier = [from];
-  for (const tile of frontier) {
-    for (const next of neighboursOf(tile)) {
-      if (!reached.has(keyOf(next)) && isWalkable(next)) {
-        reached.add(keyOf(next));
-        frontier.push(next);
-      }
-    }
-  }
-  return reached;
 }
 
 /**
@@ -321,7 +261,9 @@ describe('the creatures of the cave', () => {
       expect(tougher.type.health, `the health of ${tougher.id} against ${other.id}`).toBeGreaterThanOrEqual(
         2 * other.type.health,
       );
-      expect(hitOf(tougher.type), `the hit of ${tougher.id} against ${other.id}`).toBeGreaterThan(hitOf(other.type));
+      expect(damageOf(tougher.type), `the hit of ${tougher.id} against ${other.id}`).toBeGreaterThan(
+        damageOf(other.type),
+      );
     }
   });
 
@@ -345,7 +287,7 @@ describe('the creatures of the cave', () => {
         [...symbols].flatMap((_, col) => {
           const tile = { col, row };
           const near = distanceBetween(tile, charger.tile) <= noticingOf(gameContent, charger);
-          return near && isOpen(tile) && !inOpenBlock(tile) ? [`${charger.id} at ${col},${row}`] : [];
+          return near && isOpen(tile) && !isInOpenBlock(isOpen, tile) ? [`${charger.id} at ${col},${row}`] : [];
         }),
       ),
     );

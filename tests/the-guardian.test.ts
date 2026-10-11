@@ -8,16 +8,26 @@ import type {
   GuardianMonsterDefinition,
   GuardianPatternDefinition,
   MonsterPlacement,
-  MonsterTypeDefinition,
   PlayState,
   Point,
   Tile,
   TileRect,
 } from '../src/core';
-import { fixedRandom, interactableViews, monsterNamed, newGame, playingView, walk } from './fixtures';
-import { areaOf } from './main-route';
+import { fixedRandom, interactableViews, monsterNamed, playingView, walk } from './fixtures';
+import { areaOf, quietGameAt } from './main-route';
+import { colourGap, LEAST_COLOUR_GAP } from './pictures';
 import { gameWithHero, heroAt, type HeroProfile, QUIET } from './profile-heroes';
-import { isInZone, isWithinAwareness, keyOf, neighboursOf, openTilesOf, routeBetween, walkRoute, withoutOrdinaryMonsters } from './routes';
+import {
+  damageOf,
+  isInZone,
+  isWithinAwareness,
+  keyOf,
+  openTilesOf,
+  reachableFrom,
+  routeBetween,
+  tilesOf,
+  walkRoute,
+} from './routes';
 
 // The Guardian of the island, the one monster that the game ships with besides the creatures of the five Adventure Areas,
 // and what lies around it at the east end of the castle: the gateway that leads to it, the Checkpoint in the gateway,
@@ -62,9 +72,6 @@ const MOST_PILLAR_SHARE = 0.1;
 /** A harbor has room for the vessel and for the hero beside it: this many open tiles besides the vessel's, at least. */
 const LEAST_HARBOR_TILES = 8;
 
-/** Two colours are set apart when they lie this far from each other, at least, in the cube of red, green and blue (0 to 255 each). */
-const LEAST_COLOUR_GAP = 50;
-
 /** A fight lasts as many strikes as a hero needs to take the Guardian's Health: not a pushover and not a grind. */
 const STRIKES_TO_DEFEAT = { least: 12, most: 40 };
 
@@ -96,35 +103,12 @@ function tileOf({ x, y }: Point): Tile {
   return { col: Math.floor(x), row: Math.floor(y) };
 }
 
-/** The tiles of a rectangle of the map. */
-function tilesOf({ col, row, width, height }: TileRect): Tile[] {
-  return Array.from({ length: width * height }, (_, place) => ({
-    col: col + (place % width),
-    row: row + Math.floor(place / width),
-  }));
-}
-
 /** The tiles that surround a rectangle of the map, one tile wide, corners included. */
 function ringAround(rectangle: TileRect): Tile[] {
   const { col, row, width, height } = rectangle;
   return tilesOf({ col: col - 1, row: row - 1, width: width + 2, height: height + 2 }).filter(
     (tile) => !isInZone(rectangle, tile),
   );
-}
-
-/** Every tile that can be walked to from a tile over open ground, the tile itself included. */
-function regionFrom(isOpenGround: (tile: Tile) => boolean, from: Tile): Tile[] {
-  const seen = new Set([keyOf(from)]);
-  const region = [from];
-  for (const tile of region) {
-    for (const next of neighboursOf(tile)) {
-      if (!seen.has(keyOf(next)) && isOpenGround(next)) {
-        seen.add(keyOf(next));
-        region.push(next);
-      }
-    }
-  }
-  return region;
 }
 
 /** Everything placed on the map of the castle, by id, with the tiles it takes: a zone takes all of its tiles. */
@@ -140,27 +124,6 @@ const placed = [
 /** The ids of what is placed on the tiles of a rectangle. */
 function placedIn(rectangle: TileRect): string[] {
   return placed.filter(({ tiles }) => tiles.some((tile) => isInZone(rectangle, tile))).map(({ id }) => id);
-}
-
-/** The damage of one hit of a monster type, before the Defense of the hero: of its hardest pattern, when it has patterns. */
-function hitOf(type: MonsterTypeDefinition): number {
-  if (type.behavior === 'guardian') {
-    return Math.max(...type.patterns.map(({ damage }) => damage));
-  }
-  if ('damage' in type) {
-    return type.damage;
-  }
-  return 'projectile' in type ? type.projectile.damage : 0;
-}
-
-/** How far apart two colours, given as 0xRRGGBB, lie in the cube of red, green and blue. */
-function colourGap(one: number, other: number): number {
-  return Math.hypot(...[16, 8, 0].map((shift) => ((one >> shift) & 0xff) - ((other >> shift) & 0xff)));
-}
-
-/** A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the Guardian. */
-function quietGameAt(areaId: string, tile: Tile): Game {
-  return newGame({ ...gameContent, areas: withoutOrdinaryMonsters(gameContent), start: { area: areaId, tile } });
 }
 
 describe('the Guardian of the castle', () => {
@@ -265,7 +228,7 @@ describe('the way to the Guardian', () => {
 
   it('keeps every ordinary monster on the way\'s side of the Checkpoint: none can be walked to from the Guardian without stepping on it', () => {
     const fromGuardian = (tile: Tile) => isOpenOnceOpened(tile) && keyOf(tile) !== keyOf(CHECKPOINT_TILE);
-    const beyond = regionFrom(fromGuardian, guardianTile).map(keyOf);
+    const beyond = [...reachableFrom(fromGuardian, guardianTile)];
 
     expect(beyond).toContain(keyOf({ col: ARENA.col, row: GATEWAY.row }));
     expect(castle.monsters.filter(({ id, tile }) => id !== GUARDIAN_ID && beyond.includes(keyOf(tile))).map(({ id }) => id)).toEqual([]);
@@ -316,10 +279,10 @@ describe('the harbor behind the gate', () => {
   it('has room for the vessel and for the hero beside it: eight open tiles besides the vessel\'s, which nothing but the gate leads out of', () => {
     const closedIn = (tile: Tile) => isOpenOnceOpened(tile) && keyOf(tile) !== keyOf(GATE_TILE);
     const first = quay[0];
-    const region = first === undefined ? [] : regionFrom(closedIn, first);
+    const region = first === undefined ? [] : [...reachableFrom(closedIn, first)];
 
     expect(quay.length).toBeGreaterThanOrEqual(LEAST_HARBOR_TILES);
-    expect(region.map(keyOf).sort()).toEqual(quay.map(keyOf).sort());
+    expect(region.sort()).toEqual(quay.map(keyOf).sort());
   });
 
   it('holds the vessel and nothing else: no monster, chest, pickup, device, Checkpoint, entrance, exit or milestone is placed in it', () => {
@@ -431,7 +394,7 @@ describe('the numbers of the Guardian', () => {
   });
 
   it('hits harder than any other monster does, with its hardest pattern', () => {
-    expect(hitOf(type)).toBeGreaterThan(Math.max(...others.map(hitOf)));
+    expect(damageOf(type)).toBeGreaterThan(Math.max(...others.map(damageOf)));
   });
 
   it('walks more slowly than the hero, who can always get away', () => {

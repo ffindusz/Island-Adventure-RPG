@@ -9,17 +9,18 @@ import type {
   Game,
   GameEvent,
   InteractableDefinition,
-  MonsterTypeDefinition,
   Tile,
-  TileRect,
 } from '../src/core';
 import { FIELD_LAYOUT, arena, face, fixedRandom, newGame, playingView } from './fixtures';
-import { areaOf, LEAST_DETOUR, MOST_NEARBY, routeOf } from './main-route';
+import { areaOf, LEAST_DETOUR, MOST_NEARBY, quietGameAt, routeOf, typeOf } from './main-route';
+import { colourGap, LEAST_COLOUR_GAP } from './pictures';
 import {
+  damageOf,
   directionBetween,
   distanceBetween,
   experienceForLevel,
   experienceOfAll,
+  isInOpenBlock,
   isInZone,
   keyOf,
   metOn,
@@ -28,8 +29,8 @@ import {
   noticingOf,
   openTilesOf,
   routeBetween,
+  tilesOf,
   walkRoute,
-  withoutOrdinaryMonsters,
 } from './routes';
 
 // The old castle, the fifth and last Adventure Area on the route of the adventure, up to the end of its route: what it
@@ -67,18 +68,6 @@ const LEAST_STRETCH = 6;
 /** The last hall is the open ground of the castle within this many tiles of the end of the route, not beyond it. */
 const LAST_HALL_REACH = 4;
 
-/** Two colours are set apart when they lie this far from each other, at least, in the cube of red, green and blue (0 to 255 each). */
-const LEAST_COLOUR_GAP = 50;
-
-/**
- * A new game of the shipped content in which the hero begins on a tile of an area, with every monster taken out but the
- * Guardian, which the content must keep.
- */
-function quietGameAt(areaId: string, tile: Tile): Game {
-  const areas = withoutOrdinaryMonsters(gameContent);
-  return newGame({ ...gameContent, areas, start: { area: areaId, tile } });
-}
-
 const castle = areaOf(CASTLE);
 const wayIn = (castle.entrances ?? [])[0];
 const wayInTile: Tile = wayIn?.tile ?? { col: 0, row: 0 };
@@ -88,14 +77,6 @@ const kindAt = ({ col, row }: Tile): string | undefined => gameContent.terrain[c
 const isSolidAt = ({ col, row }: Tile): boolean => gameContent.terrain[castle.layout[row]?.[col] ?? '']?.solid ?? true;
 /** The route: the shortest way over open ground from the way in to the end of the route, with every door and gate shut and no key held. */
 const route = routeBetween(isOpen, wayInTile, (tile) => keyOf(tile) === keyOf(END_OF_ROUTE));
-
-/** The tiles of a rectangle of the map. */
-function tilesOf({ col, row, width, height }: TileRect): Tile[] {
-  return Array.from({ length: width * height }, (_, place) => ({
-    col: col + (place % width),
-    row: row + Math.floor(place / width),
-  }));
-}
 
 /** The tiles within a number of tiles of a tile, measured the way the notice is: the farther of the columns and the rows between them. */
 function tilesAround(centre: Tile, reach: number): Tile[] {
@@ -142,19 +123,6 @@ const undead = [...new Set(castle.monsters.map(({ type }) => type))].flatMap((id
 const tougher = [...undead].sort((one, other) => other.type.health - one.type.health)[0];
 const toughUndead = castle.monsters.filter(({ type }) => type === tougher?.id);
 
-/** The type of a monster of the castle, which the loader sees to exist; none here only for content it refuses. */
-function typeOf(monster: { readonly type: string }): MonsterTypeDefinition | undefined {
-  return gameContent.monsterTypes[monster.type];
-}
-
-/** The damage of one hit of a monster type, before the Defense of the hero: of the blow, or of the shot. */
-function hitOf(type: MonsterTypeDefinition): number {
-  if ('damage' in type) {
-    return type.damage;
-  }
-  return 'projectile' in type ? type.projectile.damage : 0;
-}
-
 /** The most steps that a monster takes to land its first blow on a hero who stands still four tiles from it: over six seconds. */
 const BLOW_STEP_LIMIT = 400;
 
@@ -184,20 +152,6 @@ function firstBlowOf(typeId: string): Extract<GameEvent, { type: 'hero-hit' }> {
     }
   }
   throw new Error(`The ${typeId} did not land a blow within ${BLOW_STEP_LIMIT} steps`);
-}
-
-/** Whether a tile lies in a block of open ground two tiles wide and two high: a place to step aside in either way. */
-function inOpenBlock({ col, row }: Tile): boolean {
-  return [-1, 0].some((fromCol) =>
-    [-1, 0].some((fromRow) =>
-      [0, 1].every((across) => [0, 1].every((down) => isOpen({ col: col + fromCol + across, row: row + fromRow + down }))),
-    ),
-  );
-}
-
-/** How far apart two colours, given as 0xRRGGBB, lie in the cube of red, green and blue. */
-function colourGap(one: number, other: number): number {
-  return Math.hypot(...[16, 8, 0].map((shift) => ((one >> shift) & 0xff) - ((other >> shift) & 0xff)));
 }
 
 const chests = (castle.interactables ?? []).flatMap((item) => (item.kind === 'chest' ? [item] : []));
@@ -411,7 +365,9 @@ describe('the undead of the castle', () => {
       expect(tougher.type.health, `the health of ${tougher.id} against ${other.id}`).toBeGreaterThanOrEqual(
         2 * other.type.health,
       );
-      expect(hitOf(tougher.type), `the hit of ${tougher.id} against ${other.id}`).toBeGreaterThan(hitOf(other.type));
+      expect(damageOf(tougher.type), `the hit of ${tougher.id} against ${other.id}`).toBeGreaterThan(
+        damageOf(other.type),
+      );
     }
   });
 
@@ -422,7 +378,7 @@ describe('the undead of the castle', () => {
 
     expect(earlier.length).toBeGreaterThan(0);
     expect(tougher?.type.health ?? 0).toBeGreaterThan(Math.max(...earlier.map(({ health }) => health)));
-    expect(tougher === undefined ? 0 : hitOf(tougher.type)).toBeGreaterThan(Math.max(...earlier.map(hitOf)));
+    expect(tougher === undefined ? 0 : damageOf(tougher.type)).toBeGreaterThan(Math.max(...earlier.map(damageOf)));
   });
 
   it('puts the tougher undead on every way through: none keeps out of the reach of its notice', () => {
@@ -445,7 +401,7 @@ describe('the undead of the castle', () => {
         [...symbols].flatMap((_, col) => {
           const tile = { col, row };
           const near = distanceBetween(tile, charger.tile) <= noticingOf(gameContent, charger);
-          return near && isOpen(tile) && !inOpenBlock(tile) ? [`${charger.id} at ${col},${row}`] : [];
+          return near && isOpen(tile) && !isInOpenBlock(isOpen, tile) ? [`${charger.id} at ${col},${row}`] : [];
         }),
       ),
     );
