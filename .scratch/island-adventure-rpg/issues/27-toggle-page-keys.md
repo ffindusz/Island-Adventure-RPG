@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 64, 73, 87, 92, 93, 108
 
@@ -60,3 +60,5 @@ For the implementer: the hints are drawn in three places of the adapter (the Aut
 **For ticket 28 (the Controls page).** Add the page id to `PAGE_IDS` and the compiler points at the rest: its entry in `PAGE_KEYS` (the key H), its view and drawing, and a row in the `SHOWN` and `BY_HAND` tables of `tests/page-hints.test.ts` (with the room of its window). Its hint (`pageCloseHint`) and its clash row (`keysOfEverythingElse`) are made from the same entry, and the command is the same `toggle-page`. The hint of a page with several keys has to fit its window: the stat page has room for only 22 letters.
 
 **Glossary.** "Page" (a screen shown over the game that pauses it: the stat page, the inventory, the Automap) and "toggle" (what a page key does: opens its page, and closes it when pressed again) are used in the code and the README but are not in `GLOSSARY.md`. Proposed, not edited.
+
+Resolved on integration/island-adventure-rpg at 6107fbd
