@@ -43,12 +43,34 @@ export function confirmKeyLabel(): string {
   return CONFIRM_KEY;
 }
 
-/** The key that opens each page. */
-export const PAGE_KEYS: Readonly<Record<PageId, string>> = { stats: 'C', inventory: 'I', automap: 'M' };
+/**
+ * A key of a page: the name Phaser gives it, what the player reads of it, and whether Phaser holds it back from the
+ * browser. A key needs holding back when the browser's own use of it would take the player out of the game: Tab moves the
+ * focus away from it.
+ */
+export interface PageKey {
+  readonly name: string;
+  readonly label: string;
+  readonly capture: boolean;
+}
 
-/** The key that opens the page, as the player reads it. */
+/**
+ * The keys of each page, at least one for each: any of them opens the page, and pressed again closes it. The first is
+ * the page's main key, the one the notices name. `PlayerInput` binds every one of them, `checkAudioKeys` keeps the keys
+ * of the audio off them, and the hint at the foot of the page names them all.
+ */
+export const PAGE_KEYS: Readonly<Record<PageId, readonly [PageKey, ...PageKey[]]>> = {
+  stats: [
+    { name: 'C', label: 'C', capture: false },
+    { name: 'TAB', label: 'TAB', capture: true },
+  ],
+  inventory: [{ name: 'I', label: 'I', capture: false }],
+  automap: [{ name: 'M', label: 'M', capture: false }],
+};
+
+/** The main key of the page, as the player reads it: the one a notice tells the player to press. */
 export function pageKeyLabel(page: PageId): string {
-  return PAGE_KEYS[page];
+  return PAGE_KEYS[page][0].label;
 }
 
 /** The key that closes the page that is open, and declines the question whether to sail home. */
@@ -94,7 +116,7 @@ function keysOfEverythingElse(): readonly { readonly use: string; readonly names
     { use: 'interacting', names: [INTERACT_KEY] },
     { use: 'switching weapons', names: [SWITCH_WEAPON_KEY] },
     { use: 'picking from a menu', names: [CONFIRM_KEY] },
-    ...PAGE_IDS.map((page) => ({ use: `opening the ${page} page`, names: [PAGE_KEYS[page]] })),
+    ...PAGE_IDS.map((page) => ({ use: `toggling the ${page} page`, names: PAGE_KEYS[page].map((key) => key.name) })),
     { use: 'closing a page', names: [CLOSE_PAGE_KEY] },
     ...STAT_IDS.map((stat) => ({ use: `assigning a Stat Point to ${stat}`, names: STAT_KEYS[stat].keys })),
   ];

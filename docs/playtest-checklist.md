@@ -45,17 +45,17 @@ enough without grinding? Did the Level-ups come about where listed (a Stat Point
 
 These keys are in the README's Controls table, and nothing above makes you press them.
 
-- [ ] **C** opens the stat page (Level, Experience, Health, Attack, Defense) and Esc closes it. After a level-up, the
-      stat you chose has gone up on it.
+- [ ] **C** (or **Tab**) opens the stat page (Level, Experience, Health, Attack, Defense) and the same key, or Esc, closes
+      it. After a level-up, the stat you chose has gone up on it.
 - [ ] **M** opens the Automap: every area of the route, what you have found of each, where you are and the exits you
-      have found; Esc closes it. Does it help you find the way?
+      have found; M again, or Esc, closes it. Does it help you find the way?
 - [ ] **The bow:** equip the Short Bow in the inventory (I, then Enter on its line; that does not take it in hand).
       Q takes it in hand and Q again takes the sword back; Q does nothing before a bow is equipped. With the bow in
       hand, Space shoots one arrow the way you face and the Ammunition on the HUD goes down by one; with none left the
       notice says OUT OF AMMUNITION.
-- [ ] **A Healing Potion:** I opens the inventory, Down goes past the Gear to the Healing Potion line and Enter drinks
-      one: Health rises by 5 at most (never above the maximum) and the count falls by one. At full Health nothing
-      happens and no potion is used up.
+- [ ] **A Healing Potion:** I opens the inventory (I again closes it), Down goes past the Gear to the Healing Potion
+      line and Enter drinks one: Health rises by 5 at most (never above the maximum) and the count falls by one. At
+      full Health nothing happens and no potion is used up.
 
 ## A defeat and its recovery
 

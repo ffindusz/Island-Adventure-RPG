@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { PageId } from '../src/core';
 import type { AudioChange } from '../src/adapter/audio-settings';
 import { PlayerInput } from '../src/adapter/player-input';
 
@@ -39,12 +40,19 @@ class FakeKey {
 }
 
 /** A player input over fake keys, as a screen that has just begun has it, and the keys by the name Phaser gives them. */
-function newScreen(): { input: PlayerInput<FakeKey>; key: (name: string) => FakeKey } {
+function newScreen(): {
+  input: PlayerInput<FakeKey>;
+  key: (name: string) => FakeKey;
+  captured: (name: string) => boolean;
+} {
   const keys = new Map<string, FakeKey>();
+  const captures = new Map<string, boolean>();
   const keyboard = {
-    addKey: (name: string) => {
+    // Phaser holds a key back from the browser unless it is told not to.
+    addKey: (name: string, capture = true) => {
       const key = new FakeKey();
       keys.set(name, key);
+      captures.set(name, capture);
       return key;
     },
   };
@@ -55,7 +63,16 @@ function newScreen(): { input: PlayerInput<FakeKey>; key: (name: string) => Fake
     }
     return found;
   };
-  return { input: new PlayerInput(keyboard, justDown), key };
+  const captured = (name: string): boolean => {
+    key(name);
+    return captures.get(name) === true;
+  };
+  return { input: new PlayerInput(keyboard, justDown), key, captured };
+}
+
+/** Whether the actions the keys asked for since the last look include the toggle of this page. */
+function togglesPage(page: PageId): (input: PlayerInput<FakeKey>) => boolean {
+  return (input) => input.pollActions().some((command) => command.type === 'toggle-page' && command.page === page);
 }
 
 /** The keys that more than one screen reads, and how each reports that it went down again. */
@@ -72,6 +89,11 @@ const READS: readonly { name: string; says: string; read: (input: PlayerInput<Fa
     read: (input) => input.pollActions().some((command) => command.type === 'assign-stat-point'),
   },
   { name: 'N', says: 'a change of the audio', read: (input) => input.pollAudio().length > 0 },
+  // A page key toggles its page: held down, or pressed again by a browser that repeats it, it must not toggle it back.
+  { name: 'C', says: 'a toggle of the stat page', read: togglesPage('stats') },
+  { name: 'TAB', says: 'a toggle of the stat page', read: togglesPage('stats') },
+  { name: 'I', says: 'a toggle of the inventory', read: togglesPage('inventory') },
+  { name: 'M', says: 'a toggle of the Automap', read: togglesPage('automap') },
 ];
 
 describe.each(READS)('the $name key', ({ name, says, read }) => {
@@ -144,6 +166,15 @@ describe('two keys that mean the same pressed together', () => {
     expect(input.pollAudio()).toEqual<AudioChange[]>(['lower']);
     expect(input.pollAudio()).toEqual<AudioChange[]>([]);
   });
+
+  // Two toggles of one page in a frame would open it and close it again, and the player would see nothing happen.
+  it('are one toggle of the stat page, C and Tab, and neither is left over for the next look', () => {
+    const { input, key } = newScreen();
+    key('C').down();
+    key('TAB').down();
+    expect(input.pollActions()).toEqual([{ type: 'toggle-page', page: 'stats' }]);
+    expect(input.pollActions()).toEqual([]);
+  });
 });
 
 describe('the keys of the audio', () => {
@@ -172,5 +203,78 @@ describe('the keys of the audio', () => {
     key('MINUS').up();
     key('MINUS').down();
     expect(input.pollAudio()).toEqual<AudioChange[]>(['lower']);
+  });
+});
+
+describe('the keys of the pages', () => {
+  it.each([
+    ['C', 'stats'],
+    ['TAB', 'stats'],
+    ['I', 'inventory'],
+    ['M', 'automap'],
+  ] as const)('%s toggles the %s page and nothing else', (name, page) => {
+    const { input, key } = newScreen();
+    key(name).down();
+    expect(input.pollActions()).toEqual([{ type: 'toggle-page', page }]);
+  });
+
+  // It is the Game core that tells opening from closing: the same key sends the same command every time.
+  it('send the same toggle each time a key is pressed, whether the page is open or not', () => {
+    const { input, key } = newScreen();
+    const sent = [1, 2, 3].map(() => {
+      key('M').down();
+      const commands = input.pollActions();
+      key('M').up();
+      return commands;
+    });
+    expect(sent).toEqual([
+      [{ type: 'toggle-page', page: 'automap' }],
+      [{ type: 'toggle-page', page: 'automap' }],
+      [{ type: 'toggle-page', page: 'automap' }],
+    ]);
+  });
+
+  // Ctrl and Tab, or Cmd and Tab, switch tabs or applications, and Ctrl and C copies: those presses are the browser's.
+  it.each([
+    ['Ctrl', { ctrlKey: true }],
+    ['Cmd', { metaKey: true }],
+  ])('ask for nothing when they are pressed with %s', (_held, modifiers) => {
+    const { input, key } = newScreen();
+    for (const name of ['C', 'TAB', 'I', 'M']) {
+      key(name).down(false, modifiers);
+    }
+    expect(input.pollActions()).toEqual([]);
+  });
+
+  it('ask again when the key is let go and pressed without Ctrl after a press with it', () => {
+    const { input, key } = newScreen();
+    key('TAB').down(false, { ctrlKey: true });
+    input.pollActions();
+    key('TAB').up();
+    key('TAB').down();
+    expect(input.pollActions()).toEqual([{ type: 'toggle-page', page: 'stats' }]);
+  });
+
+  it('hold Tab back from the browser, so that pressing it in play does not move the focus out of the game', () => {
+    const { captured } = newScreen();
+    expect(captured('TAB')).toBe(true);
+  });
+
+  it.each(['C', 'I', 'M'])('leave %s to the browser, whose own shortcuts on it keep working', (name) => {
+    const { captured } = newScreen();
+    expect(captured(name)).toBe(false);
+  });
+});
+
+describe('Esc', () => {
+  it('closes whichever page is open and declines the question whether to sail home, as the page keys toggle', () => {
+    const { input, key } = newScreen();
+    key('ESC').down();
+    expect(input.pollActions()).toEqual([
+      { type: 'close-page', page: 'stats' },
+      { type: 'close-page', page: 'inventory' },
+      { type: 'close-page', page: 'automap' },
+      { type: 'cancel-departure' },
+    ]);
   });
 });
