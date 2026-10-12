@@ -44,12 +44,16 @@ enough without grinding? Did the Level-ups come about where listed (a Stat Point
 ## The pages, the bow and the potions
 
 These keys are in the README's Controls table, and nothing above makes you press them. The hint at the foot of each
-page names the keys that close it (C/TAB, I or M, then Esc) and is all on the screen.
+page names the keys that close it (C/TAB, I, M or H, then Esc) and is all on the screen.
 
 - [ ] **C** (or **Tab**) opens the stat page (Level, Experience, Health, Attack, Defense) and the same key, or Esc, closes
       it. After a level-up, the stat you chose has gone up on it.
 - [ ] **M** opens the Automap: every area of the route, what you have found of each, where you are and the exits you
       have found; M again, or Esc, closes it. Does it help you find the way?
+- [ ] **H** opens the Controls page: every key of the game, each with what it does in a few words, and every line whole
+      on the screen. The game waits behind it (the monsters stop); H again, or Esc, closes it and they move again. With
+      it open, I, M, C and Tab open nothing, and at a level-up choice H opens nothing. Press each key on the list and
+      see that it does what the page says. Is every word plain to you?
 - [ ] **The bow:** defeat the first wolf of the woods, the one on the trail just inside the way in (a hero with the sword
       and the armor of the start beats it in a blow or two). The bow goes straight to the inventory: the notice says
       that you found it and to press I, and nothing lies on the ground where the wolf fell. If that defeat also raises
@@ -171,6 +175,10 @@ Tick one when you accept it as it is; otherwise write what to change.
       Do you want a second one in the castle? That is a map change, and nothing was done about it.
 - [ ] **The cave's one-tile gate** has no corner assist (see "The optional puzzles").
 - [ ] **The two-press departure** at the vessel (the first press prepares it, the second asks).
+- [ ] **H shows the controls:** H was free, so it is the key of the Controls page, but you have not chosen it. Nothing in
+      play tells a player that H exists, not the HUD and not the card of the opening; the title screen's line about the
+      controls is how the page is found (the next ticket). Is that enough, or should the opening card or the HUD say it
+      once?
 - [ ] **The Automap** joins the areas by schematic links, and draws the quay as sand. A link meets each map at the side
       where its exit is (the mountain's east edge to the cave's west edge, the cave's east edge to the castle's west
       edge, which makes two links that go round the cards): look that no link runs over a map or a name.

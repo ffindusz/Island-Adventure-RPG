@@ -12,7 +12,9 @@ import type {
 import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
 import { ChangeGuard } from './change-guard';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
-import { closePageKeyLabel, confirmKeyLabel, pageCloseHint, statKeyLabel } from './controls';
+import { closePageKeyLabel, confirmKeyLabel, controlsList, pageCloseHint, statKeyLabel } from './controls';
+import { drawControlsList, layoutControlsList } from './controls-list';
+import type { ControlsListLayout } from './controls-list';
 import { DEPTH } from './depths';
 import { potionLineOf } from './inventory-menu';
 import {
@@ -124,6 +126,8 @@ type Row =
   | { readonly kind: 'bar'; readonly share: number }
   /** A little more room. */
   | { readonly kind: 'space'; readonly height: number }
+  /** The list of the controls: the keys in one column and what they do in the other, laid out by `layoutControlsList`. */
+  | { readonly kind: 'controls'; readonly layout: ControlsListLayout }
   /** Two columns of rows side by side, as tall as the taller. */
   | {
       readonly kind: 'columns';
@@ -236,11 +240,15 @@ function pagePanel(page: PageView, hero: HeroView, inventoryCursor: number): Pan
   }
 }
 
+/** The Controls page: the list of the controls in a window as wide as the list needs, with the hint to close it below. */
 function controlsPagePanel(): Panel {
+  const layout = layoutControlsList(controlsList());
   return {
-    width: WIDE_WINDOW,
+    width: layout.width + 2 * WINDOW_PADDING,
     rows: [
       { kind: 'text', text: 'CONTROLS', colour: INK.title },
+      { kind: 'space', height: 0 },
+      { kind: 'controls', layout },
       { kind: 'space', height: 0 },
       { kind: 'text', text: pageCloseHint('controls'), colour: INK.hint },
     ],
@@ -360,6 +368,8 @@ function heightOf(row: Row): number {
       return BAR_HEIGHT;
     case 'space':
       return row.height;
+    case 'controls':
+      return row.layout.height;
     case 'columns':
       return Math.max(stackHeight(row.left, ROW_RULES), stackHeight(row.right, ROW_RULES));
   }
@@ -376,9 +386,14 @@ function gapBetween(above: Row, below: Row): number {
 
 const ROW_RULES: RowRules<Row> = { heightOf, gapBetween };
 
+/** The height of the panel's window: its rows one under the other, and the padding above and below them. */
+export function panelHeight(panel: Panel): number {
+  return stackHeight(panel.rows, ROW_RULES) + 2 * WINDOW_PADDING;
+}
+
 function drawPanel(layer: UiLayer, panel: Panel): void {
   const { width, rows } = panel;
-  const height = stackHeight(rows, ROW_RULES) + 2 * WINDOW_PADDING;
+  const height = panelHeight(panel);
   const left = Math.floor((VIEW_WIDTH - width) / 2);
   const top = Math.floor((VIEW_HEIGHT - height) / 2);
   layer.window(left, top, width, height);
@@ -458,6 +473,9 @@ function drawRow(layer: UiLayer, row: Row, space: RowSpace, gainColumn: number):
       layer.bar(left, top, right - left, BAR_HEIGHT, row.share, INK.experience);
       return;
     case 'space':
+      return;
+    case 'controls':
+      drawControlsList(layer, row.layout, left + Math.floor((right - left - row.layout.width) / 2), top);
       return;
     case 'columns':
       drawStack(layer, row.left, { left, right: left + row.leftWidth, top });

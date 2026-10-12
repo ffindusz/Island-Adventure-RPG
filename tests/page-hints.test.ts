@@ -47,7 +47,7 @@ const BY_HAND: Readonly<Record<PageId, { readonly text: string; readonly room: n
   stats: { text: 'C/TAB OR ESC TO CLOSE', room: 160 - 2 * 12 },
   inventory: { text: 'I OR ESC TO CLOSE', room: 144 + 8 + 122 },
   automap: { text: 'M OR ESC TO CLOSE', room: 300 - 2 * 12 },
-  controls: { text: 'H OR ESC TO CLOSE', room: 160 - 2 * 12 },
+  controls: { text: 'H OR ESC TO CLOSE', room: 83 + 8 + 137 },
 };
 
 /** The words and keys of a hint, in order: "C/TAB OR ESC" is C, TAB, OR and ESC. */
