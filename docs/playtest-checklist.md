@@ -29,9 +29,9 @@ enough without grinding? Did the Level-ups come about where listed (a Stat Point
 - [ ] **Shipwreck Coast** (Level 2 on leaving): two crabs, the broken mast (a milestone), a chest under the hull, a
       potion on the beach. Optional: a crevice in the south wall of the bay leads to a cove with a Steel Sword and a
       potion chest.
-- [ ] **The Woods** (Level 3): wolf, slime, boar (charges), spitter (shoots). The Short Bow chest is one tile off the
-      trail. Optional: the cabin's key (walk onto it), its locked door and the Long Bow behind it; a Chain Mail chest
-      far from the trail.
+- [ ] **The Woods** (Level 3): wolf, slime, boar (charges), spitter (shoots). The first wolf carries the Short Bow: it
+      stands on the trail, eight tiles in from the way in, and there is no chest for the bow. Optional: the cabin's key
+      (walk onto it), its locked door and the Long Bow behind it; a Chain Mail chest far from the trail.
 - [ ] **The Mountain** (Level 4): raiders; the veteran is the tougher fight. The Plate Armor chest is three tiles off
       the trail; a side pocket holds two chests and a guard. The only Checkpoint is at the way in, about 70 steps back.
 - [ ] **The Cave** (Level 5): bat, lizard (charges), eye (shoots); the bear is the tougher fight. Optional: a lever, a
@@ -49,10 +49,14 @@ These keys are in the README's Controls table, and nothing above makes you press
       stat you chose has gone up on it.
 - [ ] **M** opens the Automap: every area of the route, what you have found of each, where you are and the exits you
       have found; Esc closes it. Does it help you find the way?
-- [ ] **The bow:** equip the Short Bow in the inventory (I, then Enter on its line; that does not take it in hand).
+- [ ] **The bow:** defeat the first wolf of the woods, the one on the trail just inside the way in (a hero with the sword
+      and the armor of the start beats it in a blow or two). The bow goes straight to the inventory: the notice says
+      that you found it and to press I, and nothing lies on the ground where the wolf fell. After a defeat that sends
+      you back to the woods' Checkpoint the wolf is back, and defeating it again gives no second bow. Equip the Short
+      Bow in the inventory (I, then Enter on its line; that does not take it in hand).
       Q takes it in hand and Q again takes the sword back; Q does nothing before a bow is equipped. With the bow in
       hand, Space shoots one arrow the way you face and the Ammunition on the HUD goes down by one; with none left the
-      notice says OUT OF AMMUNITION.
+      notice says OUT OF AMMUNITION. The first cache of arrows is a little farther along the trail.
 - [ ] **A Healing Potion:** I opens the inventory, Down goes past the Gear to the Healing Potion line and Enter drinks
       one: Health rises by 5 at most (never above the maximum) and the count falls by one. At full Health nothing
       happens and no potion is used up.
@@ -193,8 +197,10 @@ Tick one when you accept it as it is; otherwise write what to change.
       gone idle, or Continues into a fight); the first Enter on a title whose sound is still locked may lose its
       confirm sound; - and + are the keys MINUS and PLUS and the keypad's, which a non-US layout may not have. All 24
       files (13.2 MB) load before the title, with no loading bar.
-- [ ] **Old saves:** a save from an older build is refused after a change of the saved state (the version is 4 now); the
-      title says so and offers New Game.
+- [ ] **Old saves:** a save from an older build is refused after a change of the saved state (the version is 4 now) and
+      after a change to the interactables of the content: ticket 30 took the bow chest out of the woods, so every save
+      made before it is refused, the one from your earlier playtests too. The title says it is from another version and
+      offers New Game, and a New Game replaces it.
 - [ ] **`?debug`** in the address bar gives the page the Game core, in a build for the public too. Keep it, or switch it
       off in a shipped build?
 - [ ] **No LICENSE file** is in the repository, so the project's own code, drawings and bitmap font state no licence.

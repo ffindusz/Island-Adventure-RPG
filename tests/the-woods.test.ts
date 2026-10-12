@@ -1,22 +1,40 @@
 import { describe, expect, it } from 'vitest';
+import { parseSave } from '../src/adapter/saved-game';
 import { gameContent } from '../src/content';
 import { GEAR_SLOTS, WEAPON_SLOTS, createGame } from '../src/core';
 import type {
   AreaDefinition,
   ChaserMonsterDefinition,
   ChestDefinition,
+  Direction,
   Game,
   GameEvent,
   InteractableDefinition,
+  MonsterPlacement,
+  MonsterTypeDefinition,
   Tile,
 } from '../src/core';
-import { face, fixedRandom, playingView } from './fixtures';
-import { areaOf, LEAST_DETOUR, quietGameAt, routeOf } from './main-route';
+import { buildAt, DEMANDING_SHARE, gearBefore, SPENDS } from './fight-table';
+import {
+  advance,
+  ATTACK,
+  CLOSE_INVENTORY,
+  COOLDOWN_STEPS,
+  face,
+  fixedRandom,
+  inventoryOf,
+  newGame,
+  OPEN_INVENTORY,
+  playingView,
+  strike,
+} from './fixtures';
+import { AREA_IDS, areaOf, LEAST_DETOUR, quietGameAt, routeOf } from './main-route';
 import {
   directionBetween,
   experienceForLevel,
   experienceOfAll,
   isInZone,
+  isWithinAwareness,
   keyOf,
   metOn,
   milestonesOf,
@@ -31,7 +49,7 @@ import {
 // content, these read the map and the lists of the content and walk the hero over them with the core's own movement,
 // so that moving a tile or a chest never breaks them unless the woods stop being what they are for. The trail is the
 // path of sand that the text of the woods tells the hero to follow: it is the intended route, and what lies beside it
-// is found by the hero who looks.
+// is found by the hero who looks. The first bow is not in a chest: a weak monster just inside the way in carries it.
 
 const COAST = 'shipwreck-coast';
 const WOODS = 'woods';
@@ -71,6 +89,31 @@ function gearInChestsOf(area: AreaDefinition): string[] {
   return (area.interactables ?? []).flatMap((item) =>
     item.kind === 'chest' && item.contents.kind === 'gear' ? [item.contents.gear] : [],
   );
+}
+
+/** The ids of the Gear that the monsters of an area carry. */
+function gearCarriedIn(area: AreaDefinition): string[] {
+  return area.monsters.flatMap(({ carries }) => carries ?? []);
+}
+
+/** The monster that carries the first bow: the one weapon of the ranged slot that a monster of the woods carries. */
+function bowCarrier(): MonsterPlacement {
+  const found = woods.monsters.find(
+    ({ carries }) => carries !== undefined && gameContent.gear[carries]?.slot === 'ranged-weapon',
+  );
+  if (found === undefined) {
+    throw new Error('No monster of the woods carries a bow');
+  }
+  return found;
+}
+
+/** The monster type of a placement, from the shipped content. */
+function monsterTypeOf({ type }: MonsterPlacement): MonsterTypeDefinition {
+  const found = gameContent.monsterTypes[type];
+  if (found === undefined) {
+    throw new Error(`The shipped content has no monster type "${type}"`);
+  }
+  return found;
 }
 
 function holdsAmmunition(item: InteractableDefinition): boolean {
@@ -126,6 +169,43 @@ function pickupFrom({ contents }: ChestDefinition): unknown {
         ? expect.objectContaining({ kind: 'gear', id: contents.gear })
         : { kind: 'consumable', id: contents.consumable, amount: contents.amount },
   });
+}
+
+/** How far the hero is from a monster, centre to centre, or null once the monster is gone from the view. */
+function apartFrom(game: Game, id: string): number | null {
+  const { hero, monsters } = playingView(game);
+  const monster = monsters.find((candidate) => candidate.id === id);
+  return monster === undefined ? null : Math.hypot(monster.position.x - hero.position.x, monster.position.y - hero.position.y);
+}
+
+/** The way to face a monster from where the hero stands: along the axis on which they are farther apart. */
+function directionToward(game: Game, id: string): Direction {
+  const { hero, monsters } = playingView(game);
+  const monster = monsters.find((candidate) => candidate.id === id);
+  const across = (monster?.position.x ?? hero.position.x) - hero.position.x;
+  const down = (monster?.position.y ?? hero.position.y) - hero.position.y;
+  if (Math.abs(across) >= Math.abs(down)) {
+    return across >= 0 ? 'right' : 'left';
+  }
+  return down >= 0 ? 'down' : 'up';
+}
+
+const MOST_BLOWS = 20;
+
+/**
+ * The hero walks the trail until the monster is two tiles from it or nearer, and then faces it and strikes, as a player
+ * who never dodges would, until it is defeated. Returns every event on the way.
+ */
+function walkToAndDefeat(game: Game, monster: MonsterPlacement): GameEvent[] {
+  const events = walkRoute(game, trail, () => (apartFrom(game, monster.id) ?? 0) > 2);
+  for (let blow = 0; apartFrom(game, monster.id) !== null; blow += 1) {
+    if (blow === MOST_BLOWS) {
+      throw new Error(`The hero has not defeated "${monster.id}" in ${MOST_BLOWS} blows`);
+    }
+    face(game, directionToward(game, monster.id));
+    events.push(...advance(game, COOLDOWN_STEPS), ...game.send(ATTACK));
+  }
+  return events;
 }
 
 describe('the way through the woods', () => {
@@ -191,40 +271,94 @@ describe('the way through the woods', () => {
 });
 
 describe('what the hero finds in the woods', () => {
-  /** The chest of the first bow, the one the hero can walk to with every door shut. */
-  const bowChest = (): ChestDefinition =>
-    chestThat('chest of a bow that the hero can reach', (chest) => gearSlotOf(chest) === 'ranged-weapon' && placeOnTrail(chest.tile) !== null);
+  it('has the bow carried by a monster early on the trail: on the sand, in the first third of it', () => {
+    const place = placeOnTrail(bowCarrier().tile);
 
-  it('has the bow in a chest early on the trail: in its first third', () => {
-    const place = placeOnTrail(bowChest().tile);
-
+    expect(kindAt(bowCarrier().tile)).toBe('sand');
     expect(place).not.toBeNull();
     expect(place ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(trail.length / 3);
   });
 
-  it('has Ammunition caches soon after the bow: two at least, the first after the bow chest on the trail and before its half', () => {
-    const places = interactables
-      .filter(holdsAmmunition)
-      .flatMap(({ tile }) => placeOnTrail(tile) ?? []);
+  it('has a carrier of a kind that the rest of the woods has too: no new monster comes with the bow', () => {
+    const carrier = bowCarrier();
 
+    const others = woods.monsters.filter((monster) => monster !== carrier);
+
+    expect(others.map(({ type }) => type)).toContain(carrier.type);
+  });
+
+  it('has a carrier that stands farther from the way in and the Checkpoint than it notices the hero: a hero who begins again there is not at once in a fight', () => {
+    const carrier = bowCarrier();
+    const spots = [...(woods.entrances ?? []), ...(woods.checkpoints ?? [])];
+
+    expect(spots.map(({ id }) => id)).toEqual(expect.arrayContaining(['from-coast', 'woods-checkpoint']));
+    for (const spot of spots) {
+      expect(
+        isWithinAwareness(monsterTypeOf(carrier), carrier.tile, gameContent.hero.size, spot.tile),
+        `a hero on ${spot.id} is noticed by the carrier ${carrier.id}`,
+      ).toBe(false);
+    }
+  });
+
+  it('has a carrier that a hero with the sword it began with and the Gear of the coast beats, as it beats the other beasts of the woods', () => {
+    const carrier = bowCarrier();
+
+    expect(gearBefore(WOODS)['ranged-weapon'], 'the hero holds no bow before the carrier').toBeUndefined();
+    for (const spend of SPENDS) {
+      const fight = buildAt(carrier.type, WOODS, spend);
+      expect(fight.result.outcome, `a hero ${spend} against the ${carrier.type}`).toBe('won');
+      expect(fight.lostShare, `a hero ${spend} against the ${carrier.type}`).toBeLessThan(DEMANDING_SHARE);
+    }
+  });
+
+  it('keeps the bow out of every chest: the woods have no bow chest, and no chest of the adventure holds what a monster carries', () => {
+    const carried = gearCarriedIn(woods);
+
+    expect(carried).toContain('short-bow');
+    expect(chests.map(({ id }) => id)).not.toContain('bow-chest');
+    expect(chests.filter((chest) => gearSlotOf(chest) === 'ranged-weapon' && placeOnTrail(chest.tile) !== null)).toEqual([]);
+    for (const id of AREA_IDS) {
+      expect(gearInChestsOf(areaOf(id)).filter((gear) => carried.includes(gear)), `the chests of ${id}`).toEqual([]);
+    }
+  });
+
+  it('has a carrier that leaves no arrows: the Ammunition is in the caches, and there are two at least, the first after the carrier on the trail and before its half', () => {
+    const type = monsterTypeOf(bowCarrier());
+    const places = interactables.filter(holdsAmmunition).flatMap(({ tile }) => placeOnTrail(tile) ?? []);
+
+    expect(type.drops ?? [], `what a ${bowCarrier().type} leaves`).toEqual([]);
     expect(places.length, 'Ammunition caches the hero can walk to').toBeGreaterThanOrEqual(2);
     const first = Math.min(...places);
-    expect(first).toBeGreaterThan(placeOnTrail(bowChest().tile) ?? Number.POSITIVE_INFINITY);
+    expect(first).toBeGreaterThan(placeOnTrail(bowCarrier().tile) ?? Number.POSITIVE_INFINITY);
     expect(first).toBeLessThanOrEqual(trail.length / 2);
   });
 
-  it('lets the hero walk to the bow chest and open it, and then do the same at an Ammunition cache', () => {
-    const game = quietGameAt(WOODS, wayInTile);
-    const bow = bowChest();
+  it('lets the hero walk from the way in to the carrier and defeat it, hold the bow, equip it, switch to it with nothing to shoot, and shoot at the first Ammunition cache', () => {
+    const carrier = bowCarrier();
     const cache = chestThat('Ammunition cache that the hero can reach', (chest) => holdsAmmunition(chest) && placeOnTrail(chest.tile) !== null);
+    const game = newGame({ ...gameContent, start: { area: WOODS, tile: wayInTile } });
+    expect(inventoryOf(game).gear.map(({ id }) => id), 'the hero begins without the bow').not.toContain('short-bow');
 
-    const bowEvents = openChest(game, bow);
+    const defeat = walkToAndDefeat(game, carrier);
+
+    expect(defeat).toContainEqual({ type: 'monster-defeated', monsterId: carrier.id });
+    expect(defeat).toContainEqual({ type: 'pickup', item: expect.objectContaining({ kind: 'gear', id: 'short-bow', slot: 'ranged-weapon' }) });
+    expect(inventoryOf(game).gear).toContainEqual(expect.objectContaining({ id: 'short-bow', equipped: false }));
+    game.send(OPEN_INVENTORY);
+    expect(game.send({ type: 'equip', gearId: 'short-bow' })).toEqual([
+      { type: 'gear-equipped', gearId: 'short-bow', slot: 'ranged-weapon' },
+    ]);
+    game.send(CLOSE_INVENTORY);
+    expect(game.send({ type: 'switch-weapon' })).toEqual([{ type: 'weapon-switched', weapon: 'ranged-weapon' }]);
+    expect(playingView(game).hero.activeWeapon).toBe('ranged-weapon');
+    expect(strike(game), 'the bow has no arrows yet').toEqual([{ type: 'out-of-ammunition' }]);
+
     const cacheEvents = openChest(game, cache);
+    const shot = strike(game);
 
-    expect(bowEvents).toContainEqual({ type: 'chest-opened', chestId: bow.id });
-    expect(bowEvents).toContainEqual(pickupFrom(bow));
     expect(cacheEvents).toContainEqual({ type: 'chest-opened', chestId: cache.id });
     expect(cacheEvents).toContainEqual(pickupFrom(cache));
+    expect(shot).toContainEqual(expect.objectContaining({ type: 'hero-shot' }));
   });
 
   it('has a Healing Potion on the ground, which the hero takes by walking over it', () => {
@@ -280,7 +414,9 @@ describe('the cabin in the woods', () => {
       const others = [
         ...GEAR_SLOTS.flatMap((slot) => gameContent.hero.startingGear[slot] ?? []),
         ...gearInChestsOf(areaOf(COAST)),
+        ...gearCarriedIn(areaOf(COAST)),
         ...chests.filter((chest) => chest !== reward).flatMap((chest) => (chest.contents.kind === 'gear' ? [chest.contents.gear] : [])),
+        ...gearCarriedIn(woods),
       ].flatMap((id) => gameContent.gear[id] ?? []);
 
       const best = Math.max(0, ...others.filter((gear) => gear.slot === upgrade?.slot).map((gear) => gear.bonus));
@@ -361,5 +497,37 @@ describe('the text of the woods', () => {
   it('is a short line, not a page', () => {
     expect(woods.text).toBeTypeOf('string');
     expect(woods.text?.length).toBeLessThanOrEqual(60);
+  });
+});
+
+describe('a save made while the bow was in a chest', () => {
+  // A save holds the state of every interactable of every area, so every save made before a monster carried the bow
+  // holds the chest "bow-chest", which the woods no longer have. The title calls such a save "from another version" and
+  // a new game replaces it (SNAPSHOT_VERSION stays: the carried Gear is content and holds no state).
+  interface SavedGame {
+    state: { areas: Record<string, { interactables: Record<string, unknown> }> };
+  }
+
+  function savedGameOfNow(): SavedGame {
+    return JSON.parse(JSON.stringify(newGame(gameContent).snapshot()));
+  }
+
+  it('is a save the game can continue from when it knows no such chest', () => {
+    expect(parseSave(JSON.stringify(savedGameOfNow()), gameContent)).toMatchObject({ status: 'usable' });
+  });
+
+  it('is from another version: the game cannot continue from it', () => {
+    const saved = savedGameOfNow();
+    const ofWoods = saved.state.areas[WOODS]?.interactables;
+    if (ofWoods === undefined) {
+      throw new Error('The save holds no state of the woods');
+    }
+    ofWoods['bow-chest'] = { kind: 'chest', opened: false };
+
+    expect(parseSave(JSON.stringify(saved), gameContent)).toMatchObject({
+      status: 'unusable',
+      problem: 'incompatible',
+      detail: expect.stringContaining(`${WOODS}.interactables.bow-chest is not an interactable of the area`),
+    });
   });
 });
