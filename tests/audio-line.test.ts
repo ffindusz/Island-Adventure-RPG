@@ -17,17 +17,19 @@ const TITLE_WINDOW_FOOT = 12;
 
 /**
  * The heights of the title's window in each of its states, worked out by hand from the rows the title draws: the lines
- * of the menu are 15 high and the other rows 7, with 4 between rows (none between the two lines of the menu), and the
- * window has 12 of air above its first row and under its last: 24 in all. The normal state is the menu and four hints
- * (the rows stand 78 high); the question about replacing the saved game is a question and two answers (33); the window
- * that says saving is not available, or that the saved game is damaged, has two more rows of message and a space round
- * them (104); one that says the saved game is from another version has a third row of message (115).
+ * of the menu are 15 high and the other rows 7, with 4 between rows (none between the lines of the menu) and 4 more
+ * either side of a space, and the window has 12 of air above its first row and under its last: 24 in all. The normal
+ * state is the three lines of the menu, a space and three hints, the keys of the sound sharing the last (the rows stand
+ * 45 + 8 + 29 = 82 high); the question about replacing the saved game is a question, a space and two answers (33); the
+ * window that says saving is not available, that the saved game is damaged or that it is from another version has two
+ * rows of message and a space round them (45 + 8 + 18 + 8 + 29 = 108). tests/title-window.test.ts has the rows and the
+ * boxes themselves.
  */
 const TITLE_WINDOW_HEIGHTS = {
-  normal: 78 + 24,
+  normal: 82 + 24,
   question: 33 + 24,
-  'saving not available or saved game damaged': 104 + 24,
-  'saved game from another version': 115 + 24,
+  'saving not available or saved game damaged': 108 + 24,
+  'saved game from another version': 108 + 24,
 };
 
 describe('the line of the audio', () => {
