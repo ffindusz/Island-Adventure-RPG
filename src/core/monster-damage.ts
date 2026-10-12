@@ -1,6 +1,7 @@
 import type { Content } from './content';
 import { openGatesOfGuardian } from './devices';
 import { rollDrops } from './drops';
+import { takeCarriedGear } from './gear';
 import type { GameEvent, RandomSource } from './interface';
 import { monsterTypeOf } from './monster-content';
 import { gainExperience } from './progression';
@@ -9,7 +10,8 @@ import type { MonsterState, PlayState } from './state';
 /**
  * The hero hurts a monster, with a strike or an arrow alike. Returns what happened, in order: the hit, and when the
  * monster's Health reaches zero, its defeat, the fall of a Guardian after it with the gate its defeat opens open
- * already, the Experience the hero earns for it, and what it drops.
+ * already, the Experience the hero earns for it, what it drops, and last the Gear it carries: the notice tells the
+ * player about the latest thing the hero took, and Gear is the one that asks for a key.
  */
 export function hurtMonster(
   state: PlayState,
@@ -29,6 +31,7 @@ export function hurtMonster(
     }
     events.push(...gainExperience(state, content, type.experience));
     events.push(...rollDrops(state, content, monster, random));
+    events.push(...takeCarriedGear(state, content, monster));
   }
   return events;
 }
