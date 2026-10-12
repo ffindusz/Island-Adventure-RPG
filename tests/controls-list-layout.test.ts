@@ -71,13 +71,27 @@ function controlsPanel(): Panel {
 }
 
 describe('the Controls page on the overlay', () => {
+  // The list in the window is the game's own, 228 wide and 127 tall in 13 lines, as worked out above. The first line has the
+  // widest keys, W A S D/ARROWS: 14 letters are 6 x 14 - 1 = 83 wide, so they start at the left edge, 0, and its words, WALK,
+  // at 83 + 8 = 91, both at the top, 0. The last line is the thirteenth, 12 x 10 = 120 from the top: its keys, - +, are 3
+  // letters, 6 x 3 - 1 = 17 wide, and sit at the right of the column of 83, at 83 - 17 = 66, and its words, VOLUME DOWN OR
+  // UP, begin at 91 as well.
   it('has its title, then the list of the controls laid out, then the hint to close it', () => {
     const { rows } = controlsPanel();
+    const lists = rows.flatMap((row) => (row.kind === 'controls' ? [row.layout] : []));
 
     expect(rows.flatMap((row) => (row.kind === 'text' ? [row.text] : []))).toEqual(['CONTROLS', 'H OR ESC TO CLOSE']);
     expect(rows.map((row) => row.kind)).toEqual(['text', 'space', 'controls', 'space', 'text']);
-    expect(rows.filter((row) => row.kind === 'controls')).toEqual([
-      { kind: 'controls', layout: layoutControlsList(controlsList()) },
+    expect(
+      lists.map(({ width, height, lines }) => ({ width, height, count: lines.length, first: lines[0], last: lines.at(-1) })),
+    ).toEqual([
+      {
+        width: 228,
+        height: 127,
+        count: 13,
+        first: { keys: { text: 'W A S D/ARROWS', left: 0, top: 0 }, words: { text: 'WALK', left: 91, top: 0 } },
+        last: { keys: { text: '- +', left: 66, top: 120 }, words: { text: 'VOLUME DOWN OR UP', left: 91, top: 120 } },
+      },
     ]);
   });
 

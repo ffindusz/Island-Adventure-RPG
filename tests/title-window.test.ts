@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { audioLineBox } from '../src/adapter/audio-line';
 import { VIEW_HEIGHT, VIEW_WIDTH } from '../src/adapter/config';
-import { controlsList, pageKeyLabel } from '../src/adapter/controls';
-import { layoutControlsList } from '../src/adapter/controls-list';
+import { pageKeyLabel } from '../src/adapter/controls';
 import { panelFor } from '../src/adapter/overlay';
 import { textWidthOf } from '../src/adapter/pixel-font';
 import type { Rect } from '../src/adapter/pixel-font';
@@ -317,11 +316,28 @@ describe('the list of the controls on the title', () => {
     expect(textsOf(list)).toEqual(['CONTROLS', 'ESC OR ENTER TO CLOSE']);
   });
 
+  // The list is the game's own, 228 wide and 127 tall in 13 lines (the layout is worked out in controls-list-layout.test.ts).
+  // The first line has the widest keys, W A S D/ARROWS: 14 letters are 6 x 14 - 1 = 83 wide, so they start at the left edge,
+  // 0, and its words, WALK, at 83 + 8 = 91, both at the top, 0. The last line is the thirteenth, 12 x 10 = 120 from the top:
+  // its keys, - +, are 3 letters, 6 x 3 - 1 = 17 wide, and sit at the right of the column of 83, at 83 - 17 = 66, and its
+  // words, VOLUME DOWN OR UP, begin at 91 as well. That the title has the same as the page in play is a comparison of the
+  // two, which are not worked out here.
   it('is the list of the Controls page in play, from the same tables, laid out the same', () => {
     const onTitle = list.rows.filter(({ row }) => row.kind === 'controls').map(({ row }) => row);
     const inPlay = controlsPageOnTheOverlay().rows.filter((row) => row.kind === 'controls');
+    const layouts = onTitle.flatMap((row) => (row.kind === 'controls' ? [row.layout] : []));
 
-    expect(onTitle).toEqual([{ kind: 'controls', layout: layoutControlsList(controlsList()) }]);
+    expect(
+      layouts.map(({ width, height, lines }) => ({ width, height, count: lines.length, first: lines[0], last: lines.at(-1) })),
+    ).toEqual([
+      {
+        width: 228,
+        height: 127,
+        count: 13,
+        first: { keys: { text: 'W A S D/ARROWS', left: 0, top: 0 }, words: { text: 'WALK', left: 91, top: 0 } },
+        last: { keys: { text: '- +', left: 66, top: 120 }, words: { text: 'VOLUME DOWN OR UP', left: 91, top: 120 } },
+      },
+    ]);
     expect(onTitle).toEqual(inPlay);
   });
 
