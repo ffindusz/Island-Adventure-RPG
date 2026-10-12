@@ -458,8 +458,16 @@ export interface StatPageView {
   readonly defense: number;
 }
 
+/**
+ * The Controls page: the keys of the game. The game knows that the page is open and nothing of what it lists, since
+ * the core knows no keys: the list is the adapter's.
+ */
+export interface ControlsPageView {
+  readonly id: 'controls';
+}
+
 /** A page that is open over the game. One kind for each page id; `id` says which. */
-export type PageView = StatPageView | InventoryPageView | AutomapPageView;
+export type PageView = StatPageView | InventoryPageView | AutomapPageView | ControlsPageView;
 
 /** A piece of Gear as the player reads about it. */
 export interface GearInfo {

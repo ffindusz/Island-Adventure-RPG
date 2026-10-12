@@ -172,7 +172,7 @@ export interface HeroState {
 }
 
 /** The pages that can be open over the game, one at a time. A new page is one more id here and one more view. */
-export const PAGE_IDS = ['stats', 'inventory', 'automap'] as const;
+export const PAGE_IDS = ['stats', 'inventory', 'automap', 'controls'] as const;
 export type PageId = (typeof PAGE_IDS)[number];
 
 /**

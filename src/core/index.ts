@@ -58,6 +58,7 @@ export type {
   AutomapPageView,
   CheckpointView,
   ChestView,
+  ControlsPageView,
   Command,
   DepartureView,
   DoorView,

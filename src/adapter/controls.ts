@@ -66,6 +66,7 @@ export const PAGE_KEYS: Readonly<Record<PageId, readonly [PageKey, ...PageKey[]]
   ],
   inventory: [{ name: 'I', label: 'I', capture: false }],
   automap: [{ name: 'M', label: 'M', capture: false }],
+  controls: [{ name: 'H', label: 'H', capture: false }],
 };
 
 /** The main key of the page, as the player reads it: the one a notice tells the player to press. */

@@ -94,6 +94,7 @@ const READS: readonly { name: string; says: string; read: (input: PlayerInput<Fa
   { name: 'TAB', says: 'a toggle of the stat page', read: togglesPage('stats') },
   { name: 'I', says: 'a toggle of the inventory', read: togglesPage('inventory') },
   { name: 'M', says: 'a toggle of the Automap', read: togglesPage('automap') },
+  { name: 'H', says: 'a toggle of the Controls page', read: togglesPage('controls') },
 ];
 
 describe.each(READS)('the $name key', ({ name, says, read }) => {
@@ -212,6 +213,7 @@ describe('the keys of the pages', () => {
     ['TAB', 'stats'],
     ['I', 'inventory'],
     ['M', 'automap'],
+    ['H', 'controls'],
   ] as const)('%s toggles the %s page and nothing else', (name, page) => {
     const { input, key } = newScreen();
     key(name).down();
@@ -240,7 +242,7 @@ describe('the keys of the pages', () => {
     ['Cmd', { metaKey: true }],
   ])('ask for nothing when they are pressed with %s', (_held, modifiers) => {
     const { input, key } = newScreen();
-    for (const name of ['C', 'TAB', 'I', 'M']) {
+    for (const name of ['C', 'TAB', 'I', 'M', 'H']) {
       key(name).down(false, modifiers);
     }
     expect(input.pollActions()).toEqual([]);
@@ -260,7 +262,7 @@ describe('the keys of the pages', () => {
     expect(captured('TAB')).toBe(true);
   });
 
-  it.each(['C', 'I', 'M'])('leave %s to the browser, whose own shortcuts on it keep working', (name) => {
+  it.each(['C', 'I', 'M', 'H'])('leave %s to the browser, whose own shortcuts on it keep working', (name) => {
     const { captured } = newScreen();
     expect(captured(name)).toBe(false);
   });
@@ -274,6 +276,7 @@ describe('Esc', () => {
       { type: 'close-page', page: 'stats' },
       { type: 'close-page', page: 'inventory' },
       { type: 'close-page', page: 'automap' },
+      { type: 'close-page', page: 'controls' },
       { type: 'cancel-departure' },
     ]);
   });

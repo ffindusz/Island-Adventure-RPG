@@ -231,7 +231,20 @@ function pagePanel(page: PageView, hero: HeroView, inventoryCursor: number): Pan
     case 'automap':
       // The Automap is a map, not rows of text: it draws itself (automap-page.ts), and the overlay shows nothing for it.
       return null;
+    case 'controls':
+      return controlsPagePanel();
   }
+}
+
+function controlsPagePanel(): Panel {
+  return {
+    width: WIDE_WINDOW,
+    rows: [
+      { kind: 'text', text: 'CONTROLS', colour: INK.title },
+      { kind: 'space', height: 0 },
+      { kind: 'text', text: pageCloseHint('controls'), colour: INK.hint },
+    ],
+  };
 }
 
 /** The title, with the cursor's place in the list of Gear while the list is longer than the window shows. */
