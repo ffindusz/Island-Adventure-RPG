@@ -119,18 +119,90 @@ export function audioKeyLabel(change: AudioChange): string {
   return AUDIO_KEYS[change].label;
 }
 
-/** The keys of everything but the audio, and what each is for, to see that none of them is also a key of the audio. */
-function keysOfEverythingElse(): readonly { readonly use: string; readonly names: readonly string[] }[] {
+/** What a line of the list of the controls says: the keys, as the player reads them, and what they do in a few plain words. */
+export interface ControlLine {
+  readonly keys: string;
+  readonly words: string;
+}
+
+/** What the list says of each page: what it is called. A page that has no words is an error, so that it is not left off the list. */
+const PAGE_WORDS: Readonly<Record<PageId, string>> = {
+  stats: 'STATS',
+  inventory: 'INVENTORY',
+  automap: 'AUTOMAP',
+  controls: 'CONTROLS',
+};
+
+/** What the keys with these names are for, as the check of the keys names a clash. */
+interface KeyUse {
+  readonly use: string;
+  readonly names: readonly string[];
+}
+
+/**
+ * A line of the controls table: the keys beside what they do. The list of the controls reads `keys` and `words`, and the
+ * check of the keys reads `uses`. The keys of the audio have no uses here: the check reads them from `AUDIO_KEYS`, which
+ * has one entry for each change of the audio.
+ */
+interface ControlsEntry extends ControlLine {
+  readonly uses: readonly KeyUse[];
+}
+
+/**
+ * The controls table, one entry for each line of the list, in the order of the list. The labels come from the tables
+ * above wherever those have one; the walk keys have none, so "ARROWS" is written here for the four arrow keys together.
+ */
+function controlsTable(): readonly ControlsEntry[] {
   return [
-    ...DIRECTIONS.map((direction) => ({ use: `walking ${direction}`, names: WALK_KEYS[direction] })),
-    { use: 'attacking', names: [ATTACK_KEY] },
-    { use: 'interacting', names: [INTERACT_KEY] },
-    { use: 'switching weapons', names: [SWITCH_WEAPON_KEY] },
-    { use: 'picking from a menu', names: [CONFIRM_KEY] },
-    ...PAGE_IDS.map((page) => ({ use: `toggling the ${page} page`, names: PAGE_KEYS[page].map((key) => key.name) })),
-    { use: 'closing a page', names: [CLOSE_PAGE_KEY] },
-    ...STAT_IDS.map((stat) => ({ use: `assigning a Stat Point to ${stat}`, names: STAT_KEYS[stat].keys })),
+    {
+      keys: 'W A S D/ARROWS',
+      words: 'WALK',
+      uses: DIRECTIONS.map((direction) => ({ use: `walking ${direction}`, names: WALK_KEYS[direction] })),
+    },
+    { keys: ATTACK_KEY, words: 'ATTACK', uses: [{ use: 'attacking', names: [ATTACK_KEY] }] },
+    {
+      keys: switchWeaponKeyLabel(),
+      words: 'SWITCH WEAPON',
+      uses: [{ use: 'switching weapons', names: [SWITCH_WEAPON_KEY] }],
+    },
+    {
+      keys: interactKeyLabel(),
+      words: 'OPEN, PULL, READ, SAIL',
+      uses: [{ use: 'interacting', names: [INTERACT_KEY] }],
+    },
+    ...PAGE_IDS.map((page) => ({
+      keys: PAGE_KEYS[page].map((key) => key.label).join('/'),
+      words: PAGE_WORDS[page],
+      uses: [{ use: `toggling the ${page} page`, names: PAGE_KEYS[page].map((key) => key.name) }],
+    })),
+    {
+      keys: confirmKeyLabel(),
+      words: 'PICK A LINE, EQUIP',
+      uses: [{ use: 'picking from a menu', names: [CONFIRM_KEY] }],
+    },
+    { keys: closePageKeyLabel(), words: 'CLOSE A PAGE', uses: [{ use: 'closing a page', names: [CLOSE_PAGE_KEY] }] },
+    {
+      keys: STAT_IDS.map((stat) => statKeyLabel(stat)).join(' '),
+      words: 'PICK A STAT AT LEVEL UP',
+      uses: STAT_IDS.map((stat) => ({ use: `assigning a Stat Point to ${stat}`, names: STAT_KEYS[stat].keys })),
+    },
+    { keys: audioKeyLabel('toggle-mute'), words: 'SOUND ON OR OFF', uses: [] },
+    { keys: `${audioKeyLabel('lower')} ${audioKeyLabel('raise')}`, words: 'VOLUME DOWN OR UP', uses: [] },
   ];
+}
+
+/**
+ * The list of the controls, one line for each key or group of keys that the game answers to, made from the controls
+ * table. It is the list that the Controls page shows; the title screen can show it too. A key that is changed or added
+ * in the tables above changes the list.
+ */
+export function controlsList(): readonly ControlLine[] {
+  return controlsTable().map(({ keys, words }) => ({ keys, words }));
+}
+
+/** The keys of everything but the audio, and what each is for, to see that none of them is also a key of the audio. */
+function keysOfEverythingElse(): readonly KeyUse[] {
+  return controlsTable().flatMap((entry) => entry.uses);
 }
 
 /**
