@@ -39,7 +39,11 @@ const ROW_GAP = 4;
 const ENTRY_HEIGHT = 15;
 const ENTRY_WIDTH = 112;
 
-const ENTRY_LABELS: Readonly<Record<MenuEntry, string>> = { 'new-game': 'NEW GAME', continue: 'CONTINUE' };
+const ENTRY_LABELS: Readonly<Record<MenuEntry, string>> = {
+  'new-game': 'NEW GAME',
+  continue: 'CONTINUE',
+  controls: 'CONTROLS',
+};
 
 type Row =
   /** Centred. */

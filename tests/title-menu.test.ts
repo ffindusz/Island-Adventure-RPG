@@ -1,17 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { openMenu, pressMenu, selectableEntries } from '../src/adapter/title-menu';
+import { MENU_ENTRIES, openMenu, pressMenu, selectableEntries } from '../src/adapter/title-menu';
 import type { TitleKeys, TitleMenu } from '../src/adapter/title-menu';
 
 // The menu of the title screen without the scene that draws it: where the cursor stands, when the screen asks before it
-// replaces a saved game, and which line a key press starts. Each case is worked out by hand from the rules in
-// title-menu.ts.
+// replaces a saved game, when it shows the list of the controls, and which line a key press starts. Each case is worked
+// out by hand from the rules in title-menu.ts.
 
 const SAVED = true;
 const NO_SAVE = false;
 
-const ON_NEW_GAME: TitleMenu = { cursor: 'new-game', confirming: false };
-const ON_CONTINUE: TitleMenu = { cursor: 'continue', confirming: false };
-const ASKING: TitleMenu = { cursor: 'new-game', confirming: true };
+const ON_NEW_GAME: TitleMenu = { cursor: 'new-game', confirming: false, showingControls: false };
+const ON_CONTINUE: TitleMenu = { cursor: 'continue', confirming: false, showingControls: false };
+const ON_CONTROLS: TitleMenu = { cursor: 'controls', confirming: false, showingControls: false };
+const ASKING: TitleMenu = { cursor: 'new-game', confirming: true, showingControls: false };
+const SHOWING_CONTROLS: TitleMenu = { cursor: 'controls', confirming: false, showingControls: true };
 
 /** One look at the keys, with nothing pressed but what is given. */
 function press(menu: TitleMenu, canContinue: boolean, keys: Partial<TitleKeys> = {}) {
@@ -28,39 +30,54 @@ describe('the menu as the title opens', () => {
   });
 });
 
+describe('the lines of the menu', () => {
+  it('are New Game, Continue and Controls, top to bottom', () => {
+    expect(MENU_ENTRIES).toEqual(['new-game', 'continue', 'controls']);
+  });
+});
+
 describe('the lines the cursor can rest on', () => {
-  it('are New Game and then Continue when there is a saved game', () => {
-    expect(selectableEntries(SAVED)).toEqual(['new-game', 'continue']);
+  it('are New Game, Continue and Controls, top to bottom, when there is a saved game', () => {
+    expect(selectableEntries(SAVED)).toEqual(['new-game', 'continue', 'controls']);
   });
 
-  it('are New Game alone when there is none, because Continue is greyed', () => {
-    expect(selectableEntries(NO_SAVE)).toEqual(['new-game']);
+  it('are New Game and Controls when there is none, because Continue is greyed and Controls can always be chosen', () => {
+    expect(selectableEntries(NO_SAVE)).toEqual(['new-game', 'controls']);
   });
 });
 
 describe('the cursor', () => {
-  it('goes down from New Game to Continue and up again, over a saved game', () => {
+  it('goes down from New Game to Continue and on to Controls, and up again, over a saved game', () => {
     expect(press(ON_NEW_GAME, SAVED, { step: 1 })).toEqual({ menu: ON_CONTINUE, choice: null });
+    expect(press(ON_CONTINUE, SAVED, { step: 1 })).toEqual({ menu: ON_CONTROLS, choice: null });
+    expect(press(ON_CONTROLS, SAVED, { step: -1 })).toEqual({ menu: ON_CONTINUE, choice: null });
     expect(press(ON_CONTINUE, SAVED, { step: -1 })).toEqual({ menu: ON_NEW_GAME, choice: null });
   });
 
-  it('stops at the first and the last line, and does not go round', () => {
-    expect(press(ON_NEW_GAME, SAVED, { step: -1 })).toEqual({ menu: ON_NEW_GAME, choice: null });
-    expect(press(ON_CONTINUE, SAVED, { step: 1 })).toEqual({ menu: ON_CONTINUE, choice: null });
+  it('skips Continue, which is greyed, when there is no saved game: New Game and Controls are next to each other', () => {
+    expect(press(ON_NEW_GAME, NO_SAVE, { step: 1 })).toEqual({ menu: ON_CONTROLS, choice: null });
+    expect(press(ON_CONTROLS, NO_SAVE, { step: -1 })).toEqual({ menu: ON_NEW_GAME, choice: null });
+  });
+
+  it('stops at New Game and at Controls, the first and the last line, and does not go round', () => {
+    for (const canContinue of [SAVED, NO_SAVE]) {
+      expect(press(ON_NEW_GAME, canContinue, { step: -1 })).toEqual({ menu: ON_NEW_GAME, choice: null });
+      expect(press(ON_CONTROLS, canContinue, { step: 1 })).toEqual({ menu: ON_CONTROLS, choice: null });
+    }
   });
 
   it('stays where it is when no key is pressed', () => {
     expect(press(ON_NEW_GAME, SAVED)).toEqual({ menu: ON_NEW_GAME, choice: null });
     expect(press(ON_CONTINUE, SAVED)).toEqual({ menu: ON_CONTINUE, choice: null });
-  });
-
-  it('cannot leave New Game when there is no saved game, whichever way it is stepped', () => {
-    expect(press(ON_NEW_GAME, NO_SAVE, { step: 1 })).toEqual({ menu: ON_NEW_GAME, choice: null });
-    expect(press(ON_NEW_GAME, NO_SAVE, { step: -1 })).toEqual({ menu: ON_NEW_GAME, choice: null });
+    expect(press(ON_CONTROLS, SAVED)).toEqual({ menu: ON_CONTROLS, choice: null });
   });
 
   it('goes back to New Game when it was left on Continue and the saved game is gone', () => {
     expect(press(ON_CONTINUE, NO_SAVE)).toEqual({ menu: ON_NEW_GAME, choice: null });
+  });
+
+  it('stays on Controls when the saved game is gone, because Controls can always be chosen', () => {
+    expect(press(ON_CONTROLS, NO_SAVE)).toEqual({ menu: ON_CONTROLS, choice: null });
   });
 
   it('is on New Game, not Continue, for the Enter that follows when the saved game is gone', () => {
@@ -81,9 +98,51 @@ describe('Enter on a line', () => {
     expect(press(ON_NEW_GAME, SAVED, { confirm: true })).toEqual({ menu: ASKING, choice: null });
   });
 
+  it('shows the list of the controls from the line of Controls, with or without a saved game, and starts nothing', () => {
+    expect(press(ON_CONTROLS, SAVED, { confirm: true })).toEqual({ menu: SHOWING_CONTROLS, choice: null });
+    expect(press(ON_CONTROLS, NO_SAVE, { confirm: true })).toEqual({ menu: SHOWING_CONTROLS, choice: null });
+  });
+
   it('is not answered by Esc when no question is open', () => {
     expect(press(ON_NEW_GAME, SAVED, { cancel: true })).toEqual({ menu: ON_NEW_GAME, choice: null });
     expect(press(ON_CONTINUE, SAVED, { cancel: true })).toEqual({ menu: ON_CONTINUE, choice: null });
+    expect(press(ON_CONTROLS, SAVED, { cancel: true })).toEqual({ menu: ON_CONTROLS, choice: null });
+  });
+});
+
+describe.each([
+  ['over a saved game', SAVED],
+  ['with no saved game', NO_SAVE],
+])('the list of the controls, %s', (_case, canContinue) => {
+  it('is closed by Esc: the menu is back as it was, the cursor on Controls, and nothing starts', () => {
+    expect(press(SHOWING_CONTROLS, canContinue, { cancel: true })).toEqual({ menu: ON_CONTROLS, choice: null });
+  });
+
+  it('is closed by Enter, the key that opened it: the menu is back, the cursor on Controls, and no game starts', () => {
+    expect(press(SHOWING_CONTROLS, canContinue, { confirm: true })).toEqual({ menu: ON_CONTROLS, choice: null });
+  });
+
+  it('is closed when Enter and Esc come together, and nothing starts', () => {
+    expect(press(SHOWING_CONTROLS, canContinue, { confirm: true, cancel: true })).toEqual({
+      menu: ON_CONTROLS,
+      choice: null,
+    });
+  });
+
+  it('stays shown, and starts nothing, while no key is pressed', () => {
+    expect(press(SHOWING_CONTROLS, canContinue)).toEqual({ menu: SHOWING_CONTROLS, choice: null });
+  });
+
+  it('does not answer the cursor keys: the cursor stays on Controls and the list stays shown', () => {
+    expect(press(SHOWING_CONTROLS, canContinue, { step: -1 })).toEqual({ menu: SHOWING_CONTROLS, choice: null });
+    expect(press(SHOWING_CONTROLS, canContinue, { step: 1 })).toEqual({ menu: SHOWING_CONTROLS, choice: null });
+  });
+
+  it('is shown again by the next Enter on Controls after it was closed, and not by the Enter that closed it', () => {
+    const closed = press(SHOWING_CONTROLS, canContinue, { confirm: true }).menu;
+
+    expect(press(closed, canContinue)).toEqual({ menu: ON_CONTROLS, choice: null });
+    expect(press(closed, canContinue, { confirm: true })).toEqual({ menu: SHOWING_CONTROLS, choice: null });
   });
 });
 
@@ -124,5 +183,40 @@ describe('a whole visit to the title, a key at a time', () => {
 
     expect([onNewGame, asked.menu, declined.menu, askedAgain.menu]).toEqual([ON_NEW_GAME, ASKING, ON_NEW_GAME, ASKING]);
     expect([asked.choice, declined.choice, askedAgain.choice, answered.choice]).toEqual([null, null, null, 'new-game']);
+  });
+
+  it('goes from the saved game down to Controls, through the list and its two ways out, and up to a New Game that still asks', () => {
+    const onContinue = openMenu(SAVED);
+    const onControls = press(onContinue, SAVED, { step: 1 }).menu;
+    const listed = press(onControls, SAVED, { confirm: true });
+    const keptOut = press(listed.menu, SAVED, { step: -1 });
+    const escaped = press(keptOut.menu, SAVED, { cancel: true });
+    const listedAgain = press(escaped.menu, SAVED, { confirm: true });
+    const entered = press(listedAgain.menu, SAVED, { confirm: true });
+    const upToContinue = press(entered.menu, SAVED, { step: -1 }).menu;
+    const upToNewGame = press(upToContinue, SAVED, { step: -1 }).menu;
+    const asked = press(upToNewGame, SAVED, { confirm: true });
+
+    expect([onControls, listed.menu, keptOut.menu, escaped.menu]).toEqual([
+      ON_CONTROLS,
+      SHOWING_CONTROLS,
+      SHOWING_CONTROLS,
+      ON_CONTROLS,
+    ]);
+    expect([listedAgain.menu, entered.menu, upToContinue, upToNewGame, asked.menu]).toEqual([
+      SHOWING_CONTROLS,
+      ON_CONTROLS,
+      ON_CONTINUE,
+      ON_NEW_GAME,
+      ASKING,
+    ]);
+    expect([listed, keptOut, escaped, listedAgain, entered, asked].map(({ choice }) => choice)).toEqual([
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]);
   });
 });
