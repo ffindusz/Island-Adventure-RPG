@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkAudioKeys } from '../src/adapter/controls';
+import { checkAudioKeys, pageKeyLabel } from '../src/adapter/controls';
 
 // The keys of the audio may not be the keys of anything else. The check is given Phaser's table of key codes, so here it
 // is given one of the test's own: every name has a code of its own, but for the names that are told to share one and
@@ -32,7 +32,9 @@ describe('the keys of the audio', () => {
     ['E', 'interacting', 'NUMPAD_ADD', 'raise'],
     ['Q', 'switching weapons', 'PLUS', 'raise'],
     ['ENTER', 'picking from a menu', 'N', 'toggle-mute'],
-    ['M', 'opening the automap page', 'NUMPAD_SUBTRACT', 'lower'],
+    ['M', 'toggling the automap page', 'NUMPAD_SUBTRACT', 'lower'],
+    ['TAB', 'toggling the stats page', 'N', 'toggle-mute'],
+    ['C', 'toggling the stats page', 'PLUS', 'raise'],
     ['ESC', 'closing a page', 'MINUS', 'lower'],
     ['TWO', 'assigning a Stat Point to attack', 'PLUS', 'raise'],
   ])('are refused when %s, the key for %s, has the code of %s, a key for the audio (%s)', (other, use, audioKey, change) => {
@@ -49,5 +51,20 @@ describe('the keys of the audio', () => {
 
   it.each(['NUMPAD_ADD', 'SPACE'])('are refused when the table does not know %s, naming it', (name) => {
     expect(() => checkAudioKeys(codes({ unknown: [name] }))).toThrow(`"${name}" is not the name of a key that Phaser knows`);
+  });
+
+  it('are refused when the table does not know a key of a page, naming it: Tab is checked as C is', () => {
+    expect(() => checkAudioKeys(codes({ unknown: ['TAB'] }))).toThrow('"TAB" is not the name of a key that Phaser knows');
+  });
+});
+
+// A page has several keys when it needs them: the notices name the first, which is the page's main key.
+describe('the key that a notice names for a page', () => {
+  it.each([
+    ['stats', 'C'],
+    ['inventory', 'I'],
+    ['automap', 'M'],
+  ] as const)('is, for the %s page, %s', (page, label) => {
+    expect(pageKeyLabel(page)).toBe(label);
   });
 });

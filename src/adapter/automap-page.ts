@@ -14,7 +14,7 @@ import type { Metrics, Place } from './automap-layout';
 import { automapColour, EXIT_COLOUR, MAP_COLOUR } from './automap-palette';
 import { ChangeGuard } from './change-guard';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
-import { closePageKeyLabel } from './controls';
+import { pageCloseHint } from './controls';
 import { DEPTH } from './depths';
 import { drawText, TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Graphics, Rect } from './pixel-font';
@@ -180,6 +180,16 @@ function drawCentred(layer: UiLayer, text: string, top: number, colour: number):
   layer.text(text, CONTENT.left + Math.floor((CONTENT.width - textWidthOf(text)) / 2), top, colour);
 }
 
+/**
+ * What the hint at the foot of the window says, and the room it has: the window less its padding. The Automap draws its
+ * own window, not the overlay's, so this is what its hint is drawn from and what the test of the hints reads. A hint
+ * wider than the room runs over the edges of the window: nothing cuts it.
+ */
+export const AUTOMAP_HINT: { readonly text: string; readonly room: number } = {
+  text: pageCloseHint('automap'),
+  room: CONTENT.width,
+};
+
 /** The window with its title and hint, over the dimmed game, drawn as the overlay draws its windows. */
 function drawWindow(backdrop: Graphics, layer: UiLayer): void {
   backdrop.clear();
@@ -188,7 +198,7 @@ function drawWindow(backdrop: Graphics, layer: UiLayer): void {
   layer.clear();
   layer.window(PANEL.left, PANEL.top, PANEL.width, PANEL.height);
   drawCentred(layer, 'AUTOMAP', CONTENT.top, INK.title);
-  drawCentred(layer, `${closePageKeyLabel()} TO CLOSE`, CONTENT.top + CONTENT.height - TEXT_HEIGHT, INK.hint);
+  drawCentred(layer, AUTOMAP_HINT.text, CONTENT.top + CONTENT.height - TEXT_HEIGHT, INK.hint);
 }
 
 /** Draws the route. Returns where the hero's mark goes, if the hero is on the map of an area. */
