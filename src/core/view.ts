@@ -172,6 +172,8 @@ function pageView(state: PlayState, content: Content): PageView | null {
       };
     case 'automap':
       return automapPage(state, content);
+    case 'controls':
+      return { id: 'controls' };
   }
 }
 

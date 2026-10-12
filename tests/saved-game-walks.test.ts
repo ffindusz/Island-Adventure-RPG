@@ -141,7 +141,7 @@ describe('a hero among every kind of monster, doing anything at all', () => {
     () => {
       const walk = newWalk();
 
-      for (const seed of [1, 2, 3]) {
+      for (const seed of [1, 2, 3, 4]) {
         walkAtRandom(gauntlet, seed, 600, walk);
       }
 

@@ -33,6 +33,7 @@ describe('the keys of the audio', () => {
     ['Q', 'switching weapons', 'PLUS', 'raise'],
     ['ENTER', 'picking from a menu', 'N', 'toggle-mute'],
     ['M', 'toggling the automap page', 'NUMPAD_SUBTRACT', 'lower'],
+    ['H', 'toggling the controls page', 'N', 'toggle-mute'],
     ['TAB', 'toggling the stats page', 'N', 'toggle-mute'],
     ['C', 'toggling the stats page', 'PLUS', 'raise'],
     ['ESC', 'closing a page', 'MINUS', 'lower'],
@@ -64,6 +65,7 @@ describe('the key that a notice names for a page', () => {
     ['stats', 'C'],
     ['inventory', 'I'],
     ['automap', 'M'],
+    ['controls', 'H'],
   ] as const)('is, for the %s page, %s', (page, label) => {
     expect(pageKeyLabel(page)).toBe(label);
   });
