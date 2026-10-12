@@ -32,7 +32,7 @@ export interface MenuInput {
   readonly confirm: boolean;
 }
 
-/** Whether a press is for the game and not for the browser: Ctrl or Cmd with a key is a shortcut, such as Ctrl and minus, which zooms. */
+/** Whether a press is for the game and not for the browser: Ctrl or Cmd with a key is a shortcut, such as Ctrl and minus, which zooms, or Ctrl and Tab, which switches tabs. */
 function isForTheGame(press: KeyState['originalEvent']): boolean {
   return !press.ctrlKey && !press.metaKey;
 }
@@ -53,7 +53,7 @@ export class PlayerInput<K extends KeyState> {
   private readonly interactKey: K;
   private readonly switchWeaponKey: K;
   private readonly confirmKey: K;
-  private readonly pageKeys: readonly { readonly page: PageId; readonly key: K }[];
+  private readonly pageKeys: readonly { readonly page: PageId; readonly keys: readonly K[] }[];
   private readonly closePageKey: K;
   private readonly statKeys: readonly { readonly stat: StatId; readonly keys: readonly K[] }[];
   private readonly audioKeys: readonly { readonly change: AudioChange; readonly keys: readonly K[] }[];
@@ -68,7 +68,11 @@ export class PlayerInput<K extends KeyState> {
     this.interactKey = keyboard.addKey(INTERACT_KEY, false);
     this.switchWeaponKey = keyboard.addKey(SWITCH_WEAPON_KEY, false);
     this.confirmKey = keyboard.addKey(CONFIRM_KEY, false);
-    this.pageKeys = PAGE_IDS.map((page) => ({ page, key: keyboard.addKey(PAGE_KEYS[page], false) }));
+    // The table says which of the page keys Phaser holds back from the browser: Tab, so that it does not move the focus.
+    this.pageKeys = PAGE_IDS.map((page) => ({
+      page,
+      keys: PAGE_KEYS[page].map(({ name, capture }) => keyboard.addKey(name, capture)),
+    }));
     this.closePageKey = keyboard.addKey(CLOSE_PAGE_KEY, false);
     this.statKeys = STAT_IDS.map((stat) => ({
       stat,
@@ -106,7 +110,9 @@ export class PlayerInput<K extends KeyState> {
   /**
    * The commands for the attack, interact, switch weapon, page and Stat Point keys that were pressed again since the
    * last call, and for Esc, which closes the page that is open and declines the question whether to sail home. Holding
-   * a key down does not repeat its command.
+   * a key down does not repeat its command. A page key asks to toggle its page, and the Game core knows whether that
+   * opens it or closes it: this does not look at the view. A page key pressed with Ctrl or Cmd asks nothing, as the
+   * audio keys: that is the browser's, such as Ctrl and C, which copies, or Ctrl and Tab, which switches tabs.
    */
   pollActions(): Command[] {
     const commands: Command[] = [];
@@ -119,9 +125,9 @@ export class PlayerInput<K extends KeyState> {
     if (this.justDown(this.switchWeaponKey)) {
       commands.push({ type: 'switch-weapon' });
     }
-    for (const { page, key } of this.pageKeys) {
-      if (this.justDown(key)) {
-        commands.push({ type: 'open-page', page });
+    for (const { page, keys } of this.pageKeys) {
+      if (this.pressedAgain(keys, isForTheGame)) {
+        commands.push({ type: 'toggle-page', page });
       }
     }
     if (this.justDown(this.closePageKey)) {

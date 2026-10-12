@@ -52,6 +52,7 @@ describe('confirming the departure', () => {
     ['interact', { type: 'interact' }],
     ['open-page', { type: 'open-page', page: 'stats' }],
     ['close-page', { type: 'close-page', page: 'stats' }],
+    ['toggle-page', { type: 'toggle-page', page: 'stats' }],
     ['assign-stat-point', { type: 'assign-stat-point', stat: 'attack' }],
     ['equip', { type: 'equip', gearId: 'basic-sword' }],
     ['use-healing-potion', { type: 'use-healing-potion' }],
