@@ -4,7 +4,7 @@
 
 **Blocked by:** 28: A Controls page in play
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 109
 
@@ -81,3 +81,5 @@ The room, worked out from `tests/audio-line.test.ts` and `src/adapter/title-layo
 **Left for the reviewer.** The play check in the last criterion (unticked: nobody played by hand, the smoke is a headless browser), above all the title in every state in a real browser, the list over the real window, and the sounds of the list opening and closing, which nobody heard (headless): they are the sounds of the question, chosen by `soundOfPress`, which the tests pin. Not tested, as ADR 0005 says of drawing: `title-scene.ts` (the drawing, and that it plays what `soundOfPress` says); the screenshots are its check. Suggested, not done: ADR 0005's list of the adapter's pure tests could name `title-window` (and `controls-list` and `controls-list-layout` from ticket 28); ADRs are not edited here.
 
 **Glossary.** "Controls list" (the list of every key of the game, shown on the Controls page in play and on the title), "Controls line" (the third line of the title's menu that shows it) and "title window" (the window of the title, whose height is limited by the line of the audio) are used in the code, the README and the checklist but are not in `GLOSSARY.md`, nor are "menu state" (the question and the list are states of the title's menu, not choices) and, with tickets 27 and 28's, "page" and "Controls page". Proposed, not edited.
+
+Resolved on integration/island-adventure-rpg at 158b9ff
