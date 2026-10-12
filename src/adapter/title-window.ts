@@ -162,17 +162,36 @@ function gapBetween(above: Row, below: Row): number {
 
 const ROW_RULES: RowRules<Row> = { heightOf, gapBetween };
 
-/**
- * The window of the title for the menu and the saved game as they stand. The list of the controls is the same whatever
- * the saved game says, and so is every other window of the menu that does not tell of it.
- */
-export function layoutTitleWindow(menu: TitleMenu, saved: SavedGame): TitleWindow {
-  const list = menu.showingControls ? layoutControlsList(controlsList()) : null;
-  const rows = list === null ? menuRows(menu, saved) : listRows(list);
-  const width = list === null ? MENU_WINDOW_WIDTH : list.width + 2 * WINDOW_PADDING;
+/** What a kind of window settles for itself; `placeWindow` does the rest the same way for both. */
+interface WindowShape {
+  readonly rows: readonly Row[];
+  /** Padding included. */
+  readonly width: number;
+  /** Where the window stands: its top, from its height. */
+  readonly topOf: (height: number) => number;
+  readonly showsName: boolean;
+}
+
+/** The menu, or the question that stands in for it: under the name of the game, in the middle of the room that is left. */
+function menuShape(menu: TitleMenu, saved: SavedGame): WindowShape {
+  return { rows: menuRows(menu, saved), width: MENU_WINDOW_WIDTH, topOf: windowTop, showsName: true };
+}
+
+/** The list of the controls: as wide as the list and its padding, in the middle of the whole screen, with no name over it. */
+function listShape(list: ControlsListLayout): WindowShape {
+  return {
+    rows: listRows(list),
+    width: list.width + 2 * WINDOW_PADDING,
+    topOf: (height) => Math.floor((VIEW_HEIGHT - height) / 2),
+    showsName: false,
+  };
+}
+
+/** The window of a shape, with each of its rows in a box as wide as what it draws, centred in the window. */
+function placeWindow({ rows, width, topOf, showsName }: WindowShape): TitleWindow {
   const height = stackHeight(rows, ROW_RULES) + 2 * WINDOW_PADDING;
   const left = Math.floor((VIEW_WIDTH - width) / 2);
-  const top = list === null ? windowTop(height) : Math.floor((VIEW_HEIGHT - height) / 2);
+  const top = topOf(height);
   const placed = stackRows(rows, top + WINDOW_PADDING, ROW_RULES).flatMap(({ row, top: rowTop }) => {
     if (row.kind === 'space') {
       return [];
@@ -181,5 +200,13 @@ export function layoutTitleWindow(menu: TitleMenu, saved: SavedGame): TitleWindo
     const box = { left: left + Math.floor((width - rowWidth) / 2), top: rowTop, width: rowWidth, height: heightOf(row) };
     return [{ row, box } satisfies PlacedTitleRow];
   });
-  return { showsName: list === null, left, top, width, height, rows: placed };
+  return { showsName, left, top, width, height, rows: placed };
+}
+
+/**
+ * The window of the title for the menu and the saved game as they stand. The list of the controls is the same whatever
+ * the saved game says, and so is every other window of the menu that does not tell of it.
+ */
+export function layoutTitleWindow(menu: TitleMenu, saved: SavedGame): TitleWindow {
+  return placeWindow(menu.showingControls ? listShape(layoutControlsList(controlsList())) : menuShape(menu, saved));
 }
