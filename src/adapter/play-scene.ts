@@ -226,10 +226,9 @@ export class PlayScene extends GameScene {
       // The core has already put the hero into the next area; a short fade hides the cut. The world keeps running.
       this.cameras.main.fadeIn(AREA_FADE_MS, 0, 0, 0);
     }
-    if (gameIsWaiting(view)) {
-      // A page or a Stat Point covers the notice, and the player is already where it pointed them.
-      this.feedback.dismissNotice();
-    }
+    // A page or the question about sailing home covers the notice, and the player is already where it pointed them. What
+    // the frame itself told, such as the bow of the monster whose defeat also raised the Level, waits for the Stat Point.
+    this.feedback.setWaiting(gameIsWaiting(view));
     this.draw(view, watching, time);
     if (view.phase === 'playing') {
       this.lastPlaying = view;

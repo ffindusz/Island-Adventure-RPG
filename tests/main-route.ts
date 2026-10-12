@@ -210,13 +210,20 @@ export function detourTo(id: AreaId, tile: Tile, doorsOpen = false): number | un
   return reached.length === 0 ? undefined : Math.min(...reached);
 }
 
-/** What a chest or a pickup of an area holds, and how far off the route it lies. */
+/**
+ * What a chest, a pickup or a monster of an area holds, and how far off the route it lies. A monster that carries Gear
+ * is a find at the spot where the hero defeats it: on the route for a monster that a hero who walks the route meets (no
+ * detour), and at a walk to the monster's tile for one it does not.
+ */
 export type Find =
   | { readonly kind: 'gear'; readonly gear: string; readonly detour: number | undefined }
   | { readonly kind: 'consumable'; readonly consumable: ConsumableId; readonly amount: number; readonly detour: number | undefined };
 
+/** What the hero finds in an area: what its chests and pickups hold, then the Gear that its monsters carry. */
 export function findsOf(id: AreaId): Find[] {
-  return (areaOf(id).interactables ?? []).flatMap((interactable): Find[] => {
+  const area = areaOf(id);
+  const met = new Set(monstersOnRoute(id));
+  const lying = (area.interactables ?? []).flatMap((interactable): Find[] => {
     const detour = detourTo(id, interactable.tile);
     if (interactable.kind === 'pickup') {
       return [{ kind: 'consumable', consumable: interactable.consumable, amount: interactable.amount, detour }];
@@ -229,4 +236,10 @@ export function findsOf(id: AreaId): Find[] {
     }
     return [];
   });
+  const carried = area.monsters.flatMap((monster): Find[] =>
+    monster.carries === undefined
+      ? []
+      : [{ kind: 'gear', gear: monster.carries, detour: met.has(monster) ? 0 : detourTo(id, monster.tile) }],
+  );
+  return [...lying, ...carried];
 }

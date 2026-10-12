@@ -436,6 +436,12 @@ function loadArea(area: AreaDefinition, definition: ContentDefinition, usedIds: 
         `Area "${area.id}": monster "${monster.id}" is placed at ${describeTile(monster.tile)}, which is ${NOT_WALKABLE}`,
       );
     }
+    if (monster.carries !== undefined) {
+      if (definition.gear[monster.carries] === undefined) {
+        throw new Error(`Area "${area.id}": monster "${monster.id}" carries unknown Gear "${monster.carries}"`);
+      }
+      claimGear(usedIds, monster.carries, `monster "${monster.id}"`);
+    }
     usedIds.monsters.add(monster.id);
   }
   return { ...loaded, interactables: loadInteractables(area, definition, loaded, usedIds) };
