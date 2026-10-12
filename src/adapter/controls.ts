@@ -74,6 +74,11 @@ export function pageKeyLabel(page: PageId): string {
   return PAGE_KEYS[page][0].label;
 }
 
+/** The labels of all the keys of the page joined with a slash, such as "C/TAB": `pageKeyLabel` is the main key's label alone. */
+function joinedPageKeyLabels(page: PageId): string {
+  return PAGE_KEYS[page].map((key) => key.label).join('/');
+}
+
 /** The key that closes the page that is open, and declines the question whether to sail home. */
 export const CLOSE_PAGE_KEY = 'ESC';
 
@@ -88,8 +93,7 @@ export function closePageKeyLabel(): string {
  * keys, and its window has room for 22 letters: the keys go side by side with a slash, not spelled out with "OR".
  */
 export function pageCloseHint(page: PageId): string {
-  const keys = PAGE_KEYS[page].map((key) => key.label).join('/');
-  return `${keys} OR ${closePageKeyLabel()} TO CLOSE`;
+  return `${joinedPageKeyLabels(page)} OR ${closePageKeyLabel()} TO CLOSE`;
 }
 
 /** The keys that assign a Stat Point to each stat, number row and keypad alike, and the label the player reads. */
@@ -171,7 +175,7 @@ function controlsTable(): readonly ControlsEntry[] {
       uses: [{ use: 'interacting', names: [INTERACT_KEY] }],
     },
     ...PAGE_IDS.map((page) => ({
-      keys: PAGE_KEYS[page].map((key) => key.label).join('/'),
+      keys: joinedPageKeyLabels(page),
       words: PAGE_WORDS[page],
       uses: [{ use: `toggling the ${page} page`, names: PAGE_KEYS[page].map((key) => key.name) }],
     })),
