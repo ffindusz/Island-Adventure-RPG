@@ -1,9 +1,9 @@
-import { gearOf } from './content';
+import { areaOf, gearOf } from './content';
 import type { Content } from './content';
 import { GEAR_SLOT_STAT, GEAR_SLOTS } from './definitions';
 import type { GearDefinition } from './definitions';
 import type { GameEvent, GearInfo, GearView } from './interface';
-import type { PlayState } from './state';
+import type { MonsterState, PlayState } from './state';
 
 // Gear: what the hero carries and what it has equipped. What the equipped Gear is worth in Attack and Defense is
 // worked out in stats.ts, like every other number of the hero.
@@ -18,6 +18,16 @@ export function describeGear(content: Content, id: string): GearInfo {
 export function grantGear(state: PlayState, content: Content, id: string): GameEvent[] {
   state.hero.gear.push(id);
   return [{ type: 'pickup', item: { kind: 'gear', ...describeGear(content, id) } }];
+}
+
+/**
+ * The hero takes the Gear that a monster it has just defeated carries, with the event a chest's Gear gives, unless it
+ * holds that piece already, carried or equipped: a monster that comes back after the hero's defeat never gives it twice.
+ * A monster is always in the Adventure Area of the hero that hurts it. No random number is drawn for the Gear.
+ */
+export function takeCarriedGear(state: PlayState, content: Content, monster: MonsterState): GameEvent[] {
+  const carried = areaOf(content, state.areaId).monsters.find(({ id }) => id === monster.id)?.carries;
+  return carried === undefined || state.hero.gear.includes(carried) ? [] : grantGear(state, content, carried);
 }
 
 /**

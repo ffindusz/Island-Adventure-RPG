@@ -112,11 +112,20 @@ Every step is a fifth or more. The weakest are the Katana for an all-Attack hero
 would be +14% for an all-Attack hero.
 
 *On or near the route* is, in these measurements, within four tiles of the trail with every door shut
-(`MOST_NEARBY` in `tests/main-route.ts`). What a hero that keeps to that carries to the Guardian is the Basic Sword it
-began with, the **Knight Mail** (two tiles off the trail in the castle) and the **Short Bow** (one tile off in the
-woods). The Plate Armor lies three tiles off the trail in the mountain, so the armor gets better in the mountain and
+(`MOST_NEARBY` in `tests/main-route.ts`). A piece of Gear that a monster carries counts as found on the route when the
+route meets the monster, and as near when a detour of four tiles reaches it (`findsOf` in `tests/main-route.ts`). What a
+hero that keeps to that carries to the Guardian is the Basic Sword it began with, the **Knight Mail** (two tiles off the
+trail in the castle) and the **Short Bow** (carried by the first wolf of the woods, which stands on the trail itself).
+The Plate Armor lies three tiles off the trail in the mountain, so the armor gets better in the mountain and
 again in the castle. The Steel Sword (eleven tiles off the coast's trail), the Chain Mail (sixteen in the woods), the
 Katana (behind the cave's lever gate) and the Long Bow (behind the cabin door) are side-path Gear: see "Proposals".
+
+The wolf that carries the Short Bow is the weakest fight of the game, so that the hero wins the bow without it: in
+"The fights" the worst build loses 0 of 12 Health to a wolf, with the Basic Sword and the Basic Armor, which are what
+the fight table gives the hero on coming into the woods (the table has no bow for it). It stands eight tiles in from the
+way in, farther than it notices a hero, and the bow comes to the hero when the wolf is defeated and no sooner. Moving
+the bow from a chest to the wolf changed no Experience (the wolf was on the route already), no ledger of the supplies
+and no step of Gear; the only number that moved is the play time's near errands (below).
 
 ## The supplies
 
@@ -252,15 +261,15 @@ Health, a main-route hero with the Stat Points split and six potions).
 | Area | Walk (s) | Fights met | Plain fights (s) | Fights off the route | Plain fights off it (s) | Near errands (s) | Far errands (s) | Puzzles | Near Gear | Far Gear |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | shipwreck-coast | 6.8 | 2 | 2.1 | 1 | 1.1 | 0.8 | 4.4 | 0 | 0 | 1 |
-| woods | 11.2 | 4 | 2.8 | 2 | 1.3 | 1.6 | 19.2 | 1 | 1 | 2 |
+| woods | 11.2 | 4 | 2.8 | 2 | 1.3 | 1.2 | 19.2 | 1 | 1 | 2 |
 | mountain | 22.0 | 5 | 6.8 | 1 | 1.0 | 4.4 | 8.0 | 0 | 1 | 0 |
 | cave | 22.8 | 5 | 5.8 | 1 | 1.3 | 4.4 | 14.8 | 1 | 0 | 1 |
 | castle | 17.8 | 8 | 9.5 | 2 | 2.9 | 5.2 | 19.6 | 0 | 1 | 0 |
-| Total | 80.6 | 24 | 27.0 | 7 | 7.5 | 16.4 | 66.0 | 2 | 3 | 4 |
+| Total | 80.6 | 24 | 27.0 | 7 | 7.5 | 16.0 | 66.0 | 2 | 3 | 4 |
 
 | Counted for the whole adventure | Value |
 | --- | ---: |
-| Words to read | 143 |
+| Words to read | 151 |
 | Level-ups | 5 |
 | Areas | 5 |
 | Demanding fights: walk back from the Checkpoint (s) | 13.6, 20.6, 13.0 |
@@ -290,7 +299,7 @@ way):
 | Part (minutes) | low | typical | high |
 | --- | ---: | ---: | ---: |
 | setup | 0.3 | 1.0 | 3.0 |
-| reading | 0.6 | 0.7 | 1.2 |
+| reading | 0.6 | 0.8 | 1.3 |
 | walking | 2.0 | 3.4 | 5.4 |
 | fights | 0.5 | 1.0 | 1.7 |
 | side finds | 0.3 | 0.8 | 1.4 |
