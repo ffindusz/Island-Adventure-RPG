@@ -16,7 +16,7 @@ The player starts a new game, reads a brief opening about the storm, and begins 
 
 Combat is real time. The hero attacks in the facing direction with a sword (Melee Weapon) or a bow (Ranged Weapon with limited Ammunition) and switches between them on the fly. Enemy attacks are telegraphed and are avoided by positioning alone. Defeating monsters and reaching milestones earns Experience; each Level, up to Level 6, grants one Stat Point to put into Health, Attack, or Defense. A few curated Gear upgrades from chests and milestones raise Attack and Defense, and Healing Potions restore Health.
 
-Checkpoints at each Adventure Area entrance and just before the Guardian restore Health and autosave the game in the browser. Defeat returns the hero to the latest Checkpoint with all growth intact. The Automap, inventory, and stat page open with a keypress and pause the game. A single undead Guardian defends the castle; beating it opens the way through the forgotten harbor to an old ship, and sailing home ends the game with a short ending and a return to the title screen.
+Checkpoints at each Adventure Area entrance and just before the Guardian restore Health and autosave the game in the browser. Defeat returns the hero to the latest Checkpoint with all growth intact. The Automap, inventory, stat page, and a Controls page that lists every key open with a keypress, close with the same key (or Esc), and pause the game. A single undead Guardian defends the castle; beating it opens the way through the forgotten harbor to an old ship, and sailing home ends the game with a short ending and a return to the title screen.
 
 ## User Stories
 
@@ -166,6 +166,15 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
 106. As a developer, I want content validated when it is loaded, so that a broken exit, a missing Checkpoint, or an unreachable harbor is caught immediately.
 107. As a developer, I want the game to need no server component, so that it is easy to run and share as plain web files.
 
+**Menus and pause (added after the first build)**
+
+108. As a player, I want the keys that open the inventory (I), the Automap (M), and the stat page (C or Tab) to close that page again when I press them a second time, and each page to name its own key when it tells me how to close it, so that I can peek at a page and dismiss it with the same key.
+109. As a player, I want one Controls page that lists every key the game answers to, which I can open at any time during play (it pauses the game like the other pages) and from the title screen, so that I never have to guess a key or look it up outside the game.
+
+**Gear (added after the first build)**
+
+110. As a player, I want the first bow to be carried by a monster that stands just inside the way into the woods, and to take it when I defeat that monster, so that my ranged weapon comes at the very start of the second Adventure Area, from the first fight there.
+
 ## Implementation Decisions
 
 **Product shape**
@@ -176,7 +185,7 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
 
 **Modules**
 
-- **Game core**: a headless, engine-free deep module that holds every gameplay rule: movement and collision, combat, Experience, Levels and Stat Points, Gear, inventory and consumables, Checkpoints and defeat recovery, Automap discovery, Adventure Area transitions, world state, saves, and the ending. Its interface is deliberately small. It accepts player commands (move or stop in a direction, attack, switch weapon, interact, use a Healing Potion, open or close the inventory, Automap, or stat page, equip Gear, assign a Stat Point) and session commands (new game, continue from a save, return to the title), plus elapsed time supplied in fixed steps. It exposes an observable state view, a stream of events (hit, monster defeated, Experience gained, level-up, pickup, Checkpoint activated, Adventure Area changed, hero defeated, ending reached), and a serializable save snapshot that restores the game exactly. Content definitions and a random source (for drops) are supplied to it. It never touches the clock, storage, rendering, audio, or Phaser. Its internals may be split however the implementer likes, but only the interface is a test seam.
+- **Game core**: a headless, engine-free deep module that holds every gameplay rule: movement and collision, combat, Experience, Levels and Stat Points, Gear, inventory and consumables, Checkpoints and defeat recovery, Automap discovery, Adventure Area transitions, world state, saves, and the ending. Its interface is deliberately small. It accepts player commands (move or stop in a direction, attack, switch weapon, interact, use a Healing Potion, open or close the inventory, Automap, stat page, or Controls page, equip Gear, assign a Stat Point) and session commands (new game, continue from a save, return to the title), plus elapsed time supplied in fixed steps. It exposes an observable state view, a stream of events (hit, monster defeated, Experience gained, level-up, pickup, Checkpoint activated, Adventure Area changed, hero defeated, ending reached), and a serializable save snapshot that restores the game exactly. Content definitions and a random source (for drops) are supplied to it. It never touches the clock, storage, rendering, audio, or Phaser. Its internals may be split however the implementer likes, but only the interface is a test seam.
 - **Content definitions**: data for the five Adventure Area maps (terrain and collision, exits, Checkpoints, chests, ammunition caches, potion pickups, monster spawns, side paths, light obstacle devices, milestone triggers), monster types including the Guardian, items and Gear, the Experience curve, and the story texts. Content is validated when it is loaded.
 - **Phaser adapter**: the only code that knows about Phaser. It owns the title, play, page, level-up, and ending screens and the HUD; maps keyboard input to player commands; advances the Game core by the elapsed time; draws the state view with tilemaps and sprites; plays sound and animation from events; and loads assets. It holds no gameplay rules.
 - **Save store**: a thin adapter between browser-local storage and the Game core's save snapshot. It holds a single autosave and carries no rules.
@@ -209,7 +218,7 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
 
 - One Melee Weapon, one Ranged Weapon, and one set of armor are equipped; other Gear and consumables are stored in the inventory. The inventory has no capacity or weight limit.
 - Gear gives simple bonuses only: weapons raise Attack and armor raises Defense. There are no special abilities and no set bonuses. Upgrades to a weapon type change Attack only.
-- The hero starts with a basic Melee Weapon (sword) and basic armor. The first Ranged Weapon (bow) and some Ammunition are found early in the woods. A few curated upgrades (roughly one weapon and one armor improvement every couple of Adventure Areas) come from chests and story milestones, with occasional monster drops. There are no shops and no currency.
+- The hero starts with a basic Melee Weapon (sword) and basic armor. The first Ranged Weapon (bow) is carried by a monster that stands just inside the way into the woods, farther from the Checkpoint there than it notices the hero: the hero takes the bow when it defeats that monster, and the first Ammunition lies in caches a little further along the trail. A monster that carries Gear gives it only to a hero that does not hold it yet, so a monster that resets after a defeat never gives it twice. A few curated upgrades (roughly one weapon and one armor improvement every couple of Adventure Areas) come from chests and story milestones, with occasional monster drops. There are no shops and no currency.
 - Healing Potions are collectible, restore Health when used, and are the only way to heal between Checkpoints. There is no passive regeneration.
 - Ammunition is replenished only from marked caches and occasional monster drops. Checkpoints never refill it.
 
@@ -229,8 +238,9 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
 
 **Menus and controls**
 
-- Keyboard only: WASD or the arrow keys move; Space attacks; Q switches weapon; E interacts; I opens the inventory; M opens the Automap; C opens the stat page; Esc closes the open page.
-- Gameplay is paused whenever the inventory, stat page, Automap, or a level-up choice is open.
+- Keyboard only: WASD or the arrow keys move; Space attacks; Q switches weapon; E interacts; I toggles the inventory; M toggles the Automap; C or Tab toggles the stat page; H toggles the Controls page; Esc closes the open page. A page key toggles only its own page: it opens the page when nothing else is open and closes it when it is the page that is open, and it does nothing while another page is open, a level-up choice waits, or the question whether to sail home is asked. Each page's close hint names its own key or keys as well as Esc.
+- The Controls page lists every key the game answers to with what each does, and is built from the table that binds the keys, so it cannot disagree with them. It opens with H during play and pauses the game like the other pages; the title screen offers the same list as a Controls entry in its menu.
+- Gameplay is paused whenever the inventory, stat page, Automap, Controls page, or a level-up choice is open.
 - The HUD during play shows Health, the active weapon, Ammunition, and the Healing Potion count.
 
 **Art and audio**
@@ -246,7 +256,9 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
   - Movement, facing, and collision; attack cooldown; melee hits only what is in front; the bow consumes one Ammunition per shot and cannot fire at zero.
   - Weapon switching; Attack and Defense totals including Gear; Defense reducing damage received.
   - Experience, Levels, the Level 6 cap, one Stat Point per Level, and the paused level-up choice; Experience granted again for reset monsters; milestone Experience awarded once.
-  - Pausing while the inventory, Automap, stat page, or a level-up choice is open.
+  - Pausing while the inventory, Automap, stat page, Controls page, or a level-up choice is open.
+  - Gear carried by a monster: not given before the monster is defeated, given when it is, given once only (also after a defeat and the reset of the monster), kept through defeat, and restored by the save snapshot.
+  - Toggling a page (the Controls page included): the same key opens a page and then closes it; a key of another page does nothing while a page is open; no page opens while a level-up choice or the question whether to sail home waits; a page that is open (also one restored from a save) closes with its own key.
   - Checkpoint activation and autosave triggers, and the full defeat-recovery rules (what persists, what rolls back, what resets), including a Guardian that stays defeated and an undefeated one that starts fresh.
   - Backtracking: monsters stay defeated; the final departure is the only point of no return; the ending is reachable only after the Guardian is defeated and leads back to the title.
   - Automap: hidden at the start, terrain recorded as explored, hero position and found exits marked, discoveries persisting through defeat.
@@ -305,6 +317,8 @@ These were not put to the user during the interview. Each is the recommended def
 - An unreadable or incompatible save. Default: treat it as no save and show a short message; never crash.
 - A floor on damage. Default: Defense can never reduce damage received to zero.
 - What the "few demanding fights" along the route are. Default: tougher variants of ordinary monsters, with no additional Guardians.
+- Which woods monster carries the bow. Default: one of the weak ones that is already there, moved to the start of the woods, so that the Experience on offer in the whole of the woods does not change.
+- Which key opens the Controls page. Default: H.
 - Numeric balance. Targets: about five level-ups on the intended route, approachable moderate difficulty, and a Guardian that is beatable with the Levels and Gear earned on the intended route.
 
 **Glossary gaps**
