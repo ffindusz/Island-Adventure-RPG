@@ -81,6 +81,16 @@ export function closePageKeyLabel(): string {
   return CLOSE_PAGE_KEY;
 }
 
+/**
+ * What the foot of a page says about closing it: the keys that toggle the page, then Esc, such as "C/TAB OR ESC TO
+ * CLOSE". It is made from the table of the keys, so that a key that is changed changes the hint. The stat page has two
+ * keys, and its window has room for 22 letters: the keys go side by side with a slash, not spelled out with "OR".
+ */
+export function pageCloseHint(page: PageId): string {
+  const keys = PAGE_KEYS[page].map((key) => key.label).join('/');
+  return `${keys} OR ${closePageKeyLabel()} TO CLOSE`;
+}
+
 /** The keys that assign a Stat Point to each stat, number row and keypad alike, and the label the player reads. */
 export const STAT_KEYS: Readonly<Record<StatId, { readonly label: string; readonly keys: readonly string[] }>> = {
   health: { label: '1', keys: ['ONE', 'NUMPAD_ONE'] },

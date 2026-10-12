@@ -12,7 +12,7 @@ import type {
 import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
 import { ChangeGuard } from './change-guard';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
-import { closePageKeyLabel, confirmKeyLabel, statKeyLabel } from './controls';
+import { closePageKeyLabel, confirmKeyLabel, pageCloseHint, statKeyLabel } from './controls';
 import { DEPTH } from './depths';
 import { potionLineOf } from './inventory-menu';
 import {
@@ -289,7 +289,7 @@ function inventoryPagePanel(page: InventoryPageView, hero: HeroView, cursor: num
       text: `UP/DOWN PICK ${confirmKeyLabel()} ${cursor === potionLineOf(page) ? 'USE' : 'EQUIP'}`,
       colour: INK.hint,
     },
-    { kind: 'text', text: `${closePageKeyLabel()} TO CLOSE`, colour: INK.hint },
+    { kind: 'text', text: pageCloseHint('inventory'), colour: INK.hint },
   ];
   return { width: INVENTORY_WINDOW, rows };
 }
@@ -320,7 +320,7 @@ function statPagePanel(page: StatPageView): Panel {
       { kind: 'bar', share: experienceShare(experience) },
       ...statRows(page),
       { kind: 'space', height: 0 },
-      { kind: 'text', text: `${closePageKeyLabel()} TO CLOSE`, colour: INK.hint },
+      { kind: 'text', text: pageCloseHint('stats'), colour: INK.hint },
     ],
   };
 }

@@ -43,7 +43,8 @@ enough without grinding? Did the Level-ups come about where listed (a Stat Point
 
 ## The pages, the bow and the potions
 
-These keys are in the README's Controls table, and nothing above makes you press them.
+These keys are in the README's Controls table, and nothing above makes you press them. The hint at the foot of each
+page names the keys that close it (C/TAB, I or M, then Esc) and is all on the screen.
 
 - [ ] **C** (or **Tab**) opens the stat page (Level, Experience, Health, Attack, Defense) and the same key, or Esc, closes
       it. After a level-up, the stat you chose has gone up on it.
