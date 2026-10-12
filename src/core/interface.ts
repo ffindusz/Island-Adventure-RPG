@@ -54,6 +54,14 @@ export type Command =
   /** Close the page, if it is the one that is open. The one event is `page-closed`; closing any other page tells nothing. */
   | { readonly type: 'close-page'; readonly page: PageId }
   /**
+   * What the key of a page does: close the page if it is the one that is open, and otherwise open it. Closing is
+   * close-page, in every state in which close-page closes it, a page restored from a save included, and tells the same
+   * `page-closed`. Opening is open-page, so nothing opens, and nothing is told, while another page is open, a Stat
+   * Point waits to be assigned or the question whether to sail home is open. Ignored at the title. open-page itself
+   * never closes a page: asked for the page that is open, it is ignored.
+   */
+  | { readonly type: 'toggle-page'; readonly page: PageId }
+  /**
    * Spend a Stat Point on a stat, for good: there is no taking it back. Ignored when no Stat Point waits to be
    * assigned. Until every Stat Point has been assigned the game is paused. The one event is `stat-point-assigned`.
    */

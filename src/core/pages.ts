@@ -26,3 +26,11 @@ export function closePage(state: PlayState, page: PageId): GameEvent[] {
   state.page = null;
   return [{ type: 'page-closed', page }];
 }
+
+/**
+ * What the key of a page does: closes the page if it is the one that is open, in any state, as closePage does, and
+ * otherwise opens it, as openPage does, which is nothing while the game is waiting for the player.
+ */
+export function togglePage(state: PlayState, content: Content, page: PageId): GameEvent[] {
+  return state.page === page ? closePage(state, page) : openPage(state, content, page);
+}

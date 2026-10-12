@@ -13,7 +13,7 @@ import { heroInteracts } from './interactables';
 import type { Game, GameEvent, GameOptions } from './interface';
 import { reachMilestones } from './milestones';
 import { walkHero } from './movement';
-import { closePage, openPage } from './pages';
+import { closePage, openPage, togglePage } from './pages';
 import { isPaused } from './pause';
 import { collectPickups } from './pickups';
 import { useHealingPotion } from './potions';
@@ -65,6 +65,8 @@ export function createGame(options: GameOptions): Game {
           return state.phase === 'playing' ? openPage(state, content, command.page) : [];
         case 'close-page':
           return state.phase === 'playing' ? closePage(state, command.page) : [];
+        case 'toggle-page':
+          return state.phase === 'playing' ? togglePage(state, content, command.page) : [];
         case 'assign-stat-point':
           return state.phase === 'playing' ? assignStatPoint(state, content, command.stat) : [];
         case 'equip':

@@ -89,6 +89,7 @@ describe('while the question is open the game is paused', () => {
     ['interact', { type: 'interact' }],
     ['switch-weapon', { type: 'switch-weapon' }],
     ['open-page', { type: 'open-page', page: 'stats' }],
+    ['toggle-page', { type: 'toggle-page', page: 'stats' }],
     ['use-healing-potion', { type: 'use-healing-potion' }],
   ] as const)('%s does nothing', (_name, command) => {
     const game = askingGameWithABiter();
