@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 39, 68, 71, 83, 84, 110
 
@@ -143,3 +143,5 @@ The scene's call `setWaiting(gameIsWaiting(view))` is Phaser-bound and cannot be
 - **Glossary proposal:** Carrier (a monster placed with a piece of Gear that it gives once, when it is defeated).
 - **Follow-up:** if the play check finds the bow too much of a surprise, a sign: a line in the woods' text (60 letters) or a mark on the wolf.
 - **Ticket 27** changes the notice's key label (`notice.ts`) and the README's controls rows. This ticket does not touch `notice.ts`; whichever merges second takes the other's lines.
+
+Resolved on integration/island-adventure-rpg at 40dc0da
