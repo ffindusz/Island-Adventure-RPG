@@ -82,20 +82,22 @@ describe('the Controls page on the overlay', () => {
   });
 
   // The screen is 320 wide and 192 tall. The window is as wide as the list and its padding of 12 on each side: 228 + 24.
-  it('is in a window as wide as the list needs and no wider than the screen', () => {
-    const { width } = controlsPanel();
+  it('is in a window as wide as the list and its padding', () => {
+    expect(controlsPanel().width).toBe(228 + 2 * 12);
+  });
 
-    expect(width).toBe(228 + 2 * 12);
-    expect(width).toBeLessThanOrEqual(320);
+  it('is in a window no wider than the screen', () => {
+    expect(controlsPanel().width).toBeLessThanOrEqual(320);
   });
 
   // The window is as tall as its rows and the 4 pixels between them, and the padding of 12 above and below: the title is
   // 7, the list 127 and the hint 7, with a gap of 4 on each side of the two spaces between them, 7 + 4 + 0 + 4 + 127 + 4 +
   // 0 + 4 + 7 = 157, and 157 + 24 = 181. That leaves 11 of the 192 of the screen.
-  it('is in a window as tall as the title, the list and the hint need, and no taller than the screen', () => {
-    const height = panelHeight(controlsPanel());
+  it('is in a window as tall as the title, the list and the hint and their padding', () => {
+    expect(panelHeight(controlsPanel())).toBe(157 + 2 * 12);
+  });
 
-    expect(height).toBe(157 + 2 * 12);
-    expect(height).toBeLessThanOrEqual(192);
+  it('is in a window no taller than the screen', () => {
+    expect(panelHeight(controlsPanel())).toBeLessThanOrEqual(192);
   });
 });
