@@ -18,6 +18,16 @@ interface Rising {
   readonly lane: number;
 }
 
+/** The notice the player is being told, and how long it still has. */
+interface Told {
+  readonly content: NoticeContent;
+  readonly msLeft: number;
+  /** Told since time last passed: in the frame that is being shown now. */
+  readonly fresh: boolean;
+  /** Kept through a wait of the game: off the screen, and with its time stopped, until the wait is over. */
+  readonly held: boolean;
+}
+
 /** The picture of what the hero picked up, rising over it: what it shows, how far through its time it is, and where. */
 export interface PickupRise {
   readonly item: PickedUpItem;
@@ -34,7 +44,7 @@ export interface PickupRise {
 export class Feedback {
   private strikes: ZoneFlash[] = [];
   private readonly flashes = new Map<string, number>();
-  private told: { readonly content: NoticeContent; readonly msLeft: number } | null = null;
+  private told: Told | null = null;
   private rises: Rising[] = [];
   private falling = false;
   private saveFailureTold = false;
@@ -53,29 +63,29 @@ export class Feedback {
           this.strikes.push({ zone: event.zone, msLeft: STRIKE_MS });
           break;
         case 'pickup':
-          this.told = { content: { kind: 'pickup', item: event.item }, msLeft: NOTICE_MS };
+          this.tell({ kind: 'pickup', item: event.item });
           this.rises.push({ item: event.item, msIn: 0, lane: this.freeLane() });
           break;
         case 'out-of-ammunition':
-          this.told = { content: { kind: 'out-of-ammunition' }, msLeft: NOTICE_MS };
+          this.tell({ kind: 'out-of-ammunition' });
           break;
         case 'checkpoint-activated':
-          this.told = { content: { kind: 'checkpoint' }, msLeft: NOTICE_MS };
+          this.tell({ kind: 'checkpoint' });
           break;
         case 'door-locked':
-          this.told = { content: { kind: 'door-locked', keyName: event.keyName }, msLeft: NOTICE_MS };
+          this.tell({ kind: 'door-locked', keyName: event.keyName });
           break;
         case 'door-opened':
-          this.told = { content: { kind: 'door-opened', keyName: event.keyName }, msLeft: NOTICE_MS };
+          this.tell({ kind: 'door-opened', keyName: event.keyName });
           break;
         case 'lever-toggled':
-          this.told = { content: { kind: 'lever-toggled', pulled: event.pulled }, msLeft: NOTICE_MS };
+          this.tell({ kind: 'lever-toggled', pulled: event.pulled });
           break;
         case 'guardian-defeated':
-          this.told = { content: { kind: 'gate-opened' }, msLeft: NOTICE_MS };
+          this.tell({ kind: 'gate-opened' });
           break;
         case 'vessel-prepared':
-          this.told = { content: { kind: 'vessel-prepared' }, msLeft: NOTICE_MS };
+          this.tell({ kind: 'vessel-prepared' });
           break;
         case 'area-changed':
           // After a defeat the return to another area is shown only when the fall is over: see endFall.
@@ -107,15 +117,16 @@ export class Feedback {
     this.flashes.clear();
   }
 
-  /** Lets one frame's time pass; feedback that has run out disappears. */
+  /** Lets one frame's time pass; feedback that has run out disappears. A notice that is held waits, and keeps its time. */
   age(frameMs: number): void {
     this.strikes = remaining(this.strikes, frameMs);
     this.rises = this.rises
       .map((rise) => ({ item: rise.item, msIn: rise.msIn + frameMs, lane: rise.lane }))
       .filter((rise) => rise.msIn < PICKUP_RISE_MS);
     if (this.told !== null) {
-      const { content, msLeft } = this.told;
-      this.told = msLeft > frameMs ? { content, msLeft: msLeft - frameMs } : null;
+      const { content, msLeft, held } = this.told;
+      const left = held ? msLeft : msLeft - frameMs;
+      this.told = left > 0 ? { content, msLeft: left, fresh: false, held } : null;
     }
     for (const [monsterId, msLeft] of this.flashes) {
       if (msLeft <= frameMs) {
@@ -151,15 +162,35 @@ export class Feedback {
 
   /**
    * What the player is being told about: the latest of what the hero found, a Checkpoint touched, the empty bow, a door,
-   * a lever, the fall of the Guardian, or the vessel made ready.
+   * a lever, the fall of the Guardian, or the vessel made ready. Nothing while a notice is held through a wait.
    */
   notice(): NoticeContent | null {
-    return this.told === null ? null : this.told.content;
+    return this.told === null || this.told.held ? null : this.told.content;
   }
 
   /** Stops telling the player about it: they have moved on to something that covers it. */
   dismissNotice(): void {
     this.told = null;
+  }
+
+  /**
+   * Says whether the game waits for the player now (see waiting.ts); the play screen says it once a frame, after it has
+   * shown the events. A notice that was showing before the wait began ends: the player is already where it pointed
+   * them. One told in the very frame the wait began, such as that of the bow a monster carried when the defeat that
+   * gave it also raised the Level, is not lost behind the Stat Point: it is held, off the screen and with its time
+   * stopped, and shows for its whole time when the wait is over.
+   */
+  setWaiting(waiting: boolean): void {
+    if (this.told === null) {
+      return;
+    }
+    if (!waiting) {
+      this.told = { ...this.told, held: false };
+    } else if (this.told.fresh || this.told.held) {
+      this.told = { ...this.told, held: true };
+    } else {
+      this.dismissNotice();
+    }
   }
 
   /**
@@ -172,7 +203,12 @@ export class Feedback {
       return;
     }
     this.saveFailureTold = true;
-    this.told = { content: { kind: 'save-failed' }, msLeft: NOTICE_MS };
+    this.tell({ kind: 'save-failed' });
+  }
+
+  /** Starts telling the player the notice, over the one that was showing, for the whole time a notice stays. */
+  private tell(content: NoticeContent): void {
+    this.told = { content, msLeft: NOTICE_MS, fresh: true, held: false };
   }
 }
 

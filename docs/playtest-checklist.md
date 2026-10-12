@@ -51,7 +51,8 @@ These keys are in the README's Controls table, and nothing above makes you press
       have found; Esc closes it. Does it help you find the way?
 - [ ] **The bow:** defeat the first wolf of the woods, the one on the trail just inside the way in (a hero with the sword
       and the armor of the start beats it in a blow or two). The bow goes straight to the inventory: the notice says
-      that you found it and to press I, and nothing lies on the ground where the wolf fell. After a defeat that sends
+      that you found it and to press I, and nothing lies on the ground where the wolf fell. If that defeat also raises
+      your Level, the Stat Point is asked first and the notice shows once you have chosen. After a defeat that sends
       you back to the woods' Checkpoint the wolf is back, and defeating it again gives no second bow. Equip the Short
       Bow in the inventory (I, then Enter on its line; that does not take it in hand).
       Q takes it in hand and Q again takes the sword back; Q does nothing before a bow is equipped. With the bow in

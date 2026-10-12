@@ -1,17 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import { Feedback } from '../src/adapter/feedback';
+import { gameIsWaiting } from '../src/adapter/waiting';
+import type { GameEvent, MonsterPlacement } from '../src/core';
+import { arena, frailMonster, newGame, playingView, strike } from './fixtures';
 import { VESSEL_ID } from './harbor-fixtures';
 
 // When the player is told that the vessel is prepared, and for how long, how long the picture of what the hero
-// picked up rises over it, and that the notice that the game could not be saved is told once. The rest of what
-// feedback.ts shows is told of by the play scene, and looked at in the smoke test.
+// picked up rises over it, that the notice that the game could not be saved is told once, and what becomes of a
+// notice when the game begins to wait for the player (a Stat Point to assign, a page). The rest of what feedback.ts
+// shows is told of by the play scene, and looked at in the smoke test.
 
 const PREPARED = { type: 'vessel-prepared', vesselId: VESSEL_ID } as const;
 const A_NOTICE_BEFORE = { type: 'checkpoint-activated', checkpointId: 'any' } as const;
 const POTION = { kind: 'consumable', id: 'healing-potion', amount: 1 } as const;
 const ARROWS = { kind: 'consumable', id: 'ammunition', amount: 12 } as const;
+const SHORT_BOW = { kind: 'gear', id: 'short-bow', name: 'Short Bow', slot: 'ranged-weapon', stat: 'attack', bonus: 1 } as const;
 const PICKED_UP_POTION = { type: 'pickup', item: POTION } as const;
 const PICKED_UP_ARROWS = { type: 'pickup', item: ARROWS } as const;
+const PICKED_UP_BOW = { type: 'pickup', item: SHORT_BOW } as const;
+
+/** One frame of the play screen, in its order: time passes, the events of the game are shown, then it is told whether the game waits. */
+function frame(feedback: Feedback, events: readonly GameEvent[], waiting: boolean): void {
+  feedback.age(16);
+  feedback.show(events);
+  feedback.setWaiting(waiting);
+}
 
 describe('the notice that the vessel is prepared', () => {
   it('tells the player when the game reports that the vessel is prepared, and not before', () => {
@@ -218,5 +231,95 @@ describe('the notice that the game could not be saved', () => {
     second.saveFailed();
 
     expect(second.notice()).toEqual({ kind: 'save-failed' });
+  });
+});
+
+describe('a notice told in the very frame in which the game begins to wait for the player', () => {
+  it('is off the screen while the game waits', () => {
+    const feedback = new Feedback();
+
+    frame(feedback, [PICKED_UP_BOW], true);
+    expect(feedback.notice()).toBeNull();
+
+    frame(feedback, [], true);
+    expect(feedback.notice()).toBeNull();
+  });
+
+  it('shows once the wait is over, for its whole three seconds, however long the wait was', () => {
+    const feedback = new Feedback();
+    frame(feedback, [PICKED_UP_BOW], true);
+    for (let waited = 0; waited < 1000; waited += 1) {
+      frame(feedback, [], true);
+    }
+
+    frame(feedback, [], false);
+    expect(feedback.notice()).toEqual({ kind: 'pickup', item: SHORT_BOW });
+
+    feedback.age(2999);
+    expect(feedback.notice()).toEqual({ kind: 'pickup', item: SHORT_BOW });
+
+    feedback.age(1);
+    expect(feedback.notice()).toBeNull();
+  });
+
+  it('is shown at once when the game does not wait', () => {
+    const feedback = new Feedback();
+
+    frame(feedback, [PICKED_UP_BOW], false);
+
+    expect(feedback.notice()).toEqual({ kind: 'pickup', item: SHORT_BOW });
+  });
+});
+
+describe('a notice that is already showing when the game begins to wait for the player', () => {
+  it('ends, and does not come back when the wait is over: the player is already where it pointed them', () => {
+    const feedback = new Feedback();
+    frame(feedback, [A_NOTICE_BEFORE], false);
+    expect(feedback.notice()).toEqual({ kind: 'checkpoint' });
+
+    frame(feedback, [], true);
+    expect(feedback.notice()).toBeNull();
+
+    frame(feedback, [], false);
+    expect(feedback.notice()).toBeNull();
+  });
+
+  it('ends also when it was told long before the wait began', () => {
+    const feedback = new Feedback();
+    frame(feedback, [A_NOTICE_BEFORE], false);
+    feedback.age(1000);
+
+    frame(feedback, [], true);
+    frame(feedback, [], false);
+
+    expect(feedback.notice()).toBeNull();
+  });
+});
+
+describe('the notice of Gear that a monster carried, when its defeat raised the Level', () => {
+  const carrier: MonsterPlacement = { id: 'carrier', type: 'carrier', tile: { col: 3, row: 4 }, carries: 'iron-sword' };
+
+  it('is not lost behind the Stat Point that the defeat opened: it shows once the point is assigned', () => {
+    const game = newGame(arena({ monsters: [carrier], monsterTypes: { carrier: frailMonster(10) } }));
+    const feedback = new Feedback();
+
+    frame(feedback, strike(game), gameIsWaiting(game.view()));
+    expect(playingView(game).levelUp).not.toBeNull();
+    expect(feedback.notice()).toBeNull();
+
+    game.send({ type: 'assign-stat-point', stat: 'attack' });
+    frame(feedback, [], gameIsWaiting(game.view()));
+
+    expect(feedback.notice()).toMatchObject({ kind: 'pickup', item: { kind: 'gear', id: 'iron-sword' } });
+  });
+
+  it('shows at once when the defeat raised no Level', () => {
+    const game = newGame(arena({ monsters: [carrier], monsterTypes: { carrier: frailMonster(1) } }));
+    const feedback = new Feedback();
+
+    frame(feedback, strike(game), gameIsWaiting(game.view()));
+
+    expect(playingView(game).levelUp).toBeNull();
+    expect(feedback.notice()).toMatchObject({ kind: 'pickup', item: { kind: 'gear', id: 'iron-sword' } });
   });
 });
