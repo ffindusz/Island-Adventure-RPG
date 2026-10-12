@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { MENU_ENTRIES, openMenu, pressMenu, selectableEntries } from '../src/adapter/title-menu';
+import { MENU_ENTRIES, openMenu, pressMenu, selectableEntries, soundOfPress } from '../src/adapter/title-menu';
 import type { TitleKeys, TitleMenu } from '../src/adapter/title-menu';
 
 // The menu of the title screen without the scene that draws it: where the cursor stands, when the screen asks before it
-// replaces a saved game, when it shows the list of the controls, and which line a key press starts. Each case is worked
-// out by hand from the rules in title-menu.ts.
+// replaces a saved game, when it shows the list of the controls, which line a key press starts, and what the player
+// hears of it. Each case is worked out by hand from the rules in title-menu.ts.
 
 const SAVED = true;
 const NO_SAVE = false;
@@ -169,6 +169,51 @@ describe('the question whether to replace the saved game', () => {
     const declined = press(ASKING, SAVED, { cancel: true }).menu;
 
     expect(press(declined, SAVED, { confirm: true })).toEqual({ menu: ASKING, choice: null });
+  });
+});
+
+/** What the player hears of one look at the keys. */
+function heard(menu: TitleMenu, canContinue: boolean, keys: Partial<TitleKeys> = {}) {
+  const { menu: after, choice } = press(menu, canContinue, keys);
+  return soundOfPress(menu, after, choice);
+}
+
+describe('what the player hears of a key press', () => {
+  it('is a page opening when Enter shows the list of the controls, with or without a saved game', () => {
+    expect(heard(ON_CONTROLS, SAVED, { confirm: true })).toBe('page-open');
+    expect(heard(ON_CONTROLS, NO_SAVE, { confirm: true })).toBe('page-open');
+  });
+
+  it('is a page closing when Esc closes the list of the controls, and when Enter does', () => {
+    for (const canContinue of [SAVED, NO_SAVE]) {
+      expect(heard(SHOWING_CONTROLS, canContinue, { cancel: true })).toBe('page-close');
+      expect(heard(SHOWING_CONTROLS, canContinue, { confirm: true })).toBe('page-close');
+    }
+  });
+
+  it('is nothing while the list of the controls stays shown, whichever cursor key is pressed', () => {
+    expect(heard(SHOWING_CONTROLS, SAVED)).toBeNull();
+    expect(heard(SHOWING_CONTROLS, SAVED, { step: -1 })).toBeNull();
+    expect(heard(SHOWING_CONTROLS, SAVED, { step: 1 })).toBeNull();
+  });
+
+  it('is a page opening when the question whether to replace the saved game opens, and a page closing when Esc turns it down', () => {
+    expect(heard(ON_NEW_GAME, SAVED, { confirm: true })).toBe('page-open');
+    expect(heard(ASKING, SAVED, { cancel: true })).toBe('page-close');
+  });
+
+  it('is a confirmation when a game starts, from Continue, from New Game and from the question, and not a page', () => {
+    expect(heard(ON_CONTINUE, SAVED, { confirm: true })).toBe('confirm');
+    expect(heard(ON_NEW_GAME, NO_SAVE, { confirm: true })).toBe('confirm');
+    expect(heard(ASKING, SAVED, { confirm: true })).toBe('confirm');
+  });
+
+  it('is nothing for a step of the cursor, for Esc when nothing is open, and for no key at all', () => {
+    expect(heard(ON_NEW_GAME, SAVED, { step: 1 })).toBeNull();
+    expect(heard(ON_CONTROLS, SAVED, { step: -1 })).toBeNull();
+    expect(heard(ON_CONTINUE, SAVED, { cancel: true })).toBeNull();
+    expect(heard(ON_CONTINUE, SAVED)).toBeNull();
+    expect(heard(ASKING, SAVED)).toBeNull();
   });
 });
 

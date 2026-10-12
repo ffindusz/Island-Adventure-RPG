@@ -2,13 +2,10 @@ import type { Game } from '../core';
 import type { ArtName } from './artwork';
 import type { GameAudio } from './audio';
 import { ChangeGuard } from './change-guard';
-import { VIEW_WIDTH } from './config';
-import { audioKeyLabel, closePageKeyLabel, confirmKeyLabel } from './controls';
+import { drawControlsList } from './controls-list';
 import { DEPTH } from './depths';
 import { GameScene } from './game-scene';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
-import { stackHeight, stackRows } from './row-stack';
-import type { RowRules } from './row-stack';
 import type { SavedGame, SaveStore } from './save-store';
 import { SCENE_KEYS, startOfNewGame } from './scene-keys';
 import type { PlayStart } from './scene-keys';
@@ -18,40 +15,22 @@ import {
   LOGO_OUTLINE_OFFSETS,
   TITLE_LINE_CORNER,
   logoLayout,
-  windowTop,
 } from './title-layout';
-import { MENU_ENTRIES, openMenu, pressMenu, selectableEntries } from './title-menu';
-import type { MenuEntry, TitleMenu } from './title-menu';
-import { INK, UiLayer, WINDOW_PADDING } from './ui-layer';
+import { openMenu, pressMenu, soundOfPress } from './title-menu';
+import type { TitleMenu } from './title-menu';
+import { layoutTitleWindow } from './title-window';
+import type { TitleWindow } from './title-window';
+import { INK, UiLayer } from './ui-layer';
 
-// The title screen: what the game opens on, and the way into it. It offers New Game and Continue, tells the player why
-// a saved game cannot be continued from, and starts the play screen. It decides nothing about the game: the rules of
-// the menu are in title-menu.ts, the verdict on the saved game is the save store's (save-store.ts), and the Game core
-// is only told which of the two begins. It never saves: the autosave belongs to the play screen (autosave.ts). Its music,
+// The title screen: what the game opens on, and the way into it. It offers New Game, Continue and Controls, tells the
+// player why a saved game cannot be continued from, shows the list of the controls, and starts the play screen. It
+// decides nothing about the game: the rules of the menu are in title-menu.ts, what its window says and where each row of
+// it goes is title-window.ts's, the verdict on the saved game is the save store's (save-store.ts), and the Game core is
+// only told which of the two begins. It never saves: the autosave belongs to the play screen (autosave.ts). Its music,
 // and the sounds of its choices, are the audio service's (audio.ts). It is a picture of the coast (the backdrop), the name
-// of the game across the top in big letters and the menu in a window under it; where the name and the window go is
-// title-layout.ts's.
+// of the game across the top in big letters and the menu in a window under it; where the name goes is title-layout.ts's.
 
 const BACKDROP = 'backdrop-title' satisfies ArtName;
-const WINDOW_WIDTH = 200;
-const ROW_GAP = 4;
-/** A line of the menu is as high as the button behind the line the cursor is on, which is as wide as the line. */
-const ENTRY_HEIGHT = 15;
-const ENTRY_WIDTH = 112;
-
-const ENTRY_LABELS: Readonly<Record<MenuEntry, string>> = {
-  'new-game': 'NEW GAME',
-  continue: 'CONTINUE',
-  controls: 'CONTROLS',
-};
-
-type Row =
-  /** Centred. */
-  | { readonly kind: 'text'; readonly text: string; readonly colour: number }
-  /** A line of the menu, centred. The button is behind it when the cursor is on it. */
-  | { readonly kind: 'entry'; readonly text: string; readonly colour: number; readonly highlighted: boolean }
-  /** A little more room. */
-  | { readonly kind: 'space'; readonly height: number };
 
 /** The title screen. */
 export class TitleScene extends GameScene {
@@ -92,11 +71,9 @@ export class TitleScene extends GameScene {
       confirm,
       cancel: this.playerInput.pollCancel(),
     });
-    // A choice is confirmed, and the question whether to replace the saved game opens and closes like a page.
-    if (choice !== null) {
-      this.audio.play('confirm');
-    } else if (menu.confirming !== this.menu.confirming) {
-      this.audio.play(menu.confirming ? 'page-open' : 'page-close');
+    const sound = soundOfPress(this.menu, menu, choice);
+    if (sound !== null) {
+      this.audio.play(sound);
     }
     this.menu = menu;
     if (choice === 'new-game') {
@@ -112,93 +89,17 @@ export class TitleScene extends GameScene {
 
   /** Draws the screen again only when what it shows has changed. */
   private draw(): void {
-    const rows = rowsFor(this.menu, this.saved);
-    if (!this.shown.changed(rows)) {
+    const title = layoutTitleWindow(this.menu, this.saved);
+    if (!this.shown.changed(title)) {
       return;
     }
     this.layer.clear();
-    drawLogo(this.layer);
-    drawWindow(this.layer, rows);
+    if (title.showsName) {
+      drawLogo(this.layer);
+    }
+    drawWindow(this.layer, title);
   }
 }
-
-/** A message: the first line says what is wrong, and the others what follows from it. */
-function message(...texts: readonly string[]): Row[] {
-  return texts.map((text, at): Row => ({ kind: 'text', text, colour: at === 0 ? INK.warning : INK.hint }));
-}
-
-/** What the player is told about the saved game, when it is not one they can simply continue from. */
-function messageRows(saved: SavedGame): Row[] {
-  switch (saved.status) {
-    case 'none':
-    case 'usable':
-      return [];
-    case 'unavailable':
-      return message('SAVING IS NOT AVAILABLE', 'PROGRESS WILL NOT BE KEPT.');
-    case 'unusable':
-      return saved.problem === 'damaged'
-        ? message('THE SAVED GAME IS DAMAGED.', 'A NEW GAME WILL REPLACE IT.')
-        : message('SAVED GAME CANNOT BE USED.', 'IT IS FROM ANOTHER VERSION.', 'A NEW GAME WILL REPLACE IT.');
-  }
-}
-
-function entryRow(entry: MenuEntry, menu: TitleMenu, canContinue: boolean): Row {
-  const highlighted = entry === menu.cursor;
-  const available = selectableEntries(canContinue).includes(entry);
-  return {
-    kind: 'entry',
-    text: ENTRY_LABELS[entry],
-    colour: highlighted ? INK.onButton : available ? INK.text : INK.dim,
-    highlighted,
-  };
-}
-
-/** What the window holds for the menu and the saved game as they stand. The name of the game is the logo's, over it. */
-function rowsFor(menu: TitleMenu, saved: SavedGame): Row[] {
-  const rows: Row[] = [];
-  if (menu.confirming) {
-    rows.push(
-      { kind: 'text', text: 'REPLACE THE SAVED GAME?', colour: INK.warning },
-      { kind: 'space', height: 0 },
-      { kind: 'text', text: `${confirmKeyLabel()} TO REPLACE IT`, colour: INK.text },
-      { kind: 'text', text: `${closePageKeyLabel()} TO KEEP IT`, colour: INK.text },
-    );
-    return rows;
-  }
-  rows.push(...MENU_ENTRIES.map((entry) => entryRow(entry, menu, saved.status === 'usable')));
-  rows.push({ kind: 'space', height: 0 });
-  const messages = messageRows(saved);
-  if (messages.length > 0) {
-    rows.push(...messages, { kind: 'space', height: 0 });
-  }
-  rows.push(
-    { kind: 'text', text: 'W/S OR ARROWS TO CHOOSE', colour: INK.hint },
-    { kind: 'text', text: `${confirmKeyLabel()} TO SELECT`, colour: INK.hint },
-  );
-  rows.push(
-    { kind: 'text', text: `${audioKeyLabel('toggle-mute')} TO MUTE`, colour: INK.hint },
-    { kind: 'text', text: `${audioKeyLabel('lower')} OR ${audioKeyLabel('raise')} FOR VOLUME`, colour: INK.hint },
-  );
-  return rows;
-}
-
-function heightOf(row: Row): number {
-  switch (row.kind) {
-    case 'text':
-      return TEXT_HEIGHT;
-    case 'entry':
-      return ENTRY_HEIGHT;
-    case 'space':
-      return row.height;
-  }
-}
-
-/** The space between two rows one under the other: none between lines of the menu, which have their own air. */
-function gapBetween(above: Row, below: Row): number {
-  return above.kind === 'entry' && below.kind === 'entry' ? 0 : ROW_GAP;
-}
-
-const ROW_RULES: RowRules<Row> = { heightOf, gapBetween };
 
 /** Draws the name of the game across the top: the letters in the title colour, a brown extrusion under them and a dark outline round both. */
 function drawLogo(layer: UiLayer): void {
@@ -210,22 +111,25 @@ function drawLogo(layer: UiLayer): void {
   paint({ x: 0, y: 0 }, INK.title);
 }
 
-/** Draws the window with the rows one under the other, under the name of the game. */
-function drawWindow(layer: UiLayer, rows: readonly Row[]): void {
-  const height = stackHeight(rows, ROW_RULES) + 2 * WINDOW_PADDING;
-  const left = Math.floor((VIEW_WIDTH - WINDOW_WIDTH) / 2);
-  const top = windowTop(height);
-  layer.window(left, top, WINDOW_WIDTH, height);
-  const centred = (width: number): number => left + Math.floor((WINDOW_WIDTH - width) / 2);
-  for (const { row, top: rowTop } of stackRows(rows, top + WINDOW_PADDING, ROW_RULES)) {
-    if (row.kind === 'entry') {
-      if (row.highlighted) {
-        layer.frame('button', centred(ENTRY_WIDTH), rowTop, ENTRY_WIDTH, ENTRY_HEIGHT);
+/** Draws the window and its rows where `layoutTitleWindow` put them. */
+function drawWindow(layer: UiLayer, title: TitleWindow): void {
+  layer.window(title.left, title.top, title.width, title.height);
+  for (const { row, box } of title.rows) {
+    switch (row.kind) {
+      case 'entry': {
+        if (row.highlighted) {
+          layer.frame('button', box.left, box.top, box.width, box.height);
+        }
+        const textLeft = box.left + Math.floor((box.width - textWidthOf(row.text)) / 2);
+        layer.text(row.text, textLeft, box.top + Math.floor((box.height - TEXT_HEIGHT) / 2), row.colour);
+        break;
       }
-      const textTop = rowTop + Math.floor((ENTRY_HEIGHT - TEXT_HEIGHT) / 2);
-      layer.text(row.text, centred(textWidthOf(row.text)), textTop, row.colour);
-    } else if (row.kind === 'text') {
-      layer.text(row.text, centred(textWidthOf(row.text)), rowTop, row.colour);
+      case 'text':
+        layer.text(row.text, box.left, box.top, row.colour);
+        break;
+      case 'controls':
+        drawControlsList(layer, row.layout, box.left, box.top);
+        break;
     }
   }
 }

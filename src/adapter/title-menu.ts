@@ -1,6 +1,8 @@
+import type { Effect } from './audio-manifest';
+
 // The rules of the title screen's menu, apart from the scene that draws it: which line the cursor is on, whether the
-// screen asks the player to confirm a New Game, whether it shows the list of the controls, and what a key press starts.
-// No Phaser in here.
+// screen asks the player to confirm a New Game, whether it shows the list of the controls, what a key press starts, and
+// what the player hears of it. No Phaser in here.
 
 /** The lines of the menu, top to bottom. A line that is added here is a line of the title. */
 export const MENU_ENTRIES = ['new-game', 'continue', 'controls'] as const;
@@ -81,4 +83,24 @@ export function pressMenu(
   }
   const moved = entries[Math.min(Math.max(entries.indexOf(cursor) + keys.step, 0), entries.length - 1)] ?? cursor;
   return { menu: { cursor: moved, confirming: false, showingControls: false }, choice: null };
+}
+
+/** The sounds of the audio that the menu asks for. */
+export type MenuSound = Extract<Effect, 'confirm' | 'page-open' | 'page-close'>;
+
+/**
+ * What the player hears when a key press moved the menu from `before` to `after` and chose `choice`: a choice is
+ * confirmed, and the question whether to replace the saved game and the list of the controls open and close like a page.
+ * A press that did neither is not heard.
+ */
+export function soundOfPress(before: TitleMenu, after: TitleMenu, choice: TitleChoice): MenuSound | null {
+  if (choice !== null) {
+    return 'confirm';
+  }
+  const pageWasOpen = before.confirming || before.showingControls;
+  const pageIsOpen = after.confirming || after.showingControls;
+  if (pageIsOpen === pageWasOpen) {
+    return null;
+  }
+  return pageIsOpen ? 'page-open' : 'page-close';
 }

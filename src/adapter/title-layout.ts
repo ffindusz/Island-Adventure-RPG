@@ -76,9 +76,9 @@ export function paintedBounds(logo: Logo): { left: number; top: number; right: n
 /**
  * The corner the line of the audio sits in on the title: the bottom right. The name runs across the top of the screen, so
  * the top right, where the other screens have room for the line, is under the last letters of it. The window's rows end
- * above the line in each of its states, at the very row it begins at in the tallest, which is the one that says that the
- * saved game is from another version; in that one and the one before it, the line covers a corner of the window's frame
- * and some of its empty air.
+ * above the line in each of its states, 3 pixels above it in the tallest, the ones with a message about the saved game;
+ * in those the line covers a corner of the window's frame and some of its empty air. The window that shows the list of the
+ * controls takes the whole screen, and the line covers a corner of its frame too, but none of its rows.
  */
 export const TITLE_LINE_CORNER: LineCorner = 'bottom-right';
 

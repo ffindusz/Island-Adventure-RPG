@@ -15,7 +15,22 @@ are in `docs/balance.md`, the keys in the README.
 
 ## The opening
 
-- [ ] The title: the name of the game, New Game chosen, Continue greyed out (in a browser with no save), four hint rows.
+- [ ] The title: the name of the game, New Game chosen, Continue greyed out (in a browser with no save), Controls under
+      them, three hint rows (the keys of the sound share the last one).
+- [ ] **Controls on the title:** Controls is always there and never greyed. With no save, Down from New Game goes
+      past the greyed Continue to Controls; with a save the cursor starts on Continue and Down goes on to Controls. Enter
+      on it shows the list of the controls over the whole screen, headed CONTROLS, the name of the game gone, every line
+      whole, with ESC OR ENTER TO CLOSE at its foot, and you hear a page open. Esc closes it, and so does Enter (try both;
+      you hear a page close) and the menu is back with the cursor on Controls. While the list shows, W, S and the arrows
+      do nothing and no game starts (Enter only closes it); N, - and + still change the sound.
+      Is it the same list as H gives in play? It is made from the same table, so it should be, line by line. Reload after
+      looking at it: no save was written, so the title is as it was (Continue still there, or still not).
+- [ ] **Every title state is whole with its third line:** no save; a save; New Game over a save (REPLACE THE SAVED GAME?);
+      saving not available (a browser that refuses storage); a damaged save (put `{` in the key
+      `island-adventure-rpg:saved-game` and reload); and a save from another version. In each, the window stands clear of
+      the name of the game, and no row of it is covered by the line of the audio at the bottom right (press N to see
+      the line), and the hint `N TO MUTE   - OR + FOR VOLUME` does not look cramped. A save from another version is the
+      tallest, and it is the first title you will see: the save from your earlier playtests is one, since ticket 30.
 - [ ] New Game shows the card of the opening (four lines, the last one the goal, a way home to find; ENTER TO BEGIN),
       then you wake on the coast with the banner
       "Wreckage lines the shore. Follow the beach east." Is it clear what to do in the first minute?
@@ -176,9 +191,14 @@ Tick one when you accept it as it is; otherwise write what to change.
 - [ ] **The cave's one-tile gate** has no corner assist (see "The optional puzzles").
 - [ ] **The two-press departure** at the vessel (the first press prepares it, the second asks).
 - [ ] **H shows the controls:** H was free, so it is the key of the Controls page, but you have not chosen it. Nothing in
-      play tells a player that H exists, not the HUD and not the card of the opening; the title screen's line about the
-      controls is how the page is found (the next ticket). Is that enough, or should the opening card or the HUD say it
-      once?
+      play tells a player that H exists, not the HUD and not the card of the opening; the title screen's Controls line
+      is how the page is found: Enter on it shows the same list (the title does not read H itself). Is that enough, or
+      should the opening card or the HUD say it once?
+- [ ] **The Controls line on the title** is the third line of the menu, always choosable, and its list takes the whole
+      screen and hides the name of the game while it shows. Esc and Enter both close it. To make room for the third
+      line, the sound's hints share one row (N TO MUTE and - OR + FOR VOLUME) and a save from another version is told
+      in two rows, SAVE IS FROM ANOTHER VERSION. and A NEW GAME WILL REPLACE IT.; the greyed Continue says the rest. Is
+      the wording enough?
 - [ ] **The Automap** joins the areas by schematic links, and draws the quay as sand. A link meets each map at the side
       where its exit is (the mountain's east edge to the cave's west edge, the cave's east edge to the castle's west
       edge, which makes two links that go round the cards): look that no link runs over a map or a name.
@@ -209,8 +229,8 @@ Tick one when you accept it as it is; otherwise write what to change.
       files (13.2 MB) load before the title, with no loading bar.
 - [ ] **Old saves:** a save from an older build is refused after a change of the saved state (the version is 4 now) and
       after a change to the interactables of the content: ticket 30 took the bow chest out of the woods, so every save
-      made before it is refused, the one from your earlier playtests too. The title says it is from another version and
-      offers New Game, and a New Game replaces it.
+      made before it is refused, the one from your earlier playtests too. The title says SAVE IS FROM ANOTHER VERSION.,
+      greys Continue out and offers New Game (and Controls), and a New Game replaces it.
 - [ ] **`?debug`** in the address bar gives the page the Game core, in a build for the public too. Keep it, or switch it
       off in a shipped build?
 - [ ] **No LICENSE file** is in the repository, so the project's own code, drawings and bitmap font state no licence.
