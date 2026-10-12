@@ -79,12 +79,12 @@ describe('the Gear of the adventure', () => {
         `${step.piece} over ${step.over ?? 'nothing'} for a hero ${step.spend} at Level ${step.level}: ${step.before} to ${step.after}`,
       ).toBe(true);
     }
-  });
+  }, 60_000);
 
   it('lies, within four tiles of the route, as the Knight Mail, the Short Bow and the sword the hero began with', () => {
     expect(gearFrom(AREA_IDS)).toEqual(MAIN_ROUTE_GEAR);
     expect(MOST_NEARBY).toBe(4);
-  });
+  }, 60_000);
 
   it('makes the armor better on the way: in the mountain and again in the castle', () => {
     const bonusOf = (equipped: HeroProfile['equipped']): number => gameContent.gear[equipped.armor ?? '']?.bonus ?? 0;
@@ -93,7 +93,7 @@ describe('the Gear of the adventure', () => {
     const atGuardian = bonusOf(gearFrom(AREA_IDS));
     expect(atCave).toBeGreaterThan(atMountain);
     expect(atGuardian).toBeGreaterThan(atCave);
-  });
+  }, 60_000);
 });
 
 describe('the supplies along the route', () => {

@@ -279,6 +279,26 @@ describe('what the hero finds in the woods', () => {
     expect(place ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(trail.length / 3);
   });
 
+  // Nearness is the tiles walked over open ground from the way in, (1,14), to the monster's tile: the length of the walk
+  // that routeBetween finds, less the tile the hero starts on. Worked out by hand on the map, the carrier at (9,14) is
+  // 8 tiles in, along the sand of row 14. No walk is shorter than the columns and the rows apart, and for the others
+  // that is 38 (34,9), 33 (31,17), 41 (34,22), 48 (37,2) and 26 (17,24): the least is 26. It is just that to the slime at
+  // (17,24), by row 14 to column 14, down the neck at columns 14 and 15 to row 22, then east and south to its tile.
+  it('has the carrier nearer the way in than every other monster of the woods: the bow comes in the first fight there', () => {
+    const carrier = bowCarrier();
+    const walkedTo = ({ tile }: MonsterPlacement): number =>
+      (routeBetween(isOpen, wayInTile, (spot) => keyOf(spot) === keyOf(tile))?.length ?? Number.POSITIVE_INFINITY) - 1;
+
+    const others = woods.monsters.filter((monster) => monster !== carrier);
+
+    expect(others, 'the monsters of the woods besides the carrier').not.toEqual([]);
+    for (const monster of others) {
+      expect(walkedTo(monster), `the tiles walked from the way in to ${monster.id}, against ${carrier.id}`).toBeGreaterThan(
+        walkedTo(carrier),
+      );
+    }
+  });
+
   it('has a carrier of a kind that the rest of the woods has too: no new monster comes with the bow', () => {
     const carrier = bowCarrier();
 

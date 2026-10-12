@@ -178,26 +178,44 @@ function savedAfter(chapter: string): Saved {
   return JSON.parse(JSON.stringify(adventureAfter(chapter).snapshot()));
 }
 
+/**
+ * A sweep damages every place of the saved adventure in turn and judges each of the saves, so it takes longer with
+ * every area and every field the game ships, and longer still when the other test files run beside it.
+ */
+const SWEEP_TIMEOUT_MS = 30_000;
+
 describe.each(CHAPTERS)('the saved adventure after the chapter "$id"', ({ id }) => {
   // Each sweep must have tried a good many saves, or it has walked nothing and proves nothing.
-  it('is refused, saying where, when a place holds the wrong kind of value', () => {
-    const { tried, slips } = judge(wrongKinds(savedAfter(id)));
+  it(
+    'is refused, saying where, when a place holds the wrong kind of value',
+    () => {
+      const { tried, slips } = judge(wrongKinds(savedAfter(id)));
 
-    expect(slips.slice(0, 5)).toEqual([]);
-    expect(tried).toBeGreaterThan(1500);
-  });
+      expect(slips.slice(0, 5)).toEqual([]);
+      expect(tried).toBeGreaterThan(1500);
+    },
+    SWEEP_TIMEOUT_MS,
+  );
 
-  it('is refused, saying where, when a field is taken away', () => {
-    const { tried, slips } = judge(goneFields(savedAfter(id)));
+  it(
+    'is refused, saying where, when a field is taken away',
+    () => {
+      const { tried, slips } = judge(goneFields(savedAfter(id)));
 
-    expect(slips.slice(0, 5)).toEqual([]);
-    expect(tried).toBeGreaterThan(100);
-  });
+      expect(slips.slice(0, 5)).toEqual([]);
+      expect(tried).toBeGreaterThan(100);
+    },
+    SWEEP_TIMEOUT_MS,
+  );
 
-  it('is refused, saying where, when an object has a field that does not belong', () => {
-    const { tried, slips } = judge(extraFields(savedAfter(id)));
+  it(
+    'is refused, saying where, when an object has a field that does not belong',
+    () => {
+      const { tried, slips } = judge(extraFields(savedAfter(id)));
 
-    expect(slips.slice(0, 5)).toEqual([]);
-    expect(tried).toBeGreaterThan(30);
-  });
+      expect(slips.slice(0, 5)).toEqual([]);
+      expect(tried).toBeGreaterThan(30);
+    },
+    SWEEP_TIMEOUT_MS,
+  );
 });
