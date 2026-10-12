@@ -4,7 +4,7 @@
 
 **Blocked by:** 27: Page keys toggle their page
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 92, 93, 108, 109
 
@@ -64,3 +64,5 @@ For the implementer: `src/adapter/controls.ts` holds the tables and the labels (
 **Left for the reviewer.** The play check in the last criterion (unticked: nobody played by hand, the smoke is a headless browser), above all pressing each key on the list and seeing that it does what its words say, and whether the words and the look read well. The sound of the page opening and closing was not listened to: it is the same events as the other pages, and the adapter picks the sound by event type. Not tested, as ADR 0005 says of drawing: `drawControlsList` and the overlay's drawing of the row; the screenshots are its check.
 
 **Glossary.** "Controls page" (the page, opened with H, that lists every key of the game), and, with ticket 27's, "page" and "toggle", are used in the code and the README but are not in `GLOSSARY.md`; "page key" (a key that toggles a page) too. Proposed, not edited.
+
+Resolved on integration/island-adventure-rpg at bf8eaf7
