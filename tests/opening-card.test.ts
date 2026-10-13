@@ -141,6 +141,25 @@ describe('the card of the opening', () => {
     }
   });
 
+  it('lays out a card of the ending and of the credits as it always did, with nothing kept for a second hint, worked out by hand', () => {
+    // A row of 2 letters (11 pixels) under ENTER TO CONTINUE (17 letters, 101 pixels) is in a window 101 + 24 = 125 wide
+    // and 7 + 14 + 7 + 24 = 52 high, at ((320 - 125) / 2, (192 - 52) / 2) = (97, 70); the row is 12 inside its top, at
+    // 70 + 12 = 82, and 97 + (125 - 11) / 2 = 154 from the left; the hint is 7 + 14 under the row, at 103, and 97 + (125
+    // - 101) / 2 = 109. ENTER FOR THE TITLE is 19 letters (113 pixels): 137 wide, at (320 - 137) / 2 = 91 (and a half).
+    const [ending, credits] = layoutEnding(['A.'], ['B.']);
+
+    expect(ending).toStrictEqual({
+      window: { left: 97, top: 70, width: 125, height: 52 },
+      rows: [{ text: 'A.', left: 154, top: 82 }],
+      hint: { text: 'ENTER TO CONTINUE', left: 109, top: 103 },
+    });
+    expect(credits).toStrictEqual({
+      window: { left: 91, top: 70, width: 137, height: 52 },
+      rows: [{ text: 'B.', left: 154, top: 82 }],
+      hint: { text: 'ENTER FOR THE TITLE', left: 103, top: 103 },
+    });
+  });
+
   it('sets the hint apart from the lines at least as far as two lines of the opening are apart', () => {
     const { rows, hint } = layoutCard(['A storm.', 'The sea.']);
 
