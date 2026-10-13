@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
 import { fightTable, gearBefore, gearFrom, renderFightTable, SPENDS } from './fight-table';
-import { AREA_IDS, MOST_NEARBY } from './main-route';
-import { type HeroProfile, MAIN_ROUTE_GEAR, POTIONS_SPARED } from './profile-heroes';
+import { AREA_IDS, findsOf, MOST_NEARBY } from './main-route';
+import { gameAtTheGuardian, type HeroProfile, MAIN_ROUTE_GEAR, mainRouteHero, POTIONS_SPARED, SPLITS } from './profile-heroes';
 import {
   areaOfGear,
   arrowLedger,
@@ -81,8 +81,13 @@ describe('the Gear of the adventure', () => {
     }
   }, 60_000);
 
-  it('lies, within four tiles of the route, as the Knight Mail, the Short Bow and the sword the hero began with', () => {
-    expect(gearFrom(AREA_IDS)).toEqual(MAIN_ROUTE_GEAR);
+  it('lies, within four tiles of the route, as the Knight Mail and the sword the hero began with, and no bow: the Long Bow is in a chest behind a shut door', () => {
+    const found = gearFrom(AREA_IDS);
+
+    expect(found).toEqual({ 'melee-weapon': 'basic-sword', armor: 'knight-mail' });
+    expect(found['ranged-weapon'], 'a bow within four tiles of the route').toBeUndefined();
+    expect(found, 'what the main route gives the heroes of the balance pass').toEqual(MAIN_ROUTE_GEAR);
+    expect(findsOf('woods')).toContainEqual({ kind: 'gear', gear: 'long-bow', detour: undefined });
     expect(MOST_NEARBY).toBe(4);
   }, 60_000);
 
@@ -115,15 +120,26 @@ describe('the supplies along the route', () => {
     }
   }, 60_000);
 
-  it('hold arrows near the route, in every area with a ranged monster, for the shots that take them off, twice over', () => {
+  it('hold arrows near the route, in every area with a ranged monster, for the shots that take them off, twice over, for a hero that took the Long Bow from the cabin', () => {
     for (const spend of SPENDS) {
       const met = arrowLedger(spend).filter((row) => row.ranged > 0);
       expect(met.length).toBeGreaterThan(0);
       for (const row of met) {
-        expect(row.attack, `${spend} in ${row.area} has a bow by the ranged monster`).toBeGreaterThan(0);
+        expect(row.attack, `${spend} in ${row.area} has the Long Bow by the ranged monster`).toBeGreaterThan(0);
         expect(row.found, `${spend} in ${row.area}: ${row.shots} shots`).toBeGreaterThanOrEqual(row.needed);
       }
     }
+  }, 60_000);
+
+  it('ask no arrow of the hero of the main route, which has no bow: the arrows along it are for the player who finds the cabin', () => {
+    for (const spend of SPENDS) {
+      for (const row of arrowLedger(spend, MOST_NEARBY, false)) {
+        expect(row, `${spend} in ${row.area} without the Long Bow`).toMatchObject({ attack: 0, shots: 0, needed: 0 });
+      }
+    }
+    const game = gameAtTheGuardian(mainRouteHero(SPLITS.balanced, 0));
+
+    expect(game.send({ type: 'switch-weapon' }), 'the main-route hero has no Ranged Weapon to take in hand').toEqual([]);
   }, 60_000);
 });
 
