@@ -362,8 +362,7 @@ These are not things a number can solve; each would be a new ticket.
 - **The weapon upgrades are not near the route.** The ticket asks for upgrades "on or near the route". The Steel Sword
   lies eleven tiles off a 35-step coast, and the Katana is behind a puzzle, so the main-route hero fights the whole game
   with the Basic Sword: the armor comes to it, the sword and the bow do not (the Long Bow is behind the door of the
-  cabin). A placement ticket could put a Melee
-  Weapon upgrade within a few tiles of the trail.
+  cabin). A placement ticket could put a Melee Weapon upgrade within a few tiles of the trail.
 - **Plate Armor is optional in effect**, three tiles off the trail, and the Knight Mail is only a step of one point over
   it. Moving either would change the shape of the armor steps.
 - **The Katana is the weakest step** for an all-Attack hero (a fifth), and shrinks as the hero's Level rises.
