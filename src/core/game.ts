@@ -1,4 +1,4 @@
-import { ageAreaText, crossExits, enterArea } from './areas';
+import { ageAreaText, crossExits, dismissAreaText, enterArea } from './areas';
 import { flyArrows } from './arrows';
 import { revealAroundHero } from './automap';
 import { stepMonsters } from './behaviors';
@@ -89,6 +89,11 @@ export function createGame(options: GameOptions): Game {
           state = { phase: 'title' };
           return events;
         }
+        case 'dismiss-area-text':
+          if (state.phase === 'playing') {
+            dismissAreaText(state);
+          }
+          return [];
       }
     },
     step() {
