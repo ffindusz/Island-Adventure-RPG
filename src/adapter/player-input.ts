@@ -38,6 +38,16 @@ function isForTheGame(press: KeyState['originalEvent']): boolean {
 }
 
 /**
+ * Whether a press puts the text of an area away: the first press of any key does, whichever key it is, one the game uses
+ * or not. An auto-repeat does not: a key held down is not a new key, whether it was held when the text came or from the
+ * screen before, and a new scene's keys take the first repeat of a held key for a press. A press that is the browser's
+ * does not either (`isForTheGame`), so Ctrl and R, which reloads, leaves the text.
+ */
+export function dismissesAreaText(press: KeyState['originalEvent']): boolean {
+  return !press.repeat && isForTheGame(press);
+}
+
+/**
  * Turns the keyboard into Game core commands. It polls the keys once per frame instead of listening for key
  * events, because Phaser releases every key when the window loses focus without sending key-up events: polling
  * notices, so the hero never keeps walking by itself. It sends every command the keys call for and leaves it to the
