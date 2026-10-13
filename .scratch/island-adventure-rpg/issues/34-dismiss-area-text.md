@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 114
 
@@ -112,3 +112,5 @@ Left for the human reviewer and the merger:
 - The integration tip has moved on from c3089db (ticket 35 merged); this branch was not merged with it, as instructed. The merger does that.
 - Ticket 36: the merger keeps the dismissal first, so that one Esc press puts the text away and then pauses. The likely conflicts are the block in `PlayScene.update` that collects `commands` and sends `dismissalFirst(...)`, the `pollActions()` line, and the lists in the README, the checklist and ADR 0005. If ticket 36 keeps the play screen alive while the title shows, the watch may hold a stale press; it should `take()` it when the screen wakes.
 - Proposed terms for GLOSSARY.md (not edited): "Area text" (the text of an Adventure Area or of a sign, shown under the HUD) and "dismissal" (putting it away with a key press).
+
+Resolved on integration/island-adventure-rpg at bf37e87
