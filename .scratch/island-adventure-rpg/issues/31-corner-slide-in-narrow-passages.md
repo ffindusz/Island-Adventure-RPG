@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 21, 22, 23, 111
 
@@ -124,3 +124,5 @@ A note on the sideways step and what is solid. Only a living monster can show th
 - **Follow-up for ticket 32:** `MAIN_ROUTE_GEAR` in `tests/profile-heroes.ts` still names the Short Bow, which is ticket 32's. This ticket left it alone.
 - **For the tool README:** the smoke technique that sets the hero down in the middle of a play (an init script that waits for `window.gameCore`, takes `snapshot()`, changes the hero and sends `continue`, with real keys after it) could be written there.
 - **Merge:** this ticket's lines are the README's section "Walking and the corner slide" and two lines of the checklist ("The optional puzzles" and the review lines); no neighbour was reflowed.
+
+Resolved on integration/island-adventure-rpg at 4a4af13
