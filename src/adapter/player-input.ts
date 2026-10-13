@@ -66,6 +66,8 @@ export class PlayerInput<K extends KeyState> {
   private readonly statKeys: readonly { readonly stat: StatId; readonly keys: readonly K[] }[];
   private readonly audioKeys: readonly { readonly change: AudioChange; readonly keys: readonly K[] }[];
   private readonly walking: Record<Direction, boolean> = { up: false, down: false, left: false, right: false };
+  /** The fresh press of Esc that the last `pollActions` took, for `pollActionsWithEsc` to hand on. Set by every call, so none is left over. */
+  private freshEsc: KeyPress | null = null;
 
   constructor(keyboard: Keyboard<K>, justDown: (key: K) => boolean) {
     this.justDown = justDown;
@@ -138,7 +140,9 @@ export class PlayerInput<K extends KeyState> {
         commands.push({ type: 'toggle-page', page });
       }
     }
-    if (this.justDown(this.closePageKey)) {
+    const escWentDown = this.justDown(this.closePageKey);
+    this.freshEsc = escWentDown && isFreshPress(this.closePageKey.originalEvent) ? this.closePageKey.originalEvent : null;
+    if (escWentDown) {
       for (const page of PAGE_IDS) {
         commands.push({ type: 'close-page', page });
       }
@@ -150,6 +154,17 @@ export class PlayerInput<K extends KeyState> {
       }
     }
     return commands;
+  }
+
+  /**
+   * What `pollActions` found, and with it the press of Esc that went down in that same read, if it is a fresh one: not
+   * the repeat of a key held down, and not with Ctrl or Cmd (`isFreshPress`). The press goes to the rule of the pause
+   * (pausing.ts). It is not read from the key a second time, because `JustDown` uses a press up: `pollActions` has taken
+   * it, and sends the commands of Esc whether or not the press is fresh.
+   */
+  pollActionsWithEsc(): { readonly commands: Command[]; readonly esc: KeyPress | null } {
+    const commands = this.pollActions();
+    return { commands, esc: this.freshEsc };
   }
 
   /**
