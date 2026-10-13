@@ -6,7 +6,7 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // from four tiles away, winds up for half a second, hits for 4 (3 after the hero's Defense) and rests before the next.
   // It is worth 5 Experience. Now and then it leaves
   // a Healing Potion behind when it is defeated. It leaves no arrows: the crabs of the shipwreck coast meet a hero who
-  // has no bow yet, and a spitter, which shoots them, carries them instead.
+  // has no bow (the only bow of the game lies in the woods), and a spitter, which shoots them, carries them instead.
   crab: {
     behavior: 'chaser',
     health: 3,
@@ -73,8 +73,9 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // away when the hero comes nearer, until a wall is at its back. It winds up for 0.8 s with a flash on its body, then
   // fires along the row or column that the hero stood in, a projectile slower than the hero's walk that hits for 4 (3
   // after Defense) and falls six tiles on. It rests for 1.5 s. It is frail: two hits from the sword, one arrow of the
-  // short bow, and worth 3 Experience. Now and then it leaves two arrows behind when it is defeated: it carries what it
-  // shoots. Leave out `keepsDistance` and it stands still where it is placed.
+  // Long Bow (which hits for 3 at the hero's base Attack), and worth 3 Experience. Now and then it leaves two arrows
+  // behind when it is defeated: it carries what it shoots. Leave out `keepsDistance` and it stands still where it is
+  // placed.
   spitter: {
     behavior: 'ranged',
     health: 2,
@@ -126,7 +127,7 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // backing away when the hero comes nearer, until a wall is at its back. It winds up for 0.8 s with a flash on its
   // body, then fires along the row or column that the hero stood in a projectile slower than the hero's walk that hits
   // for 5 (4 after Defense) and falls seven tiles on. It rests for 1.5 s. It is frail: three hits from the basic sword,
-  // two from the Steel Sword or two arrows of the short bow, and worth 3 Experience. Now and then it leaves three arrows
+  // two from the Steel Sword or one arrow of the Long Bow, and worth 3 Experience. Now and then it leaves three arrows
   // behind when it is defeated: it carries what it shoots.
   'raider-archer': {
     behavior: 'ranged',
@@ -198,7 +199,7 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // (`keepsDistance` is left out), notices the hero from six tiles away and winds up for 0.9 s with a flash on its body.
   // It then fires along the row or column that the hero stood in a projectile slower than the hero's walk that hits for 5
   // (4 after Defense) and falls eight tiles on, and rests for 1.6 s. It is frail: three hits from the basic sword, two
-  // from the Steel Sword or two arrows of the short bow, and worth 3 Experience. Now and then it leaves three arrows
+  // from the Steel Sword or one arrow of the Long Bow, and worth 3 Experience. Now and then it leaves three arrows
   // behind when it is defeated: it carries what it shoots.
   'cave-eye': {
     behavior: 'ranged',
@@ -270,7 +271,7 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // walks to five tiles from it, backing away when the hero comes nearer, until a wall is at its back. It winds up for
   // 0.85 s with a flash on its body, then fires along the row or column that the hero stood in a projectile slower than
   // the hero's walk that hits for 6 (5 after Defense) and falls nine tiles on. It rests for 1.5 s. It is frail: four hits
-  // from the basic sword, two from the Steel Sword or two arrows of the short bow, and worth 3 Experience. Now and then
+  // from the basic sword, two from the Steel Sword or two arrows of the Long Bow, and worth 3 Experience. Now and then
   // it leaves three arrows behind when it is defeated: it carries what it shoots.
   'castle-wraith': {
     behavior: 'ranged',
@@ -306,7 +307,7 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // The Guardian of the castle, the last fight of the game and the only monster of its kind. It is the biggest creature
   // there is, 1.6 tiles wide where the knight is 0.9, and its width is the width of its charge. It has 100 Health, five
   // times the knight's: twenty-five hits from a hero of Level 6 who put two Stat Points in Attack and carries the Steel
-  // Sword (twenty with the Katana, thirty-four from a hero of Level 4), or as many arrows of the short bow, which the
+  // Sword (twenty with the Katana, thirty-four from a hero of Level 4), or twenty arrows of the Long Bow, which the
   // arrows that lie near the route cover twice over (docs/balance.md). It leaves nothing behind. It is worth 30
   // Experience, which takes a hero of Level 5 to Level 6; a hero who is at the top Level already gets none, so it is no
   // prize to wait for. It notices the hero from seven tiles away, as far as the hero's arrows fly, so that nobody shoots

@@ -176,7 +176,7 @@ export class Feedback {
   /**
    * Says whether the game waits for the player now (see waiting.ts); the play screen says it once a frame, after it has
    * shown the events. A notice that was showing before the wait began ends: the player is already where it pointed
-   * them. One told in the very frame the wait began, such as that of the bow a monster carried when the defeat that
+   * them. One told in the very frame the wait began, such as that of the potion a monster dropped when the defeat that
    * gave it also raised the Level, is not lost behind the Stat Point: it is held, off the screen and with its time
    * stopped, and shows for its whole time when the wait is over.
    */

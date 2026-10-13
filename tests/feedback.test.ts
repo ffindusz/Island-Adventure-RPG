@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Feedback } from '../src/adapter/feedback';
 import { gameIsWaiting } from '../src/adapter/waiting';
-import type { GameEvent, MonsterPlacement } from '../src/core';
+import type { GameEvent, MonsterPlacement, StationaryMonsterDefinition } from '../src/core';
 import { arena, frailMonster, newGame, playingView, strike } from './fixtures';
 import { VESSEL_ID } from './harbor-fixtures';
 
@@ -296,11 +296,16 @@ describe('a notice that is already showing when the game begins to wait for the 
   });
 });
 
-describe('the notice of Gear that a monster carried, when its defeat raised the Level', () => {
-  const carrier: MonsterPlacement = { id: 'carrier', type: 'carrier', tile: { col: 3, row: 4 }, carries: 'iron-sword' };
+describe('the notice of what a monster dropped, when the same defeat raised the Level', () => {
+  const dropper: MonsterPlacement = { id: 'dropper', type: 'dropper', tile: { col: 3, row: 4 } };
+
+  /** A monster kind of the test's own content whose defeat always leaves a Healing Potion. */
+  function leavingAPotion(experience: number): StationaryMonsterDefinition {
+    return { ...frailMonster(experience), drops: [{ consumable: 'healing-potion', chance: 1, amount: 1 }] };
+  }
 
   it('is not lost behind the Stat Point that the defeat opened: it shows once the point is assigned', () => {
-    const game = newGame(arena({ monsters: [carrier], monsterTypes: { carrier: frailMonster(10) } }));
+    const game = newGame(arena({ monsters: [dropper], monsterTypes: { dropper: leavingAPotion(10) } }));
     const feedback = new Feedback();
 
     frame(feedback, strike(game), gameIsWaiting(game.view()));
@@ -310,16 +315,16 @@ describe('the notice of Gear that a monster carried, when its defeat raised the 
     game.send({ type: 'assign-stat-point', stat: 'attack' });
     frame(feedback, [], gameIsWaiting(game.view()));
 
-    expect(feedback.notice()).toMatchObject({ kind: 'pickup', item: { kind: 'gear', id: 'iron-sword' } });
+    expect(feedback.notice()).toMatchObject({ kind: 'pickup', item: { kind: 'consumable', id: 'healing-potion' } });
   });
 
   it('shows at once when the defeat raised no Level', () => {
-    const game = newGame(arena({ monsters: [carrier], monsterTypes: { carrier: frailMonster(1) } }));
+    const game = newGame(arena({ monsters: [dropper], monsterTypes: { dropper: leavingAPotion(1) } }));
     const feedback = new Feedback();
 
     frame(feedback, strike(game), gameIsWaiting(game.view()));
 
     expect(playingView(game).levelUp).toBeNull();
-    expect(feedback.notice()).toMatchObject({ kind: 'pickup', item: { kind: 'gear', id: 'iron-sword' } });
+    expect(feedback.notice()).toMatchObject({ kind: 'pickup', item: { kind: 'consumable', id: 'healing-potion' } });
   });
 });
