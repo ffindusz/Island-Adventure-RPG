@@ -16,12 +16,10 @@ import { controlsLineText } from './controls';
 import { DEPTH } from './depths';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Rect } from './pixel-font';
-import { INK, UiLayer } from './ui-layer';
+import { INK, PANEL_ALPHA, UiLayer } from './ui-layer';
 
 /** How long the line stays, in milliseconds of the frames that count: as long as the text of an area stays. */
 const LINE_MS = 4000;
-
-const PANEL_ALPHA = 0.9;
 
 /** Where the panel of the line that says this goes: the size and the row of the audio line's panel, in the middle of the screen. */
 export function controlsLineBox(text: string): Rect {
@@ -51,11 +49,11 @@ export class ControlsLineTime {
    * it had left, and it is back, with that, when the game runs on. A frame that nobody watches leaves the line on and
    * takes nothing.
    */
-  frame(frameMs: number, of: FrameOfPlay): boolean {
-    if (of.watching && !of.waiting) {
+  frame(frameMs: number, play: FrameOfPlay): boolean {
+    if (play.watching && !play.waiting) {
       this.remaining -= frameMs;
     }
-    return this.remaining > 0 && !of.waiting;
+    return this.remaining > 0 && !play.waiting;
   }
 
   /** Ends the line for good: the player opened the Controls page, so has found it. */

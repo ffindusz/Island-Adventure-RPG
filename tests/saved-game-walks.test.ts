@@ -75,22 +75,22 @@ interface Walk {
   readonly arrows: Set<'hero' | 'monster'>;
 }
 
-/** What a walk plays on a game before its first round, as a script: the commands that put the game in a state of its own. */
-type Opening = (game: Game) => void;
+/** What a walk plays on a game before its first round: the commands of a script that put the game in a state of its own. */
+type Script = (game: Game) => void;
 
 /**
- * Plays a game from its start, after its opening if it has one, with commands at random, a few steps after each, and
- * saves it after the opening and after every round.
+ * Plays a game from its start, after its script if it has one, with commands at random, a few steps after each, and
+ * saves it after the script and after every round.
  */
-function walkAtRandom(content: ContentDefinition, seed: number, rounds: number, walk: Walk, opening?: Opening): void {
+function walkAtRandom(content: ContentDefinition, seed: number, rounds: number, walk: Walk, script?: Script): void {
   const random = seededRandom(seed);
   const game = createGame({ content, random: seededRandom(seed + 1) });
   game.send({ type: 'new-game' });
   const gearIds = Object.keys(content.gear);
 
-  if (opening !== undefined) {
-    opening(game);
-    saveAndCheck(game, content, { seed, round: 'opening' }, walk);
+  if (script !== undefined) {
+    script(game);
+    saveAndCheck(game, content, { seed, round: 'script' }, walk);
   }
   for (let round = 0; round < rounds; round++) {
     game.send(commandAtRandom(random, gearIds));
@@ -106,7 +106,7 @@ function walkAtRandom(content: ContentDefinition, seed: number, rounds: number, 
 function saveAndCheck(
   game: Game,
   content: ContentDefinition,
-  at: { readonly seed: number; readonly round: number | 'opening' },
+  at: { readonly seed: number; readonly round: number | 'script' },
   walk: Walk,
 ): void {
   const saved = game.snapshot();
@@ -160,7 +160,7 @@ describe('a hero among every kind of monster, doing anything at all', () => {
   // the chests it walks into, as it did before it slid round corners, so a random walk seldom gets to its bow and
   // Ammunition and to shoot. It takes the Ammunition of the cache below it and the bow of the chest at its right, equips
   // the bow, takes it in hand and shoots left, at the other chest, so that the shot is in flight when the game is saved.
-  const shootsFirst: Opening = (game) => {
+  const shootsFirst: Script = (game) => {
     face(game, 'down');
     game.send({ type: 'interact' });
     face(game, 'right');

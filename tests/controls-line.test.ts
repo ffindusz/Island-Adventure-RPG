@@ -138,13 +138,21 @@ describe('the time of the line that says what H is for', () => {
     });
   });
 
-  it('starts every game afresh, with the whole of the four seconds and the line on, as a new time does', () => {
+  it('gives a new time the whole of the four seconds, whatever became of the others', () => {
+    // One time spends its four seconds in a frame of 4000 milliseconds and one is dismissed, so both have 0 left, and a
+    // frame of 1 millisecond more finds nothing above 0 in either: the line is gone in both. A new time has all of its own
+    // 4000: 3999 milliseconds leave 1, so the line is on, and the 4000th leaves 0, so it is gone.
     const spent = new ControlsLineTime();
     spent.frame(4000, RUNNING);
     const dismissed = new ControlsLineTime();
     dismissed.dismiss();
+    expect(spent.frame(1, RUNNING)).toBe(false);
+    expect(dismissed.frame(1, RUNNING)).toBe(false);
 
-    expect(new ControlsLineTime().frame(3999, RUNNING)).toBe(true);
+    const fresh = new ControlsLineTime();
+
+    expect(fresh.frame(3999, RUNNING)).toBe(true);
+    expect(fresh.frame(1, RUNNING)).toBe(false);
   });
 });
 

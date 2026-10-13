@@ -4,7 +4,7 @@ import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { DEPTH } from './depths';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Rect } from './pixel-font';
-import { INK, UiLayer } from './ui-layer';
+import { INK, PANEL_ALPHA, UiLayer } from './ui-layer';
 
 // The line that says what a key of the audio did: VOLUME 6/10, SOUND OFF or SOUND ON. It sits against a corner of the
 // screen for a moment after the key: the top right, where the play screen and the ending draw nothing, or the corner a
@@ -21,8 +21,6 @@ const LINE_MS = 1500;
 /** From the screen's edge to the panel, and from the panel's edge, whose frame is 3 pixels wide, to the text. */
 const MARGIN = 4;
 const PADDING = 6;
-
-const PANEL_ALPHA = 0.9;
 
 /** The corners of the screen the line may sit in, always against the right edge. */
 export type LineCorner = 'top-right' | 'bottom-right';

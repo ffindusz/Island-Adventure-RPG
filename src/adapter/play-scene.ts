@@ -236,7 +236,8 @@ export class PlayScene extends GameScene {
       this.cameras.main.fadeIn(AREA_FADE_MS, 0, 0, 0);
     }
     // A page or the question about sailing home covers the notice, and the player is already where it pointed them. What
-    // the frame itself told, such as the bow of the monster whose defeat also raised the Level, waits for the Stat Point.
+    // the frame itself told, such as that of the potion a monster dropped when the defeat that gave it also raised the
+    // Level, waits for the Stat Point.
     this.feedback.setWaiting(gameIsWaiting(view));
     this.showControlsLine(view, frameMs, watching);
     this.draw(view, watching, time);

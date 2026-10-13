@@ -92,6 +92,9 @@ export function filledPixels(inside: number, share: number): number {
   return Math.min(inside - 1, Math.max(1, Math.round(inside * share)));
 }
 
+/** The alpha of the panel behind the area banner, the audio line and the controls line, which sit over the play. */
+export const PANEL_ALPHA = 0.9;
+
 /**
  * One screen-fixed drawing, at `depth`. What it draws stacks in this order, whatever the order of the calls: frames
  * (in the order they were asked for), then text and bars, then icons.
