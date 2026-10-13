@@ -93,11 +93,6 @@ function gearInChestsOf(area: AreaDefinition): string[] {
   );
 }
 
-/** The ids of the Gear that the monsters of an area carry. */
-function gearCarriedIn(area: AreaDefinition): string[] {
-  return area.monsters.flatMap(({ carries }) => carries ?? []);
-}
-
 /** The first wolf of the woods: the weakest monster of the game, on the sand just inside the way in. It carries nothing. */
 function firstWolf(): MonsterPlacement {
   const found = woods.monsters.find(({ id }) => id === 'woods-wolf-1');
@@ -445,9 +440,7 @@ describe('the cabin in the woods', () => {
       const others = [
         ...GEAR_SLOTS.flatMap((slot) => gameContent.hero.startingGear[slot] ?? []),
         ...gearInChestsOf(areaOf(COAST)),
-        ...gearCarriedIn(areaOf(COAST)),
         ...chests.filter((chest) => chest !== reward).flatMap((chest) => (chest.contents.kind === 'gear' ? [chest.contents.gear] : [])),
-        ...gearCarriedIn(woods),
       ].flatMap((id) => gameContent.gear[id] ?? []);
 
       const best = Math.max(0, ...others.filter((gear) => gear.slot === upgrade?.slot).map((gear) => gear.bonus));
@@ -468,16 +461,15 @@ describe('the cabin in the woods', () => {
   });
 });
 
-/** Every place of the five areas that gives the hero a piece of Gear: the Gear it begins with, the chests and the monsters that carry it. */
+/** Every place of the five areas that gives the hero a piece of Gear: the Gear it begins with and the chests (no monster gives Gear). */
 function placesGivingGear(): { readonly where: string; readonly gear: string }[] {
   return [
     ...GEAR_SLOTS.flatMap((slot) => gameContent.hero.startingGear[slot] ?? []).map((gear) => ({ where: 'the start', gear })),
-    ...AREA_IDS.flatMap((id) => [
-      ...(areaOf(id).interactables ?? []).flatMap((item) =>
+    ...AREA_IDS.flatMap((id) =>
+      (areaOf(id).interactables ?? []).flatMap((item) =>
         item.kind === 'chest' && item.contents.kind === 'gear' ? [{ where: item.id, gear: item.contents.gear }] : [],
       ),
-      ...areaOf(id).monsters.flatMap(({ id: where, carries }) => (carries === undefined ? [] : [{ where, gear: carries }])),
-    ]),
+    ),
   ];
 }
 

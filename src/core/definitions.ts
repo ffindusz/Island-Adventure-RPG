@@ -293,11 +293,6 @@ export interface MonsterPlacement {
   readonly type: string;
   /** The monster starts at the centre of this tile, which must not be solid. */
   readonly tile: Tile;
-  /**
-   * The id of a piece of Gear this monster carries, which the hero takes when it defeats the monster. It belongs to
-   * the placement, not to the monster type: the drops of a type are consumables, rolled for every monster of the type.
-   */
-  readonly carries?: string;
 }
 
 /** A block of whole tiles in an Adventure Area, counted from the top-left corner of its map. */
