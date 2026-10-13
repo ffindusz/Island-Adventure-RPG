@@ -2,10 +2,23 @@
 // the card of a New Game, and when a saved game is continued. It is the adapter's alone, made from the table of the
 // keys (controls.ts) and kept by the play screen for the game it was made for, so that nothing of it is saved. Its time
 // is the frames' and not a timer's: a frame counts only while the game runs and the player watches, so that a player
-// who opens a page at once does not lose the line and a tab that nobody looks at does not spend it.
+// who opens a page at once does not lose the line and a tab that nobody looks at does not spend it. It sits in the top
+// row of the screen, in the middle: the HUD ends at x = 90, the text of an area starts at y = 52 and the audio line, at
+// its widest, starts at x = 233 in either of its corners, so the 95 by 19 panel has room on every side, and the notice,
+// which is low on the screen, never meets it. It is see-through and takes no input, as the audio line is.
+
+import { audioLineBox } from './audio-line';
+import { VIEW_WIDTH } from './config';
+import type { Rect } from './pixel-font';
 
 /** How long the line stays, in milliseconds of the frames that count: as long as the text of an area stays. */
 const LINE_MS = 4000;
+
+/** Where the panel of the line that says this goes: the size and the row of the audio line's panel, in the middle of the screen. */
+export function controlsLineBox(text: string): Rect {
+  const { width, height, top } = audioLineBox(text);
+  return { left: Math.floor((VIEW_WIDTH - width) / 2), top, width, height };
+}
 
 /** What one frame of the play screen is to the line. */
 export interface FrameOfPlay {

@@ -17,7 +17,7 @@ const LINE_GAP = 4;
 /** The air between the HUD and the banner's panel, in canvas pixels. */
 const BELOW_HUD = 4;
 /** Where the banner's panel starts: below the HUD, so that the two never overlap. */
-const TOP = HUD_BOTTOM + BELOW_HUD;
+export const BANNER_TOP = HUD_BOTTOM + BELOW_HUD;
 
 const PANEL_ALPHA = 0.9;
 
@@ -71,9 +71,9 @@ function drawPanel(layer: UiLayer, lines: readonly string[]): void {
   const width = Math.max(...lines.map(textWidthOf)) + 2 * PADDING;
   const height = lines.length * TEXT_HEIGHT + (lines.length - 1) * LINE_GAP + 2 * PADDING;
   const left = Math.floor((VIEW_WIDTH - width) / 2);
-  layer.frame('panel', left, TOP, width, height, PANEL_ALPHA);
+  layer.frame('panel', left, BANNER_TOP, width, height, PANEL_ALPHA);
   lines.forEach((line, index) => {
     const lineLeft = left + Math.floor((width - textWidthOf(line)) / 2);
-    layer.text(line, lineLeft, TOP + PADDING + index * (TEXT_HEIGHT + LINE_GAP), INK.text);
+    layer.text(line, lineLeft, BANNER_TOP + PADDING + index * (TEXT_HEIGHT + LINE_GAP), INK.text);
   });
 }
