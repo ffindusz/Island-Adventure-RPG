@@ -151,7 +151,10 @@ export interface AreaState {
 export interface HeroState {
   position: Point;
   facing: Direction;
-  /** The hero's current Health. It is never above the maximum, and it only goes up when the hero is restored. */
+  /**
+   * The hero's current Health. It is never above the maximum. It goes up with a Healing Potion, with what a Stat Point
+   * on Health adds to the maximum, and when defeat sends the hero back at full Health; a Checkpoint leaves it as it is.
+   */
   health: number;
   /** Fixed steps left before the hero can attack again; 0 means ready. */
   attackCooldown: number;

@@ -59,7 +59,7 @@ describe('the telegraphs of the Guardian', () => {
 
 describe('the Guardian with the Levels and Gear of the route', () => {
   it.each(Object.entries(SPLITS))(
-    'falls to a hero with the Stat Points %s that misses one telegraph in three, with the potions the route spares',
+    'falls to a hero with the Stat Points %s that misses one telegraph in three, with the potions of the fixture (POTIONS_SPARED)',
     (split, points) => {
       for (const reactionMs of [250, 450]) {
         const result = fight(mainRouteHero(points, POTIONS_SPARED), reactionMs, 3);

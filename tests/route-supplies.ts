@@ -105,46 +105,90 @@ export function expectedDrops(area: AreaId, consumable: ConsumableId): number {
   );
 }
 
-/** The Healing Potions a hero needs to come out of fights that take this much Health from it, if it starts at full Health. */
-export function potionsFor(damage: number, maxHealth: number): number {
-  const restores = gameContent.healingPotion.restores;
-  return damage < maxHealth ? 0 : Math.floor((damage - maxHealth) / restores) + 1;
+/**
+ * The Healing Potions a hero needs to come out of fights that take this much Health from it, from the Health it has in
+ * hand: the fewest that leave it with 1 Health or more, drunk as late as possible so that none is wasted above the
+ * maximum. None while the damage is below the Health in hand. Walking in at full Health is the case where the Health in
+ * hand is the maximum.
+ */
+export function potionsFor(damage: number, health: number, restores = gameContent.healingPotion.restores): number {
+  return damage < health ? 0 : Math.floor((damage - health) / restores) + 1;
 }
 
-/** The Healing Potions of one area for one build: what the fights of its route take, and what the hero has to meet it. */
-export interface PotionLedger {
-  readonly area: AreaId;
-  readonly spend: Spend;
+/** What the fights of the route of an area ask of a hero, and what lies near the route to meet them. */
+export interface Stretch {
+  /** The hero's maximum Health in the area: its Stat Points on Health spent. */
   readonly maxHealth: number;
-  /** The Health that every fight of the route in the area takes, with no dodging: the hero begins the area at full Health. */
+  /** The Health that every fight of the route in the area takes, with no dodging. */
   readonly damage: number;
-  /** The potions the hero drinks to come out of them. */
-  readonly needed: number;
   /** The potions lying within reach of the route in the area. */
   readonly found: number;
+}
+
+/** What a hero has on walking into a stretch of the route and on leaving it, in Health and in Healing Potions. */
+export interface Supplies {
+  /**
+   * The Health the hero walks in with: what it left the area before with, plus the gain in its maximum Health since (a
+   * Stat Point put in Health adds to the Health in hand what it adds to the maximum), and its maximum in the first
+   * area. A Checkpoint gives no Health back, so nothing refills it on the way in.
+   */
+  readonly healthIn: number;
+  /** The potions the hero drinks to come out of the fights of the area from the Health it walked in with. */
+  readonly needed: number;
+  /** The Health it has on leaving the area: what it walked in with, less the fights, plus the potions drunk. */
+  readonly healthOut: number;
   /** The potions the hero carried in from the areas before. */
   readonly carried: number;
   /** The potions it has on leaving the area: negative when it ran short. */
   readonly left: number;
 }
 
-/** The potions of a build, area by area along the route, counting what lies within this many steps of it. */
-export function potionLedger(spend: Spend, nearest = MOST_NEARBY): PotionLedger[] {
-  const ledger: PotionLedger[] = [];
-  let carried = 0;
-  for (const area of AREA_IDS) {
-    const maxHealth = maxHealthOf(heroAtEntrance(area, spend).points);
-    const damage = monstersOnRoute(area).reduce(
-      (total, placement) => total + buildAt(placement.type, area, spend).damageTaken,
-      0,
-    );
-    const needed = potionsFor(damage, maxHealth);
-    const found = lyingNear(area, 'healing-potion', nearest);
-    const left = carried + found - needed;
-    ledger.push({ area, spend, maxHealth, damage, needed, found, carried, left });
-    carried = left;
+/**
+ * The supplies of a hero that walks the stretches of a route in order and never dodges, a Healing Potion restoring this
+ * much. A shortage is counted, not suffered: the Health on leaving is that of a hero that had the potions it needed,
+ * and the potions it lacked are a negative number that the ones found later pay off.
+ */
+export function suppliesAlong<T extends Stretch>(
+  route: readonly T[],
+  restores = gameContent.healingPotion.restores,
+): (T & Supplies)[] {
+  const walked: (T & Supplies)[] = [];
+  let before: Pick<Stretch & Supplies, 'maxHealth' | 'healthOut' | 'left'> | undefined;
+  for (const stretch of route) {
+    const healthIn = before === undefined ? stretch.maxHealth : before.healthOut + stretch.maxHealth - before.maxHealth;
+    const needed = potionsFor(stretch.damage, healthIn, restores);
+    const healthOut = healthIn + needed * restores - stretch.damage;
+    const carried = before?.left ?? 0;
+    const left = carried + stretch.found - needed;
+    walked.push({ ...stretch, healthIn, needed, healthOut, carried, left });
+    before = { maxHealth: stretch.maxHealth, healthOut, left };
   }
-  return ledger;
+  return walked;
+}
+
+/** The Healing Potions of one area for one build: what the fights of its route take, and what the hero has to meet it. */
+export interface PotionLedger extends Stretch, Supplies {
+  readonly area: AreaId;
+  readonly spend: Spend;
+}
+
+/**
+ * The potions of a build, area by area along the route, counting what lies within this many steps of it. The hero walks
+ * into the first area at full Health and carries its Health from one area to the next.
+ */
+export function potionLedger(spend: Spend, nearest = MOST_NEARBY): PotionLedger[] {
+  return suppliesAlong(
+    AREA_IDS.map((area) => ({
+      area,
+      spend,
+      maxHealth: maxHealthOf(heroAtEntrance(area, spend).points),
+      damage: monstersOnRoute(area).reduce(
+        (total, placement) => total + buildAt(placement.type, area, spend).damageTaken,
+        0,
+      ),
+      found: lyingNear(area, 'healing-potion', nearest),
+    })),
+  );
 }
 
 /** The arrows to take every ranged monster of the route of an area off from a distance, at a hit in so many. */
@@ -209,21 +253,29 @@ export function renderSteps(): string {
   return markdownTable(['Piece', 'Over', 'Found in', 'Level', ...SPENDS], rows);
 }
 
-/** The potion ledgers of the three builds as a Markdown table, for the potions within this many steps of the route. */
+/**
+ * The potion ledgers of the three builds as a Markdown table, for the potions within this many steps of the route. Max
+ * Health, Health in and Health out are Health; the rest, but the Build and the Area, are damage and Healing Potions.
+ */
 export function renderPotionLedger(nearest = MOST_NEARBY): string {
   const rows = SPENDS.flatMap((spend) =>
     potionLedger(spend, nearest).map((row) => [
       spend,
       row.area,
       row.maxHealth,
+      row.healthIn,
       row.damage,
       row.needed,
+      row.healthOut,
       row.found,
       row.carried,
       row.left,
     ]),
   );
-  return markdownTable(['Build', 'Area', 'Max Health', 'Damage', 'Needed', 'Found', 'Carried in', 'Left'], rows);
+  return markdownTable(
+    ['Build', 'Area', 'Max Health', 'Health in', 'Damage', 'Needed', 'Health out', 'Found', 'Carried in', 'Left'],
+    rows,
+  );
 }
 
 /** The arrow ledgers of the three builds as a Markdown table, for a hero that took the Long Bow from the cabin. */

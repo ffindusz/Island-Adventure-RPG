@@ -50,8 +50,10 @@ export const OPTIONAL_GEAR = { 'melee-weapon': 'katana', armor: 'knight-mail', '
 export const FIRST_GEAR = { 'melee-weapon': 'basic-sword', armor: 'basic-armor' };
 
 /**
- * The Healing Potions that the route spares for the Guardian: the route holds eleven or twelve within a few tiles of
- * the trail, and a hero that has met every monster of it has drunk about half.
+ * The Healing Potions that the Guardian's fixtures give the bot. It was what the route spared a hero when every
+ * Checkpoint gave the Health back: about half of the eleven that lie within a few tiles of the trail. A hero
+ * that never dodges now arrives with fewer, and hurt, so six is a fixture and not a measure of the route (see "The
+ * supplies" in docs/balance.md).
  */
 export const POTIONS_SPARED = 6;
 

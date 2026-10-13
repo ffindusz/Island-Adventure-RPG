@@ -204,9 +204,9 @@ export type GameEvent =
    */
   | { readonly type: 'stat-point-assigned'; readonly stat: StatId }
   /**
-   * The hero came onto this Checkpoint. It is the one defeat sends the hero back to now, and the hero's Health is
-   * restored to full. Nothing else changes: the Ammunition and the Healing Potions the hero has stay as they are, and
-   * they are what defeat gives back later, along with the pickups and the caches taken so far.
+   * The hero came onto this Checkpoint. It is the one defeat sends the hero back to now. It gives no Health back: the
+   * hero's Health stays as it is, and so do the Ammunition and the Healing Potions the hero has, and they are what
+   * defeat gives back later, along with the pickups and the caches taken so far.
    */
   | { readonly type: 'checkpoint-activated'; readonly checkpointId: string }
   /**
