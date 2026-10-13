@@ -162,7 +162,8 @@ class FakeKeyboard {
 }
 
 describe('what sees the presses', () => {
-  const KEY_DOWN = 'keydown';
+  // A name of the test's own: a watch that listened for the browser's `keydown` whatever it was given would hear nothing.
+  const KEY_DOWN = 'a-key-went-down';
 
   function watching(): { keyboard: FakeKeyboard; watch: DismissalWatch } {
     const keyboard = new FakeKeyboard();
