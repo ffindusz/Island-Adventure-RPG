@@ -79,7 +79,10 @@ function joinedPageKeyLabels(page: PageId): string {
   return PAGE_KEYS[page].map((key) => key.label).join('/');
 }
 
-/** The key that closes the page that is open, and declines the question whether to sail home. */
+/**
+ * The key that closes the page that is open, and declines the question whether to sail home. With nothing open it pauses
+ * the game (pausing.ts).
+ */
 export const CLOSE_PAGE_KEY = 'ESC';
 
 /** The key that closes the page that is open, as the player reads it. */
@@ -202,7 +205,11 @@ function controlsTable(): readonly ControlsEntry[] {
       words: 'PICK A LINE, EQUIP',
       uses: [{ use: 'picking from a menu', names: [CONFIRM_KEY] }],
     },
-    { keys: closePageKeyLabel(), words: 'CLOSE A PAGE', uses: [{ use: 'closing a page', names: [CLOSE_PAGE_KEY] }] },
+    {
+      keys: closePageKeyLabel(),
+      words: 'PAUSE OR CLOSE A PAGE',
+      uses: [{ use: 'closing a page or pausing the game', names: [CLOSE_PAGE_KEY] }],
+    },
     {
       keys: STAT_IDS.map((stat) => statKeyLabel(stat)).join(' '),
       words: 'PICK A STAT AT LEVEL UP',

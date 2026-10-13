@@ -44,6 +44,12 @@ describe('the keys of the audio', () => {
     );
   });
 
+  it('are refused for the key of Esc with the words that say that Esc also pauses the game, and not only that it closes a page', () => {
+    expect(() => checkAudioKeys(codes({ shared: ['ESC', 'MINUS'] }))).toThrow(
+      'The key MINUS, for the audio (lower), is also the key for closing a page or pausing the game',
+    );
+  });
+
   it('are refused when two of the changes of the audio share a key', () => {
     expect(() => checkAudioKeys(codes({ shared: ['MINUS', 'PLUS'] }))).toThrow(
       'The key PLUS, for the audio (raise), is also the key for the audio (lower)',
