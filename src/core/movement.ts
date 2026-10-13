@@ -17,7 +17,8 @@ import type { PlayState } from './state';
 /**
  * Walks the hero one fixed step in the given direction, stopping flush against whatever is in the way. When what stops
  * it is the corner of something that does not move, and its middle is over the gap beside it, the rest of the step
- * slides it clear of the corner (see `slideRoundCorner`).
+ * slides it clear of the corner (see `slideRoundCorner`). A step that a monster cuts short, before anything that does
+ * not move would have, is not slid: it is the monster that stops the hero, and the hero stays flush against it.
  */
 export function walkHero(state: PlayState, content: Content, direction: Direction | undefined): void {
   if (direction === undefined) {
@@ -27,10 +28,15 @@ export function walkHero(state: PlayState, content: Content, direction: Directio
   const { size, speedPerStep } = content.hero;
   const monsters = livingMonsters(state).map((monster) => monsterBody(monster, content));
   const fixtures = interactableObstacles(state, content);
-  const ahead = moveBody(area, state.hero.position, size, direction, speedPerStep, [...monsters, ...fixtures]);
-  const unspent = speedPerStep - travelledBetween(state.hero.position, ahead);
+  const here = state.hero.position;
+  const ahead = moveBody(area, here, size, direction, speedPerStep, [...monsters, ...fixtures]);
+  const unspent = speedPerStep - travelledBetween(here, ahead);
+  const clearOfMonsters = moveBody(area, here, size, direction, speedPerStep, fixtures);
+  const cutByMonster = travelledBetween(here, clearOfMonsters) > travelledBetween(here, ahead) + EPSILON;
   state.hero.position =
-    unspent > EPSILON ? slideRoundCorner(area, ahead, size, direction, unspent, fixtures, monsters) : ahead;
+    unspent > EPSILON && !cutByMonster
+      ? slideRoundCorner(area, ahead, size, direction, unspent, fixtures, monsters)
+      : ahead;
 }
 
 /** The two ways that a body walking in a direction can be nudged sideways. */

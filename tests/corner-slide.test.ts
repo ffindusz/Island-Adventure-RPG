@@ -277,6 +277,28 @@ describe('the hero that walks into a monster', () => {
 
     expectHeroAt(game, 5.4, 4.125);
   });
+
+  it('is not slid along it by a rock whose face is a hair beyond it: the monster stops the hero, not the rock', () => {
+    // The rock is the tile (4, 4), from x = 4 to 5 and from y = 4 to 5. The dummy, half a tile wide, stands against
+    // its right side with its middle at (5.25, 4.21875): its body runs from x = 5 to 5.5 and from y = 3.96875 to
+    // 4.46875, so that its top is 1/32 = 0.03125 tile above the top of the rock. The hero's middle is at
+    // (5.125, 3.59375): its body runs from x = 4.75 to 5.5, which overlaps the rock by 0.25 with its middle over the
+    // gap beside the rock, and from y = 3.21875 to 3.96875, flush on top of the dummy. The dummy stops the step with
+    // all of its 1/12 tile left over, and the top of the rock is 0.03125 below the hero, within it. Without the dummy
+    // the rock would stop the hero 0.03125 on, so it is the dummy that stops it, and a monster is no corner to slide
+    // round: the hero stays where it is and is not slid 1/12 tile to the right.
+    const game = putAt(
+      yardWith('#', [], [dummyAt('dummy', 1, 1)]),
+      { x: 5.125, y: 3.59375 },
+      { dummy: { x: 5.25, y: 4.21875 } },
+    );
+
+    game.send({ type: 'move', direction: 'down' });
+    for (let step = 0; step < 120; step++) {
+      game.step();
+      expectHeroAt(game, 5.125, 3.59375);
+    }
+  });
 });
 
 describe('the biter that walks into a corner', () => {
