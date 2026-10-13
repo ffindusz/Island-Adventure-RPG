@@ -156,6 +156,58 @@ describe('the time of the line that says what H is for', () => {
   });
 });
 
+describe('what the line has left when a game is put away and brought back', () => {
+  it('is the whole four seconds for a time that nothing has been taken from', () => {
+    expect(new ControlsLineTime().left()).toBe(4000);
+  });
+
+  it('is what the frames of the game that runs have left of the four seconds', () => {
+    const time = new ControlsLineTime();
+    time.frame(1000, RUNNING);
+
+    expect(time.left()).toBe(3000);
+  });
+
+  it('is not less for a frame in which a page is open, or one that nobody looks at, which take nothing', () => {
+    const time = new ControlsLineTime();
+    time.frame(1000, RUNNING);
+    time.frame(60_000, WAITING);
+    time.frame(60_000, UNWATCHED);
+
+    expect(time.left()).toBe(3000);
+  });
+
+  it('is nothing once the line is gone, and not less than nothing for a frame that went past the end', () => {
+    const time = new ControlsLineTime();
+    time.frame(5000, RUNNING);
+
+    expect(time.left()).toBe(0);
+  });
+
+  it('is nothing once the player has opened the Controls page', () => {
+    const time = new ControlsLineTime();
+    time.frame(1000, RUNNING);
+    time.dismiss();
+
+    expect(time.left()).toBe(0);
+  });
+
+  it('gives a time made with it that much of the line, and no more: on for 2999 of 3000 milliseconds, gone at the 3000th', () => {
+    const before = new ControlsLineTime();
+    before.frame(1000, RUNNING);
+    const after = new ControlsLineTime(before.left());
+
+    expect(after.frame(2999, RUNNING)).toBe(true);
+    expect(after.frame(1, RUNNING)).toBe(false);
+  });
+
+  it('does not bring back a line that was gone: a time made with nothing left has it off in every frame', () => {
+    const gone = new ControlsLineTime(0);
+
+    expect([gone.frame(16, RUNNING), gone.frame(16, WAITING), gone.frame(16, UNWATCHED)]).toEqual([false, false, false]);
+  });
+});
+
 /** Whether two boxes share a pixel: boxes that only touch along an edge do not. */
 function meets(one: Rect, other: Rect): boolean {
   return (
