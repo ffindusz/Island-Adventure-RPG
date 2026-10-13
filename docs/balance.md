@@ -131,27 +131,50 @@ potions and no number of the Guardian. What moved is the Long Bow's row above (i
 
 ## The supplies
 
-A Healing Potion restores 5 Health. For each build the ledger adds up what the fights of the route of an area take with
-no dodging (a duel with potions to spare), and counts the potions needed to come out of them from full Health
-(`floor((damage - max Health) / 5) + 1`, none if the damage is below the Health). It then walks the route: potions
-found within four tiles of the trail, plus those carried in, minus those needed. Monster drops are left out of the
-count; they are a bonus.
+A Healing Potion restores 5 Health, and a Checkpoint restores none (spec story 115): a hero walks into each area with the
+Health it left the one before with, plus what its Stat Points on Health have added to its maximum since, and into the
+first at full Health. For each build the ledger adds up what the fights of the route of an area take with no dodging (a
+duel with potions to spare), and counts the potions needed to come out of them from the Health walked in with: the
+fewest that leave the hero with 1 Health or more, drunk as late as it can so that none of the 5 is wasted above the
+maximum (`floor((damage - Health in) / 5) + 1`, none if the damage is below the Health in hand). It then walks the
+route: potions found within four tiles of the trail, plus those carried in, minus those needed, and the Health on
+leaving is the Health walked in with, less the damage, plus what the potions drunk restore. A number below zero is a
+shortage that the potions found later pay off. Monster drops are left out of the count; they are a bonus.
+`tests/route-supplies.test.ts` works the rule by hand on small routes, and the ledger of every build in every area is
+printed by `npx vitest run tests/fights.test.ts --silent=false -t "have a line for every piece"`; this table is its
+summary, each cell listing the five areas from the coast to the castle.
 
-| Build | Needed, by area (coast to castle) | Left on leaving, with the potions near the route | Left, with every potion that lies without a door |
-| --- | --- | --- | --- |
-| all in Health | 0, 0, 5, 3, 8 | 3, 4, 1, 0, **-5** | 3, 6, 6, 8, 8 |
-| all in Attack | 0, 0, 0, 0, 1 | 3, 4, 6, 8, 10 | 3, 6, 11, 16, 23 |
-| split | 0, 0, 2, 0, 0 | 3, 4, 4, 6, 9 | 3, 6, 9, 14, 22 |
+| Build | Max Health | Health walked in with | Damage | Needed | Health on leaving | Left on leaving, with the potions near the route | Left, with every potion that lies without a door |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| all in Health | 10, 12, 14, 16, 18 | 10, 6, 6, 4, 5 | 6, 7, 34, 26, 54 | 0, 1, 6, 5, 10 | 4, 4, 2, 3, 1 | 3, 3, **-1**, **-4**, **-11** | 3, 5, 4, 4, 2 |
+| all in Attack | 10, 10, 10, 10, 10 | 10, 4, 2, 5, 1 | 6, 2, 7, 9, 11 | 0, 0, 2, 1, 3 | 4, 2, 5, 1, 5 | 3, 4, 4, 5, 5 | 3, 6, 9, 13, 18 |
+| split | 10, 10, 12, 12, 12 | 10, 4, 4, 4, 1 | 6, 2, 20, 8, 9 | 0, 0, 4, 1, 2 | 4, 2, 4, 1, 2 | 3, 4, 2, 3, 4 | 3, 6, 7, 11, 17 |
 
 Potions found by area: 3, 1, 2, 2, 3 near the route (eleven), and 3, 3, 5, 5, 8 in all behind no door (twenty-four).
 Drops add, on average, 0.3, 0, 0.5, 0.5 and 0.5 potions per area.
 
-- A hero that spends its points on Attack or on a split never runs short with the potions near the route, and arrives
-  at the Guardian with 9 or 10 left: more than the six the Guardian's tests assume.
-- A hero that puts every point in Health and never dodges takes 34, 26 and 54 Health of damage in the mountain, the
-  cave and the castle, against 14, 16 and 18 Health: with the near potions alone it is five short in the castle. It is
-  not short if it also opens the side-path chests. This is an extreme build and a hero that never dodges; the
-  numbers say that such a hero has to leave the trail for its potions, not that it must grind.
+- Held: a hero that spends its points on Attack or on a split and never dodges is never short of a potion with the
+  ones near the route (the fewest it has left on leaving an area is 3 for Attack and 2 for a split), and a hero that
+  puts every point in Health is never short either if it takes every potion that lies without a door (the fewest
+  is 2).
+- No longer held: that such a hero comes to the Guardian with the six potions that the Guardian's tests give their bot,
+  and whole. With the near potions it arrives with 5 (Attack) or 4 (a split); the ledger that walked every area in at
+  full Health, as a Checkpoint allowed before story 115, said 10 and 9. It leaves the castle with 5 of 10 Health or 2
+  of 12. With every potion it has 18 and 17. The Guardian's table below is still a hero that begins at full Health
+  with six potions: a fixture, not what the route brings.
+- Found out: a hero that puts every point in Health and never dodges is short of potions from the mountain on, with
+  the near potions alone. It leaves the woods with 4 of 12 Health and walks into the mountain with 6 of 14, where the
+  fights take 34: it needs 6 potions, finds 2 and has 3 carried, so it is one short. It needs 5 in the cave, where 2
+  lie near the trail, and 10 in the castle, where 3 do: four short by the cave and eleven by the castle (the old
+  ledger: five short, in the castle only). With every potion that lies without a door it is never short, and ends
+  with 2 potions and 1 of 18 Health. This is an extreme build and a hero that never dodges; the numbers say that such
+  a hero has to leave the trail for its potions or dodge, not that it must grind. Nothing was tuned: no potion was
+  added or moved, and no monster or number of the content changed.
+- What these numbers do not say: no test plays the whole route with a hero that dodges, so there is no proof that the
+  route can be won now that a Checkpoint gives no Health, and none that it cannot. The ledger is the worst case of a
+  hero that never dodges, each fight of the fight table is measured from full Health, and the Guardian's bot begins at
+  full Health. A hero that dodges takes less than the ledger counts. Whether the route is too hard now is for the
+  playtest (`docs/playtest-checklist.md`).
 
 Arrows: a ranged monster takes `ceil(Health / arrow Attack)` shots, and the ledger counts two arrows to a shot that
 lands. The arrow's Attack is the hero's with the Long Bow, the only bow of the game, which the main route does not give:
@@ -180,7 +203,9 @@ It reads the view and sends the commands a player's keys send. Each step it drin
 steps out of any lit zone by the shortest way, walks up to the Guardian and strikes whenever the blow would land. Two
 settings stand for the person: how long it takes to act on a telegraph, and how many telegraphs go unseen (the
 lapse: one in so many; 1 is every one). The hero begins at full Health at the Guardian's Checkpoint, in the shipped
-content without the ordinary monsters. It is melee-only: it never shoots.
+content without the ordinary monsters, and with the potions the table gives it. That is a fixture, not what the route
+brings: a Checkpoint gives no Health, so a hero that never dodges comes to this one hurt and with fewer potions (see
+"The supplies"). It is melee-only: it never shoots.
 
 | Hero | Plays | Potions | Outcome | Damage taken | Potions drunk | Blows | Seconds |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -233,9 +258,10 @@ shoots, so a bow cannot move a row of this table, and no row moved when the main
 the game's, not a player's.
 
 - **It can be beaten with the Gear of the main route.** Every build of the Level 6 hero wins when it answers within
-  700 ms, and when it misses one telegraph in three with the six potions the route spares. Even with no answer at all
+  700 ms, and when it misses one telegraph in three with the six potions of the table. Even with no answer at all
   and six potions every build wins but the all-in-Health one. (With no potion at all, a hero of 10 Health that is hit
-  at 750 ms is defeated: the all-in-Attack row.)
+  at 750 ms is defeated: the all-in-Attack row.) All of it from full Health: how a hero fares that comes hurt, with
+  the 5 or 4 potions that the near ones leave it, is not in this table.
 - **A hero that answers is not touched.** Within 700 ms of the telegraph's first moment the bot takes no damage at
   any build; the first hits come at 750 ms. 250 and 450 ms are the stand-ins for a person (see the assumptions).
 - **The Katana makes it easier**: 20 blows against 34 for the same split, a fight of 11 seconds instead of 19, and
@@ -262,7 +288,7 @@ tiles a second; the model's walk agrees with the core's own to within a tile), t
 every door open; *near* is within four tiles of the route with the doors shut, as in "The supplies"), the words on
 show, the level-ups, the areas, the pieces of Gear, the keys and levers, the walk back to each demanding fight, and one
 fight with the Guardian played by the dodging bot (reaction 450 ms, a lapse every third telegraph, a potion at half
-Health, a main-route hero with the Stat Points split and six potions).
+Health, a main-route hero with the Stat Points split and six potions, begun at full Health as in "The Guardian").
 
 | Area | Walk (s) | Fights met | Plain fights (s) | Fights off the route | Plain fights off it (s) | Near errands (s) | Far errands (s) | Puzzles | Near Gear | Far Gear |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -342,8 +368,17 @@ its test: the playtest checklist asks for the clock time from the title to the c
   standing in its lane.
 - **Entrance Level.** A fight is measured at the Level the hero has on coming into the area, the least it has there; it
   will level up inside the area.
-- **Six Healing Potions at the arena.** The area tests put eleven or twelve within four tiles of the trail, and a hero
-  that fought every monster and drank sensibly has used about half. The Guardian simulation leans on this number.
+- **Six Healing Potions at the arena, and full Health.** The area tests put eleven or twelve potions within four tiles
+  of the trail. A hero that never dodges and puts its points on Attack or on a split uses six or seven of the eleven on
+  the way, carrying its Health from area to area (the ledger of "The supplies"), and arrives with five or four,
+  hurt; the Guardian's table gives its bot six, at full Health. That is a fixture, a little more than that hero brings,
+  and the Guardian simulation leans on it.
+- **Every fight is measured from full Health.** The duel of the fight table starts the hero whole, and the Guardian's
+  bot does too. The ledger of the supplies is what joins the fights, and it counts a hero that never dodges; no test
+  plays the whole route with one that does.
+- **The play-time guesses were made when a Checkpoint gave Health back.** None was changed by story 115 (the measured
+  figures are not about Health). A hero that comes to a demanding fight hurt may be defeated more often than
+  `defeatsPerHardFight` says; only the playtest can tell.
 - **One arrow in two lands** (`ARROWS_PER_HIT`), and the ledgers count the arrows near the trail, not drops.
 - **The arrow ledger is for a hero that took the Long Bow from the cabin.** The main route gives no bow, so the hero
   that keeps to it shoots no arrow and the Guardian's numbers (which are a sword's) do not need one. The arrows along
@@ -369,4 +404,7 @@ These are not things a number can solve; each would be a new ticket.
 - **Builds that trivialise the Guardian** (all in Attack: 10 seconds, at most 14 damage with no answer) and builds that
   nearly cannot lose (all in Defense). A rule ticket (damage that scales, or a Defense floor) would be needed; a
   number cannot do it without breaking the 40-strike ceiling.
-- **A hero that never dodges and puts every point in Health** has to open the side-path chests for its potions.
+- **A hero that never dodges and puts every point in Health** has to open the side-path chests for its potions: with
+  the near ones alone it is short from the mountain on (one short there, four by the cave, eleven by the castle; see
+  "The supplies"). It is a finding for the playtest, and no number is proposed: a potion more along the trail would be
+  a placement ticket, and the player decides whether to ask for one.

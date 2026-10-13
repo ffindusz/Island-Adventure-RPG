@@ -501,8 +501,8 @@ export interface ExitDestination {
 }
 
 /**
- * A safe place the hero activates by touching it: it restores the hero's Health and records where defeat sends the
- * hero back to (see checkpoints.ts). It fills one tile and is not solid.
+ * A safe place the hero activates by touching it: it records where defeat sends the hero back to (see checkpoints.ts)
+ * and gives no Health back. It fills one tile and is not solid.
  */
 export interface CheckpointDefinition {
   /** Unique across all Adventure Areas: events refer to the Checkpoint by it. */

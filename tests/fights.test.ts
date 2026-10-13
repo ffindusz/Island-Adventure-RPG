@@ -18,7 +18,8 @@ import {
 // The balance of the fights and of what the route gives a hero to fight with, against the shipped content: the ticket's
 // "most fights approachable, a few demanding; upgrades that are noticeable steps; supplies enough with no grinding".
 // The fights are played through the core as a player who does not dodge plays them (tests/duel.ts), which is the plain
-// cost of a fight and what the potions are for; the limits of that are written in docs/balance.md.
+// cost of a fight and what the potions are for; the limits of that are written in docs/balance.md. The potions are
+// counted from the Health the hero carries from area to area, since a Checkpoint gives none back (tests/route-supplies.ts).
 
 /** The tougher variants, the one fight of each of the last three areas that is meant to be demanding. */
 const TOUGHER_VARIANTS = ['raider-veteran', 'cave-bear', 'castle-knight'];
@@ -102,13 +103,21 @@ describe('the Gear of the adventure', () => {
 });
 
 describe('the supplies along the route', () => {
-  it('leave a hero that spends its points on Attack or on a split short of no Healing Potion, and the Guardian its share', () => {
+  it('leave a hero that spends its points on Attack or on a split, and never dodges, short of no Healing Potion', () => {
     for (const spend of ['all in Attack', 'split'] as const) {
-      const ledger = potionLedger(spend);
-      for (const row of ledger) {
+      for (const row of potionLedger(spend)) {
         expect(row.left, `${spend} in ${row.area}: ${row.needed} needed, ${row.found} found, ${row.carried} carried`).toBeGreaterThanOrEqual(0);
       }
-      expect(ledger[ledger.length - 1]?.left, `${spend} at the Guardian`).toBeGreaterThanOrEqual(POTIONS_SPARED);
+    }
+  }, 60_000);
+
+  it('bring that hero to the Guardian hurt, and with fewer potions than the Guardian\'s table gives its bot unless it took every potion without a door', () => {
+    for (const spend of ['all in Attack', 'split'] as const) {
+      const near = potionLedger(spend).at(-1);
+      const every = potionLedger(spend, Infinity).at(-1);
+      expect(near?.healthOut, `${spend} at the Guardian: ${near?.healthOut} of ${near?.maxHealth} Health`).toBeLessThan(near?.maxHealth ?? 0);
+      expect(near?.left, `${spend} at the Guardian: ${near?.left} potions, those near the route`).toBeLessThan(POTIONS_SPARED);
+      expect(every?.left, `${spend} at the Guardian: ${every?.left} potions, every one without a door`).toBeGreaterThanOrEqual(POTIONS_SPARED);
     }
   }, 60_000);
 

@@ -161,17 +161,34 @@ describe('Touching a Checkpoint', () => {
     ]);
   });
 
-  it('restores the hero to full Health', () => {
-    const game = newGame(arena({ checkpoints: [CAMP], monsters: [BITER_BESIDE_HERO] }));
-    expect(advance(game, 31)).toContainEqual(BITE);
-    expect(playingView(game).hero.health).toBe(5);
+  // The biter hits for `hit` on the 31st step, which leaves the hero with the rest of its 10 Health: the Checkpoint is
+  // touched on the 3rd step after that, and the biter, which winds up and strikes again 55 steps after its first hit,
+  // is not heard from in those 3.
+  it.each([
+    { hit: 5, health: 5 },
+    { hit: 7, health: 3 },
+    { hit: 9, health: 1 },
+  ])('leaves a hero hurt by a hit of $hit with $health of its 10 Health as it is, and tells of the touch once', ({ hit, health }) => {
+    const heavyBiter = { ...BITER, damage: hit };
+    const game = newGame(arena({ checkpoints: [CAMP], monsters: [BITER_BESIDE_HERO], monsterTypes: { biter: heavyBiter } }));
+    expect(advance(game, 31)).toContainEqual({ ...BITE, damage: hit, health });
+    expect(playingView(game).hero).toMatchObject({ health, maxHealth: 10 });
 
-    walk(game, 'down', 3);
+    const events = walk(game, 'down', 3);
 
-    expect(playingView(game).hero.health).toBe(10);
+    expect(events.filter((event) => event.type === 'checkpoint-activated')).toEqual([CAMP_ACTIVATED]);
+    expect(playingView(game).hero).toMatchObject({ health, maxHealth: 10 });
   });
 
-  it('happens as the hero comes onto it: standing there does nothing more, and coming back does', () => {
+  it('leaves a hero at full Health at full Health', () => {
+    const game = newGame(arena({ checkpoints: [CAMP] }));
+
+    expect(walk(game, 'down', 3)).toEqual([CAMP_ACTIVATED]);
+
+    expect(playingView(game).hero).toMatchObject({ health: 10, maxHealth: 10 });
+  });
+
+  it('happens as the hero comes onto it: standing there does nothing more, and coming back does, with the Health as it is', () => {
     const game = newGame(arena({ checkpoints: [CAMP], monsters: [BITER_BESIDE_HERO] }));
     walk(game, 'down', 3);
 
@@ -182,7 +199,23 @@ describe('Touching a Checkpoint', () => {
 
     walk(game, 'up', 3);
     expect(walk(game, 'down', 3)).toContainEqual(CAMP_ACTIVATED);
+    expect(playingView(game).hero.health).toBe(5);
+  });
+
+  it('leaves the lower Health of a hero that left it, was hurt and came back: 10, hit for 4, back on it with 6', () => {
+    // The hero touches the camp on the 3rd step with all its 10 Health, walks clear of it in the next 3, and the biter's
+    // hit for 4 lands on the 31st step, 25 steps later, before the hero comes back onto the camp.
+    const game = newGame(
+      arena({ checkpoints: [CAMP], monsters: [BITER_BESIDE_HERO], monsterTypes: { biter: { ...BITER, damage: 4 } } }),
+    );
+    expect(walk(game, 'down', 3)).toContainEqual(CAMP_ACTIVATED);
     expect(playingView(game).hero.health).toBe(10);
+    walk(game, 'up', 3);
+    expect(advance(game, 25)).toContainEqual({ ...BITE, damage: 4, health: 6 });
+
+    expect(walk(game, 'down', 3)).toContainEqual(CAMP_ACTIVATED);
+
+    expect(playingView(game).hero).toMatchObject({ health: 6, maxHealth: 10 });
   });
 
   it('leaves what the hero carries, opened and took as it is: Ammunition does not come back, nothing is put back', () => {
@@ -229,6 +262,20 @@ describe('Arriving on a Checkpoint', () => {
     expect(walk(game, 'right', 11)).not.toContainEqual(expect.objectContaining({ type: 'checkpoint-activated' }));
     expect(playingView(game).checkpoints).toEqual([expect.objectContaining({ active: false })]);
   });
+
+  it('leaves the Health the hero came in with: the touch follows area-changed and heals nothing', () => {
+    // The biter above the hero hits for 7 on the 31st step, which leaves it 3 of its 10 Health in the arena. The hero
+    // then walks right along row 3 to the exit, and touches the door as it arrives in the cellar.
+    const game = newGame(
+      world({ monsters: [biterAt('biter', 3, 2)], monsterTypes: { biter: { ...BITER, damage: 7 } } }, { checkpoints: [DOOR] }),
+    );
+    expect(advance(game, 31)).toContainEqual({ type: 'hero-hit', monsterId: 'biter', damage: 7, health: 3 });
+
+    const events = walk(game, 'right', 11);
+
+    expect(events.slice(-2)).toEqual([{ type: 'area-changed', areaId: 'cellar' }, DOOR_ACTIVATED]);
+    expect(playingView(game).hero).toMatchObject({ health: 3, maxHealth: 10 });
+  });
 });
 
 describe('Defeat with Checkpoints', () => {
@@ -252,6 +299,22 @@ describe('Defeat with Checkpoints', () => {
     const { hero, area } = playingView(game);
     expect(hero).toMatchObject({ position: { x: 4.5, y: 4.5 }, health: 5, maxHealth: 5 });
     expect(area.id).toBe('arena');
+  });
+
+  it('sends the hero back at full Health though it touched the Checkpoint hurt: 3 of 10 on the camp, 10 after the fall', () => {
+    // The biter hits for 7. Its first hit, on the 31st step, leaves the hero with 3 of its 10 Health, which it has on
+    // the camp, touched in the 3 steps after that; its second, 55 steps after the first (24 of recovery and a wind-up
+    // of 31), defeats the hero.
+    const game = newGame(
+      arena({ checkpoints: [CAMP], monsters: [BITER_BESIDE_HERO], monsterTypes: { biter: { ...BITER, damage: 7 } } }),
+    );
+    advance(game, 31);
+    expect(walk(game, 'down', 3)).toContainEqual(CAMP_ACTIVATED);
+    expect(playingView(game).hero.health).toBe(3);
+
+    expect(untilDefeated(game)).toContainEqual({ type: 'hero-defeated' });
+
+    expect(playingView(game).hero).toMatchObject({ position: { x: 3.5, y: 4.5 }, health: 10, maxHealth: 10 });
   });
 
   it('counts the last Checkpoint touched, which may have been touched before another one', () => {
@@ -723,5 +786,23 @@ describe('Defeat and what the hero keeps', () => {
 
     game.send({ type: 'open-page', page: 'stats' });
     expect(playingView(game).page).toMatchObject({ level: 2, experience: { earned: 4, needed: 15 } });
+  });
+});
+
+describe('The Health a Checkpoint leaves, in a saved game', () => {
+  it('is in the snapshot taken on the Checkpoint, and is the Health of the game continued from it', () => {
+    // The biter hits for 7 on the 31st step, which leaves the hero with 3 of its 10 Health, and the hero touches the
+    // camp in the 3 steps after that.
+    const content = arena({ checkpoints: [CAMP], monsters: [BITER_BESIDE_HERO], monsterTypes: { biter: { ...BITER, damage: 7 } } });
+    const game = newGame(content);
+    advance(game, 31);
+    expect(walk(game, 'down', 3)).toContainEqual(CAMP_ACTIVATED);
+
+    const snapshot = game.snapshot();
+    const restored = continuedFrom(content, snapshot);
+
+    expect(snapshot.state.hero.health).toBe(3);
+    expect(playingView(restored).hero).toMatchObject({ health: 3, maxHealth: 10 });
+    expect(restored.view()).toEqual(game.view());
   });
 });

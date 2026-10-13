@@ -3,8 +3,8 @@ import type { GameEvent } from './interface';
 import type { PlayState } from './state';
 import { heroMaxHealth } from './stats';
 
-// Healing Potions: the only way the hero gets Health back between Checkpoints. Health never regenerates on its own,
-// and a potion is never used on the hero's behalf: the player uses it from the inventory page.
+// Healing Potions: the only way the hero gets Health back short of defeat, and a Checkpoint gives none. Health never
+// regenerates on its own, and a potion is never used on the hero's behalf: the player uses it from the inventory page.
 
 /**
  * The hero uses a Healing Potion, from the inventory page only. It gets back the Health the content says, but never

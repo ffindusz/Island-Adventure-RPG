@@ -328,7 +328,7 @@ export const monsterTypes: Readonly<Record<string, MonsterTypeDefinition>> = {
   // A hero of Level 6 with 14 Health, Defense 2 and the Steel Sword takes 6, 9 and 5 from them: it survives two sweeps,
   // one charge or two smites, and with the Knight Mail and the Katana, 3, 6 and 2. Stepping out of any of them takes
   // under half of its wind-up. The tuning pass kept the numbers (docs/balance.md): a hero that answers each telegraph
-  // within 600 ms is not hit at all, and one that misses one in three still wins with the potions the route spares.
+  // within 600 ms is not hit at all, and one that misses one in three still wins with six potions in hand.
   'castle-guardian': {
     behavior: 'guardian',
     health: 100,
