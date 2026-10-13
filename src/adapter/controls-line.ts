@@ -16,12 +16,10 @@ import { controlsLineText } from './controls';
 import { DEPTH } from './depths';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { Rect } from './pixel-font';
-import { INK, UiLayer } from './ui-layer';
+import { INK, PANEL_ALPHA, UiLayer } from './ui-layer';
 
 /** How long the line stays, in milliseconds of the frames that count: as long as the text of an area stays. */
 const LINE_MS = 4000;
-
-const PANEL_ALPHA = 0.9;
 
 /** Where the panel of the line that says this goes: the size and the row of the audio line's panel, in the middle of the screen. */
 export function controlsLineBox(text: string): Rect {
