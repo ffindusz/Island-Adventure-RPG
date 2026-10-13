@@ -22,12 +22,13 @@ import { MonsterSprites } from './monster-sprites';
 import { Notice } from './notice';
 import { OpeningCard } from './opening-card';
 import { Overlay } from './overlay';
+import { pausesTheGame, stopsBeforePausing } from './pausing';
 import { PickupRiseSprites } from './pickup-rise-sprites';
 import { byShooter } from './projectiles';
 import { ProjectileSprites } from './projectile-sprites';
 import { PropSprites } from './prop-sprites';
 import type { SaveStore } from './save-store';
-import { SCENE_KEYS, startOfEnding } from './scene-keys';
+import { SCENE_KEYS, keptByResume, startOfEnding, startOfTitle } from './scene-keys';
 import type { PlayStart } from './scene-keys';
 import { bakeGround } from './terrain-baker';
 import { gameIsWaiting } from './waiting';
@@ -57,6 +58,10 @@ function playerIsWatching(): boolean {
  * (controls-line.ts); nothing of it is saved. The scene is started again for every game of a session, so what it keeps
  * from one is made anew in `init`. It tells the audio service what the frame's events sound like and which place the
  * music is for (audio.ts), and polls the keys of the audio in every frame, the card, the falls and the pages included.
+ *
+ * A fresh press of Esc in a frame in which the game ran from its start to its end, with nothing in it to wait for, puts
+ * the game away (pausing.ts): the walk keys are let go in the core, the title is started as the paused screen, and no
+ * step runs while it shows. Its Resume starts this scene again from the core's view, which `init` reads (scene-keys.ts).
  */
 export class PlayScene extends GameScene {
   private readonly core: Game;
@@ -111,13 +116,15 @@ export class PlayScene extends GameScene {
   init(start: PlayStart): void {
     // A game that follows another in the same session (the title is reached again after the ending) starts with no time
     // owed to the steps, nothing of the last game's flashes and notice left on the screen, no fight on, and the line that
-    // says H FOR CONTROLS to show again.
+    // says H FOR CONTROLS to show again. A Resume brings back the fight and what the line had left, which the core's view
+    // does not hold; the rest is made anew as for a Continue, for it brings the game back from the view.
+    const kept = keptByResume(start);
     this.clock = new FixedStepClock();
     this.feedback = new Feedback();
-    this.controlsLineTime = new ControlsLineTime();
+    this.controlsLineTime = new ControlsLineTime(kept?.controlsLineMs);
     this.saveAtOnce = start.saveAtOnce === true;
     this.openingLines = start.opening ?? [];
-    this.fight = false;
+    this.fight = kept?.fight ?? false;
   }
 
   create(): void {
@@ -183,7 +190,8 @@ export class PlayScene extends GameScene {
     }
     const menu = this.playerInput.pollMenu();
     send(this.inventoryMenu.update(viewAtStart, menu));
-    send(this.playerInput.pollActions());
+    const actions = this.playerInput.pollActionsWithEsc();
+    send(actions.commands);
     // After the actions, so that Esc, which declines the question, goes first and the core then ignores an Enter that
     // answers it in the same frame. Decided from the view before the commands, so that the Interact that opens the
     // question cannot be answered by an Enter pressed with it.
@@ -216,7 +224,7 @@ export class PlayScene extends GameScene {
       // autosave.
       const ending = startOfEnding(events);
       if (ending === null) {
-        this.scene.start(SCENE_KEYS.title);
+        this.scene.start(SCENE_KEYS.title, startOfTitle(false));
       } else {
         this.scene.start(SCENE_KEYS.ending, ending);
       }
@@ -229,6 +237,10 @@ export class PlayScene extends GameScene {
       this.fall = new Fall(this.lastPlaying ?? view);
       this.fadingOut = false;
       this.draw(this.fall.view, watching, time);
+      return;
+    }
+    if (pausesTheGame({ esc: actions.esc, before: viewAtStart, after: view, events })) {
+      this.putAway(view);
       return;
     }
     if (events.some((event) => event.type === 'area-changed')) {
@@ -247,6 +259,22 @@ export class PlayScene extends GameScene {
     // After the fall above, which keeps the music of the place the hero fell in until it is over, and so after the frame in
     // which the hero was defeated.
     this.playMusicFor(view);
+  }
+
+  /**
+   * Puts the game away for the paused screen. The Game core keeps a direction held until it is told to stop, and this
+   * screen, which reads the keys, is gone while the title shows, so every walk key is let go first (pausing.ts). The core
+   * is told nothing else and its game is not saved: the title is started with what the core's view does not hold, for
+   * the Resume that may follow.
+   */
+  private putAway(view: PlayingView): void {
+    for (const command of stopsBeforePausing(view.hero.facing)) {
+      this.core.send(command);
+    }
+    this.scene.start(
+      SCENE_KEYS.title,
+      startOfTitle(true, { fight: this.fight, controlsLineMs: this.controlsLineTime.left() }),
+    );
   }
 
   /**

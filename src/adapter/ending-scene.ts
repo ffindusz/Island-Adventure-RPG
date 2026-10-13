@@ -6,7 +6,7 @@ import { layoutEnding, turnPage } from './ending-pages';
 import type { EndingPage } from './ending-pages';
 import { GameScene } from './game-scene';
 import { drawCard } from './opening-card';
-import { SCENE_KEYS } from './scene-keys';
+import { SCENE_KEYS, startOfTitle } from './scene-keys';
 import type { EndingStart } from './scene-keys';
 import { UiLayer } from './ui-layer';
 
@@ -48,7 +48,8 @@ export class EndingScene extends GameScene {
     this.audio.playMusic({ at: 'ending' });
     const { page, done } = turnPage(this.page, this.pages.length, this.playerInput.pollMenu().confirm);
     if (done) {
-      this.scene.start(SCENE_KEYS.title);
+      // Said in words that this is the title and not a paused one: a start with no data keeps the data of the last start.
+      this.scene.start(SCENE_KEYS.title, startOfTitle(false));
       return;
     }
     this.page = page;
