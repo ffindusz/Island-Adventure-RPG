@@ -25,12 +25,14 @@ export function walkHero(state: PlayState, content: Content, direction: Directio
   }
   const area = areaOf(content, state.areaId);
   const { size, speedPerStep } = content.hero;
+  const fixtures = interactableObstacles(state, content);
   const ahead = moveBody(area, state.hero.position, size, direction, speedPerStep, [
     ...livingMonsters(state).map((monster) => monsterBody(monster, content)),
-    ...interactableObstacles(state, content),
+    ...fixtures,
   ]);
   const unspent = speedPerStep - travelledBetween(state.hero.position, ahead);
-  state.hero.position = unspent > EPSILON ? slideRoundCorner(area, ahead, size, direction, unspent) : ahead;
+  state.hero.position =
+    unspent > EPSILON ? slideRoundCorner(area, ahead, size, direction, unspent, fixtures) : ahead;
 }
 
 /** The two ways that a body walking in a direction can be nudged sideways. */
@@ -52,12 +54,20 @@ const SLIDE_LIMIT = 0.5;
  * slide round: nudged sideways, by no more than what is left of the step, toward the side where it clears them all by
  * the least. The rest of the step goes into the slide and nowhere else, and the hero is not turned. Where there is no
  * such side, because it is over the thing and not over the gap beside it, or nothing that stands still stopped it, it
- * stays where it is.
+ * stays where it is. Solid terrain and the `fixtures`, the boxes of the interactables that stop a walker, are corners
+ * alike.
  */
-function slideRoundCorner(area: Area, position: Point, size: number, direction: Direction, unspent: number): Point {
+function slideRoundCorner(
+  area: Area,
+  position: Point,
+  size: number,
+  direction: Direction,
+  unspent: number,
+  fixtures: readonly Box[],
+): Point {
   const body = boxAround(position, size);
-  const inTheWay = solidTilesAround(area, body, unspent).filter((tile) => {
-    const gap = gapAhead(body, direction, tile);
+  const inTheWay = [...solidTilesAround(area, body, unspent), ...fixtures].filter((box) => {
+    const gap = gapAhead(body, direction, box);
     return gap !== undefined && gap < unspent;
   });
   if (inTheWay.length === 0) {
