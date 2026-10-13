@@ -21,6 +21,9 @@ export interface KeyState {
   readonly originalEvent: { readonly repeat: boolean; readonly ctrlKey: boolean; readonly metaKey: boolean };
 }
 
+/** What the browser said of one press of a key: whether it is the repeat of a key held down, and the Ctrl and Cmd keys held with it. */
+export type KeyPress = KeyState['originalEvent'];
+
 /** What the player's input asks of the keyboard: the key by the name Phaser gives it, held back from the browser if `capture`. */
 export interface Keyboard<K extends KeyState> {
   addKey(name: string, capture?: boolean): K;
@@ -35,6 +38,11 @@ export interface MenuInput {
 /** Whether a press is for the game and not for the browser: Ctrl or Cmd with a key is a shortcut, such as Ctrl and minus, which zooms, or Ctrl and Tab, which switches tabs. */
 function isForTheGame(press: KeyState['originalEvent']): boolean {
   return !press.ctrlKey && !press.metaKey;
+}
+
+/** Whether a press is a fresh one for the game: not the repeat of a key held down, and not a browser's shortcut (see `isForTheGame`). */
+export function isFreshPress(press: KeyPress): boolean {
+  return !press.repeat && isForTheGame(press);
 }
 
 /**
