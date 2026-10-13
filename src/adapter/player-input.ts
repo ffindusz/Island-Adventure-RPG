@@ -36,22 +36,18 @@ export interface MenuInput {
 }
 
 /** Whether a press is for the game and not for the browser: Ctrl or Cmd with a key is a shortcut, such as Ctrl and minus, which zooms, or Ctrl and Tab, which switches tabs. */
-function isForTheGame(press: KeyState['originalEvent']): boolean {
+function isForTheGame(press: KeyPress): boolean {
   return !press.ctrlKey && !press.metaKey;
 }
 
-/** Whether a press is a fresh one for the game: not the repeat of a key held down, and not a browser's shortcut (see `isForTheGame`). */
-export function isFreshPress(press: KeyPress): boolean {
-  return !press.repeat && isForTheGame(press);
-}
-
 /**
- * Whether a press puts the text of an area away: the first press of any key does, whichever key it is, one the game uses
- * or not. An auto-repeat does not: a key held down is not a new key, whether it was held when the text came or from the
- * screen before, and a new scene's keys take the first repeat of a held key for a press. A press that is the browser's
- * does not either (`isForTheGame`), so Ctrl and R, which reloads, leaves the text.
+ * Whether a press is a fresh one for the game. It is the rule for the Esc that closes a page or pauses the game, and for
+ * the press of any key that puts the text of an area away, whichever key it is, one the game uses or not. An auto-repeat
+ * is not fresh: a key held down is not a new key, whether it was held when the text came or from the screen before, and
+ * a new scene's keys take the first repeat of a held key for a press. A press that is the browser's is not fresh either
+ * (`isForTheGame`), so Ctrl and R, which reloads, leaves the text.
  */
-export function dismissesAreaText(press: KeyState['originalEvent']): boolean {
+export function isFreshPress(press: KeyPress): boolean {
   return !press.repeat && isForTheGame(press);
 }
 
@@ -212,7 +208,7 @@ export class PlayerInput<K extends KeyState> {
    * Enter held down to sail home does not turn the first page of the ending, nor does it go on to pick on the title.
    * A press that `counts` refuses is used up all the same, and does not come back on the next frame.
    */
-  private pressedAgain(keys: readonly K[], counts: (press: KeyState['originalEvent']) => boolean = () => true): boolean {
+  private pressedAgain(keys: readonly K[], counts: (press: KeyPress) => boolean = () => true): boolean {
     return keys.filter((key) => this.justDown(key) && !key.originalEvent.repeat && counts(key.originalEvent)).length > 0;
   }
 }

@@ -2,16 +2,24 @@ import { describe, expect, it } from 'vitest';
 import { audioLineBox } from '../src/adapter/audio-line';
 import { VIEW_HEIGHT } from '../src/adapter/config';
 import { textWidthOf } from '../src/adapter/pixel-font';
-import type { Rect } from '../src/adapter/pixel-font';
 import type { SavedGame } from '../src/adapter/save-store';
 import { TITLE_LINE_CORNER, logoLayout, paintedBounds } from '../src/adapter/title-layout';
 import { openMenu } from '../src/adapter/title-menu';
 import type { TitleMenu } from '../src/adapter/title-menu';
 import { layoutTitleWindow } from '../src/adapter/title-window';
-import type { TitleWindow } from '../src/adapter/title-window';
 import { INK, WINDOW_PADDING } from '../src/adapter/ui-layer';
 import { charactersTheFontLacks } from './drawn-text';
-import { newGame } from './fixtures';
+import {
+  A_SAVE,
+  DAMAGED,
+  FROM_ANOTHER_VERSION,
+  NO_SAVE,
+  NOT_AVAILABLE,
+  SAID,
+  crosses,
+  linesOf,
+  textsOf,
+} from './title-window-fixtures';
 
 // The window of the start screen while the game is paused (Esc in play), as the scene draws it, without the scene: what it
 // says, how high and wide it is, and the box of each of its rows on the 320 x 192 screen. The window of the title, which is
@@ -21,16 +29,6 @@ import { newGame } from './fixtures';
 // is 4 more of air, and a window has 12 of padding round its rows. The room under the name of the game runs from 36 to
 // 188, so that a window of height h stands at 36 + floor((152 - h) / 2), and the line of the audio, in the bottom right
 // corner, starts at 169, so that no row of a window may end below that.
-
-const NO_SAVE: SavedGame = { status: 'none' };
-const A_SAVE: SavedGame = { status: 'usable', snapshot: newGame().snapshot() };
-const NOT_AVAILABLE: SavedGame = { status: 'unavailable' };
-const DAMAGED: SavedGame = { status: 'unusable', problem: 'damaged', detail: 'The save could not be read.' };
-const FROM_ANOTHER_VERSION: SavedGame = {
-  status: 'unusable',
-  problem: 'incompatible',
-  detail: 'The save is from version 3 of the game.',
-};
 
 /** The saved games the window can be over, each with whether a New Game would replace something in the slot. */
 const SAVED_GAMES: readonly { readonly saved: SavedGame; readonly replaced: boolean }[] = [
@@ -47,28 +45,6 @@ const SHOWING_THE_LIST: TitleMenu = { cursor: 'controls', confirming: false, sho
 
 /** The list of the controls on the title, which is not paused: the paused screen shows the very same one. */
 const THE_TITLES_LIST: TitleMenu = { cursor: 'controls', confirming: false, showingControls: true };
-
-/** What the keys of the audio can say: the narrowest line is SOUND ON, and the widest VOLUME 10/10. */
-const SAID = ['SOUND OFF', 'SOUND ON', ...Array.from({ length: 11 }, (_, volume) => `VOLUME ${volume}/10`)];
-
-/** The lines of text of the window, the lines of the menu included, from the top down. */
-function textsOf(window: TitleWindow): string[] {
-  return window.rows.flatMap(({ row }) => (row.kind === 'text' || row.kind === 'entry' ? [row.text] : []));
-}
-
-/** The lines of the menu in the window, from the top down. */
-function linesOf(window: TitleWindow) {
-  return window.rows.flatMap(({ row }) => (row.kind === 'entry' ? [row] : []));
-}
-
-function crosses(one: Rect, other: Rect): boolean {
-  return (
-    one.left < other.left + other.width &&
-    other.left < one.left + one.width &&
-    one.top < other.top + other.height &&
-    other.top < one.top + one.height
-  );
-}
 
 const PAUSED_LINES = ['RESUME', 'NEW GAME', 'CONTINUE', 'CONTROLS'];
 const HINTS = ['W/S OR ARROWS TO CHOOSE', 'ENTER TO SELECT   ESC TO RESUME', 'N TO MUTE   - OR + FOR VOLUME'];

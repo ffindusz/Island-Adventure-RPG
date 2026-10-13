@@ -26,6 +26,7 @@ import { OpeningCard } from './opening-card';
 import { Overlay } from './overlay';
 import { pausesTheGame, stopsBeforePausing } from './pausing';
 import { PickupRiseSprites } from './pickup-rise-sprites';
+import type { MenuInput } from './player-input';
 import { byShooter } from './projectiles';
 import { ProjectileSprites } from './projectile-sprites';
 import { PropSprites } from './prop-sprites';
@@ -108,8 +109,11 @@ export class PlayScene extends GameScene {
   private openingLines: readonly string[] = [];
   /** The card of the opening while it shows: no step runs and no key but Enter counts until the player ends it. */
   private card: OpeningCard | null = null;
-  /** Whether a press that puts away the text of an area came since the last frame (area-text-dismissal.ts): made with the scene. */
-  private presses!: DismissalWatch;
+  /**
+   * The watch that sees the presses that put the text of an area away (area-text-dismissal.ts), made with the scene and
+   * stopped with it by `GameScene.watchPresses`.
+   */
+  private dismissalWatch!: DismissalWatch;
   /** Whether the fight with the Guardian is on, which the music of the fight plays for (audio-manifest.ts, `fightAfter`). */
   private fight = false;
 
@@ -165,7 +169,7 @@ export class PlayScene extends GameScene {
     this.overlay = new Overlay(this);
     this.automapPage = new AutomapPage(this, this.areas);
     this.useKeyboard('control the hero');
-    this.presses = this.watchPresses('control the hero');
+    this.dismissalWatch = this.watchPresses('control the hero');
     this.card = this.openingLines.length > 0 ? new OpeningCard(this, this.openingLines) : null;
   }
 
@@ -208,7 +212,7 @@ export class PlayScene extends GameScene {
     // answers it in the same frame. Decided from the view before the commands, so that the Interact that opens the
     // question cannot be answered by an Enter pressed with it.
     commands.push(...departureAnswer(viewAtStart, menu));
-    send(dismissalFirst(commands, this.presses.take()));
+    send(dismissalFirst(commands, this.dismissalWatch.take()));
     if (waiting && !gameIsWaiting(this.core.view())) {
       // The wait ended just now. The walk keys were left alone during it, so the hero walks by the keys that are down
       // now, from the first step of this frame.
@@ -319,14 +323,24 @@ export class PlayScene extends GameScene {
   private holdForOpening(card: OpeningCard): void {
     this.autosave([]);
     this.playMusicFor(this.core.view());
-    const { confirm } = this.playerInput.pollMenu();
-    this.playerInput.pollActions();
-    this.presses.take();
+    const { confirm } = this.pollHeld();
     if (confirm) {
       card.hide();
       this.card = null;
       this.cameras.main.fadeIn(OPENING_FADE_MS, 0, 0, 0);
     }
+  }
+
+  /**
+   * Reads what the keys did in a frame in which the game is held (the card of the opening, a fall) and throws it away:
+   * nothing the player presses reaches the game, none of it puts the text of an area away, and none is kept for the
+   * first frame after. Gives what the menu keys did, for the card to take its Enter from.
+   */
+  private pollHeld(): MenuInput {
+    const menu = this.playerInput.pollMenu();
+    this.playerInput.pollActions();
+    this.dismissalWatch.take();
+    return menu;
   }
 
   /**
@@ -354,11 +368,8 @@ export class PlayScene extends GameScene {
 
   /** One frame of a fall: the world stands still with the hero lying in it, and at the end the screen fades out. */
   private showFall(fall: Fall, frameMs: number, watching: boolean, time: number): void {
-    // What the player presses meanwhile does not count, and puts away no text that shows when the fall is over. The walk
-    // keys are read again when the fall is over.
-    this.playerInput.pollMenu();
-    this.playerInput.pollActions();
-    this.presses.take();
+    // The walk keys are read again when the fall is over.
+    this.pollHeld();
     this.letTimePass(frameMs);
     if (fall.stage === 'fading-out' && !this.fadingOut) {
       this.fadingOut = true;
