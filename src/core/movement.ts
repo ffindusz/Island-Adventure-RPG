@@ -25,14 +25,12 @@ export function walkHero(state: PlayState, content: Content, direction: Directio
   }
   const area = areaOf(content, state.areaId);
   const { size, speedPerStep } = content.hero;
+  const monsters = livingMonsters(state).map((monster) => monsterBody(monster, content));
   const fixtures = interactableObstacles(state, content);
-  const ahead = moveBody(area, state.hero.position, size, direction, speedPerStep, [
-    ...livingMonsters(state).map((monster) => monsterBody(monster, content)),
-    ...fixtures,
-  ]);
+  const ahead = moveBody(area, state.hero.position, size, direction, speedPerStep, [...monsters, ...fixtures]);
   const unspent = speedPerStep - travelledBetween(state.hero.position, ahead);
   state.hero.position =
-    unspent > EPSILON ? slideRoundCorner(area, ahead, size, direction, unspent, fixtures) : ahead;
+    unspent > EPSILON ? slideRoundCorner(area, ahead, size, direction, unspent, fixtures, monsters) : ahead;
 }
 
 /** The two ways that a body walking in a direction can be nudged sideways. */
@@ -55,7 +53,8 @@ const SLIDE_LIMIT = 0.5;
  * the least. The rest of the step goes into the slide and nowhere else, and the hero is not turned. Where there is no
  * such side, because it is over the thing and not over the gap beside it, or nothing that stands still stopped it, it
  * stays where it is. Solid terrain and the `fixtures`, the boxes of the interactables that stop a walker, are corners
- * alike.
+ * alike. The living `monsters` are not: they move, so the hero is not helped round them, but the slide stops flush
+ * against them as it does against everything solid, and never ends with the hero overlapping any of them.
  */
 function slideRoundCorner(
   area: Area,
@@ -64,6 +63,7 @@ function slideRoundCorner(
   direction: Direction,
   unspent: number,
   fixtures: readonly Box[],
+  monsters: readonly Box[],
 ): Point {
   const body = boxAround(position, size);
   const inTheWay = [...solidTilesAround(area, body, unspent), ...fixtures].filter((box) => {
@@ -79,7 +79,7 @@ function slideRoundCorner(
   if (shift > size * SLIDE_LIMIT + EPSILON) {
     return position;
   }
-  return moveBody(area, position, size, side, Math.min(shift, unspent), []);
+  return moveBody(area, position, size, side, Math.min(shift, unspent), [...monsters, ...fixtures]);
 }
 
 /** How far a body has to move to one side to be clear of every one of the boxes. */

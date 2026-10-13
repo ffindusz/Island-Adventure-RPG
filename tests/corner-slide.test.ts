@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { ContentDefinition, Game, GameEvent, InteractableDefinition, Point } from '../src/core';
+import type { ContentDefinition, Game, GameEvent, InteractableDefinition, MonsterPlacement, Point } from '../src/core';
 import {
   advance,
   arena,
   chestAt,
   doorAt,
+  dummyAt,
   gameAtTitle,
   gateAt,
   keyAt,
@@ -117,21 +118,31 @@ const REAL_HERO = { size: 0.75, speedTilesPerSecond: 5 };
 
 const FLUSH_ABOVE_THING = 3.625;
 
-/** The yard with the terrain `symbol` on the tile (4, 4), and the interactables that are given. */
-function yardWith(symbol: string, interactables: readonly InteractableDefinition[] = []): ContentDefinition {
+/** The yard with the terrain `symbol` on the tile (4, 4), and the interactables and monsters that are given. */
+function yardWith(
+  symbol: string,
+  interactables: readonly InteractableDefinition[] = [],
+  monsters: readonly MonsterPlacement[] = [],
+): ContentDefinition {
   const layout = Array.from({ length: 9 }, (_, row) => {
     if (row === 0 || row === 8) {
       return '#########';
     }
     return row === 4 ? `#...${symbol}...#` : '#.......#';
   });
-  return arena({ layout, interactables, hero: REAL_HERO });
+  return arena({ layout, interactables, monsters, hero: REAL_HERO });
 }
 
-/** A game of the content with the hero put at a place, as a save would put it there. */
-function heroPutAt(content: ContentDefinition, position: Point): Game {
+/** A game of the content with the hero, and the monsters by their ids, put at places as a save would put them there. */
+function putAt(content: ContentDefinition, hero: Point, monsters: Readonly<Record<string, Point>> = {}): Game {
   const snapshot = newGame(content).snapshot();
-  snapshot.state.hero.position = { ...position };
+  snapshot.state.hero.position = { ...hero };
+  for (const monster of snapshot.state.areas['arena']?.monsters ?? []) {
+    const place = monsters[monster.id];
+    if (place !== undefined) {
+      monster.position = { ...place };
+    }
+  }
   const game = gameAtTitle(content);
   game.send({ type: 'continue', snapshot });
   return game;
@@ -167,7 +178,7 @@ describe.each(THINGS)('the hero in front of $what', ({ content, used }) => {
   it('slides round its corner when its middle is over the gap beside it', () => {
     // The middle at x = 5.175: the body runs from 4.8 to 5.55 and overlaps the thing by 0.2 tile. The slide takes
     // 0.2 / (1/12) = 2.4 steps, two whole ones and 0.0333 tile, to x = 5.375, and the hero walks down from the fourth.
-    const game = heroPutAt(content(), { x: 5.175, y: FLUSH_ABOVE_THING });
+    const game = putAt(content(), { x: 5.175, y: FLUSH_ABOVE_THING });
 
     game.send({ type: 'move', direction: 'down' });
     advance(game, 3);
@@ -178,7 +189,7 @@ describe.each(THINGS)('the hero in front of $what', ({ content, used }) => {
 
   it('walks head-on up to it and stays flush in front of it, so that Interact reaches it as it did', () => {
     // From (4.5, 2.5) it takes 13.5 steps to get to y = 3.625, and it stays there for the rest of the 40.
-    const game = heroPutAt(content(), { x: 4.5, y: 2.5 });
+    const game = putAt(content(), { x: 4.5, y: 2.5 });
 
     walk(game, 'down', 40);
 
@@ -186,5 +197,52 @@ describe.each(THINGS)('the hero in front of $what', ({ content, used }) => {
     if (used !== undefined) {
       expect(game.send({ type: 'interact' }).map((event) => event.type)).toContain(used);
     }
+  });
+});
+
+// A slide never goes into anything solid, and a living monster is solid for it. A dummy never moves or attacks, so
+// that it stands where the test puts it. It is half a tile wide, and it stands with its middle at y = 3.5 at the side of
+// the hero, whose body runs from y = 3.25 to 4 when it is flush above the rock, so that they are in one row.
+
+describe('the hero in front of a rock, with a monster at the side it would slide to', () => {
+  const content = (): ContentDefinition => yardWith('#', [], [dummyAt('dummy', 1, 1)]);
+
+  it('is left where it was by a monster that stands against that side of it, and the slide does not move it at all', () => {
+    // The middle at x = 5.125: the body runs from 4.75 to 5.5 and overlaps the rock by 0.25, which is a slide to the
+    // right. The dummy's left edge is at x = 5.5, where the right edge of the hero is: there is no room to slide.
+    const game = putAt(content(), { x: 5.125, y: FLUSH_ABOVE_THING }, { dummy: { x: 5.75, y: 3.5 } });
+
+    game.send({ type: 'move', direction: 'down' });
+    for (let step = 0; step < 120; step++) {
+      game.step();
+      expectHeroAt(game, 5.125, FLUSH_ABOVE_THING);
+    }
+  });
+
+  it('slides as far as the monster lets it, and stops flush against it', () => {
+    // The dummy's left edge is at x = 5.625, an eighth of a tile from the right edge of the hero: the slide is cut
+    // short at x = 5.125 + 0.125 = 5.25, after one whole step and half of the next.
+    const game = putAt(content(), { x: 5.125, y: FLUSH_ABOVE_THING }, { dummy: { x: 5.875, y: 3.5 } });
+
+    game.send({ type: 'move', direction: 'down' });
+    advance(game, 1);
+    expectHeroAt(game, 5.125 + STEP, FLUSH_ABOVE_THING);
+    for (let step = 0; step < 120; step++) {
+      game.step();
+      expectHeroAt(game, 5.25, FLUSH_ABOVE_THING);
+    }
+  });
+});
+
+describe('the hero that walks into a monster', () => {
+  it('is not helped round it: a monster moves, so it is not a corner, and the hero stays flush against it', () => {
+    // The dummy stands with its middle at (5, 4.75), so that its body runs from x = 4.75 to 5.25 and from y = 4.5 to
+    // 5. The hero walks down from (5.4, 3) with its body from x = 5.025 to 5.775, which overlaps the dummy by 0.225 and
+    // would clear it by sliding right, if a monster were a corner. It is stopped with its middle at y = 4.5 - 0.375.
+    const game = putAt(yardWith('.', [], [dummyAt('dummy', 1, 1)]), { x: 5.4, y: 3 }, { dummy: { x: 5, y: 4.75 } });
+
+    walk(game, 'down', 120);
+
+    expectHeroAt(game, 5.4, 4.125);
   });
 });
