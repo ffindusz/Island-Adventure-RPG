@@ -8,6 +8,7 @@ import type { GameAudio } from './audio';
 import { effectsOfFrame, fightAfter } from './audio-manifest';
 import { callsForSave } from './autosave';
 import { scrollFor } from './camera';
+import { ControlsLine, ControlsLineTime } from './controls-line';
 import { departureAnswer } from './departure-menu';
 import { DEPTH } from './depths';
 import { Fall, FALL_FADE_OUT_MS } from './fall';
@@ -51,10 +52,11 @@ function playerIsWatching(): boolean {
  * It also saves the game when the hero touches a Checkpoint or comes into another area (autosave.ts), and takes the
  * player back to the title when the core has gone back to it, or on to the ending when it went back because the hero
  * sailed home (ending-scene.ts), which saves nothing. A New Game starts with the card of the opening: until the
- * player presses Enter, the game is held and nothing but the card is on the screen (opening-card.ts). The scene is
- * started again for every game of a session, so what it keeps from one is made anew in `init`. It tells the audio
- * service what the frame's events sound like and which place the music is for (audio.ts), and polls the keys of the
- * audio in every frame, the card, the falls and the pages included.
+ * player presses Enter, the game is held and nothing but the card is on the screen (opening-card.ts). For a few seconds
+ * after the card is gone, or after a saved game is continued, a short line says that H shows the controls
+ * (controls-line.ts); nothing of it is saved. The scene is started again for every game of a session, so what it keeps
+ * from one is made anew in `init`. It tells the audio service what the frame's events sound like and which place the
+ * music is for (audio.ts), and polls the keys of the audio in every frame, the card, the falls and the pages included.
  */
 export class PlayScene extends GameScene {
   private readonly core: Game;
@@ -63,6 +65,8 @@ export class PlayScene extends GameScene {
   private readonly areas: readonly AreaDefinition[];
   private clock!: FixedStepClock;
   private feedback!: Feedback;
+  /** How long the line that says H FOR CONTROLS has left (controls-line.ts): made anew for every game, so each shows it. */
+  private controlsLineTime!: ControlsLineTime;
   private readonly inventoryMenu = new InventoryMenu();
   private heroSprite!: HeroSprite;
   private pickupRiseSprites!: PickupRiseSprites;
@@ -72,6 +76,7 @@ export class PlayScene extends GameScene {
   private hud!: Hud;
   private banner!: AreaBanner;
   private notice!: Notice;
+  private controlsLine!: ControlsLine;
   private overlay!: Overlay;
   private automapPage!: AutomapPage;
   private terrainLayer!: Phaser.GameObjects.Graphics;
@@ -105,9 +110,11 @@ export class PlayScene extends GameScene {
 
   init(start: PlayStart): void {
     // A game that follows another in the same session (the title is reached again after the ending) starts with no time
-    // owed to the steps, nothing of the last game's flashes and notice left on the screen, and no fight on.
+    // owed to the steps, nothing of the last game's flashes and notice left on the screen, no fight on, and the line that
+    // says H FOR CONTROLS to show again.
     this.clock = new FixedStepClock();
     this.feedback = new Feedback();
+    this.controlsLineTime = new ControlsLineTime();
     this.saveAtOnce = start.saveAtOnce === true;
     this.openingLines = start.opening ?? [];
     this.fight = false;
@@ -121,8 +128,9 @@ export class PlayScene extends GameScene {
     // monster attacks, then the flat shapes of what has no picture yet, then the monsters of final art, what they shoot,
     // and the hero and its arrows, which are sprites too, and the strikes of the monsters above those, and above them the
     // picture of what the hero just picked up, rising over its head. The HUD draws above them all, then the text of the
-    // area, the notice above that, and the overlay above that, which shares its place with the Automap page. The world
-    // scrolls with the camera; the HUD, the text, the notice, the overlay and the Automap page do not.
+    // area, the line that says H FOR CONTROLS, the notice above that, and the overlay above that, which shares its place
+    // with the Automap page. The world scrolls with the camera; the HUD, the text, the line, the notice, the overlay and
+    // the Automap page do not.
     this.terrainLayer = this.add.graphics();
     this.groundImage = this.add.image(0, 0, '__WHITE').setOrigin(0, 0).setVisible(false);
     this.drawnAreaId = null;
@@ -139,6 +147,7 @@ export class PlayScene extends GameScene {
     this.hud = new Hud(this);
     this.banner = new AreaBanner(this);
     this.notice = new Notice(this);
+    this.controlsLine = new ControlsLine(this);
     this.overlay = new Overlay(this);
     this.automapPage = new AutomapPage(this, this.areas);
     this.useKeyboard('control the hero');
@@ -229,6 +238,7 @@ export class PlayScene extends GameScene {
     // A page or the question about sailing home covers the notice, and the player is already where it pointed them. What
     // the frame itself told, such as the bow of the monster whose defeat also raised the Level, waits for the Stat Point.
     this.feedback.setWaiting(gameIsWaiting(view));
+    this.showControlsLine(view, frameMs, watching);
     this.draw(view, watching, time);
     if (view.phase === 'playing') {
       this.lastPlaying = view;
@@ -236,6 +246,18 @@ export class PlayScene extends GameScene {
     // After the fall above, which keeps the music of the place the hero fell in until it is over, and so after the frame in
     // which the hero was defeated.
     this.playMusicFor(view);
+  }
+
+  /**
+   * Lets the frame's time pass for the line that says H FOR CONTROLS and shows it, or takes it off the screen. Only a
+   * frame of the game that runs comes here, so the frames of the opening card and of a fall take nothing from the line.
+   * Opening the Controls page ends it for good, for the player has found the page. It reads no key and holds nothing back.
+   */
+  private showControlsLine(view: PlayingView, frameMs: number, watching: boolean): void {
+    if (view.page?.id === 'controls') {
+      this.controlsLineTime.dismiss();
+    }
+    this.controlsLine.draw(this.controlsLineTime.frame(frameMs, { watching, waiting: gameIsWaiting(view) }));
   }
 
   /** Asks for the music of the place the hero is in: the area's own, or the fight's while the fight is on. */

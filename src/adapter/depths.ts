@@ -3,8 +3,8 @@
 // monsters' attacks come over those, so that nothing hides one, then the flat shapes of what has no picture yet (the
 // monsters of an area whose art is not final, the gates, the levers), then the monsters of final art. Over the world
 // come the parts of the play screen that are fixed to the screen, each over the one before: the HUD, the text of an
-// area, the notice, the pages of the overlay and the card of the opening. The title and the ending are scenes of their
-// own, and the audio line, whose keys work on every screen, is over all of them.
+// area, the line that says H FOR CONTROLS, the notice, the pages of the overlay and the card of the opening. The title
+// and the ending are scenes of their own, and the audio line, whose keys work on every screen, is over all of them.
 export const DEPTH = {
   /** The marks of the way out, painted on the ground. */
   exit: 1,
@@ -35,6 +35,8 @@ export const DEPTH = {
   hud: 100,
   /** The text of an Adventure Area, over the HUD and under the notice. */
   areaBanner: 120,
+  /** The line that says H FOR CONTROLS when play begins: over the HUD and the text of an area, under the notice and every page. */
+  controlsLine: 130,
   /** The notice of what the hero found or touched, over the HUD and the banner and under every page. */
   notice: 150,
   /**

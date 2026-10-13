@@ -96,6 +96,24 @@ export function pageCloseHint(page: PageId): string {
   return `${joinedPageKeyLabels(page)} OR ${closePageKeyLabel()} TO CLOSE`;
 }
 
+/**
+ * The short line that shows for a few seconds when play begins, to say which key shows the controls: "H FOR CONTROLS".
+ * It is made from the table of the keys, so that a key that is changed changes the line. It is not the foot of a page: a
+ * page that is open takes no other page's key, so a foot that said it would name a key that does nothing there.
+ */
+export function controlsLineText(): string {
+  return `${pageKeyLabel('controls')} FOR CONTROLS`;
+}
+
+/**
+ * The line of the opening's card under the hint to begin, to say which key shows the controls: "IN PLAY, H SHOWS THE
+ * CONTROLS". The card holds the game and takes only the key to begin, so the line says what the key does once play has
+ * begun and does not say that it works at the card. It is made from the table of the keys, as `controlsLineText` is.
+ */
+export function openingControlsHint(): string {
+  return `IN PLAY, ${pageKeyLabel('controls')} SHOWS THE CONTROLS`;
+}
+
 /** The keys that assign a Stat Point to each stat, number row and keypad alike, and the label the player reads. */
 export const STAT_KEYS: Readonly<Record<StatId, { readonly label: string; readonly keys: readonly string[] }>> = {
   health: { label: '1', keys: ['ONE', 'NUMPAD_ONE'] },
