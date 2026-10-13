@@ -221,7 +221,10 @@ const PLAY_OF_THE_GUARDIAN = { reactionMs: 450, missEvery: 3, drinkAtShare: DRIN
 
 let attempt: FightResult | undefined;
 
-/** One fight with the Guardian as that player plays it, for a hero of the main route that has the potions it spares. */
+/**
+ * One fight with the Guardian as that player plays it, for a hero of the main route that has the potions of the
+ * fixture (`POTIONS_SPARED`).
+ */
 export function guardianAttempt(): FightResult {
   if (attempt === undefined) {
     const hero = mainRouteHero(SPLITS.balanced, POTIONS_SPARED);
