@@ -26,6 +26,7 @@ const PLAY_SCREEN: readonly Part[] = [
   'pickupRise',
   'hud',
   'areaBanner',
+  'controlsLine',
   'notice',
   'overlay',
   'openingCard',
