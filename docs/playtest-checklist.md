@@ -95,9 +95,15 @@ page names the keys that close it (C/TAB, I, M or H, then Esc) and is all on the
 
 ## A defeat and its recovery
 
+- [ ] **A Checkpoint does not heal.** Get hurt (a crab will do), then go on to the woods: its Checkpoint is at the way
+      in, so arriving touches it. The notice says CHECKPOINT and DEFEAT SENDS YOU BACK HERE, with no word about Health,
+      the chime plays, and the Health on the HUD is what it was. Walk back onto the coast's Checkpoint: still no heal.
+      Drink a Healing Potion (I, Down, Enter): +5, never over the maximum. Spend a Stat Point on Health: the Health
+      rises by what it adds.
 - [ ] Let a tougher fight (the veteran, the bear, the knight) beat you once. You wake at the last Checkpoint with full
       Health, the monsters of that area are back at full Health, and the potions and arrows are what you had there.
       Level, Gear, opened chests and solved puzzles stay. Was the way back fair, and not too long?
+- [ ] With no Health from a Checkpoint, is the route too hard now? Where do you run short of potions?
 
 ## Saving and Continue
 
@@ -196,8 +202,9 @@ clock says.
 Tick one when you accept it as it is; otherwise write what to change.
 
 - [ ] **Numbers made without a playtest:** the thresholds (Levels at 10, 25, 45, 70 and 100 Experience); the Guardian's
-      numbers; six Healing Potions left for the Guardian, which its simulation counts on; the sound's base volumes,
-      the default volume and cutting a track off instead of fading it. A bot cannot judge how a fight feels.
+      numbers; six Healing Potions and full Health at the Guardian, which its simulation counts on and a hero that never
+      dodges does not bring there (docs/balance.md, "The supplies"); the sound's base volumes, the default volume and
+      cutting a track off instead of fading it. A bot cannot judge how a fight feels.
 - [ ] **Autosave when the Guardian falls** is taken before the Stat Point is spent, so Continue asks for it again.
 - [ ] **One Checkpoint** each in the mountain, the cave and the castle, plus the Guardian's (the ways back are above).
       Do you want a second one in the castle? That is a map change, and nothing was done about it.
