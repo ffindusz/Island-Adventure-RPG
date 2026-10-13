@@ -95,7 +95,15 @@ export type Command =
    * the game is at the title afterwards: there is no postgame, and everything but new-game and continue is ignored.
    * The core writes nothing, so what was saved before is as it was. Ignored when no question is open, and at the title.
    */
-  | { readonly type: 'confirm-departure' };
+  | { readonly type: 'confirm-departure' }
+  /**
+   * Put away the text of an Adventure Area or of a sign that shows: `areaText` of the view is null afterwards. The
+   * caller sends it when the player presses a key, and tells nothing of it. It works while the game is paused, a page
+   * open, a Stat Point to assign or the question whether to sail home, so that the text does not come back when that
+   * ends. Ignored at the title, and when no text shows. It changes nothing else: the text of an area still shows once,
+   * the first time the hero is in the area, and a sign read again shows its text again, for its whole time.
+   */
+  | { readonly type: 'dismiss-area-text' };
 
 /** Something that happened, for the adapter to show or play. Events never carry rules; the state view is the truth. */
 export type GameEvent =
@@ -204,9 +212,9 @@ export type GameEvent =
    */
   | { readonly type: 'stat-point-assigned'; readonly stat: StatId }
   /**
-   * The hero came onto this Checkpoint. It is the one defeat sends the hero back to now, and the hero's Health is
-   * restored to full. Nothing else changes: the Ammunition and the Healing Potions the hero has stay as they are, and
-   * they are what defeat gives back later, along with the pickups and the caches taken so far.
+   * The hero came onto this Checkpoint. It is the one defeat sends the hero back to now. It gives no Health back: the
+   * hero's Health stays as it is, and so do the Ammunition and the Healing Potions the hero has, and they are what
+   * defeat gives back later, along with the pickups and the caches taken so far.
    */
   | { readonly type: 'checkpoint-activated'; readonly checkpointId: string }
   /**
@@ -565,7 +573,10 @@ export interface PlayingView {
   readonly exits: readonly ExitView[];
   /** The Checkpoints of the Adventure Area the hero is in, in the order the content places them. */
   readonly checkpoints: readonly CheckpointView[];
-  /** The short text of the Adventure Area while it is shown: for a few seconds after the hero first comes in. */
+  /**
+   * The short text across the top of the screen: that of the Adventure Area for a few seconds after the hero first comes
+   * in, or that of a sign the hero has read. It is null when the time is up, or when `dismiss-area-text` put it away.
+   */
   readonly areaText: string | null;
   readonly hero: HeroView;
   /** The hero's Level and Experience progress, so that they can be shown without opening the stat page. */

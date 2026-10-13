@@ -42,6 +42,16 @@ are in `docs/balance.md`, the keys in the README.
       open and is back, with the time it had left, when you close the page. Press H while it shows: the Controls page
       opens and the line is gone for good, also after you close the page. A pickup's notice, low on the screen, never
       meets it. Reload and choose Continue: it shows again, and so it does for the New Game that follows the credits.
+- [ ] **A key puts the text of an area away** (the banner of an area and the text of a sign): after the card the banner
+      of the coast shows, and the Enter that ended the card did not put it away. Press a walk key: the banner goes at once
+      and the hero walks. Start again and press nothing: it goes by itself after about four seconds. Space strikes and
+      puts it away, N shows the line of the audio and puts it away, and so does a key the game does not use. Press I
+      while it shows: it is gone, and does not come back when the inventory closes. Walk through an exit with a walk key
+      held: the banner of the new area shows and stays while you hold the key, and goes when you press another. Read a
+      sign with E: its text shows; a walk key puts it away; read it again and it shows whole. Press E at the sign while
+      its text shows: the sign is read again and the text shows afresh. Hold Ctrl and press A while a banner shows: it
+      stays. The line H FOR CONTROLS is not put away by any of them. Is the banner quick to clear, and does it ever go
+      when you did not mean it to?
 
 ## The five areas, in the order of the route
 
@@ -114,6 +124,8 @@ the pause" and "Saving, Continue and the title").
 - [ ] Esc with the inventory, the stat page, the Automap or the Controls page open closes it and does not pause; a
       second Esc pauses. At SAIL HOME? Esc declines it, and a second Esc pauses. With a Stat Point to assign, in the card
       of the opening and in a fall, Esc does nothing.
+- [ ] With the text of an area up (just after the card of the opening) a single Esc puts the text away and pauses;
+      after RESUME the text is not back.
 - [ ] On the paused screen: CONTROLS shows the list (its Esc line says PAUSE OR CLOSE A PAGE), and Esc or Enter closes it
       with the cursor on Controls and the game still paused. NEW GAME asks START A NEW GAME?, says that the game in play
       is lost (and that the saved game is replaced, when there is one); Esc goes back with RESUME still working, and
@@ -128,9 +140,15 @@ the pause" and "Saving, Continue and the title").
 
 ## A defeat and its recovery
 
+- [ ] **A Checkpoint does not heal.** Get hurt (a crab will do), then go on to the woods: its Checkpoint is at the way
+      in, so arriving touches it. The notice says CHECKPOINT and DEFEAT SENDS YOU BACK HERE, with no word about Health,
+      the chime plays, and the Health on the HUD is what it was. Walk back onto the coast's Checkpoint: still no heal.
+      Drink a Healing Potion (I, Down, Enter): +5, never over the maximum. Spend a Stat Point on Health: the Health
+      rises by what it adds.
 - [ ] Let a tougher fight (the veteran, the bear, the knight) beat you once. You wake at the last Checkpoint with full
       Health, the monsters of that area are back at full Health, and the potions and arrows are what you had there.
       Level, Gear, opened chests and solved puzzles stay. Was the way back fair, and not too long?
+- [ ] With no Health from a Checkpoint, is the route too hard now? Where do you run short of potions?
 
 ## Saving and Continue
 
@@ -230,8 +248,9 @@ clock says.
 Tick one when you accept it as it is; otherwise write what to change.
 
 - [ ] **Numbers made without a playtest:** the thresholds (Levels at 10, 25, 45, 70 and 100 Experience); the Guardian's
-      numbers; six Healing Potions left for the Guardian, which its simulation counts on; the sound's base volumes,
-      the default volume and cutting a track off instead of fading it. A bot cannot judge how a fight feels.
+      numbers; six Healing Potions and full Health at the Guardian, which its simulation counts on and a hero that never
+      dodges does not bring there (docs/balance.md, "The supplies"); the sound's base volumes, the default volume and
+      cutting a track off instead of fading it. A bot cannot judge how a fight feels.
 - [ ] **Autosave when the Guardian falls** is taken before the Stat Point is spent, so Continue asks for it again.
 - [ ] **One Checkpoint** each in the mountain, the cave and the castle, plus the Guardian's (the ways back are above).
       Do you want a second one in the castle? That is a map change, and nothing was done about it.

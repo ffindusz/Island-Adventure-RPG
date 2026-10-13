@@ -6,9 +6,9 @@ import { HUD_BOTTOM } from './hud';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import { INK, PANEL_ALPHA, UiLayer } from './ui-layer';
 
-// The text of an Adventure Area, across the top of the screen for a few seconds after the hero first comes in. It is
-// drawn from the text the Game core's view carries, and the core also decides how long it stays: the banner is
-// see-through and takes no input, so it never gets in the way of play.
+// The text of an Adventure Area, across the top of the screen for a few seconds after the hero first comes in, or until
+// a key puts it away. It is drawn from the text the Game core's view carries, and the core also decides how long it
+// stays: the banner is see-through and takes no input, so it never gets in the way of play.
 
 const SIDE_MARGIN = 6;
 /** From the panel's edge, whose frame is 3 pixels wide, to the text. */

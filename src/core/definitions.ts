@@ -501,8 +501,8 @@ export interface ExitDestination {
 }
 
 /**
- * A safe place the hero activates by touching it: it restores the hero's Health and records where defeat sends the
- * hero back to (see checkpoints.ts). It fills one tile and is not solid.
+ * A safe place the hero activates by touching it: it records where defeat sends the hero back to (see checkpoints.ts)
+ * and gives no Health back. It fills one tile and is not solid.
  */
 export interface CheckpointDefinition {
   /** Unique across all Adventure Areas: events refer to the Checkpoint by it. */
@@ -578,7 +578,7 @@ export interface ContentDefinition {
   /** Every piece of Gear in the game, by id: what the hero starts with, and what is waiting to be found. */
   readonly gear: Readonly<Record<string, GearDefinition>>;
   readonly monsterTypes: Readonly<Record<string, MonsterTypeDefinition>>;
-  /** How long the text of an Adventure Area stays on screen, in milliseconds. Leave it out for the default of 4000. */
+  /** How long the text of an Adventure Area stays on screen, in milliseconds, unless a key puts it away. Leave it out for the default of 4000. */
   readonly areaTextMs?: number;
   /**
    * The opening: a short card the player reads once, as a new game begins and before the hero can move. Its lines, from

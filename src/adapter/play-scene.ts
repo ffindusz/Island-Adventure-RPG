@@ -1,6 +1,8 @@
 import type Phaser from 'phaser';
 import type { AreaDefinition, Command, Game, GameEvent, GameView, PlayingView } from '../core';
 import { AreaBanner } from './area-banner';
+import { dismissalFirst } from './area-text-dismissal';
+import type { DismissalWatch } from './area-text-dismissal';
 import { drawMonster, drawStrike, drawTelegraph, drawTerrain } from './art';
 import { hasFinalArt } from './artwork';
 import { AutomapPage } from './automap-page';
@@ -58,6 +60,9 @@ function playerIsWatching(): boolean {
  * (controls-line.ts); nothing of it is saved. The scene is started again for every game of a session, so what it keeps
  * from one is made anew in `init`. It tells the audio service what the frame's events sound like and which place the
  * music is for (audio.ts), and polls the keys of the audio in every frame, the card, the falls and the pages included.
+ * The first press of any key puts away the text of an area: the watch of the presses (area-text-dismissal.ts) tells the
+ * frame, which sends the dismissal ahead of its other commands, and what is pressed during the card or a fall is thrown
+ * away.
  *
  * A fresh press of Esc in a frame in which the game ran from its start to its end, with nothing in it to wait for, puts
  * the game away (pausing.ts): the walk keys are let go in the core, the title is started as the paused screen, and no
@@ -103,6 +108,8 @@ export class PlayScene extends GameScene {
   private openingLines: readonly string[] = [];
   /** The card of the opening while it shows: no step runs and no key but Enter counts until the player ends it. */
   private card: OpeningCard | null = null;
+  /** Whether a press that puts away the text of an area came since the last frame (area-text-dismissal.ts): made with the scene. */
+  private presses!: DismissalWatch;
   /** Whether the fight with the Guardian is on, which the music of the fight plays for (audio-manifest.ts, `fightAfter`). */
   private fight = false;
 
@@ -158,6 +165,7 @@ export class PlayScene extends GameScene {
     this.overlay = new Overlay(this);
     this.automapPage = new AutomapPage(this, this.areas);
     this.useKeyboard('control the hero');
+    this.presses = this.watchPresses('control the hero');
     this.card = this.openingLines.length > 0 ? new OpeningCard(this, this.openingLines) : null;
   }
 
@@ -185,17 +193,22 @@ export class PlayScene extends GameScene {
     };
     const viewAtStart = this.core.view();
     const waiting = gameIsWaiting(viewAtStart);
+    // What the keys call for, in the order it is sent in. The dismissal of the text of an area goes ahead of all of it when
+    // a press counted (area-text-dismissal.ts), so that the text is gone before the rest runs: the Interact that reads a
+    // sign puts the sign's text up after it, and that text stays. The key does what it did as well.
+    const commands: Command[] = [];
     if (!waiting) {
-      send(this.playerInput.pollWalking());
+      commands.push(...this.playerInput.pollWalking());
     }
     const menu = this.playerInput.pollMenu();
-    send(this.inventoryMenu.update(viewAtStart, menu));
+    commands.push(...this.inventoryMenu.update(viewAtStart, menu));
     const actions = this.playerInput.pollActionsWithEsc();
-    send(actions.commands);
+    commands.push(...actions.commands);
     // After the actions, so that Esc, which declines the question, goes first and the core then ignores an Enter that
     // answers it in the same frame. Decided from the view before the commands, so that the Interact that opens the
     // question cannot be answered by an Enter pressed with it.
-    send(departureAnswer(viewAtStart, menu));
+    commands.push(...departureAnswer(viewAtStart, menu));
+    send(dismissalFirst(commands, this.presses.take()));
     if (waiting && !gameIsWaiting(this.core.view())) {
       // The wait ended just now. The walk keys were left alone during it, so the hero walks by the keys that are down
       // now, from the first step of this frame.
@@ -300,13 +313,15 @@ export class PlayScene extends GameScene {
    * One frame of the opening. The game is held: no step runs, and nothing the player presses reaches it. Enter ends the
    * opening, and the screen fades in on the hero. The walk keys are read again from the next frame, and a New Game is
    * saved even now, so that a tab closed at the card brings back this game and not the old one. The music of the coast
-   * plays under the card.
+   * plays under the card. The text of the coast is in the game while the card shows, and its time starts when the card
+   * ends, so no press of the card puts it away: the Enter that ends the card is thrown away with the rest.
    */
   private holdForOpening(card: OpeningCard): void {
     this.autosave([]);
     this.playMusicFor(this.core.view());
     const { confirm } = this.playerInput.pollMenu();
     this.playerInput.pollActions();
+    this.presses.take();
     if (confirm) {
       card.hide();
       this.card = null;
@@ -339,9 +354,11 @@ export class PlayScene extends GameScene {
 
   /** One frame of a fall: the world stands still with the hero lying in it, and at the end the screen fades out. */
   private showFall(fall: Fall, frameMs: number, watching: boolean, time: number): void {
-    // What the player presses meanwhile does not count. The walk keys are read again when the fall is over.
+    // What the player presses meanwhile does not count, and puts away no text that shows when the fall is over. The walk
+    // keys are read again when the fall is over.
     this.playerInput.pollMenu();
     this.playerInput.pollActions();
+    this.presses.take();
     this.letTimePass(frameMs);
     if (fall.stage === 'fading-out' && !this.fadingOut) {
       this.fadingOut = true;
@@ -414,7 +431,8 @@ export class PlayScene extends GameScene {
     }
     this.pickupRiseSprites.draw(this.feedback.pickupRises(), view.hero.position);
     this.hud.draw(view);
-    // A page or a Stat Point covers the text of the area; the core keeps its time frozen, so it is back afterwards.
+    // A page or a Stat Point covers the text of the area, and the core keeps its time frozen. It is back afterwards only if
+    // no press counted meanwhile, and the press that opens or closes a page or assigns a point does count.
     this.banner.draw(gameIsWaiting(view) ? null : view.areaText);
     this.notice.draw(this.feedback.notice());
     this.overlay.draw(view, watching, this.inventoryMenu.position);

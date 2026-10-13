@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { PickedUpItem } from '../core';
-import { consumableIcon, gearIcon, HEART, KEY_ICON } from './artwork';
+import { consumableIcon, gearIcon, KEY_ICON } from './artwork';
 import { ChangeGuard } from './change-guard';
 import { VIEW_HEIGHT, VIEW_WIDTH } from './config';
 import { interactKeyLabel, pageKeyLabel, switchWeaponKeyLabel } from './controls';
@@ -81,11 +81,10 @@ function iconFor(content: NoticeContent): string | null {
       return pickupIcon(content.item);
     case 'out-of-ammunition':
       return consumableIcon('ammunition');
-    case 'checkpoint':
-      return HEART;
     case 'door-locked':
     case 'door-opened':
       return KEY_ICON;
+    case 'checkpoint':
     case 'lever-toggled':
     case 'gate-opened':
     case 'vessel-prepared':
@@ -119,7 +118,7 @@ export function linesFor(content: NoticeContent): Line[] {
     case 'checkpoint':
       return [
         { text: 'CHECKPOINT', colour: TITLE_COLOUR },
-        { text: 'HEALTH FULL', colour: GAIN_COLOUR },
+        { text: 'DEFEAT SENDS YOU BACK HERE', colour: HINT_COLOUR },
       ];
     case 'door-locked':
       return [
