@@ -74,7 +74,7 @@ describe('the list of the controls', () => {
       { keys: 'M', words: 'AUTOMAP' },
       { keys: 'H', words: 'CONTROLS' },
       { keys: 'ENTER', words: 'PICK A LINE, EQUIP' },
-      { keys: 'ESC', words: 'CLOSE A PAGE' },
+      { keys: 'ESC', words: 'PAUSE OR CLOSE A PAGE' },
       { keys: '1 2 3', words: 'PICK A STAT AT LEVEL UP' },
       { keys: 'N', words: 'SOUND ON OR OFF' },
       { keys: '- +', words: 'VOLUME DOWN OR UP' },

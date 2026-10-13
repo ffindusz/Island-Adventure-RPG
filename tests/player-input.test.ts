@@ -281,3 +281,84 @@ describe('Esc', () => {
     ]);
   });
 });
+
+// The same read of the keys that sends the commands of Esc hands the rule of the pause (pausing.ts) its press: Phaser's
+// `JustDown` uses the press up, so a second read of the key in the frame would find none.
+describe('the press of Esc that the rule of the pause is given', () => {
+  const CLOSES_AND_DECLINES = [
+    { type: 'close-page', page: 'stats' },
+    { type: 'close-page', page: 'inventory' },
+    { type: 'close-page', page: 'automap' },
+    { type: 'close-page', page: 'controls' },
+    { type: 'cancel-departure' },
+  ];
+
+  it('is reported once for a fresh Esc, which sends the commands it sent before', () => {
+    const { input, key } = newScreen();
+    key('ESC').down();
+
+    const poll = input.pollActionsWithEsc();
+
+    expect(poll.esc).toEqual({ repeat: false, ctrlKey: false, metaKey: false });
+    expect(poll.commands).toEqual(CLOSES_AND_DECLINES);
+  });
+
+  it('is not reported for the press of a repeat, which still sends the commands of Esc', () => {
+    const { input, key } = newScreen();
+    key('ESC').down(true);
+
+    const poll = input.pollActionsWithEsc();
+
+    expect(poll.esc).toBeNull();
+    expect(poll.commands).toEqual(CLOSES_AND_DECLINES);
+  });
+
+  it.each([
+    ['Ctrl', { ctrlKey: true }],
+    ['Meta', { metaKey: true }],
+  ])('is not reported for an Esc pressed with %s, which still sends the commands of Esc', (_name, modifiers) => {
+    const { input, key } = newScreen();
+    key('ESC').down(false, modifiers);
+
+    const poll = input.pollActionsWithEsc();
+
+    expect(poll.esc).toBeNull();
+    expect(poll.commands).toEqual(CLOSES_AND_DECLINES);
+  });
+
+  it('is not reported when no Esc went down, and sends no command of it', () => {
+    const { input } = newScreen();
+
+    expect(input.pollActionsWithEsc()).toEqual({ commands: [], esc: null });
+  });
+
+  it('is not left over for the next frame, whether the key is held down or let go', () => {
+    const { input, key } = newScreen();
+    key('ESC').down();
+    expect(input.pollActionsWithEsc().esc).not.toBeNull();
+
+    key('ESC').down(true);
+    expect(input.pollActionsWithEsc().esc).toBeNull();
+    key('ESC').up();
+    expect(input.pollActionsWithEsc().esc).toBeNull();
+  });
+
+  it('is reported again when the key is let go and pressed again', () => {
+    const { input, key } = newScreen();
+    key('ESC').down();
+    input.pollActionsWithEsc();
+    key('ESC').up();
+    key('ESC').down();
+
+    expect(input.pollActionsWithEsc().esc).not.toBeNull();
+  });
+
+  it('is taken by pollActions, which the frames of the card and of a fall use and leave unanswered', () => {
+    const { input, key } = newScreen();
+    key('ESC').down();
+
+    expect(input.pollActions()).toEqual(CLOSES_AND_DECLINES);
+
+    expect(input.pollActionsWithEsc().esc).toBeNull();
+  });
+});

@@ -21,6 +21,9 @@ export interface KeyState {
   readonly originalEvent: { readonly repeat: boolean; readonly ctrlKey: boolean; readonly metaKey: boolean };
 }
 
+/** What the browser said of one press of a key: whether it is the repeat of a key held down, and the Ctrl and Cmd keys held with it. */
+export type KeyPress = KeyState['originalEvent'];
+
 /** What the player's input asks of the keyboard: the key by the name Phaser gives it, held back from the browser if `capture`. */
 export interface Keyboard<K extends KeyState> {
   addKey(name: string, capture?: boolean): K;
@@ -35,6 +38,11 @@ export interface MenuInput {
 /** Whether a press is for the game and not for the browser: Ctrl or Cmd with a key is a shortcut, such as Ctrl and minus, which zooms, or Ctrl and Tab, which switches tabs. */
 function isForTheGame(press: KeyState['originalEvent']): boolean {
   return !press.ctrlKey && !press.metaKey;
+}
+
+/** Whether a press is a fresh one for the game: not the repeat of a key held down, and not a browser's shortcut (see `isForTheGame`). */
+export function isFreshPress(press: KeyPress): boolean {
+  return !press.repeat && isForTheGame(press);
 }
 
 /**
@@ -68,6 +76,8 @@ export class PlayerInput<K extends KeyState> {
   private readonly statKeys: readonly { readonly stat: StatId; readonly keys: readonly K[] }[];
   private readonly audioKeys: readonly { readonly change: AudioChange; readonly keys: readonly K[] }[];
   private readonly walking: Record<Direction, boolean> = { up: false, down: false, left: false, right: false };
+  /** The fresh press of Esc that the last `pollActions` took, for `pollActionsWithEsc` to hand on. Set by every call, so none is left over. */
+  private freshEsc: KeyPress | null = null;
 
   constructor(keyboard: Keyboard<K>, justDown: (key: K) => boolean) {
     this.justDown = justDown;
@@ -140,7 +150,9 @@ export class PlayerInput<K extends KeyState> {
         commands.push({ type: 'toggle-page', page });
       }
     }
-    if (this.justDown(this.closePageKey)) {
+    const escWentDown = this.justDown(this.closePageKey);
+    this.freshEsc = escWentDown && isFreshPress(this.closePageKey.originalEvent) ? this.closePageKey.originalEvent : null;
+    if (escWentDown) {
       for (const page of PAGE_IDS) {
         commands.push({ type: 'close-page', page });
       }
@@ -152,6 +164,17 @@ export class PlayerInput<K extends KeyState> {
       }
     }
     return commands;
+  }
+
+  /**
+   * What `pollActions` found, and with it the press of Esc that went down in that same read, if it is a fresh one: not
+   * the repeat of a key held down, and not with Ctrl or Cmd (`isFreshPress`). The press goes to the rule of the pause
+   * (pausing.ts). It is not read from the key a second time, because `JustDown` uses a press up: `pollActions` has taken
+   * it, and sends the commands of Esc whether or not the press is fresh.
+   */
+  pollActionsWithEsc(): { readonly commands: Command[]; readonly esc: KeyPress | null } {
+    const commands = this.pollActions();
+    return { commands, esc: this.freshEsc };
   }
 
   /**

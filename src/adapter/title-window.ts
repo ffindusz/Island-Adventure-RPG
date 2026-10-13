@@ -8,22 +8,30 @@ import { stackHeight, stackRows } from './row-stack';
 import type { RowRules } from './row-stack';
 import type { SavedGame } from './save-store';
 import { windowTop } from './title-layout';
-import { MENU_ENTRIES, selectableEntries } from './title-menu';
+import { MENU_ENTRIES, PAUSED_ENTRIES, selectableEntries } from './title-menu';
 import type { MenuEntry, TitleMenu } from './title-menu';
 import { INK, WINDOW_PADDING } from './ui-layer';
 
 // The window of the title screen, apart from the scene that draws it: what it says in each state of the title, how high
 // it is and where each of its rows goes on the 320 x 192 screen. In every state but one it stands under the name of the
 // game, in the middle of the room that is left (title-layout.ts); while the list of the controls shows, it takes the
-// middle of the whole screen and the name is left out. No Phaser in here.
+// middle of the whole screen and the name is left out. The same window serves the paused screen, the start screen of a
+// game that was put away with Esc: PAUSED and Resume on top of the lines of the title, its own question, and a window a
+// little wider. No Phaser in here.
 
 const MENU_WINDOW_WIDTH = 200;
+/**
+ * The window of the paused screen is wider: the hint that Esc resumes shares a row with the hint of Enter, and that row,
+ * ENTER TO SELECT   ESC TO RESUME, is 185 wide, which the 176 inside the other window do not hold.
+ */
+const PAUSED_WINDOW_WIDTH = 210;
 const ROW_GAP = 4;
 /** A line of the menu is as high as the button behind the line the cursor is on, which is as wide as the line. */
 const ENTRY_HEIGHT = 15;
 const ENTRY_WIDTH = 112;
 
 const ENTRY_LABELS: Readonly<Record<MenuEntry, string>> = {
+  resume: 'RESUME',
   'new-game': 'NEW GAME',
   continue: 'CONTINUE',
   controls: 'CONTROLS',
@@ -82,7 +90,7 @@ function messageRows(saved: SavedGame): Row[] {
 
 function entryRow(entry: MenuEntry, menu: TitleMenu, canContinue: boolean): Row {
   const highlighted = entry === menu.cursor;
-  const available = selectableEntries(canContinue).includes(entry);
+  const available = selectableEntries(canContinue, menu.paused === true).includes(entry);
   return {
     kind: 'entry',
     text: ENTRY_LABELS[entry],
@@ -91,8 +99,60 @@ function entryRow(entry: MenuEntry, menu: TitleMenu, canContinue: boolean): Row 
   };
 }
 
+/** A hint: a row of text in the colour of hints. */
+function hint(text: string): Row {
+  return { kind: 'text', text, colour: INK.hint };
+}
+
+const CHOOSE_HINT = 'W/S OR ARROWS TO CHOOSE';
+
+/** The keys of the sound share a row, so that the window with a message still has room above the line of the audio. */
+function soundKeysHint(): string {
+  return `${audioKeyLabel('toggle-mute')} TO MUTE   ${audioKeyLabel('lower')} OR ${audioKeyLabel('raise')} FOR VOLUME`;
+}
+
+/** Whether the slot of the saved game holds something that the first save of a new game replaces: a saved game, usable or not. */
+function holdsASavedGame(saved: SavedGame): boolean {
+  return saved.status === 'usable' || saved.status === 'unusable';
+}
+
+/**
+ * What the window holds for the paused menu: PAUSED over the lines, then the hints, the one of Enter sharing its row with
+ * the one of Esc. It does not tell of the saved game, for there is no room: Continue is greyed all the same.
+ */
+function pausedMenuRows(menu: TitleMenu, saved: SavedGame): Row[] {
+  return [
+    { kind: 'text', text: 'PAUSED', colour: INK.title },
+    ...PAUSED_ENTRIES.map((entry) => entryRow(entry, menu, saved.status === 'usable')),
+    { kind: 'space', height: 0 },
+    hint(CHOOSE_HINT),
+    hint(`${confirmKeyLabel()} TO SELECT   ${closePageKeyLabel()} TO RESUME`),
+    hint(soundKeysHint()),
+  ];
+}
+
+/**
+ * What the window holds for the question of a New Game on the paused screen: what is lost, the game in play always and the
+ * saved game when there is one, and the key that starts it and the key that keeps the game.
+ */
+function pausedQuestionRows(saved: SavedGame): Row[] {
+  return [
+    ...message(
+      'START A NEW GAME?',
+      'THE GAME IN PLAY IS LOST.',
+      ...(holdsASavedGame(saved) ? ['THE SAVED GAME IS REPLACED.'] : []),
+    ),
+    { kind: 'space', height: 0 },
+    { kind: 'text', text: `${confirmKeyLabel()} TO START A NEW GAME`, colour: INK.text },
+    { kind: 'text', text: `${closePageKeyLabel()} TO KEEP THE GAME`, colour: INK.text },
+  ];
+}
+
 /** What the window holds for the menu and the saved game as they stand, under the name of the game. */
 function menuRows(menu: TitleMenu, saved: SavedGame): Row[] {
+  if (menu.paused === true) {
+    return menu.confirming ? pausedQuestionRows(saved) : pausedMenuRows(menu, saved);
+  }
   if (menu.confirming) {
     return [
       { kind: 'text', text: 'REPLACE THE SAVED GAME?', colour: INK.warning },
@@ -107,16 +167,7 @@ function menuRows(menu: TitleMenu, saved: SavedGame): Row[] {
   if (messages.length > 0) {
     rows.push(...messages, { kind: 'space', height: 0 });
   }
-  // The keys of the sound share a row, so that the window with a message still has room above the line of the audio.
-  rows.push(
-    { kind: 'text', text: 'W/S OR ARROWS TO CHOOSE', colour: INK.hint },
-    { kind: 'text', text: `${confirmKeyLabel()} TO SELECT`, colour: INK.hint },
-    {
-      kind: 'text',
-      text: `${audioKeyLabel('toggle-mute')} TO MUTE   ${audioKeyLabel('lower')} OR ${audioKeyLabel('raise')} FOR VOLUME`,
-      colour: INK.hint,
-    },
-  );
+  rows.push(hint(CHOOSE_HINT), hint(`${confirmKeyLabel()} TO SELECT`), hint(soundKeysHint()));
   return rows;
 }
 
@@ -174,7 +225,8 @@ interface WindowShape {
 
 /** The menu, or the question that stands in for it: under the name of the game, in the middle of the room that is left. */
 function menuShape(menu: TitleMenu, saved: SavedGame): WindowShape {
-  return { rows: menuRows(menu, saved), width: MENU_WINDOW_WIDTH, topOf: windowTop, showsName: true };
+  const width = menu.paused === true ? PAUSED_WINDOW_WIDTH : MENU_WINDOW_WIDTH;
+  return { rows: menuRows(menu, saved), width, topOf: windowTop, showsName: true };
 }
 
 /** The list of the controls: as wide as the list and its padding, in the middle of the whole screen, with no name over it. */
@@ -205,7 +257,8 @@ function placeWindow({ rows, width, topOf, showsName }: WindowShape): TitleWindo
 
 /**
  * The window of the title for the menu and the saved game as they stand. The list of the controls is the same whatever
- * the saved game says, and so is every other window of the menu that does not tell of it.
+ * the saved game says, and so is every other window of the menu that does not tell of it. The paused screen tells of it
+ * only in its question, which says whether a saved game is replaced.
  */
 export function layoutTitleWindow(menu: TitleMenu, saved: SavedGame): TitleWindow {
   return placeWindow(menu.showingControls ? listShape(layoutControlsList(controlsList())) : menuShape(menu, saved));

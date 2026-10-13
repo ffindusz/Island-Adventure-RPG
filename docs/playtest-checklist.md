@@ -103,6 +103,41 @@ page names the keys that close it (C/TAB, I, M or H, then Esc) and is all on the
       line and Enter drinks one: Health rises by 5 at most (never above the maximum) and the count falls by one. At
       full Health nothing happens and no potion is used up.
 
+## Pausing with Esc
+
+Esc in play with nothing open puts the game away and shows the start screen as the paused screen (the README, "Pages and
+the pause" and "Saving, Continue and the title").
+
+- [ ] Start a New Game, let the card go and press Esc: the start screen shows PAUSED over RESUME, NEW GAME, CONTINUE and
+      CONTROLS, with the cursor on RESUME (with a saved game too), the hint ENTER TO SELECT   ESC TO RESUME, the music
+      of the title and nothing moving behind it. Continue is greyed with no save.
+- [ ] Enter on RESUME, and also Esc (try both), brings the game back as it was: no card, the music of the place, the
+      same Health, place and monsters, and the line H FOR CONTROLS only if its four seconds were not spent, with the
+      time it had left.
+- [ ] Pause and resume ten times in a row: every Esc works, and nothing is different after the tenth.
+- [ ] Hold Esc for a few seconds on the play screen: one pause and no flicker. Hold it again on the paused screen: one
+      resume and no second pause.
+- [ ] Hold a walk key, press Esc, let the key go on the paused screen and resume: the hero stands still, and walks
+      again when the key is pressed. Hold a key through the pause and the resume: the hero walks on, from the first
+      repeat of the key. Hold up and then right so that the hero faces right, pause and resume with the keys let go: the
+      hero still faces right.
+- [ ] Esc with the inventory, the stat page, the Automap or the Controls page open closes it and does not pause; a
+      second Esc pauses. At SAIL HOME? Esc declines it, and a second Esc pauses. With a Stat Point to assign, in the card
+      of the opening and in a fall, Esc does nothing.
+- [ ] With the text of an area up (just after the card of the opening) a single Esc puts the text away and pauses;
+      after RESUME the text is not back.
+- [ ] On the paused screen: CONTROLS shows the list (its Esc line says PAUSE OR CLOSE A PAGE), and Esc or Enter closes it
+      with the cursor on Controls and the game still paused. NEW GAME asks START A NEW GAME?, says that the game in play
+      is lost (and that the saved game is replaced, when there is one); Esc goes back with RESUME still working, and
+      Enter starts a new game with its card, which a later Esc pauses again. CONTINUE, after a Checkpoint, brings back
+      the last autosave and asks nothing. N, - and + work.
+- [ ] Sail home after a pause and a resume: the title is the normal one, with no RESUME and no PAUSED. Reload while
+      paused: the normal title, and Continue gives the last autosave.
+- [ ] In the Guardian's fight, if you can reach it: pause and resume, and the music of the fight is back.
+- [ ] Tab away and back: the notice PAUSED of the lost focus is as it was (see "Saving and Continue"); it is not the
+      paused screen.
+- [ ] Does the paused screen feel like a pause, and is anything on it in the way?
+
 ## A defeat and its recovery
 
 - [ ] **A Checkpoint does not heal.** Get hurt (a crab will do), then go on to the woods: its Checkpoint is at the way
@@ -122,7 +157,8 @@ page names the keys that close it (C/TAB, I, M or H, then Esc) and is all on the
 - [ ] With a save, New Game asks REPLACE THE SAVED GAME? Enter replaces it, Esc keeps it.
 - [ ] After the Guardian has fallen, reload and Continue: the gate is open. A Stat Point you had not spent is asked
       for again.
-- [ ] Switch to another tab and back: the game paused (PAUSED), and goes on without a rush.
+- [ ] Switch to another tab and back: the game paused (the notice PAUSED, not the paused screen of Esc), and goes on
+      without a rush.
 
 ## The optional puzzles
 
@@ -235,6 +271,10 @@ Tick one when you accept it as it is; otherwise write what to change.
       line, the sound's hints share one row (N TO MUTE and - OR + FOR VOLUME) and a save from another version is told
       in two rows, SAVE IS FROM ANOTHER VERSION. and A NEW GAME WILL REPLACE IT.; the greyed Continue says the rest. Is
       the wording enough?
+- [ ] **The paused screen** is the title's window with PAUSED and RESUME on top, and it does not tell of the saved game.
+      CONTINUE on it loads the last autosave with no question, so it gives up what you did since the save; NEW GAME
+      always asks. Esc at the top of it, with the cursor on any line, resumes. The line H FOR CONTROLS comes back after
+      a resume with the time it had left. Should CONTINUE ask first, as NEW GAME does?
 - [ ] **The Automap** joins the areas by schematic links, and draws the quay as sand. A link meets each map at the side
       where its exit is (the mountain's east edge to the cave's west edge, the cave's east edge to the castle's west
       edge, which makes two links that go round the cards): look that no link runs over a map or a name.

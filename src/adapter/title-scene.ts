@@ -7,8 +7,8 @@ import { DEPTH } from './depths';
 import { GameScene } from './game-scene';
 import { TEXT_HEIGHT, textWidthOf } from './pixel-font';
 import type { SavedGame, SaveStore } from './save-store';
-import { SCENE_KEYS, startOfNewGame } from './scene-keys';
-import type { PlayStart } from './scene-keys';
+import { SCENE_KEYS, keptByPause, startOfNewGame, startOfResume } from './scene-keys';
+import type { KeptOfPlay, PlayStart, TitleStart } from './scene-keys';
 import {
   GAME_TITLE,
   LOGO_EXTRUSION_OFFSETS,
@@ -29,6 +29,10 @@ import { INK, UiLayer } from './ui-layer';
 // only told which of the two begins. It never saves: the autosave belongs to the play screen (autosave.ts). Its music,
 // and the sounds of its choices, are the audio service's (audio.ts). It is a picture of the coast (the backdrop), the name
 // of the game across the top in big letters and the menu in a window under it; where the name goes is title-layout.ts's.
+// It is also the paused screen: when the play screen puts a game away (pausing.ts) it starts this scene with a pause
+// (scene-keys.ts), and the menu then has Resume on top, which starts the play screen again from the Game core's view,
+// which the pause left as it was. Every start of this scene says whether it is paused, so that a pause is not carried
+// into the title that the ending or the sailing home leads to.
 
 const BACKDROP = 'backdrop-title' satisfies ArtName;
 
@@ -39,12 +43,19 @@ export class TitleScene extends GameScene {
   private layer!: UiLayer;
   private saved: SavedGame = { status: 'none' };
   private menu: TitleMenu = openMenu(false);
+  /** What the play screen kept of the game it put away, when this is the paused screen; null for the title itself. */
+  private kept: KeptOfPlay | null = null;
   private readonly shown = new ChangeGuard();
 
   constructor(core: Game, saves: SaveStore, audio: GameAudio) {
     super(SCENE_KEYS.title, audio);
     this.core = core;
     this.saves = saves;
+  }
+
+  /** The first start of the game gives no data, and so does nothing else's: no data is the title, not the paused one. */
+  init(start?: TitleStart): void {
+    this.kept = keptByPause(start);
   }
 
   create(): void {
@@ -57,7 +68,7 @@ export class TitleScene extends GameScene {
     if (this.saved.status === 'unusable') {
       console.warn(`The saved game cannot be continued from (${this.saved.problem}): ${this.saved.detail}`);
     }
-    this.menu = openMenu(this.saved.status === 'usable');
+    this.menu = openMenu(this.saved.status === 'usable', this.kept !== null);
     this.shown.forget();
   }
 
@@ -76,7 +87,10 @@ export class TitleScene extends GameScene {
       this.audio.play(sound);
     }
     this.menu = menu;
-    if (choice === 'new-game') {
+    if (choice === 'resume' && this.kept !== null) {
+      // The game in play goes on from where the Game core holds it: nothing is sent to the core, and nothing is saved.
+      this.scene.start(SCENE_KEYS.play, startOfResume(this.kept));
+    } else if (choice === 'new-game') {
       // The opening is among the events of a New Game; the play screen shows it and holds the game until Enter.
       this.scene.start(SCENE_KEYS.play, startOfNewGame(this.core.send({ type: 'new-game' })));
     } else if (choice === 'continue' && saved.status === 'usable') {

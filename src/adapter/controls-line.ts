@@ -38,10 +38,17 @@ export interface FrameOfPlay {
 /**
  * How long the line has left, as a rule of its own with no Phaser. The play screen makes a new one for every game and
  * gives it every frame of the game that runs after the card: the frames of the card and of a fall are not given, and
- * so take nothing. Once it is gone it does not come back in the same game.
+ * so take nothing. Once it is gone it does not come back in the same game. A game that is put away on the paused screen
+ * takes what is left with it, and the time that the play screen makes for its Resume has just that, so the line does not
+ * start its four seconds again.
  */
 export class ControlsLineTime {
-  private remaining = LINE_MS;
+  private remaining: number;
+
+  /** A time that has the whole of the line's four seconds left, or what a time of a game that was put away had left. */
+  constructor(leftMs: number = LINE_MS) {
+    this.remaining = leftMs;
+  }
 
   /**
    * Lets the frame's time pass and says whether the line is on the screen in this frame. The time of a frame counts only
@@ -59,6 +66,11 @@ export class ControlsLineTime {
   /** Ends the line for good: the player opened the Controls page, so has found it. */
   dismiss(): void {
     this.remaining = 0;
+  }
+
+  /** How long the line has left, in milliseconds, 0 once it is gone: what a game that is put away takes with it. */
+  left(): number {
+    return Math.max(0, this.remaining);
   }
 }
 
