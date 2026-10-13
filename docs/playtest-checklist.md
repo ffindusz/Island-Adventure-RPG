@@ -31,8 +31,9 @@ are in `docs/balance.md`, the keys in the README.
       the name of the game, and no row of it is covered by the line of the audio at the bottom right (press N to see
       the line), and the hint `N TO MUTE   - OR + FOR VOLUME` does not look cramped. A save from another version is the
       tallest, and it is the first title you will see: the save from your earlier playtests is one, since ticket 30.
-- [ ] New Game shows the card of the opening (four lines, the last one the goal, a way home to find; ENTER TO BEGIN),
-      then you wake on the coast with the banner
+- [ ] New Game shows the card of the opening (four lines, the last one the goal, a way home to find; ENTER TO BEGIN and,
+      under it in the same colour, IN PLAY, H SHOWS THE CONTROLS; the card whole, with air all round it), and H pressed at
+      the card does nothing. Then you wake on the coast with the banner
       "Wreckage lines the shore. Follow the beach east." Is it clear what to do in the first minute?
 
 ## The five areas, in the order of the route
