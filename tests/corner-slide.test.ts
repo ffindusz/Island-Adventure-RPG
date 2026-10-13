@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import type { ContentDefinition, Game, GameEvent, InteractableDefinition, MonsterPlacement, Point } from '../src/core';
+import type {
+  Box,
+  ContentDefinition,
+  Direction,
+  Game,
+  GameEvent,
+  InteractableDefinition,
+  MonsterPlacement,
+  Point,
+} from '../src/core';
 import {
   advance,
   arena,
+  biterAt,
   chestAt,
   doorAt,
   dummyAt,
@@ -10,8 +20,10 @@ import {
   gateAt,
   keyAt,
   leverAt,
+  monsterNamed,
   newGame,
   playingView,
+  seededRandom,
   signAt,
   walk,
 } from './fixtures';
@@ -244,5 +256,298 @@ describe('the hero that walks into a monster', () => {
     walk(game, 'down', 120);
 
     expectHeroAt(game, 5.4, 4.125);
+  });
+});
+
+describe('the biter that walks into a corner', () => {
+  // The wall across this room has a gap of one tile, the tile (4, 5). The biter is half a tile wide and walks down
+  // toward the hero, who stands still on the other side of the wall.
+  const content = (): ContentDefinition =>
+    arena({
+      layout: [
+        '#########',
+        '#.......#',
+        '#.......#',
+        '#.......#',
+        '#.......#',
+        '####.####',
+        '#.......#',
+        '#.......#',
+        '#########',
+      ],
+      monsters: [biterAt('biter', 1, 1)],
+      hero: REAL_HERO,
+    });
+
+  it('is not helped round it: only the hero is, so it stays flush against the wall with its middle over the gap', () => {
+    // The biter's middle is at x = 4.9: its body runs from 4.65 to 5.15 and overlaps the wall right of the gap by 0.15.
+    const game = putAt(content(), { x: 4.9, y: 6.5 }, { biter: { x: 4.9, y: 4.5 } });
+
+    for (let step = 0; step < 120; step++) {
+      game.step();
+      expect(monsterNamed(game, 'biter').position.x).toBeCloseTo(4.9, 6);
+    }
+    expect(monsterNamed(game, 'biter').position.y).toBeCloseTo(4.75, 6);
+    expect(playingView(game).hero.health).toBe(playingView(game).hero.maxHealth);
+  });
+
+  it('does walk into the gap when it is lined up with it, which is what the corner stopped it from doing', () => {
+    // It is stopped at y = 4.75 by the wall, in the test above, and it goes on to wind up its attack from the gap here.
+    const game = putAt(content(), { x: 4.5, y: 6.5 }, { biter: { x: 4.5, y: 4.5 } });
+
+    advance(game, 60);
+
+    expect(monsterNamed(game, 'biter').position.y).toBeGreaterThan(5);
+  });
+});
+
+// The slide goes sideways whichever way the hero walks. The rock on the tile (4, 4) of the yard is a corner on each of
+// its four sides: flush against one of them, with its middle 0.175 tile beyond the edge of the rock at either end, the
+// hero overlaps the rock by 0.2 tile. It slides 0.2 tile clear of it in three steps, two whole ones and a third of one,
+// and walks on in the fourth. It goes on facing the way it walks, and the slide tells no event.
+
+interface SlideAlongRock {
+  readonly what: string;
+  readonly walking: Direction;
+  /** Where the hero starts, flush against the rock. */
+  readonly from: Point;
+  /** Where the slide leaves it, three steps later. */
+  readonly slidTo: Point;
+  /** Where it is a step after that. */
+  readonly then: Point;
+}
+
+const SLIDES_ALONG_ROCK: readonly SlideAlongRock[] = [
+  {
+    what: 'down, with its middle right of the rock',
+    walking: 'down',
+    from: { x: 5.175, y: 3.625 },
+    slidTo: { x: 5.375, y: 3.625 },
+    then: { x: 5.375, y: 3.625 + STEP },
+  },
+  {
+    what: 'down, with its middle left of the rock',
+    walking: 'down',
+    from: { x: 3.825, y: 3.625 },
+    slidTo: { x: 3.625, y: 3.625 },
+    then: { x: 3.625, y: 3.625 + STEP },
+  },
+  {
+    what: 'up, with its middle right of the rock',
+    walking: 'up',
+    from: { x: 5.175, y: 5.375 },
+    slidTo: { x: 5.375, y: 5.375 },
+    then: { x: 5.375, y: 5.375 - STEP },
+  },
+  {
+    what: 'up, with its middle left of the rock',
+    walking: 'up',
+    from: { x: 3.825, y: 5.375 },
+    slidTo: { x: 3.625, y: 5.375 },
+    then: { x: 3.625, y: 5.375 - STEP },
+  },
+  {
+    what: 'right, with its middle below the rock',
+    walking: 'right',
+    from: { x: 3.625, y: 5.175 },
+    slidTo: { x: 3.625, y: 5.375 },
+    then: { x: 3.625 + STEP, y: 5.375 },
+  },
+  {
+    what: 'right, with its middle above the rock',
+    walking: 'right',
+    from: { x: 3.625, y: 3.825 },
+    slidTo: { x: 3.625, y: 3.625 },
+    then: { x: 3.625 + STEP, y: 3.625 },
+  },
+  {
+    what: 'left, with its middle below the rock',
+    walking: 'left',
+    from: { x: 5.375, y: 5.175 },
+    slidTo: { x: 5.375, y: 5.375 },
+    then: { x: 5.375 - STEP, y: 5.375 },
+  },
+  {
+    what: 'left, with its middle above the rock',
+    walking: 'left',
+    from: { x: 5.375, y: 3.825 },
+    slidTo: { x: 5.375, y: 3.625 },
+    then: { x: 5.375 - STEP, y: 3.625 },
+  },
+];
+
+describe.each(SLIDES_ALONG_ROCK)('the hero that walks $what', ({ walking, from, slidTo, then }) => {
+  it('is slid clear of it in three steps, walks on in the fourth, and goes on facing the way it walks', () => {
+    const game = putAt(yardWith('#'), from);
+
+    game.send({ type: 'move', direction: walking });
+    for (let step = 0; step < 3; step++) {
+      expect(game.step()).toEqual([]);
+      expect(playingView(game).hero.facing).toBe(walking);
+    }
+    expectHeroAt(game, slidTo.x, slidTo.y);
+    expect(game.step()).toEqual([]);
+    expectHeroAt(game, then.x, then.y);
+    expect(playingView(game).hero.facing).toBe(walking);
+  });
+});
+
+describe('the hero that comes to the corner part of the way through a step', () => {
+  it('walks the part of the step that it has up to the rock, and slides with what is left of it', () => {
+    // The middle at (5.175, 3.55): the body is 0.075 above the rock. The first step walks that 0.075 of its 1/12 tile
+    // and slides the 1/120 that is left, and the next three slide on, the last of them 0.025 tile, to x = 5.375.
+    const game = putAt(yardWith('#'), { x: 5.175, y: 3.55 });
+    const leftOfFirstStep = STEP - 0.075;
+
+    game.send({ type: 'move', direction: 'down' });
+    for (const x of [5.175 + leftOfFirstStep, 5.175 + leftOfFirstStep + STEP, 5.175 + leftOfFirstStep + 2 * STEP, 5.375]) {
+      game.step();
+      expectHeroAt(game, x, FLUSH_ABOVE_THING);
+    }
+    game.step();
+    expectHeroAt(game, 5.375, FLUSH_ABOVE_THING + STEP);
+  });
+});
+
+// Walking that nothing stops is as it was: a twelfth of a tile in a step, along the key and not a hair to the side. So
+// is walking into what is no corner: a straight wall, the same wherever along it the hero comes up to it.
+
+describe('the hero that walks where no corner stops it', () => {
+  it.each([
+    { direction: 'up', along: { x: 0, y: -1 } },
+    { direction: 'down', along: { x: 0, y: 1 } },
+    { direction: 'left', along: { x: -1, y: 0 } },
+    { direction: 'right', along: { x: 1, y: 0 } },
+  ] as const)('goes $direction a twelfth of a tile in each step over open ground', ({ direction, along }) => {
+    const game = putAt(yardWith('.'), { x: 4.5, y: 4.5 });
+
+    game.send({ type: 'move', direction });
+    for (let step = 1; step <= 12; step++) {
+      game.step();
+      expectHeroAt(game, 4.5 + along.x * step * STEP, 4.5 + along.y * step * STEP);
+    }
+  });
+
+  it.each([-0.125, 0, 0.125])('goes down the crevice of the coast a twelfth of a tile in each step, %s off its middle', (offset) => {
+    const x = 25.5 + offset;
+    const game = gameWithHero(QUIET, NEW_HERO, { areaId: 'shipwreck-coast', position: { x, y: 12 }, facing: 'down' });
+
+    game.send({ type: 'move', direction: 'down' });
+    for (let step = 1; step <= 24; step++) {
+      game.step();
+      expectHeroAt(game, x, 12 + step * STEP);
+    }
+  });
+
+  it('stays flush against a straight wall wherever along it it walks up to it, however long the key is held', () => {
+    // Its middle at every sixteenth of a tile from 1.5 to 7.5 along the north wall of the yard: its body is over one
+    // tile of the wall, or two of them, and never over a corner.
+    for (let sixteenths = 24; sixteenths <= 120; sixteenths++) {
+      const x = sixteenths / 16;
+      const game = putAt(yardWith('.'), { x, y: 1.375 });
+
+      walk(game, 'up', 3);
+
+      expect(heroOf(game)).toEqual({ x, y: 1.375 });
+    }
+  });
+});
+
+// A hero that wanders about a room full of things never ends a step inside one of them, however it comes against them,
+// nor goes farther than a step, and now and then it is slid round a corner. The room has rock and water, a chest, a
+// lever and its gate, a sign, a shut door, a key to pick up and three dummies that stand off the grid of the tiles.
+
+const ROOM = [
+  '##############',
+  '#............#',
+  '#..#.....~...#',
+  '#............#',
+  '#.....##.....#',
+  '#.....#......#',
+  '#............#',
+  '#..~.....#...#',
+  '#............#',
+  '##############',
+];
+
+const ROOM_INTERACTABLES: readonly InteractableDefinition[] = [
+  chestAt('chest', 11, 2, 'leather-armor'),
+  leverAt('lever', 2, 5, ['gate']),
+  gateAt('gate', 12, 5),
+  signAt('sign', 4, 4, 'Mind the step.'),
+  doorAt('door', 8, 6, 'key-1'),
+  keyAt('key-1', 1, 8),
+];
+
+const DUMMIES_OFF_THE_TILES = { a: { x: 5.3, y: 2.6 }, b: { x: 10.15, y: 5.35 }, c: { x: 2.7, y: 8.2 } };
+
+const DIRECTIONS: readonly Direction[] = ['up', 'down', 'left', 'right'];
+
+function boxAt({ x, y }: Point, size: number): Box {
+  return { minX: x - size / 2, minY: y - size / 2, maxX: x + size / 2, maxY: y + size / 2 };
+}
+
+function tileAt(col: number, row: number): Box {
+  return { minX: col, minY: row, maxX: col + 1, maxY: row + 1 };
+}
+
+/** The boxes of the room that the hero cannot go into: rock and water, what stops a walker of its interactables, dummies. */
+function solidsOfRoom(game: Game): Box[] {
+  const terrain = ROOM.flatMap((line, row) =>
+    [...line].flatMap((symbol, col) => (symbol === '#' || symbol === '~' ? [tileAt(col, row)] : [])),
+  );
+  const interactables = ROOM_INTERACTABLES.filter((thing) => thing.kind !== 'key').map(({ tile }) =>
+    tileAt(tile.col, tile.row),
+  );
+  const monsters = playingView(game).monsters.map(({ position, size }) => boxAt(position, size));
+  return [...terrain, ...interactables, ...monsters];
+}
+
+/** Whether the boxes share an area of more than `by` in both directions. */
+function overlapBy(a: Box, b: Box, by: number): boolean {
+  return a.minX < b.maxX - by && a.maxX > b.minX + by && a.minY < b.maxY - by && a.maxY > b.minY + by;
+}
+
+describe('the hero that wanders about a room full of things', () => {
+  it.each([1, 2, 3])('never ends a step inside one of them or farther on than a step, in the walk of seed %s', (seed) => {
+    const content = arena({
+      layout: ROOM,
+      interactables: ROOM_INTERACTABLES,
+      monsters: [dummyAt('a', 5, 2), dummyAt('b', 10, 5), dummyAt('c', 2, 8)],
+      hero: REAL_HERO,
+    });
+    const game = putAt(content, { x: 1.5, y: 1.5 }, DUMMIES_OFF_THE_TILES);
+    const solids = solidsOfRoom(game);
+    const random = seededRandom(seed);
+    const problems: string[] = [];
+    let slidSteps = 0;
+    let at = heroOf(game);
+
+    for (let round = 0; round < 1500; round++) {
+      const direction = DIRECTIONS[Math.floor(random() * DIRECTIONS.length)] ?? 'up';
+      const steps = 1 + Math.floor(random() * 12);
+      game.send({ type: 'move', direction });
+      for (let step = 1; step <= steps; step++) {
+        game.step();
+        const to = heroOf(game);
+        const where = `round ${round}, step ${step} of ${steps} ${direction}, from ${JSON.stringify(at)}`;
+        if (solids.some((solid) => overlapBy(boxAt(to, REAL_HERO.size), solid, 1e-6))) {
+          problems.push(`${where}: the hero is in something at ${JSON.stringify(to)}`);
+        }
+        if (Math.abs(to.x - at.x) + Math.abs(to.y - at.y) > STEP + 1e-9) {
+          problems.push(`${where}: the hero went farther than a step, to ${JSON.stringify(to)}`);
+        }
+        const aside = direction === 'up' || direction === 'down' ? to.x - at.x : to.y - at.y;
+        if (Math.abs(aside) > 1e-9) {
+          slidSteps++;
+        }
+        at = to;
+      }
+      game.send({ type: 'stop', direction });
+    }
+
+    expect(problems.slice(0, 5)).toEqual([]);
+    // It is not for nothing: each walk slides round a corner in at least fifty of its steps (about 125 to 150 do).
+    expect(slidSteps).toBeGreaterThan(50);
   });
 });
