@@ -9,6 +9,7 @@ import type {
   MonsterPlacement,
   Point,
 } from '../src/core';
+import { boxAround, overlaps } from './dodging-bot';
 import {
   advance,
   arena,
@@ -510,10 +511,6 @@ const DUMMIES_OFF_THE_TILES: Readonly<Record<string, Point>> = {
 
 const DIRECTIONS: readonly Direction[] = ['up', 'down', 'left', 'right'];
 
-function boxAt({ x, y }: Point, size: number): Box {
-  return { minX: x - size / 2, minY: y - size / 2, maxX: x + size / 2, maxY: y + size / 2 };
-}
-
 function tileAt(col: number, row: number): Box {
   return { minX: col, minY: row, maxX: col + 1, maxY: row + 1 };
 }
@@ -526,13 +523,8 @@ function solidsOfRoom(game: Game): Box[] {
   const interactables = ROOM_INTERACTABLES.filter((thing) => thing.kind !== 'key').map(({ tile }) =>
     tileAt(tile.col, tile.row),
   );
-  const monsters = playingView(game).monsters.map(({ position, size }) => boxAt(position, size));
+  const monsters = playingView(game).monsters.map(({ position, size }) => boxAround(position, size));
   return [...terrain, ...interactables, ...monsters];
-}
-
-/** Whether the boxes share an area of more than `by` in both directions. */
-function overlapBy(a: Box, b: Box, by: number): boolean {
-  return a.minX < b.maxX - by && a.maxX > b.minX + by && a.minY < b.maxY - by && a.maxY > b.minY + by;
 }
 
 describe('the hero that wanders about a room full of things', () => {
@@ -558,7 +550,7 @@ describe('the hero that wanders about a room full of things', () => {
         game.step();
         const to = heroOf(game);
         const where = `round ${round}, step ${step} of ${steps} ${direction}, from ${JSON.stringify(at)}`;
-        if (solids.some((solid) => overlapBy(boxAt(to, REAL_HERO.size), solid, 1e-6))) {
+        if (solids.some((solid) => overlaps(boxAround(to, REAL_HERO.size), solid))) {
           problems.push(`${where}: the hero is in something at ${JSON.stringify(to)}`);
         }
         if (Math.abs(to.x - at.x) + Math.abs(to.y - at.y) > STEP + 1e-9) {
