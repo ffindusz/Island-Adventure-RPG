@@ -104,28 +104,30 @@ Each piece is compared with the piece below it in its slot.
 | chain-mail | basic-armor | woods | 2 | 1 to 2 (+100%) | 1 to 2 (+100%) | 1 to 2 (+100%) |
 | plate-armor | chain-mail | mountain | 3 | 2 to 3 (+50%) | 2 to 3 (+50%) | 2 to 3 (+50%) |
 | knight-mail | plate-armor | castle | 5 | 3 to 4 (+33%) | 3 to 4 (+33%) | 4 to 5 (+25%) |
-| short-bow | nothing | woods | 2 | none to 2 (new) | none to 3 (new) | none to 3 (new) |
-| long-bow | short-bow | woods | 2 | 2 to 3 (+50%) | 3 to 4 (+33%) | 3 to 4 (+33%) |
+| long-bow | nothing | woods | 2 | none to 3 (new) | none to 4 (new) | none to 4 (new) |
 
 Every step is a fifth or more. The weakest are the Katana for an all-Attack hero (exactly a fifth) and the Knight Mail
 (a quarter to a third). A step shrinks as the Level rises, because the base is larger: the same Katana at Level 6
-would be +14% for an all-Attack hero.
+would be +14% for an all-Attack hero. The Long Bow is the only bow of the game, so its step is from no bow at all:
+it is new, and it is not measured over another bow.
 
 *On or near the route* is, in these measurements, within four tiles of the trail with every door shut
-(`MOST_NEARBY` in `tests/main-route.ts`). A piece of Gear that a monster carries counts as found on the route when the
-route meets the monster, and as near when a detour of four tiles reaches it (`findsOf` in `tests/main-route.ts`). What a
-hero that keeps to that carries to the Guardian is the Basic Sword it began with, the **Knight Mail** (two tiles off the
-trail in the castle) and the **Short Bow** (carried by the first wolf of the woods, which stands on the trail itself).
-The Plate Armor lies three tiles off the trail in the mountain, so the armor gets better in the mountain and
-again in the castle. The Steel Sword (eleven tiles off the coast's trail), the Chain Mail (sixteen in the woods), the
-Katana (behind the cave's lever gate) and the Long Bow (behind the cabin door) are side-path Gear: see "Proposals".
+(`MOST_NEARBY` in `tests/main-route.ts`): `findsOf` in that file lists the chests and pickups of an area, each with the
+steps that it takes to reach it off the route, or none when a shut door or gate is in the way. What a hero that keeps to
+that has at the Guardian is the Basic Sword it began with and the **Knight Mail** (two tiles off the trail in the
+castle), and no bow: the main route gives none (`MAIN_ROUTE_GEAR` in `tests/profile-heroes.ts`). The Plate Armor lies
+three tiles off the trail in the mountain, so the armor gets better in the mountain and again in the castle. The Steel
+Sword (eleven tiles off the coast's trail), the Chain Mail (sixteen in the woods), the Katana (behind the cave's lever
+gate) and the Long Bow (in the chest of the cabin, behind a door whose key lies in the north glade) are side-path Gear:
+see "Proposals".
 
-The wolf that carries the Short Bow is the weakest fight of the game, so that the hero wins the bow without it: in
-"The fights" the worst build loses 0 of 12 Health to a wolf, with the Basic Sword and the Basic Armor, which are what
-the fight table gives the hero on coming into the woods (the table has no bow for it). It stands eight tiles in from the
-way in, farther than it notices a hero, and the bow comes to the hero when the wolf is defeated and no sooner. Moving
-the bow from a chest to the wolf changed no Experience (the wolf was on the route already), no ledger of the supplies
-and no step of Gear; the only number that moved is the play time's near errands (below).
+The first wolf of the woods gives nothing, and is among the gentlest fights of the game: in "The fights" the worst
+build loses 0 of 12 Health to a wolf (as to a spitter, against 2 of 10 to a slime and 5 of 12 to a boar), with the
+Basic Sword and the Basic Armor, which are what the fight table gives the hero on coming into the woods. It stands
+eight tiles in from the way in, farther than it notices a hero. Making the Long Bow the only bow, with nothing on the
+wolf, changed no Experience (the wolf is still there, of the same kind, on the route), no fight, no ledger of the
+potions and no number of the Guardian. What moved is the Long Bow's row above (it is the first bow of its slot now:
+"none to 3, none to 4, none to 4"), the arrow ledger (below) and the play time's counts of near Gear (in "Play time").
 
 ## The supplies
 
@@ -152,21 +154,23 @@ Drops add, on average, 0.3, 0, 0.5, 0.5 and 0.5 potions per area.
   numbers say that such a hero has to leave the trail for its potions, not that it must grind.
 
 Arrows: a ranged monster takes `ceil(Health / arrow Attack)` shots, and the ledger counts two arrows to a shot that
-lands. The arrow's Attack is the hero's with the bow it has by then.
+lands. The arrow's Attack is the hero's with the Long Bow, the only bow of the game, which the main route does not give:
+the hero takes it from the chest of the cabin, behind a door. The ledger is for a hero that did, with the bow in hand
+from the woods on; the hero of the main route has no bow and needs no arrow (see "What these numbers rest on").
 
 | Build | Arrow Attack, woods to castle | Arrows needed, coast to castle | Arrows near the route |
 | --- | --- | --- | --- |
-| all in Health | 2, 2, 2, 2 | 0, 2, 4, 4, 8 | 0, 12, 12, 18, 18 |
-| all in Attack | 3, 4, 5, 6 | 0, 2, 2, 2, 4 | 0, 12, 12, 18, 18 |
-| split | 3, 3, 3, 4 | 0, 2, 2, 2, 4 | 0, 12, 12, 18, 18 |
+| all in Health | 3, 3, 3, 3 | 0, 2, 2, 2, 8 | 0, 12, 12, 18, 18 |
+| all in Attack | 4, 5, 6, 7 | 0, 2, 2, 2, 4 | 0, 12, 12, 18, 18 |
+| split | 4, 4, 4, 5 | 0, 2, 2, 2, 4 | 0, 12, 12, 18, 18 |
 
 The arrows near the route are at least 2.25 times what the shots need, counted at two arrows to a shot that lands (the
-all-in-Health hero in the castle, who has the weakest arrows; elsewhere, three times and more), so a hero that shoots
-does not run short: 60 arrows lie near the route in all, and 32 more on the side paths (four caches of 8, one in each of
-the mountain and the cave and two in the castle). The Guardian takes 25 shots
-from a hero whose arrows have Attack 4 (a split hero with the Short Bow): 50 arrows at a hit in two, which the 60
-near the route cover; an all-in-Health hero, with arrows of Attack 2, would need 100, more than lie near the route, so
-the sword is its way.
+all-in-Health hero in the castle, who has the weakest arrows; elsewhere, four and a half times and more), so a hero that
+shoots does not run short: 60 arrows lie near the route in all, and 32 more on the side paths (four caches of 8, one in
+each of the mountain and the cave and two in the castle). The Guardian (100 Health) takes 20 shots from a hero whose
+arrows have Attack 5 (a split hero at Level 6: the hero's 1, two Stat Points put in Attack, and the Long Bow's 2): 40
+arrows at a hit in two, which the 60 near the route cover; an all-in-Health hero, with arrows of Attack 3 (the hero's 1
+and the bow's 2), would need 34 shots and 68 arrows, more than lie near the route, so the sword is its way.
 
 ## The Guardian
 
@@ -223,8 +227,10 @@ content without the ordinary monsters. It is melee-only: it never shoots.
 | Level 3, 1/1/0 points | misses 1 in 3, answers in 450 ms | 6 | won | 12 | 2 | 50 | 28 |
 | Level 3, 1/1/0 points | never answers | 6 | won | 38 | 6 | 50 | 21 |
 
-The Level 6 heroes have the Basic Sword, the Knight Mail and the Short Bow (the Gear of the main route) unless the row
-says otherwise; the Level 3 hero has the Knight Mail and the Basic Sword. The seconds are the game's, not a player's.
+The Level 6 heroes have the Basic Sword and the Knight Mail (the Gear of the main route, which gives no bow) unless the
+row says otherwise; the Level 3 hero has the Knight Mail and the Basic Sword. The bot strikes with the sword and never
+shoots, so a bow cannot move a row of this table, and no row moved when the main route lost its bow. The seconds are
+the game's, not a player's.
 
 - **It can be beaten with the Gear of the main route.** Every build of the Level 6 hero wins when it answers within
   700 ms, and when it misses one telegraph in three with the six potions the route spares. Even with no answer at all
@@ -261,11 +267,11 @@ Health, a main-route hero with the Stat Points split and six potions).
 | Area | Walk (s) | Fights met | Plain fights (s) | Fights off the route | Plain fights off it (s) | Near errands (s) | Far errands (s) | Puzzles | Near Gear | Far Gear |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | shipwreck-coast | 6.8 | 2 | 2.1 | 1 | 1.1 | 0.8 | 4.4 | 0 | 0 | 1 |
-| woods | 11.2 | 4 | 2.8 | 2 | 1.3 | 1.2 | 19.2 | 1 | 1 | 2 |
+| woods | 11.2 | 4 | 2.8 | 2 | 1.3 | 1.2 | 19.2 | 1 | 0 | 2 |
 | mountain | 22.0 | 5 | 6.8 | 1 | 1.0 | 4.4 | 8.0 | 0 | 1 | 0 |
 | cave | 22.8 | 5 | 5.8 | 1 | 1.3 | 4.4 | 14.8 | 1 | 0 | 1 |
 | castle | 17.8 | 8 | 9.5 | 2 | 2.9 | 5.2 | 19.6 | 0 | 1 | 0 |
-| Total | 80.6 | 24 | 27.0 | 7 | 7.5 | 16.0 | 66.0 | 2 | 3 | 4 |
+| Total | 80.6 | 24 | 27.0 | 7 | 7.5 | 16.0 | 66.0 | 2 | 2 | 4 |
 
 | Counted for the whole adventure | Value |
 | --- | ---: |
@@ -304,14 +310,14 @@ way):
 | fights | 0.5 | 1.0 | 1.7 |
 | side finds | 0.3 | 0.8 | 1.4 |
 | puzzles | 0.0 | 1.5 | 10.0 |
-| pages | 1.7 | 3.8 | 8.5 |
+| pages | 1.6 | 3.5 | 8.0 |
 | defeats | 0.0 | 0.5 | 1.8 |
 | Guardian | 0.4 | 1.4 | 4.1 |
-| Total | 5.7 | 14.1 | 37.0 |
+| Total | 5.6 | 13.9 | 36.5 |
 | Against the 45 to 60 minutes of the spec | under | under | under |
 
 **The adventure is well short of the target.** A hero that never stops walks all five routes in 81 seconds and wins the
-24 fights of the way in 27; the typical estimate is 14 minutes, the low about 6 and the high 37. No scenario reaches 45,
+24 fights of the way in 27; the typical estimate is 14 minutes, the low about 6 and the high 36.5. No scenario reaches 45,
 and the high one takes every guess at its slow end at once. The parts that move most between the scenarios are the
 puzzles (up to ten minutes if a player searches for both keys), the looks at the menus and walking.
 
@@ -339,6 +345,9 @@ its test: the playtest checklist asks for the clock time from the title to the c
 - **Six Healing Potions at the arena.** The area tests put eleven or twelve within four tiles of the trail, and a hero
   that fought every monster and drank sensibly has used about half. The Guardian simulation leans on this number.
 - **One arrow in two lands** (`ARROWS_PER_HIT`), and the ledgers count the arrows near the trail, not drops.
+- **The arrow ledger is for a hero that took the Long Bow from the cabin.** The main route gives no bow, so the hero
+  that keeps to it shoots no arrow and the Guardian's numbers (which are a sword's) do not need one. The arrows along
+  the route (60 near it) are a reason to look for the bow, not a supply that the route's hero depends on.
 - **Near the route** is four tiles of detour with every door shut. A different number would move the lists above.
 
 ## Proposals
@@ -346,13 +355,14 @@ its test: the playtest checklist asks for the clock time from the title to the c
 These are not things a number can solve; each would be a new ticket.
 
 - **The adventure is about a third of the length that the spec asks for** (see "Play time": a typical first playthrough
-  of 14 minutes against 45 to 60, and 37 minutes for a slow player who does everything). A content ticket could add
+  of 14 minutes against 45 to 60, and 36.5 minutes for a slow player who does everything). A content ticket could add
   areas, lengthen the trails, put more encounters or optional content along them (and then this balance pass would
   need to run again), or the target could be revised to the length that the adventure has. That is a decision for the
   user, and the playtest's clock time is the evidence for it.
 - **The weapon upgrades are not near the route.** The ticket asks for upgrades "on or near the route". The Steel Sword
   lies eleven tiles off a 35-step coast, and the Katana is behind a puzzle, so the main-route hero fights the whole game
-  with the Basic Sword: the armor and the bow come to it, the sword does not. A placement ticket could put a Melee
+  with the Basic Sword: the armor comes to it, the sword and the bow do not (the Long Bow is behind the door of the
+  cabin). A placement ticket could put a Melee
   Weapon upgrade within a few tiles of the trail.
 - **Plate Armor is optional in effect**, three tiles off the trail, and the Knight Mail is only a step of one point over
   it. Moving either would change the shape of the armor steps.

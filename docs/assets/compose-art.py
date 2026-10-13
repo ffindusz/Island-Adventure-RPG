@@ -2,7 +2,7 @@
 """Composes pictures from pieces of the Ninja Adventure pack: the ground and the monsters of the shipwreck coast and the
 woods, the ground and the monsters of the mountain and of the cave, the ground (the masonry, the flagstones, the moss, the
 pillars, the fountain, the harbor and its quay) and the undead and the Guardian of the castle, the old vessel of its harbor
-(the pack's boat and sail), the props every area shares, the icons of the two bows, and the backdrops of the title screen and of
+(the pack's boat and sail), the props every area shares, the icon of the Long Bow, and the backdrops of the title screen and of
 the ending (pictures of the size of the canvas, put together from the coast's own sea, sand and wreck, and from the quay of
 the castle's harbor).
 
@@ -735,16 +735,10 @@ def lever_sheet(pack):
     return sheet_of([lever_frame(dungeon, -1, REST_KNOB), lever_frame(dungeon, 1, PULLED_KNOB)], 2)
 
 
-def bow_icon(pack, folder, shorter_by=0):
+def bow_icon(pack, folder):
     """A bow of the pack turned a quarter, to stand upright like the icons of the swords: its string on the left, its belly
-    on the right. Lying down, as the hero holds it, it reads as a bowl in the HUD and the inventory. A shorter bow has that
-    many rows cut out of its middle, where the belly is straight, so that its tips and its curve stay whole."""
-    bow = pack.image('Items', 'Weapons', folder, 'Sprite.png').transpose(Image.ROTATE_90)
-    first = (bow.height - shorter_by) // 2
-    out = Image.new('RGBA', (bow.width, bow.height - shorter_by), (0, 0, 0, 0))
-    out.paste(bow.crop((0, 0, bow.width, first)), (0, 0))
-    out.paste(bow.crop((0, first + shorter_by, bow.width, bow.height)), (0, first))
-    return out
+    on the right. Lying down, as the hero holds it, it reads as a bowl in the HUD and the inventory."""
+    return pack.image('Items', 'Weapons', folder, 'Sprite.png').transpose(Image.ROTATE_90)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -1449,7 +1443,6 @@ def ending_backdrop(pack):
 
 
 BUILDERS = {
-    'gear-short-bow': lambda pack: bow_icon(pack, 'Bow', shorter_by=2),
     'gear-long-bow': lambda pack: bow_icon(pack, 'Bow2'),
     'terrain-water': terrain_water,
     'terrain-sand': terrain_sand,

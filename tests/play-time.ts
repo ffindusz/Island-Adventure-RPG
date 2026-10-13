@@ -150,11 +150,7 @@ export function offRouteFights(): Fight[] {
 /** What a player goes off the route for. */
 const ERRAND_KINDS: readonly string[] = ['chest', 'pickup', 'key', 'lever'];
 
-/**
- * What lies off the route in an area: the walk there and back, with every door open, for the near and the far. The Gear
- * that a monster carries is counted with the chests of Gear, as near when the route meets the monster, with no walk of
- * its own: the fight is in the fight times already.
- */
+/** What lies off the route in an area: the walk there and back, with every door open, for the near and the far. */
 export function errandsOf(area: AreaId): {
   readonly nearSeconds: number;
   readonly farSeconds: number;
@@ -180,13 +176,6 @@ export function errandsOf(area: AreaId): {
     }
     if (interactable.kind === 'chest' && interactable.contents.kind === 'gear') {
       found[isNear ? 'nearGear' : 'farGear'] += 1;
-    }
-  }
-  const met = monstersOnRoute(area);
-  for (const monster of areaOf(area).monsters) {
-    if (monster.carries !== undefined) {
-      const detour = met.includes(monster) ? 0 : detourTo(area, monster.tile);
-      found[detour !== undefined && detour <= MOST_NEARBY ? 'nearGear' : 'farGear'] += 1;
     }
   }
   return found;

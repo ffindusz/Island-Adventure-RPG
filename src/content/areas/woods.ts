@@ -8,15 +8,15 @@ const WAY_IN: Tile = { col: 1, row: 14 };
 // between them are grass. One path of sand, the trail, runs from the way in from the coast at the west to the way on to
 // the mountain at the east, which the text of the area tells the hero to follow: it needs no key, no lever and no door,
 // and no other way goes round the old oak at the neck where it ends, which is the milestone. Along the trail come first
-// a wolf that carries the Short Bow, which the hero takes when it defeats it, then two caches of arrows for it, a
-// Healing Potion lying on the ground, a slime, a spitter and a boar; a chest of Healing Potions stands by the pond to
-// the north. The side paths are the hero's to find and want nothing but a walk and, for the cabin, a key: the Chain Mail
-// in a nook to the south, and a cabin in the south-west behind a locked door, whose key lies in the north glade, guarded
-// by a wolf, and which holds the Long Bow. Neither the cabin nor the Chain Mail is on any route. The wolf with the bow
-// stands on the sand eight tiles in from the way in, farther than it notices the hero, and no monster notices a hero at
-// either way in, so that a hero who comes in, or is defeated and returns to the Checkpoint there, is not at once in a
-// fight. The trees at the north-west corner, down to row 2 and across to column 5, are where the HUD sits when the view
-// is at that corner, so that it never covers the hero.
+// a wolf, then two caches of arrows for the bow of the cabin, a Healing Potion lying on the ground, a slime, a spitter
+// and a boar; a chest of Healing Potions stands by the pond to the north. The side paths are the hero's to find and
+// want nothing but a walk and, for the cabin, a key: the Chain Mail in a nook to the south, and a cabin in the
+// south-west behind a locked door, whose key lies in the north glade, guarded by a wolf, and which holds the Long Bow,
+// the only bow of the game. Neither the cabin nor the Chain Mail is on any route. The first wolf stands on the sand
+// eight tiles in from the way in, farther than it notices the hero, and no monster notices a hero at either way in, so
+// that a hero who comes in, or is defeated and returns to the Checkpoint there, is not at once in a fight. The trees at
+// the north-west corner, down to row 2 and across to column 5, are where the HUD sits when the view is at that corner,
+// so that it never covers the hero.
 export const woods: AreaDefinition = {
   id: 'woods',
   name: 'The Woods',
@@ -69,8 +69,8 @@ export const woods: AreaDefinition = {
     'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
   ],
   monsters: [
-    // The wolf that carries the Short Bow: the first fight of the woods, a weak one, on the sand just inside the way in.
-    { id: 'woods-wolf-1', type: 'wolf', tile: { col: 9, row: 14 }, carries: 'short-bow' },
+    // The first fight of the woods, a weak one, on the sand just inside the way in.
+    { id: 'woods-wolf-1', type: 'wolf', tile: { col: 9, row: 14 } },
     { id: 'woods-slime-1', type: 'slime', tile: { col: 34, row: 9 } },
     { id: 'woods-spitter-1', type: 'spitter', tile: { col: 31, row: 17 } },
     { id: 'woods-boar-1', type: 'boar', tile: { col: 34, row: 22 } },
@@ -79,7 +79,8 @@ export const woods: AreaDefinition = {
   ],
   milestones: [{ id: 'old-oak', zone: { col: 43, row: 18, width: 3, height: 2 }, reward: { experience: 5 } }],
   interactables: [
-    // Two caches of arrows, in the west glades beside the trail, soon after the wolf that carries the bow.
+    // Two caches of arrows, in the west glades beside the trail, soon after the first wolf: the arrows are for the Long
+    // Bow of the cabin.
     {
       kind: 'chest',
       id: 'arrow-cache-1',
@@ -105,7 +106,7 @@ export const woods: AreaDefinition = {
     // hero in front of a chest lower down would stand under the notice of what it found, which is drawn low.
     { kind: 'chest', id: 'armor-chest', tile: { col: 22, row: 24 }, contents: { kind: 'gear', gear: 'chain-mail' } },
     // A side path with a key: the cabin in the south-west is locked, a sign by its door says where the key is, and the
-    // brass key lies in the north glade. The chest inside holds a better bow than the one the first wolf carries.
+    // brass key lies in the north glade. The chest inside holds the Long Bow, the only bow of the game.
     { kind: 'key', id: 'brass-key', tile: { col: 41, row: 1 }, name: 'Brass Key' },
     { kind: 'door', id: 'cabin-door', tile: { col: 5, row: 22 }, key: 'brass-key' },
     {

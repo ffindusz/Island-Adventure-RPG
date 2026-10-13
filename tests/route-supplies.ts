@@ -160,11 +160,26 @@ export interface ArrowLedger {
   readonly found: number;
 }
 
-/** The arrows of a build, area by area: a bow found in the area counts, as the arrows beside it do. */
-export function arrowLedger(spend: Spend, nearest = MOST_NEARBY): ArrowLedger[] {
+/** The best Ranged Weapon that lies in these areas, near the route or behind a door: what a hero who goes for it holds. */
+function bestBowIn(areas: readonly AreaId[]): string | undefined {
+  const lying = new Set(areas.flatMap((area) => findsOf(area).flatMap((find) => (find.kind === 'gear' ? [find.gear] : []))));
+  return ladderOf('ranged-weapon')
+    .filter((piece) => lying.has(piece))
+    .at(-1);
+}
+
+/**
+ * The arrows of a build, area by area. The hero of the main route has no bow, and so needs no arrow: the arrows along the
+ * route are for the player who goes through the door of the cabin for the Long Bow, the only bow of the game. That hero
+ * holds the bow from the area where it lies on, a bow found in an area counting there, as the arrows beside it do.
+ */
+export function arrowLedger(spend: Spend, nearest = MOST_NEARBY, takesTheBow = true): ArrowLedger[] {
   return AREA_IDS.map((area): ArrowLedger => {
     const level = levelOf(experienceBefore(area));
-    const equipped = gearFrom(AREA_IDS.slice(0, AREA_IDS.indexOf(area) + 1), nearest);
+    const areasSoFar = AREA_IDS.slice(0, AREA_IDS.indexOf(area) + 1);
+    const bow = takesTheBow ? bestBowIn(areasSoFar) : undefined;
+    const nearby = gearFrom(areasSoFar, nearest);
+    const equipped: Readonly<Partial<Record<GearSlot, string>>> = bow === undefined ? nearby : { ...nearby, 'ranged-weapon': bow };
     const attack = equipped['ranged-weapon'] === undefined ? 0 : statOf('ranged-weapon', level, spend, equipped);
     const ranged = monstersOnRoute(area).filter((placement) => gameContent.monsterTypes[placement.type]?.behavior === 'ranged');
     const shots = ranged.reduce((total, placement) => {
@@ -211,7 +226,7 @@ export function renderPotionLedger(nearest = MOST_NEARBY): string {
   return markdownTable(['Build', 'Area', 'Max Health', 'Damage', 'Needed', 'Found', 'Carried in', 'Left'], rows);
 }
 
-/** The arrow ledgers of the three builds as a Markdown table. */
+/** The arrow ledgers of the three builds as a Markdown table, for a hero that took the Long Bow from the cabin. */
 export function renderArrowLedger(): string {
   const rows = SPENDS.flatMap((spend) =>
     arrowLedger(spend).map((row) => [spend, row.area, row.attack, row.ranged, row.shots, row.needed, row.found]),

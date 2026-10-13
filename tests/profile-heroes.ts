@@ -37,11 +37,11 @@ export const INTENDED_LEVEL = gameContent.progression.levelThresholds.length + 1
 
 /**
  * The Gear on or beside the route: the Plate Armor lies three tiles off the trail and the Knight Mail two, so the Knight
- * Mail, the best armor, is the armor of a hero who kept to the route, and the Short Bow is carried by a wolf on the
- * trail. The hero has
- * no better Melee Weapon than the one it began with: the Steel Sword and the Katana lie on side paths.
+ * Mail, the best armor, is the armor of a hero who kept to the route. The hero has no better Melee Weapon than the one it
+ * began with: the Steel Sword and the Katana lie on side paths. It has no bow either: the only bow of the game, the Long
+ * Bow, is in the chest of the cabin, behind a locked door.
  */
-export const MAIN_ROUTE_GEAR = { 'melee-weapon': 'basic-sword', armor: 'knight-mail', 'ranged-weapon': 'short-bow' };
+export const MAIN_ROUTE_GEAR = { 'melee-weapon': 'basic-sword', armor: 'knight-mail' };
 
 /** The same hero with the best of the side paths: the Katana and the Long Bow. The Knight Mail is the best armor there is. */
 export const OPTIONAL_GEAR = { 'melee-weapon': 'katana', armor: 'knight-mail', 'ranged-weapon': 'long-bow' };

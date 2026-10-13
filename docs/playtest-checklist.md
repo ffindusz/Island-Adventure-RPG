@@ -52,9 +52,10 @@ enough without grinding? Did the Level-ups come about where listed (a Stat Point
 - [ ] **Shipwreck Coast** (Level 2 on leaving): two crabs, the broken mast (a milestone), a chest under the hull, a
       potion on the beach. Optional: a crevice in the south wall of the bay leads to a cove with a Steel Sword and a
       potion chest.
-- [ ] **The Woods** (Level 3): wolf, slime, boar (charges), spitter (shoots). The first wolf carries the Short Bow: it
-      stands on the trail, eight tiles in from the way in, and there is no chest for the bow. Optional: the cabin's key
-      (walk onto it), its locked door and the Long Bow behind it; a Chain Mail chest far from the trail.
+- [ ] **The Woods** (Level 3): wolf, slime, boar (charges), spitter (shoots). The first wolf stands on the trail, eight
+      tiles in from the way in, and gives nothing; two caches of arrows lie along the trail, and the route gives no bow.
+      Optional: the cabin's key (walk onto it), its locked door and the Long Bow behind it, which is the only bow of the
+      game; a Chain Mail chest far from the trail.
 - [ ] **The Mountain** (Level 4): raiders; the veteran is the tougher fight. The Plate Armor chest is three tiles off
       the trail; a side pocket holds two chests and a guard. The only Checkpoint is at the way in, about 70 steps back.
 - [ ] **The Cave** (Level 5): bat, lizard (charges), eye (shoots); the bear is the tougher fight. Optional: a lever, a
@@ -77,15 +78,17 @@ page names the keys that close it (C/TAB, I, M or H, then Esc) and is all on the
       on the screen. The game waits behind it (the monsters stop); H again, or Esc, closes it and they move again. With
       it open, I, M, C and Tab open nothing, and at a level-up choice H opens nothing. Press each key on the list and
       see that it does what the page says. Is every word plain to you?
-- [ ] **The bow:** defeat the first wolf of the woods, the one on the trail just inside the way in (a hero with the sword
-      and the armor of the start beats it in a blow or two). The bow goes straight to the inventory: the notice says
-      that you found it and to press I, and nothing lies on the ground where the wolf fell. If that defeat also raises
-      your Level, the Stat Point is asked first and the notice shows once you have chosen. After a defeat that sends
-      you back to the woods' Checkpoint the wolf is back, and defeating it again gives no second bow. Equip the Short
-      Bow in the inventory (I, then Enter on its line; that does not take it in hand).
+- [ ] **The bow:** the Long Bow in the cabin's chest is the only bow of the game. Defeat the first wolf of the woods, the
+      one on the trail just inside the way in (a hero with the sword and the armor of the start beats it in a blow or
+      two): nothing is given for it and no notice tells of Gear. Open a cache of arrows along the trail: the notice
+      tells of the arrows, the inventory (I) holds no bow and Q does nothing. Take the key in the north woods (a wolf
+      guards it), walk back to the cabin in the south-west (the sign by its door says where the key is), open the door
+      and then the chest: the Long Bow goes straight to the inventory, and the notice says that you found it and to
+      press I. Equip it in the inventory (I, then Enter on its line; that does not take it in hand).
       Q takes it in hand and Q again takes the sword back; Q does nothing before a bow is equipped. With the bow in
       hand, Space shoots one arrow the way you face and the Ammunition on the HUD goes down by one; with none left the
-      notice says OUT OF AMMUNITION. The first cache of arrows is a little farther along the trail.
+      notice says OUT OF AMMUNITION. The HUD shows the Long Bow's icon where the sword's was, and nothing in it jumps
+      when you switch. Save and Continue with the bow equipped: it is still equipped.
 - [ ] **A Healing Potion:** I opens the inventory (I again closes it), Down goes past the Gear to the Healing Potion
       line and Enter drinks one: Health rises by 5 at most (never above the maximum) and the count falls by one. At
       full Health nothing happens and no potion is used up.
@@ -108,7 +111,9 @@ page names the keys that close it (C/TAB, I, M or H, then Esc) and is all on the
 ## The optional puzzles
 
 - [ ] The woods' key and door; the cave's lever, sign and gate. Do the signs and the lever tell you enough?
-- [ ] The cave's gate is one tile wide and has no corner assist (line up within an eighth of a tile). Fair, or fiddly?
+- [ ] Walk a little off the middle into the crevice in the coast's bay, the cabin's door once it is open and the cave's
+      gate once it is open, each one tile wide: the hero slides round the corner and goes in. Does it feel right, or
+      does it ever take you where you did not mean to go?
 - [ ] Did you find the optional Gear (Steel Sword, Chain Mail, Plate Armor, Long Bow, Katana), and was each a step up on
       the inventory page?
 
@@ -170,7 +175,7 @@ page names the keys that close it (C/TAB, I, M or H, then Esc) and is all on the
 ## How long it took (a question for your stopwatch)
 
 The estimate (`docs/balance.md`, "Play time") is about **14 minutes** for a first playthrough that follows the trail
-and does a little of everything: 5.7 at best, 37.0 for a slow player who does every side find and puzzle. The spec
+and does a little of everything: 5.6 at best, 36.5 for a slow player who does every side find and puzzle. The spec
 asks for **45 to 60**. The estimate is a model with nine guesses, so criterion 4 of ticket 26 stays open until your
 clock says.
 
@@ -196,7 +201,10 @@ Tick one when you accept it as it is; otherwise write what to change.
 - [ ] **Autosave when the Guardian falls** is taken before the Stat Point is spent, so Continue asks for it again.
 - [ ] **One Checkpoint** each in the mountain, the cave and the castle, plus the Guardian's (the ways back are above).
       Do you want a second one in the castle? That is a map change, and nothing was done about it.
-- [ ] **The cave's one-tile gate** has no corner assist (see "The optional puzzles").
+- [ ] **The corner slide** helps the hero only, and only when its middle is already over the gap beside the corner: a
+      hero whose middle is over a wall, a chest, a lever, a sign or a shut door stays flush against it, and the monsters
+      get no such help. The slide goes round chests, levers, signs and shut doors and gates as it goes round rock, and
+      nothing in the picture or the sound says that it happened (see "The optional puzzles"). Is that how you want it?
 - [ ] **The two-press departure** at the vessel (the first press prepares it, the second asks).
 - [ ] **H shows the controls:** H was free, so it is the key of the Controls page, but you have not chosen it. The game
       now says it twice and in no other place: on the card of the opening (IN PLAY, H SHOWS THE CONTROLS, under ENTER TO
@@ -238,10 +246,12 @@ Tick one when you accept it as it is; otherwise write what to change.
       gone idle, or Continues into a fight); the first Enter on a title whose sound is still locked may lose its
       confirm sound; - and + are the keys MINUS and PLUS and the keypad's, which a non-US layout may not have. All 24
       files (13.2 MB) load before the title, with no loading bar.
-- [ ] **Old saves:** a save from an older build is refused after a change of the saved state (the version is 4 now) and
-      after a change to the interactables of the content: ticket 30 took the bow chest out of the woods, so every save
-      made before it is refused, the one from your earlier playtests too. The title says SAVE IS FROM ANOTHER VERSION.,
-      greys Continue out and offers New Game (and Controls), and a New Game replaces it.
+- [ ] **Old saves:** a save from an older build is refused after a change of the saved state (the version is 4 now),
+      after a change to the interactables of the content (ticket 30 took the bow chest out of the woods, so every save
+      made before it is refused) and after a piece of Gear is taken out of the content (ticket 32 took the bow that the
+      first wolf gave in the last build out of the game, so a save whose hero holds it is refused: yours is, if you took
+      it). The title says SAVE IS FROM ANOTHER VERSION., greys Continue out and offers New Game (and Controls), and a New
+      Game replaces it.
 - [ ] **`?debug`** in the address bar gives the page the Game core, in a build for the public too. Keep it, or switch it
       off in a shipped build?
 - [ ] **No LICENSE file** is in the repository, so the project's own code, drawings and bitmap font state no licence.
