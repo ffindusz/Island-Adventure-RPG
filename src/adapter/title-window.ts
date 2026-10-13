@@ -24,6 +24,7 @@ const ENTRY_HEIGHT = 15;
 const ENTRY_WIDTH = 112;
 
 const ENTRY_LABELS: Readonly<Record<MenuEntry, string>> = {
+  resume: 'RESUME',
   'new-game': 'NEW GAME',
   continue: 'CONTINUE',
   controls: 'CONTROLS',
