@@ -26,6 +26,7 @@ import { OpeningCard } from './opening-card';
 import { Overlay } from './overlay';
 import { pausesTheGame, stopsBeforePausing } from './pausing';
 import { PickupRiseSprites } from './pickup-rise-sprites';
+import type { MenuInput } from './player-input';
 import { byShooter } from './projectiles';
 import { ProjectileSprites } from './projectile-sprites';
 import { PropSprites } from './prop-sprites';
@@ -322,14 +323,24 @@ export class PlayScene extends GameScene {
   private holdForOpening(card: OpeningCard): void {
     this.autosave([]);
     this.playMusicFor(this.core.view());
-    const { confirm } = this.playerInput.pollMenu();
-    this.playerInput.pollActions();
-    this.dismissalWatch.take();
+    const { confirm } = this.pollHeld();
     if (confirm) {
       card.hide();
       this.card = null;
       this.cameras.main.fadeIn(OPENING_FADE_MS, 0, 0, 0);
     }
+  }
+
+  /**
+   * Reads what the keys did in a frame in which the game is held (the card of the opening, a fall) and throws it away:
+   * nothing the player presses reaches the game, none of it puts the text of an area away, and none is kept for the
+   * first frame after. Gives what the menu keys did, for the card to take its Enter from.
+   */
+  private pollHeld(): MenuInput {
+    const menu = this.playerInput.pollMenu();
+    this.playerInput.pollActions();
+    this.dismissalWatch.take();
+    return menu;
   }
 
   /**
@@ -357,11 +368,8 @@ export class PlayScene extends GameScene {
 
   /** One frame of a fall: the world stands still with the hero lying in it, and at the end the screen fades out. */
   private showFall(fall: Fall, frameMs: number, watching: boolean, time: number): void {
-    // What the player presses meanwhile does not count, and puts away no text that shows when the fall is over. The walk
-    // keys are read again when the fall is over.
-    this.playerInput.pollMenu();
-    this.playerInput.pollActions();
-    this.dismissalWatch.take();
+    // The walk keys are read again when the fall is over.
+    this.pollHeld();
     this.letTimePass(frameMs);
     if (fall.stage === 'fading-out' && !this.fadingOut) {
       this.fadingOut = true;
