@@ -51,11 +51,11 @@ export class ControlsLineTime {
    * it had left, and it is back, with that, when the game runs on. A frame that nobody watches leaves the line on and
    * takes nothing.
    */
-  frame(frameMs: number, of: FrameOfPlay): boolean {
-    if (of.watching && !of.waiting) {
+  frame(frameMs: number, play: FrameOfPlay): boolean {
+    if (play.watching && !play.waiting) {
       this.remaining -= frameMs;
     }
-    return this.remaining > 0 && !of.waiting;
+    return this.remaining > 0 && !play.waiting;
   }
 
   /** Ends the line for good: the player opened the Controls page, so has found it. */
