@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 113, 110 (superseded by 113), 68, 71, 11, 28, 29, 33, 37, 39, 66
 
@@ -99,3 +99,5 @@ For the tests that were green when written:
 **Left for the reviewer.** The play check (the last criterion) is not ticked. The HUD criterion is ticked on the numbers above, but its look is the reviewer's eye.
 
 **Follow-ups, none made.** The gap above the bow's icon, if wanted. Nothing on the trail points at the cabin except the sign by its door ("Not decided" above stands). The checklist's bow lines sit beside the Controls lines that ticket 33 edits: if the two merges meet there, take both. The glossary has no term for the Short Bow or for a carrier and needs none; no ADR is proposed, as nothing recorded in one changes.
+
+Resolved on integration/island-adventure-rpg at 243c1c1
