@@ -145,3 +145,5 @@ The scene's call `setWaiting(gameIsWaiting(view))` is Phaser-bound and cannot be
 - **Ticket 27** changes the notice's key label (`notice.ts`) and the README's controls rows. This ticket does not touch `notice.ts`; whichever merges second takes the other's lines.
 
 Resolved on integration/island-adventure-rpg at 40dc0da
+
+**Superseded by ticket 32** (after the player played the build, and chose the Long Bow in the cabin as the only bow): the wolf carries nothing, the Short Bow is taken out of the game, and the mechanism that this ticket added, a monster that carries a piece of Gear (`carries`, `takeCarriedGear` and the loader's check), goes with them unless the player asks for it to stay. Spec story 110 is superseded by story 113. What this ticket built is left in the history above as it was.

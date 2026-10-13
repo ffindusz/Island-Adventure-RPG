@@ -110,7 +110,7 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
 **Gear, inventory, and loot**
 
 67. As a player, I want to start with a basic Melee Weapon and basic armor, so that I can fight from the moment I wake on the coast.
-68. As a player, I want to find my first Ranged Weapon and some Ammunition early in the woods, so that the bow arrives as a rewarding discovery.
+68. As a player, I want to find my first Ranged Weapon, a bow, in the woods, in a chest behind a locked door that a key from the north woods opens, and my first Ammunition in caches along the trail, so that the bow arrives as a rewarding discovery that I went looking for. (Changed after the second build: see story 113.)
 69. As a player, I want a few curated Gear upgrades across the journey, roughly one weapon and one armor improvement every couple of Adventure Areas, so that each find feels significant.
 70. As a player, I want better weapons to raise my Attack and better armor to raise my Defense, so that every upgrade is simple to understand.
 71. As a player, I want Gear and upgrades to come mainly from chests and story milestones, with occasional monster drops, so that the important finds are placed by design and reward exploring.
@@ -173,7 +173,19 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
 
 **Gear (added after the first build)**
 
-110. As a player, I want the first bow to be carried by a monster that stands just inside the way into the woods, and to take it when I defeat that monster, so that my ranged weapon comes at the very start of the second Adventure Area, from the first fight there.
+110. (Superseded by story 113: after playtesting the player chose the bow in the cabin's chest over the bow on the wolf.) As a player, I want the first bow to be carried by a monster that stands just inside the way into the woods, and to take it when I defeat that monster, so that my ranged weapon comes at the very start of the second Adventure Area, from the first fight there.
+
+**Movement (added after the second build)**
+
+111. As a player, I want to walk into a passage one tile wide, such as the crevice in the coast or the door of the cabin, without lining the hero up to the pixel, so that I am not stopped at an opening I am plainly walking into: when the hero walks against a corner with its middle over the gap, it slides the little that is needed and goes in.
+
+**Menus and pause (added after the second build)**
+
+112. As a player, I want to be told in play that H shows the controls, once on the opening card and in a short line when play begins or continues, so that I know of the Controls page when I need it, without looking for it on the title screen.
+
+**Gear (added after the second build)**
+
+113. As a player, I want the only bow of the game to be the Long Bow in the chest of the cabin behind the locked door, which I reach by finding the key in the north woods, and no monster to hand out Gear, so that the bow is the reward of a side path that I chose to explore.
 
 ## Implementation Decisions
 
@@ -199,6 +211,10 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
 - There are no NPCs and no dialogue. The story is a brief opening (a storm wrecked the ship, with no deeper mystery), a brief ending, short Adventure Area text, and environmental clues.
 - The ending: defeating the Guardian opens access to the forgotten harbor; the hero prepares the old vessel and sails home. That departure is the point of no return. It is followed by an ending and credits screen and then the title screen.
 
+**Movement**
+
+- The hero walks a fixed step at a time in the direction last held, and stops flush against what is solid: rock and water, a chest, a lever, a sign, a closed door or gate, and a monster. Its body is narrower than a tile, but the passages of the world are one tile wide, so that a player who is a little off the middle of one would be stopped by its corner at every try. The hero is therefore helped round corners: when its step is stopped by the corner of something solid that does not move, and its middle is already over the gap, it slides sideways the little that is needed to clear the corner, at walking speed, and then goes on in the direction it was walking. It never slides into anything solid, a monster that stands in the way included, and it is not helped when its middle is over the wall, the chest or the door (it would not fit the gap, or would be pushed through what it should be stopped by). Monsters are not helped, and nothing about combat or its numbers changes.
+
 **Combat rules**
 
 - Combat is real time. Space attacks in the facing direction with the active weapon, and Q switches the active weapon between the Melee Weapon (sword) and the Ranged Weapon (bow). Both use the same attack key and a shared short cooldown. There is no stamina or mana.
@@ -218,7 +234,7 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
 
 - One Melee Weapon, one Ranged Weapon, and one set of armor are equipped; other Gear and consumables are stored in the inventory. The inventory has no capacity or weight limit.
 - Gear gives simple bonuses only: weapons raise Attack and armor raises Defense. There are no special abilities and no set bonuses. Upgrades to a weapon type change Attack only.
-- The hero starts with a basic Melee Weapon (sword) and basic armor. The first Ranged Weapon (bow) is carried by a monster that stands just inside the way into the woods, farther from the Checkpoint there than it notices the hero: the hero takes the bow when it defeats that monster, and the first Ammunition lies in caches a little further along the trail. A monster that carries Gear gives it only to a hero that does not hold it yet, so a monster that resets after a defeat never gives it twice. A few curated upgrades (roughly one weapon and one armor improvement every couple of Adventure Areas) come from chests and story milestones, with occasional monster drops. There are no shops and no currency.
+- The hero starts with a basic Melee Weapon (sword) and basic armor. The first Ranged Weapon (bow) is the Long Bow, the only bow of the game, in the chest of a locked cabin in the woods: a side path that the main route never needs (the sword is enough for the Guardian), whose key lies in the north woods, guarded, and which a sign by the cabin's door points to. The first Ammunition lies in caches along the trail. No monster carries Gear. A few curated upgrades (roughly one weapon and one armor improvement every couple of Adventure Areas) come from chests and story milestones, with occasional monster drops of consumables. There are no shops and no currency.
 - Healing Potions are collectible, restore Health when used, and are the only way to heal between Checkpoints. There is no passive regeneration.
 - Ammunition is replenished only from marked caches and occasional monster drops. Checkpoints never refill it.
 
@@ -240,6 +256,7 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
 
 - Keyboard only: WASD or the arrow keys move; Space attacks; Q switches weapon; E interacts; I toggles the inventory; M toggles the Automap; C or Tab toggles the stat page; H toggles the Controls page; Esc closes the open page. A page key toggles only its own page: it opens the page when nothing else is open and closes it when it is the page that is open, and it does nothing while another page is open, a level-up choice waits, or the question whether to sail home is asked. Each page's close hint names its own key or keys as well as Esc.
 - The Controls page lists every key the game answers to with what each does, and is built from the table that binds the keys, so it cannot disagree with them. It opens with H during play and pauses the game like the other pages; the title screen offers the same list as a Controls entry in its menu.
+- The player is told that H shows the Controls page: the card of the opening says so under its lines, and a short line, "H FOR CONTROLS", shows for a few seconds when play begins (after the opening card, for a New Game) and when a saved game continues. The label comes from the table that binds the keys. The feet of the pages do not say it, because a page key does nothing while another page is open. The line is the adapter's own, since the Game core knows no keys.
 - Gameplay is paused whenever the inventory, stat page, Automap, Controls page, or a level-up choice is open.
 - The HUD during play shows Health, the active weapon, Ammunition, and the Healing Potion count.
 
@@ -257,7 +274,8 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
   - Weapon switching; Attack and Defense totals including Gear; Defense reducing damage received.
   - Experience, Levels, the Level 6 cap, one Stat Point per Level, and the paused level-up choice; Experience granted again for reset monsters; milestone Experience awarded once.
   - Pausing while the inventory, Automap, stat page, Controls page, or a level-up choice is open.
-  - Gear carried by a monster: not given before the monster is defeated, given when it is, given once only (also after a defeat and the reset of the monster), kept through defeat, and restored by the save snapshot.
+  - Movement round corners: a hero whose middle is over a one-tile gap and that walks against its corner slides in at walking speed, from every offset across the gap, tested on the real passages of the content (the crevice of the coast and the door of the cabin); it stops flush when its middle is over the wall, a chest, a lever, a sign or a closed door, and when a monster stands in the way of the slide; monsters are not helped.
+  - The Long Bow as the only bow: the starting hero has no bow, no monster hands out Gear, and the bow is in the cabin's chest, behind the door that only the key of the north woods opens; a hero that walks from the key to the door to the chest holds the Long Bow, equips it, switches to it with Q and shoots it with Space; a save that holds a bow of an earlier version is refused as from another version and never crashes the game.
   - Toggling a page (the Controls page included): the same key opens a page and then closes it; a key of another page does nothing while a page is open; no page opens while a level-up choice or the question whether to sail home waits; a page that is open (also one restored from a save) closes with its own key.
   - Checkpoint activation and autosave triggers, and the full defeat-recovery rules (what persists, what rolls back, what resets), including a Guardian that stays defeated and an undefeated one that starts fresh.
   - Backtracking: monsters stay defeated; the final departure is the only point of no return; the ending is reachable only after the Guardian is defeated and leads back to the title.
@@ -317,7 +335,6 @@ These were not put to the user during the interview. Each is the recommended def
 - An unreadable or incompatible save. Default: treat it as no save and show a short message; never crash.
 - A floor on damage. Default: Defense can never reduce damage received to zero.
 - What the "few demanding fights" along the route are. Default: tougher variants of ordinary monsters, with no additional Guardians.
-- Which woods monster carries the bow. Default: one of the weak ones that is already there, moved to the start of the woods, so that the Experience on offer in the whole of the woods does not change.
 - Which key opens the Controls page. Default: H.
 - Numeric balance. Targets: about five level-ups on the intended route, approachable moderate difficulty, and a Guardian that is beatable with the Levels and Gear earned on the intended route.
 
