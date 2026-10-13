@@ -58,12 +58,12 @@ const COUNT_ROOM = textWidthOf('00');
 
 /**
  * What shows the weapon in hand, by the slot it is equipped in: the picture the hero holds for the sword, upside down so
- * that its point is up, and the icon of the bow for the bow, which stands upright, because the bow the hero holds lies
- * flat and read as a bowl here.
+ * that its point is up, and the icon of the Long Bow, the only bow of the game, for the bow, which stands upright,
+ * because the bow the hero holds lies flat and read as a bowl here.
  */
 const WEAPON_ICONS: Readonly<Record<WeaponSlot, { readonly texture: string; readonly flipped: boolean }>> = {
   'melee-weapon': { texture: SWORD_HELD, flipped: true },
-  'ranged-weapon': { texture: gearIcon('short-bow'), flipped: false },
+  'ranged-weapon': { texture: gearIcon('long-bow'), flipped: false },
 };
 
 const POTION_ICON = consumableIcon('healing-potion');

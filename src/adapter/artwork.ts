@@ -21,7 +21,6 @@ export const ARTWORK = {
   'gear-basic-sword': image('gear-basic-sword.png'),
   'gear-steel-sword': image('gear-steel-sword.png'),
   'gear-katana': image('gear-katana.png'),
-  'gear-short-bow': image('gear-short-bow.png'),
   'gear-long-bow': image('gear-long-bow.png'),
   'gear-basic-armor': drawn(TUNIC_ROWS, PACK_PALETTE),
   'gear-chain-mail': drawn(MAIL_ROWS, PACK_PALETTE),
