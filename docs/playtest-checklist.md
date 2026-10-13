@@ -35,6 +35,13 @@ are in `docs/balance.md`, the keys in the README.
       under it in the same colour, IN PLAY, H SHOWS THE CONTROLS; the card whole, with air all round it), and H pressed at
       the card does nothing. Then you wake on the coast with the banner
       "Wreckage lines the shore. Follow the beach east." Is it clear what to do in the first minute?
+- [ ] **The line H FOR CONTROLS** (after the card, and after Continue): a small panel in the middle of the top row, clear
+      of the HUD at the left, of the audio line at the right (press N to see it) and of the area banner under it, from
+      the first frame of play for about four seconds; then it is gone and does not come back in that game (not after a
+      fall, in another area or when a page closes). Press I, M or C while it shows: it is off the screen while the page is
+      open and is back, with the time it had left, when you close the page. Press H while it shows: the Controls page
+      opens and the line is gone for good, also after you close the page. A pickup's notice, low on the screen, never
+      meets it. Reload and choose Continue: it shows again, and so it does for the New Game that follows the credits.
 
 ## The five areas, in the order of the route
 
@@ -191,10 +198,13 @@ Tick one when you accept it as it is; otherwise write what to change.
       Do you want a second one in the castle? That is a map change, and nothing was done about it.
 - [ ] **The cave's one-tile gate** has no corner assist (see "The optional puzzles").
 - [ ] **The two-press departure** at the vessel (the first press prepares it, the second asks).
-- [ ] **H shows the controls:** H was free, so it is the key of the Controls page, but you have not chosen it. Nothing in
-      play tells a player that H exists, not the HUD and not the card of the opening; the title screen's Controls line
-      is how the page is found: Enter on it shows the same list (the title does not read H itself). Is that enough, or
-      should the opening card or the HUD say it once?
+- [ ] **H shows the controls:** H was free, so it is the key of the Controls page, but you have not chosen it. The game
+      now says it twice and in no other place: on the card of the opening (IN PLAY, H SHOWS THE CONTROLS, under ENTER TO
+      BEGIN) and in the line H FOR CONTROLS, for four seconds once play begins or continues; the title screen's Controls
+      line is how the page is found before then (Enter on it shows the same list; the title does not read H itself). Is
+      the line long enough, or too long, and is the middle of the top row the right place for it? Is it enough, or should
+      the HUD carry the key all the time? H pressed at the card does nothing, because the card takes only Enter: should
+      it open the page?
 - [ ] **The Controls line on the title** is the third line of the menu, always choosable, and its list takes the whole
       screen and hides the name of the game while it shows. Esc and Enter both close it. To make room for the third
       line, the sound's hints share one row (N TO MUTE and - OR + FOR VOLUME) and a save from another version is told
