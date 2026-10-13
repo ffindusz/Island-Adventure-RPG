@@ -16,7 +16,7 @@ The player starts a new game, reads a brief opening about the storm, and begins 
 
 Combat is real time. The hero attacks in the facing direction with a sword (Melee Weapon) or a bow (Ranged Weapon with limited Ammunition) and switches between them on the fly. Enemy attacks are telegraphed and are avoided by positioning alone. Defeating monsters and reaching milestones earns Experience; each Level, up to Level 6, grants one Stat Point to put into Health, Attack, or Defense. A few curated Gear upgrades from chests and milestones raise Attack and Defense, and Healing Potions restore Health.
 
-Checkpoints at each Adventure Area entrance and just before the Guardian restore Health and autosave the game in the browser. Defeat returns the hero to the latest Checkpoint with all growth intact. The Automap, inventory, stat page, and a Controls page that lists every key open with a keypress, close with the same key (or Esc), and pause the game. A single undead Guardian defends the castle; beating it opens the way through the forgotten harbor to an old ship, and sailing home ends the game with a short ending and a return to the title screen.
+Checkpoints at each Adventure Area entrance and just before the Guardian autosave the game in the browser; they do not restore Health, so the Health the hero has left goes with it from one Adventure Area to the next, and Healing Potions are the way to heal. Defeat returns the hero to the latest Checkpoint at full Health with all growth intact. The Automap, inventory, stat page, and a Controls page that lists every key open with a keypress, close with the same key (or Esc), and pause the game; Esc, when none of them is open, pauses the game too and brings up the start screen, from which the game is resumed. A single undead Guardian defends the castle; beating it opens the way through the forgotten harbor to an old ship, and sailing home ends the game with a short ending and a return to the title screen.
 
 ## User Stories
 
@@ -82,7 +82,7 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
 46. As a player, I want my Health to drop when I'm hit and defeat to occur when it reaches zero, so that the stakes of each fight are visible.
 47. As a player, I want collectible Healing Potions that restore Health when used, so that I can recover from a hard fight.
 48. As a player, I want no passive Health regeneration, so that Health stays a meaningful resource between Checkpoints.
-49. As a player, I want full Health recovery at a Checkpoint, so that I can reset after a hard stretch.
+49. (Superseded by story 115: after playtesting the player found that Health restored at every Checkpoint made the game too easy.) As a player, I want full Health recovery at a Checkpoint, so that I can reset after a hard stretch.
 
 **Monsters and the Guardian**
 
@@ -123,7 +123,7 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
 **Checkpoints, defeat, and recovery**
 
 77. As a player, I want a Checkpoint at the entrance of every Adventure Area and just before the Guardian, so that defeat never costs much progress.
-78. As a player, I want reaching a Checkpoint to restore my Health fully and autosave, so that Checkpoints feel safe.
+78. (Superseded in part by story 115: a Checkpoint still autosaves, but no longer restores Health.) As a player, I want reaching a Checkpoint to restore my Health fully and autosave, so that Checkpoints feel safe.
 79. As a player, I want to return to the latest Checkpoint when my Health reaches zero, so that failing costs time rather than progress.
 80. As a player, I want to keep my Level, Experience, assigned Stat Points, and Gear after defeat, so that I never lose growth.
 81. As a player, I want my Ammunition and Healing Potion counts to return to what they were at the Checkpoint, so that a retry doesn't punish me twice.
@@ -187,6 +187,18 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
 
 113. As a player, I want the only bow of the game to be the Long Bow in the chest of the cabin behind the locked door, which I reach by finding the key in the north woods, and no monster to hand out Gear, so that the bow is the reward of a side path that I chose to explore.
 
+**Menus and pause (added after the third build)**
+
+114. As a player, I want the text that shows when I enter a new Adventure Area, and the text of a sign I read, to go away when I press any key, so that I can clear it from the screen as soon as I have read it instead of waiting for it to time out.
+
+**Health and healing (added after the third build)**
+
+115. (Supersedes stories 49 and 78 where they say that a Checkpoint restores Health.) As a player, I want a Checkpoint to save my progress but not to restore my Health, so that the Health I have left goes with me from one Adventure Area to the next, Healing Potions matter, and the adventure is harder; defeat still returns me to a Checkpoint at full Health.
+
+**Menus and pause (added after the third build)**
+
+116. As a player, I want Esc, when nothing is open, to pause the game and bring up the start screen with a PAUSED message and RESUME on top of its menu, and to take me back into the game exactly as it was when I choose RESUME or press Esc again, so that I can stop, read the controls, or leave for a new game or my saved game without losing the game I am in until I choose to.
+
 ## Implementation Decisions
 
 **Product shape**
@@ -197,7 +209,7 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
 
 **Modules**
 
-- **Game core**: a headless, engine-free deep module that holds every gameplay rule: movement and collision, combat, Experience, Levels and Stat Points, Gear, inventory and consumables, Checkpoints and defeat recovery, Automap discovery, Adventure Area transitions, world state, saves, and the ending. Its interface is deliberately small. It accepts player commands (move or stop in a direction, attack, switch weapon, interact, use a Healing Potion, open or close the inventory, Automap, stat page, or Controls page, equip Gear, assign a Stat Point) and session commands (new game, continue from a save, return to the title), plus elapsed time supplied in fixed steps. It exposes an observable state view, a stream of events (hit, monster defeated, Experience gained, level-up, pickup, Checkpoint activated, Adventure Area changed, hero defeated, ending reached), and a serializable save snapshot that restores the game exactly. Content definitions and a random source (for drops) are supplied to it. It never touches the clock, storage, rendering, audio, or Phaser. Its internals may be split however the implementer likes, but only the interface is a test seam.
+- **Game core**: a headless, engine-free deep module that holds every gameplay rule: movement and collision, combat, Experience, Levels and Stat Points, Gear, inventory and consumables, Checkpoints and defeat recovery, Automap discovery, Adventure Area transitions, world state, saves, and the ending. Its interface is deliberately small. It accepts player commands (move or stop in a direction, attack, switch weapon, interact, use a Healing Potion, open or close the inventory, Automap, stat page, or Controls page, equip Gear, assign a Stat Point, dismiss the text of the area) and session commands (new game, continue from a save, return to the title), plus elapsed time supplied in fixed steps. It exposes an observable state view, a stream of events (hit, monster defeated, Experience gained, level-up, pickup, Checkpoint activated, Adventure Area changed, hero defeated, ending reached), and a serializable save snapshot that restores the game exactly. Content definitions and a random source (for drops) are supplied to it. It never touches the clock, storage, rendering, audio, or Phaser. Its internals may be split however the implementer likes, but only the interface is a test seam.
 - **Content definitions**: data for the five Adventure Area maps (terrain and collision, exits, Checkpoints, chests, ammunition caches, potion pickups, monster spawns, side paths, light obstacle devices, milestone triggers), monster types including the Guardian, items and Gear, the Experience curve, and the story texts. Content is validated when it is loaded.
 - **Phaser adapter**: the only code that knows about Phaser. It owns the title, play, page, level-up, and ending screens and the HUD; maps keyboard input to player commands; advances the Game core by the elapsed time; draws the state view with tilemaps and sprites; plays sound and animation from events; and loads assets. It holds no gameplay rules.
 - **Save store**: a thin adapter between browser-local storage and the Game core's save snapshot. It holds a single autosave and carries no rules.
@@ -235,13 +247,13 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
 - One Melee Weapon, one Ranged Weapon, and one set of armor are equipped; other Gear and consumables are stored in the inventory. The inventory has no capacity or weight limit.
 - Gear gives simple bonuses only: weapons raise Attack and armor raises Defense. There are no special abilities and no set bonuses. Upgrades to a weapon type change Attack only.
 - The hero starts with a basic Melee Weapon (sword) and basic armor. The first Ranged Weapon (bow) is the Long Bow, the only bow of the game, in the chest of a locked cabin in the woods: a side path that the main route never needs (the sword is enough for the Guardian), whose key lies in the north woods, guarded, and which a sign by the cabin's door points to. The first Ammunition lies in caches along the trail. No monster carries Gear. A few curated upgrades (roughly one weapon and one armor improvement every couple of Adventure Areas) come from chests and story milestones, with occasional monster drops of consumables. There are no shops and no currency.
-- Healing Potions are collectible, restore Health when used, and are the only way to heal between Checkpoints. There is no passive regeneration.
+- Healing Potions are collectible, restore Health when used, and are the only way to heal short of defeat, which returns the hero to a Checkpoint at full Health. A Checkpoint does not heal. There is no passive regeneration.
 - Ammunition is replenished only from marked caches and occasional monster drops. Checkpoints never refill it.
 
 **Checkpoints, saves, and defeat**
 
 - There is a Checkpoint at the entrance of each of the five Adventure Areas (the start of the adventure counts as the first) and one immediately before the Guardian: six in total.
-- Activating a Checkpoint restores full Health, records a snapshot of the hero's Ammunition and Healing Potion counts and of which consumable pickups have been collected, and autosaves. The game also autosaves whenever the hero changes Adventure Area. There is one autosave, in browser-local storage; Continue restores it.
+- Activating a Checkpoint leaves the hero's Health as it is (the Health the hero has left goes on into the next Adventure Area), records a snapshot of the hero's Ammunition and Healing Potion counts and of which consumable pickups have been collected, and autosaves. The game also autosaves whenever the hero changes Adventure Area. There is one autosave, in browser-local storage; Continue restores it.
 - On defeat the hero returns to the most recently activated Checkpoint with full Health, and:
   - These persist: Level, Experience, assigned Stat Points, all Gear, opened chests that hold Gear and other permanent one-time rewards, opened levers and doors, a defeated Guardian, and Automap discoveries.
   - These roll back to the Checkpoint's snapshot: Ammunition and Healing Potion counts, together with the collected state of every pickup or chest whose contents are consumables (ammunition caches, potion pickups, and so on), so a consumable obtained after the Checkpoint is never permanently lost.
@@ -254,10 +266,12 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
 
 **Menus and controls**
 
-- Keyboard only: WASD or the arrow keys move; Space attacks; Q switches weapon; E interacts; I toggles the inventory; M toggles the Automap; C or Tab toggles the stat page; H toggles the Controls page; Esc closes the open page. A page key toggles only its own page: it opens the page when nothing else is open and closes it when it is the page that is open, and it does nothing while another page is open, a level-up choice waits, or the question whether to sail home is asked. Each page's close hint names its own key or keys as well as Esc.
+- Keyboard only: WASD or the arrow keys move; Space attacks; Q switches weapon; E interacts; I toggles the inventory; M toggles the Automap; C or Tab toggles the stat page; H toggles the Controls page; Esc closes the open page, declines the question whether to sail home and, when none of them is open, pauses the game (below). A page key toggles only its own page: it opens the page when nothing else is open and closes it when it is the page that is open, and it does nothing while another page is open, a level-up choice waits, or the question whether to sail home is asked. Each page's close hint names its own key or keys as well as Esc.
 - The Controls page lists every key the game answers to with what each does, and is built from the table that binds the keys, so it cannot disagree with them. It opens with H during play and pauses the game like the other pages; the title screen offers the same list as a Controls entry in its menu.
 - The player is told that H shows the Controls page: the card of the opening says so under its lines, and a short line, "H FOR CONTROLS", shows for a few seconds when play begins (after the opening card, for a New Game) and when a saved game continues. The label comes from the table that binds the keys. The feet of the pages do not say it, because a page key does nothing while another page is open. The line is the adapter's own, since the Game core knows no keys.
-- Gameplay is paused whenever the inventory, stat page, Automap, Controls page, or a level-up choice is open.
+- The text of an Adventure Area (shown the first time the hero is in the area) and the text of a sign stay on the screen for a few seconds, or until the player presses a key. Any key counts, the walk keys and Esc included, but only a key that goes down after the text has appeared: the key that made it appear (Interact at a sign, the Enter that ended the card of the opening) and a key still held from before, such as the walk key that carried the hero through an exit, do not dismiss it. The Game core takes a command that clears the text and the time it has left; which key sends it is the adapter's, for the Game core knows no keys.
+- Esc pauses the game when nothing is open: no page, no level-up choice, no question whether to sail home, and the game is not at the card of the opening or in a fall. The start screen comes up with a PAUSED message, and its menu has RESUME on top, then NEW GAME, CONTINUE and CONTROLS as the start screen has them. RESUME, or Esc again, returns to the game exactly as it was: nothing is sent to the Game core, nothing is saved by the pause, no key held at the pause keeps the hero walking, and the music of the place plays again. NEW GAME asks before it replaces the game in play and the saved game; CONTINUE goes back to the saved game; CONTROLS shows the list. The pause is the adapter's: the Game core knows no keys and no screens.
+- Gameplay is paused whenever the inventory, stat page, Automap, Controls page, or a level-up choice is open, and while the pause screen shows.
 - The HUD during play shows Health, the active weapon, Ammunition, and the Healing Potion count.
 
 **Art and audio**
@@ -277,7 +291,8 @@ Checkpoints at each Adventure Area entrance and just before the Guardian restore
   - Movement round corners: a hero whose middle is over a one-tile gap and that walks against its corner slides in at walking speed, from every offset across the gap, tested on the real passages of the content (the crevice of the coast and the door of the cabin); it stops flush when its middle is over the wall, a chest, a lever, a sign or a closed door, and when a monster stands in the way of the slide; monsters are not helped.
   - The Long Bow as the only bow: the starting hero has no bow, no monster hands out Gear, and the bow is in the cabin's chest, behind the door that only the key of the north woods opens; a hero that walks from the key to the door to the chest holds the Long Bow, equips it, switches to it with Q and shoots it with Space; a save that holds a bow of an earlier version is refused as from another version and never crashes the game.
   - Toggling a page (the Controls page included): the same key opens a page and then closes it; a key of another page does nothing while a page is open; no page opens while a level-up choice or the question whether to sail home waits; a page that is open (also one restored from a save) closes with its own key.
-  - Checkpoint activation and autosave triggers, and the full defeat-recovery rules (what persists, what rolls back, what resets), including a Guardian that stays defeated and an undefeated one that starts fresh.
+  - Dismissing the text of an area: the command clears the text of a first entry into an area and of a sign, with the time it had left, and changes nothing when there is no text.
+  - Checkpoint activation (it leaves the hero's Health as it is) and autosave triggers, and the full defeat-recovery rules (full Health, what persists, what rolls back, what resets), including a Guardian that stays defeated and an undefeated one that starts fresh.
   - Backtracking: monsters stay defeated; the final departure is the only point of no return; the ending is reachable only after the Guardian is defeated and leads back to the title.
   - Automap: hidden at the start, terrain recorded as explored, hero position and found exits marked, discoveries persisting through defeat.
   - Save snapshot round trip: restoring a snapshot reproduces the same observable state.
