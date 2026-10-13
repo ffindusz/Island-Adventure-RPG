@@ -37,8 +37,8 @@ export function activateCheckpoints(state: PlayState, content: Content, touchedB
 }
 
 /**
- * Defeat now sends the hero back here, with the consumables it has now (see consumable-rollback.ts), and the hero is
- * restored to full Health.
+ * Defeat now sends the hero back here, with the consumables it has now (see consumable-rollback.ts). The hero's Health
+ * is left as it is: a Checkpoint gives none back, only defeat does (see recoverHero).
  */
 function activate(state: PlayState, content: Content, checkpoint: Checkpoint): void {
   state.checkpoint = {
@@ -46,7 +46,6 @@ function activate(state: PlayState, content: Content, checkpoint: Checkpoint): v
     tile: { ...checkpoint.tile },
     ...recordConsumables(state, content),
   };
-  state.hero.health = heroMaxHealth(state, content);
 }
 
 /** Whether defeat sends the hero back to this Checkpoint of the Adventure Area `areaId`. */
