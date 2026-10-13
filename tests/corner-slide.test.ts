@@ -199,6 +199,25 @@ describe.each(THINGS)('the hero in front of $what', ({ content, used }) => {
     expectHeroAt(game, 5.375, FLUSH_ABOVE_THING + STEP);
   });
 
+  it('slides when its middle is at the very edge of it, and is not helped when its middle is a sixteenth over it', () => {
+    // The middle at x = 5: the body overlaps the thing by 0.375, half its width, which is the end of the window. The
+    // slide takes four whole steps and half of a fifth.
+    const atTheEdge = putAt(content(), { x: 5, y: FLUSH_ABOVE_THING });
+    atTheEdge.send({ type: 'move', direction: 'down' });
+    advance(atTheEdge, 5);
+    expectHeroAt(atTheEdge, 5.375, FLUSH_ABOVE_THING);
+    advance(atTheEdge, 1);
+    expectHeroAt(atTheEdge, 5.375, FLUSH_ABOVE_THING + STEP);
+
+    // The middle at x = 4.9375: the body overlaps it by 0.4375, and its middle is over the thing.
+    const overIt = putAt(content(), { x: 4.9375, y: FLUSH_ABOVE_THING });
+    overIt.send({ type: 'move', direction: 'down' });
+    for (let step = 0; step < 120; step++) {
+      overIt.step();
+      expect(heroOf(overIt)).toEqual({ x: 4.9375, y: FLUSH_ABOVE_THING });
+    }
+  });
+
   it('walks head-on up to it and stays flush in front of it, so that Interact reaches it as it did', () => {
     // From (4.5, 2.5) it takes 13.5 steps to get to y = 3.625, and it stays there for the rest of the 40.
     const game = putAt(content(), { x: 4.5, y: 2.5 });
@@ -455,7 +474,9 @@ describe('the hero that walks where no corner stops it', () => {
 
 // A hero that wanders about a room full of things never ends a step inside one of them, however it comes against them,
 // nor goes farther than a step, and now and then it is slid round a corner. The room has rock and water, a chest, a
-// lever and its gate, a sign, a shut door, a key to pick up and three dummies that stand off the grid of the tiles.
+// lever and its gate, a sign, a shut door, a key to pick up and five dummies that stand off the grid of the tiles. Two
+// of them stand where a slide round a corner would run into them: 'd' beside the top right corner of the rock at the
+// top left, and 'e' beside the bottom left corner of the sign.
 
 const ROOM = [
   '##############',
@@ -479,7 +500,13 @@ const ROOM_INTERACTABLES: readonly InteractableDefinition[] = [
   keyAt('key-1', 1, 8),
 ];
 
-const DUMMIES_OFF_THE_TILES = { a: { x: 5.3, y: 2.6 }, b: { x: 10.15, y: 5.35 }, c: { x: 2.7, y: 8.2 } };
+const DUMMIES_OFF_THE_TILES: Readonly<Record<string, Point>> = {
+  a: { x: 5.3, y: 2.6 },
+  b: { x: 10.15, y: 5.35 },
+  c: { x: 2.7, y: 8.2 },
+  d: { x: 4.9, y: 1.6 },
+  e: { x: 3.25, y: 5.4 },
+};
 
 const DIRECTIONS: readonly Direction[] = ['up', 'down', 'left', 'right'];
 
@@ -513,7 +540,7 @@ describe('the hero that wanders about a room full of things', () => {
     const content = arena({
       layout: ROOM,
       interactables: ROOM_INTERACTABLES,
-      monsters: [dummyAt('a', 5, 2), dummyAt('b', 10, 5), dummyAt('c', 2, 8)],
+      monsters: Object.entries(DUMMIES_OFF_THE_TILES).map(([id, { x, y }]) => dummyAt(id, Math.floor(x), Math.floor(y))),
       hero: REAL_HERO,
     });
     const game = putAt(content, { x: 1.5, y: 1.5 }, DUMMIES_OFF_THE_TILES);
