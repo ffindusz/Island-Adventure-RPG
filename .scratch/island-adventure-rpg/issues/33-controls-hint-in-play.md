@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 112, 109
 
@@ -100,3 +100,5 @@ For the implementer (the facts are from `integration/island-adventure-rpg` at 0f
 **Left for the reviewer.** The play check in the last criterion (unticked: nobody played by hand, the smoke is a headless browser): above all whether the line is long enough or too long, whether the top middle is the right place, and the card in a real browser. Not tested automatically, as ADR 0005 says of drawing: `ControlsLine` and the wiring in `play-scene.ts`; the screenshots are their check. Suggested, not done: ADR 0005's list of the adapter's pure modules that are tested could name `controls-line`; ADRs are not edited here. Asked again, as the ticket said: should H also open the page from the card? It is in the checklist.
 
 **Glossary.** Used in the code, the README and the checklist but not in `GLOSSARY.md`: "hint" (a short line that says which key does what: the one under a card, the foot of a page), "card of the opening" and "the line that says H FOR CONTROLS" (`ControlsLine` in the code). That last name meets ticket 29's proposed "Controls line" for the third line of the title's menu; one of the two needs another name. Proposed, not edited.
+
+Resolved on integration/island-adventure-rpg at 79746cb
