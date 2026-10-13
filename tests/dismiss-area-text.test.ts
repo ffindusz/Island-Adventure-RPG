@@ -214,6 +214,19 @@ describe('dismissing when there is no text', () => {
     expect(game.send({ type: 'new-game' })).toEqual([{ type: 'area-text', areaId: 'arena', text: TEXT }]);
     expect(playingView(game).areaText).toBe(TEXT);
   });
+
+  it('is ignored after the game has ended, as before the first game: the game stays at the title', () => {
+    const game = askingGame({ text: TEXT });
+    expect(playingView(game).areaText).toBe(TEXT);
+    game.send({ type: 'confirm-departure' });
+    expect(game.view()).toEqual({ phase: 'title' });
+
+    expect(game.send(DISMISS)).toEqual([]);
+
+    expect(game.view()).toEqual({ phase: 'title' });
+    game.send({ type: 'new-game' });
+    expect(playingView(game).areaText).toBe(TEXT);
+  });
 });
 
 describe('dismissing the text and then playing on', () => {
