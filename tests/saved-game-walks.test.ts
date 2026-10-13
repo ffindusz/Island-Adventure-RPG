@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseSave } from '../src/adapter/saved-game';
 import { gameContent } from '../src/content';
 import { createGame, PAGE_IDS, STAT_IDS } from '../src/core';
-import type { Command, ContentDefinition, Direction, RandomSource } from '../src/core';
+import type { Command, ContentDefinition, Direction, Game, RandomSource } from '../src/core';
 import { CHARGER, chargerAt, SHOOTER, shooterAt } from './enemy-fixtures';
 import {
   arena,
@@ -10,6 +10,7 @@ import {
   cacheAt,
   chestAt,
   dummyAt,
+  face,
   FIELD_LAYOUT,
   milestone,
   pickupAt,
@@ -74,34 +75,53 @@ interface Walk {
   readonly arrows: Set<'hero' | 'monster'>;
 }
 
-/** Plays a game from its start with commands at random, a few steps after each, and saves it after every round. */
-function walkAtRandom(content: ContentDefinition, seed: number, rounds: number, walk: Walk): void {
+/** What a walk plays on a game before its first round, as a script: the commands that put the game in a state of its own. */
+type Opening = (game: Game) => void;
+
+/**
+ * Plays a game from its start, after its opening if it has one, with commands at random, a few steps after each, and
+ * saves it after the opening and after every round.
+ */
+function walkAtRandom(content: ContentDefinition, seed: number, rounds: number, walk: Walk, opening?: Opening): void {
   const random = seededRandom(seed);
   const game = createGame({ content, random: seededRandom(seed + 1) });
   game.send({ type: 'new-game' });
   const gearIds = Object.keys(content.gear);
 
+  if (opening !== undefined) {
+    opening(game);
+    saveAndCheck(game, content, { seed, round: 'opening' }, walk);
+  }
   for (let round = 0; round < rounds; round++) {
     game.send(commandAtRandom(random, gearIds));
     const steps = 1 + Math.floor(random() * 8);
     for (let step = 0; step < steps; step++) {
       game.step();
     }
+    saveAndCheck(game, content, { seed, round }, walk);
+  }
+}
 
-    const saved = game.snapshot();
-    const text = JSON.stringify(saved);
-    const parsed = parseSave(text, content);
-    if (parsed.status !== 'usable' || JSON.stringify(parsed.snapshot) !== text) {
-      walk.refused.push({ seed, round, parsed });
+/** Saves the game, checks the save as the game would be given it back, and notes what the walk has been through. */
+function saveAndCheck(
+  game: Game,
+  content: ContentDefinition,
+  at: { readonly seed: number; readonly round: number | 'opening' },
+  walk: Walk,
+): void {
+  const saved = game.snapshot();
+  const text = JSON.stringify(saved);
+  const parsed = parseSave(text, content);
+  if (parsed.status !== 'usable' || JSON.stringify(parsed.snapshot) !== text) {
+    walk.refused.push({ ...at, parsed });
+  }
+  for (const world of Object.values(saved.state.areas)) {
+    for (const monster of world.monsters) {
+      walk.actions.add(monster.action.type);
     }
-    for (const world of Object.values(saved.state.areas)) {
-      for (const monster of world.monsters) {
-        walk.actions.add(monster.action.type);
-      }
-    }
-    for (const arrow of saved.state.arrows) {
-      walk.arrows.add(arrow.shotBy === undefined ? 'hero' : 'monster');
-    }
+  }
+  for (const arrow of saved.state.arrows) {
+    walk.arrows.add(arrow.shotBy === undefined ? 'hero' : 'monster');
   }
 }
 
@@ -136,13 +156,30 @@ describe('a hero among every kind of monster, doing anything at all', () => {
     checkpoints: [{ id: 'camp', tile: { col: 3, row: 3 } }],
   });
 
+  // The hero's first moves are scripted, because what it comes to by chance is not enough: the hero no longer sticks to
+  // the chests it walks into, as it did before it slid round corners, so a random walk seldom gets to its bow and
+  // Ammunition and to shoot. It takes the Ammunition of the cache below it and the bow of the chest at its right, equips
+  // the bow, takes it in hand and shoots left, at the other chest, so that the shot is in flight when the game is saved.
+  const shootsFirst: Opening = (game) => {
+    face(game, 'down');
+    game.send({ type: 'interact' });
+    face(game, 'right');
+    game.send({ type: 'interact' });
+    game.send({ type: 'open-page', page: 'inventory' });
+    game.send({ type: 'equip', gearId: 'short-bow' });
+    game.send({ type: 'close-page', page: 'inventory' });
+    game.send({ type: 'switch-weapon' });
+    face(game, 'left');
+    expect(game.send({ type: 'attack' })).toEqual([{ type: 'hero-shot', direction: 'left' }]);
+  };
+
   it(
     'is saved in a state the checks accept, whatever the state, every time',
     () => {
       const walk = newWalk();
 
       for (const seed of [1, 2, 3, 4]) {
-        walkAtRandom(gauntlet, seed, 600, walk);
+        walkAtRandom(gauntlet, seed, 600, walk, shootsFirst);
       }
 
       expect(walk.refused).toEqual([]);
