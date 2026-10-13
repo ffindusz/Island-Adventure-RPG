@@ -165,7 +165,7 @@ page names the keys that close it (C/TAB, I, M or H, then Esc) and is all on the
 ## How long it took (a question for your stopwatch)
 
 The estimate (`docs/balance.md`, "Play time") is about **14 minutes** for a first playthrough that follows the trail
-and does a little of everything: 5.7 at best, 37.0 for a slow player who does every side find and puzzle. The spec
+and does a little of everything: 5.6 at best, 36.5 for a slow player who does every side find and puzzle. The spec
 asks for **45 to 60**. The estimate is a model with nine guesses, so criterion 4 of ticket 26 stays open until your
 clock says.
 
