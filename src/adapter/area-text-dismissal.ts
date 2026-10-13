@@ -1,14 +1,14 @@
 import type { Command } from '../core';
-import { dismissesAreaText } from './player-input';
-import type { KeyState } from './player-input';
+import { isFreshPress } from './player-input';
+import type { KeyPress } from './player-input';
 
 // What the play screen does to put the text of an Adventure Area or of a sign away when the player presses a key. Which
-// presses count is `dismissesAreaText` in player-input.ts. The rest is here, and none of it knows Phaser.
+// presses count is `isFreshPress` in player-input.ts. The rest is here, and none of it knows Phaser.
 
 /** What the watch asks of a keyboard: to tell of the presses, as the event it is given, and to stop. Phaser's keyboard plugin does both. */
 export interface PressSource {
-  on(event: string, listener: (press: KeyState['originalEvent']) => void): unknown;
-  off(event: string, listener: (press: KeyState['originalEvent']) => void): unknown;
+  on(event: string, listener: (press: KeyPress) => void): unknown;
+  off(event: string, listener: (press: KeyPress) => void): unknown;
 }
 
 /**
@@ -21,8 +21,8 @@ export class DismissalWatch {
   private readonly source: PressSource;
   private readonly event: string;
   private pressed = false;
-  private readonly listener = (press: KeyState['originalEvent']): void => {
-    if (dismissesAreaText(press)) {
+  private readonly listener = (press: KeyPress): void => {
+    if (isFreshPress(press)) {
       this.pressed = true;
     }
   };

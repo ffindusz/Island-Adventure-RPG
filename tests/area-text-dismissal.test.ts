@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Command, Game, GameEvent } from '../src/core';
 import { dismissalFirst, DismissalWatch } from '../src/adapter/area-text-dismissal';
-import { dismissesAreaText } from '../src/adapter/player-input';
+import { isFreshPress } from '../src/adapter/player-input';
 import { INTERACT, arena, face, newGame, playingView, signAt } from './fixtures';
 
-// Which presses put the text of an area away (the rule of `dismissesAreaText` in player-input.ts), which frame commands
+// Which presses put the text of an area away (the rule of `isFreshPress` in player-input.ts), which frame commands
 // the dismissal goes before, and what sees the presses (area-text-dismissal.ts). All of it is pure: no Phaser, no scene.
 // The wiring of it in the play screen is looked at in the game, as ADR 0005 says of the wiring.
 
@@ -42,28 +42,28 @@ const KEYS = [
 
 describe('which presses put the text of an area away', () => {
   it.each(KEYS)('the first press of $key does', ({ code }) => {
-    expect(dismissesAreaText(pressOf(code))).toBe(true);
+    expect(isFreshPress(pressOf(code))).toBe(true);
   });
 
   it.each(KEYS)('the auto-repeat of $key, held down, does not', ({ code }) => {
-    expect(dismissesAreaText(pressOf(code, { repeat: true }))).toBe(false);
+    expect(isFreshPress(pressOf(code, { repeat: true }))).toBe(false);
   });
 
   it.each(KEYS)('$key pressed with Ctrl held, a shortcut of the browser, does not', ({ code }) => {
-    expect(dismissesAreaText(pressOf(code, { ctrlKey: true }))).toBe(false);
+    expect(isFreshPress(pressOf(code, { ctrlKey: true }))).toBe(false);
   });
 
   it.each(KEYS)('$key pressed with Meta held, a shortcut of the browser, does not', ({ code }) => {
-    expect(dismissesAreaText(pressOf(code, { metaKey: true }))).toBe(false);
+    expect(isFreshPress(pressOf(code, { metaKey: true }))).toBe(false);
   });
 
   it('the press of the Ctrl key or the Meta key itself, which tells that it is held, does not', () => {
-    expect(dismissesAreaText(pressOf('ControlLeft', { ctrlKey: true }))).toBe(false);
-    expect(dismissesAreaText(pressOf('MetaLeft', { metaKey: true }))).toBe(false);
+    expect(isFreshPress(pressOf('ControlLeft', { ctrlKey: true }))).toBe(false);
+    expect(isFreshPress(pressOf('MetaLeft', { metaKey: true }))).toBe(false);
   });
 
   it('a repeat with Ctrl held does not either', () => {
-    expect(dismissesAreaText(pressOf('KeyR', { repeat: true, ctrlKey: true }))).toBe(false);
+    expect(isFreshPress(pressOf('KeyR', { repeat: true, ctrlKey: true }))).toBe(false);
   });
 });
 
