@@ -226,6 +226,14 @@ describe('the door of the cabin in the woods, the tile (5, 22)', () => {
   const startsOver = OFFSETS.map((offset) => ({ offset, position: { x: 5.5 + offset, y: 21.625 } })).filter(
     ({ position }) => fits(isOpen, position),
   );
+  // A row farther up, at y = 20.5, the body (0.75 tall) is in row 20 alone, which is open over columns 4 to 6, and the
+  // sign (6, 21) is below it and not beside it: so every offset fits, half a tile either way. Coming down from there, a
+  // hero more than an eighth tile right of the middle of the gap is stopped flush above the sign, 0.125 tile on, and
+  // the corner slides it left by the offset less 0.125, 0.375 at most, before it can go on. A hero more than an eighth
+  // left of the middle is stopped flush above the wall at (4, 22), 1.125 tile on, and slid right.
+  const startsOneRowUp = OFFSETS.map((offset) => ({ offset, position: { x: 5.5 + offset, y: 20.5 } })).filter(
+    ({ position }) => fits(isOpen, position),
+  );
 
   function aboveTheDoor(position: Point, adjust?: (save: Snapshot) => void): Game {
     return gameWithHero(QUIET, NEW_HERO, { areaId: 'woods', position, facing: 'down' }, adjust);
@@ -278,5 +286,35 @@ describe('the door of the cabin in the woods, the tile (5, 22)', () => {
     walk(game, 'down', A_SECOND);
 
     expect(playingView(game).hero.position.y).toBeGreaterThanOrEqual(23);
+  });
+
+  it('is tried from every offset a row farther up, where the sign is below the body and not beside it', () => {
+    expect(startsOneRowUp.map(({ offset }) => offset)).toEqual(OFFSETS);
+  });
+
+  it('keeps a hero out while it is shut, from a row farther up too: it gets no farther than flush above it', () => {
+    const past: number[] = [];
+    for (const { offset, position } of startsOneRowUp) {
+      const game = aboveTheDoor(position);
+      walk(game, 'down', A_SECOND);
+      if (playingView(game).hero.position.y > 21.625 + EPSILON) {
+        past.push(offset);
+      }
+    }
+
+    expect(past).toEqual([]);
+  });
+
+  it('lets in a hero that comes down from a row farther up, from every offset, once it is open: its middle is in row 23 within a second', () => {
+    const stuck: number[] = [];
+    for (const { offset, position } of startsOneRowUp) {
+      const game = aboveTheDoor(position, openTheDoor);
+      walk(game, 'down', A_SECOND);
+      if (playingView(game).hero.position.y < 23) {
+        stuck.push(offset);
+      }
+    }
+
+    expect(stuck).toEqual([]);
   });
 });
