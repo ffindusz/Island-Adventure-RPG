@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 116, 93, 109
 
@@ -123,3 +123,5 @@ Slices, each test first and each green under `npm.cmd run check` before its comm
 - With saving not available (a browser that refuses the storage), the play screen made afresh at each RESUME has a new notice, so COULD NOT SAVE may be told once more at the next failing autosave after a resume.
 
 **Proposed words for GLOSSARY.md (not edited here):** "paused screen" for the start screen of the title with PAUSED and RESUME, shown over a game that was put away; "pausing" for putting the play screen away with Esc. "The pause" in the README stays for the Game core standing still behind a page.
+
+Resolved on integration/island-adventure-rpg at 5a35077
