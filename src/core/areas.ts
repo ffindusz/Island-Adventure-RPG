@@ -72,6 +72,14 @@ export function ageAreaText(state: PlayState): void {
   }
 }
 
+/**
+ * The text of an Adventure Area or of a sign goes at once, whatever time it had left. Nothing of that time is kept: a sign
+ * read again shows its text for the whole time, and the area that had the text has had its visit all the same.
+ */
+export function dismissAreaText(state: PlayState): void {
+  state.areaText = null;
+}
+
 /** Cannot fail for content that loaded: loading checks that every exit leads to an entrance that exists. */
 function entranceOf(area: Area, entranceId: string): Entrance {
   const entrance = area.entrances.find((candidate) => candidate.id === entranceId);

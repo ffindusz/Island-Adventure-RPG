@@ -224,7 +224,7 @@ export interface PlayState {
   areaId: string;
   /** Where defeat sends the hero. It does not change until the hero touches a Checkpoint (see checkpoints.ts). */
   checkpoint: CheckpointState;
-  /** The text of the Adventure Area that is shown now, if any. It runs down while the game is not paused. */
+  /** The text of the Adventure Area that is shown now, if any. It runs down while the game is not paused, and a key puts it away. */
   areaText: AreaTextState | null;
   hero: HeroState;
   /**

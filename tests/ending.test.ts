@@ -59,6 +59,7 @@ describe('confirming the departure', () => {
     ['switch-weapon', { type: 'switch-weapon' }],
     ['cancel-departure', { type: 'cancel-departure' }],
     ['confirm-departure', CONFIRM],
+    ['dismiss-area-text', { type: 'dismiss-area-text' }],
   ])('leaves no postgame: %s does nothing afterwards, and the game stays at the title', (_name, command) => {
     const game = askingGame();
     game.send(CONFIRM);
