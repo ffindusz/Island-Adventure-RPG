@@ -4,32 +4,31 @@ import { VIEW_HEIGHT, VIEW_WIDTH } from '../src/adapter/config';
 import { pageKeyLabel } from '../src/adapter/controls';
 import { panelFor } from '../src/adapter/overlay';
 import { textWidthOf } from '../src/adapter/pixel-font';
-import type { Rect } from '../src/adapter/pixel-font';
 import type { SavedGame } from '../src/adapter/save-store';
 import { TITLE_LINE_CORNER, logoLayout, paintedBounds } from '../src/adapter/title-layout';
 import { openMenu } from '../src/adapter/title-menu';
 import type { TitleMenu } from '../src/adapter/title-menu';
 import { layoutTitleWindow } from '../src/adapter/title-window';
-import type { TitleWindow } from '../src/adapter/title-window';
 import { INK, WINDOW_PADDING } from '../src/adapter/ui-layer';
 import { charactersTheFontLacks } from './drawn-text';
 import { newGame, playingView } from './fixtures';
+import {
+  A_SAVE,
+  DAMAGED,
+  FROM_ANOTHER_VERSION,
+  NO_SAVE,
+  NOT_AVAILABLE,
+  SAID,
+  crosses,
+  linesOf,
+  textsOf,
+} from './title-window-fixtures';
 
 // The window of the title screen as the scene draws it, without the scene: what it says in each state of the title, how
 // high it is, and the box of each of its rows on the 320 x 192 screen. A direct test of a pure function of the adapter,
 // as ADR 0005 allows. Every number is worked out by hand: a text of n letters is 6n - 1 pixels wide and 7 tall, a line of
 // the menu is 112 wide and 15 tall, there are 4 pixels between two rows (none between two lines of the menu), a space
 // between two rows is 4 more of air, and a window has 12 of padding round its rows.
-
-const NO_SAVE: SavedGame = { status: 'none' };
-const A_SAVE: SavedGame = { status: 'usable', snapshot: newGame().snapshot() };
-const NOT_AVAILABLE: SavedGame = { status: 'unavailable' };
-const DAMAGED: SavedGame = { status: 'unusable', problem: 'damaged', detail: 'The save could not be read.' };
-const FROM_ANOTHER_VERSION: SavedGame = {
-  status: 'unusable',
-  problem: 'incompatible',
-  detail: 'The save is from version 3 of the game.',
-};
 
 const ASKING: TitleMenu = { cursor: 'new-game', confirming: true, showingControls: false };
 const SHOWING_THE_LIST: TitleMenu = { cursor: 'controls', confirming: false, showingControls: true };
@@ -52,28 +51,6 @@ const MENU_STATES: readonly TitleState[] = [
 
 /** The saved games the list of the controls can be shown over, which is all of them. */
 const SAVED_GAMES: readonly SavedGame[] = [NO_SAVE, A_SAVE, NOT_AVAILABLE, DAMAGED, FROM_ANOTHER_VERSION];
-
-/** What the keys of the audio can say: the narrowest line is SOUND ON, and the widest VOLUME 10/10. */
-const SAID = ['SOUND OFF', 'SOUND ON', ...Array.from({ length: 11 }, (_, volume) => `VOLUME ${volume}/10`)];
-
-/** The lines of text of the window, the lines of the menu included, from the top down. */
-function textsOf(window: TitleWindow): string[] {
-  return window.rows.flatMap(({ row }) => (row.kind === 'text' || row.kind === 'entry' ? [row.text] : []));
-}
-
-/** The lines of the menu in the window, from the top down. */
-function linesOf(window: TitleWindow) {
-  return window.rows.flatMap(({ row }) => (row.kind === 'entry' ? [row] : []));
-}
-
-function crosses(one: Rect, other: Rect): boolean {
-  return (
-    one.left < other.left + other.width &&
-    other.left < one.left + one.width &&
-    one.top < other.top + other.height &&
-    other.top < one.top + one.height
-  );
-}
 
 const LINES = ['NEW GAME', 'CONTINUE', 'CONTROLS'];
 const HINTS = ['W/S OR ARROWS TO CHOOSE', 'ENTER TO SELECT', 'N TO MUTE   - OR + FOR VOLUME'];
