@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec stories:** 115, 49, 78
 
@@ -128,3 +128,5 @@ Commits on ticket/35-checkpoints-no-longer-heal (from c3089db). The integration 
 - Whether the notice keeps the second line DEFEAT SENDS YOU BACK HERE or says CHECKPOINT alone, and whether a picture returns (another one than the heart).
 - Whether the new Guardian-arrival claim stays pinned: it pins a finding that is regrettable, and it goes red if a later ticket improves the supplies (it should then be changed to what is true, not loosened).
 - Whether the player wants potions added or moved, since a hero all in Health that never dodges runs short from the mountain on. Nothing was tuned here.
+
+Resolved on integration/island-adventure-rpg at 5c60359
