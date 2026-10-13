@@ -108,8 +108,11 @@ export class PlayScene extends GameScene {
   private openingLines: readonly string[] = [];
   /** The card of the opening while it shows: no step runs and no key but Enter counts until the player ends it. */
   private card: OpeningCard | null = null;
-  /** Whether a press that puts away the text of an area came since the last frame (area-text-dismissal.ts): made with the scene. */
-  private presses!: DismissalWatch;
+  /**
+   * The watch that sees the presses that put the text of an area away (area-text-dismissal.ts), made with the scene and
+   * stopped with it by `GameScene.watchPresses`.
+   */
+  private dismissalWatch!: DismissalWatch;
   /** Whether the fight with the Guardian is on, which the music of the fight plays for (audio-manifest.ts, `fightAfter`). */
   private fight = false;
 
@@ -165,7 +168,7 @@ export class PlayScene extends GameScene {
     this.overlay = new Overlay(this);
     this.automapPage = new AutomapPage(this, this.areas);
     this.useKeyboard('control the hero');
-    this.presses = this.watchPresses('control the hero');
+    this.dismissalWatch = this.watchPresses('control the hero');
     this.card = this.openingLines.length > 0 ? new OpeningCard(this, this.openingLines) : null;
   }
 
@@ -208,7 +211,7 @@ export class PlayScene extends GameScene {
     // answers it in the same frame. Decided from the view before the commands, so that the Interact that opens the
     // question cannot be answered by an Enter pressed with it.
     commands.push(...departureAnswer(viewAtStart, menu));
-    send(dismissalFirst(commands, this.presses.take()));
+    send(dismissalFirst(commands, this.dismissalWatch.take()));
     if (waiting && !gameIsWaiting(this.core.view())) {
       // The wait ended just now. The walk keys were left alone during it, so the hero walks by the keys that are down
       // now, from the first step of this frame.
@@ -321,7 +324,7 @@ export class PlayScene extends GameScene {
     this.playMusicFor(this.core.view());
     const { confirm } = this.playerInput.pollMenu();
     this.playerInput.pollActions();
-    this.presses.take();
+    this.dismissalWatch.take();
     if (confirm) {
       card.hide();
       this.card = null;
@@ -358,7 +361,7 @@ export class PlayScene extends GameScene {
     // keys are read again when the fall is over.
     this.playerInput.pollMenu();
     this.playerInput.pollActions();
-    this.presses.take();
+    this.dismissalWatch.take();
     this.letTimePass(frameMs);
     if (fall.stage === 'fading-out' && !this.fadingOut) {
       this.fadingOut = true;
