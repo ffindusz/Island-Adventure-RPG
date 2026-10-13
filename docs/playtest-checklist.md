@@ -100,7 +100,9 @@ page names the keys that close it (C/TAB, I, M or H, then Esc) and is all on the
 ## The optional puzzles
 
 - [ ] The woods' key and door; the cave's lever, sign and gate. Do the signs and the lever tell you enough?
-- [ ] The cave's gate is one tile wide and has no corner assist (line up within an eighth of a tile). Fair, or fiddly?
+- [ ] Walk a little off the middle into the crevice in the coast's bay, the cabin's door once it is open and the cave's
+      gate once it is open, each one tile wide: the hero slides round the corner and goes in. Does it feel right, or
+      does it ever take you where you did not mean to go?
 - [ ] Did you find the optional Gear (Steel Sword, Chain Mail, Plate Armor, Long Bow, Katana), and was each a step up on
       the inventory page?
 
@@ -188,7 +190,10 @@ Tick one when you accept it as it is; otherwise write what to change.
 - [ ] **Autosave when the Guardian falls** is taken before the Stat Point is spent, so Continue asks for it again.
 - [ ] **One Checkpoint** each in the mountain, the cave and the castle, plus the Guardian's (the ways back are above).
       Do you want a second one in the castle? That is a map change, and nothing was done about it.
-- [ ] **The cave's one-tile gate** has no corner assist (see "The optional puzzles").
+- [ ] **The corner slide** helps the hero only, and only when its middle is already over the gap beside the corner: a
+      hero whose middle is over a wall, a chest, a lever, a sign or a shut door stays flush against it, and the monsters
+      get no such help. The slide goes round chests, levers, signs and shut doors and gates as it goes round rock, and
+      nothing in the picture or the sound says that it happened (see "The optional puzzles"). Is that how you want it?
 - [ ] **The two-press departure** at the vessel (the first press prepares it, the second asks).
 - [ ] **H shows the controls:** H was free, so it is the key of the Controls page, but you have not chosen it. Nothing in
       play tells a player that H exists, not the HUD and not the card of the opening; the title screen's Controls line
