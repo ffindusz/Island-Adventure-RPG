@@ -11,3 +11,7 @@ Default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-huma
 ### Domain docs
 
 Single-context: root `GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.md`.
+
+## Checks
+
+Run `npm run check` (typecheck, tests, build) before merging. The pre-commit hook runs the typecheck and the tests related to the staged files; commit without `--no-verify`.

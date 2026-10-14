@@ -1,0 +1,2 @@
+# Git's sh cannot run a hook with CRLF line endings, and core.autocrlf=true would write them on checkout.
+.husky/* text eol=lf
