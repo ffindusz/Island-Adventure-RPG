@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { expect } from 'vitest';
 
 // docs/balance.md holds the tables that the renderers of these tests print (tests/fight-table.ts, route-supplies.ts,
-// guardian-table.ts, play-time.ts), written in by hand after a tuning. This is how a test holds the doc to them.
+// guardian-table.ts, play-time.ts), written in by hand after a tuning. This is how a test holds the doc to them, one of
+// the readings of the disk that ADR 0005 (b) allows: it compares tables, never words.
 
 /** The lines of the doc as it is on disk, whatever line ends the checkout gave it. */
 function docLines(): string[] {
