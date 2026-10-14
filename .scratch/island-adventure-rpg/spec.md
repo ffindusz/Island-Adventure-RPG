@@ -6,7 +6,7 @@ Status: ready-for-agent
 
 I want a small, finished fantasy RPG that I can play in a desktop browser. A single hero is shipwrecked by a storm on a remote island and has to fight through the coast, the woods, over a mountain, and into a cave to find an old castle, a ship, and a way home. Along the way the hero finds better Gear (armor and weapons), earns Experience, and raises their stats. I need an inventory, an Automap, and a stat page to keep track of it all, and the game has to look beautiful.
 
-Today there is nothing to play: the repository holds only the domain glossary and one decision record (use Phaser). There is no code, no project setup, and no art. The game must be a complete journey with a definite ending in about 45-60 minutes, without needing a large content pipeline.
+Today there is nothing to play: the repository holds only the domain glossary and one decision record (use Phaser). There is no code, no project setup, and no art. The game must be a complete journey with a definite ending in about 20 minutes, without needing a large content pipeline.
 
 ## Solution
 
@@ -44,7 +44,7 @@ Checkpoints at each Adventure Area entrance and just before the Guardian autosav
 17. As a player, I want defeating the Guardian to open the way to the forgotten harbor, so that the victory has a concrete reward.
 18. As a player, I want to prepare the old vessel and sail home, so that the shipwreck premise is resolved.
 19. As a player, I want a concise ending and credits screen after I sail home, followed by the title screen, so that the game feels finished.
-20. As a player, I want a complete first playthrough to take about 45-60 minutes, so that the adventure is whole but short.
+20. (Superseded by story 117: after playtesting the player found that a first playthrough takes about 20 minutes, and kept that as the length.) As a player, I want a complete first playthrough to take about 45-60 minutes, so that the adventure is whole but short.
 
 **Moving and exploring**
 
@@ -199,13 +199,17 @@ Checkpoints at each Adventure Area entrance and just before the Guardian autosav
 
 116. As a player, I want Esc, when nothing is open, to pause the game and bring up the paused screen, the title screen with a PAUSED message and RESUME on top of its menu, and to take me back into the game exactly as it was when I choose RESUME or press Esc again, so that I can stop, read the controls, or leave for a new game or my saved game without losing the game I am in until I choose to.
 
+**Length (changed after playtesting)**
+
+117. (Supersedes story 20 where it says 45-60 minutes.) As a player, I want a complete first playthrough to take about 20 minutes, so that the adventure is whole but short; that is the length that the player's own playthroughs found.
+
 ## Implementation Decisions
 
 **Product shape**
 
 - A complete, short, single-hero, top-down 2D action RPG for current desktop browsers, keyboard only, built with Phaser as recorded in the existing decision record. Maps and collision still have to be assembled for the chosen art.
 - There is no server-side component: saves are browser-local and there are no accounts or cloud services.
-- Intended first playthrough is about 45-60 minutes. The tone is earnest and light. Difficulty is approachable and moderate, with telegraphed enemy attacks and a few demanding fights; there are no difficulty modes.
+- Intended first playthrough is about 20 minutes (story 117). The tone is earnest and light. Difficulty is approachable and moderate, with telegraphed enemy attacks and a few demanding fights; there are no difficulty modes.
 
 **Modules**
 

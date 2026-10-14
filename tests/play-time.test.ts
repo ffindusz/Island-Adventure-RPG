@@ -259,18 +259,18 @@ describe('the guesses of a first-time player', () => {
 });
 
 describe('the verdict on a play time against the spec', () => {
-  it('has the 45 to 60 minutes that the spec gives for a first playthrough', () => {
-    expect(TARGET_MINUTES).toEqual({ from: 45, to: 60 });
+  it('has the 15 to 25 minutes that the spec gives for a first playthrough: about 20, a quarter either way', () => {
+    expect(TARGET_MINUTES).toEqual({ from: 15, to: 25 });
   });
 
   it.each([
-    [30, 'under'],
-    [44.9, 'under'],
-    [45, 'within'],
-    [52.5, 'within'],
-    [60, 'within'],
-    [60.1, 'over'],
-    [90, 'over'],
+    [10, 'under'],
+    [14.9, 'under'],
+    [15, 'within'],
+    [20, 'within'],
+    [25, 'within'],
+    [25.1, 'over'],
+    [40, 'over'],
   ] as const)('calls %f minutes %s the target', (minutes, expected) => {
     expect(verdict(minutes)).toBe(expected);
   });

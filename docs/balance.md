@@ -291,10 +291,11 @@ the game's, not a player's.
 
 ## Play time
 
-The spec expects a first playthrough of about 45 to 60 minutes (`spec.md`, the aims and user story 20).
-`tests/play-time.ts` estimates it from two kinds of input; `tests/play-time.test.ts` keeps its arithmetic and its
-measurements true. **No number was chosen to reach the target**: the guesses below were written down before the
-estimate was first computed, and they were not changed after.
+The spec expects a first playthrough of about 20 minutes (`spec.md`, the aims and story 117), the length that the
+player's own playthroughs found. Its first version asked for 45 to 60 (story 20): the target moved to the playthroughs,
+not the adventure to the target. `tests/play-time.ts` estimates it from two kinds of input; `tests/play-time.test.ts`
+keeps its arithmetic and its measurements true. **No number was chosen to reach the target**: the guesses below were
+written down before the estimate was first computed, and they were not changed after.
 
 **Measured or counted** from the shipped content and the core: the route of each area walked at the hero's speed (5
 tiles a second; the model's walk agrees with the core's own to within a tile), the plain fights played through the core
@@ -354,18 +355,18 @@ way):
 | defeats | 0.0 | 0.5 | 1.8 |
 | Guardian | 0.4 | 1.4 | 4.1 |
 | Total | 5.6 | 13.9 | 36.5 |
-| Against the 45 to 60 minutes of the spec | under | under | under |
+| Against the 15 to 25 minutes of the spec | under | under | over |
 
-**The adventure is well short of the target.** A hero that never stops walks all five routes in 81 seconds and wins the
-24 fights of the way in 27; the typical estimate is 14 minutes, the low about 6 and the high 36.5. No scenario reaches 45,
-and the high one takes every guess at its slow end at once. The parts that move most between the scenarios are the
-puzzles (up to ten minutes if a player searches for both keys), the looks at the menus and walking.
+**The estimate brackets the target, with its typical case a little under it.** "About 20" is read as 15 to 25
+(`TARGET_MINUTES`). The typical estimate is 14 minutes, the low about 6 and the high 36.5. A hero that never stops walks
+all five routes in 81 seconds and wins the 24 fights of the way in 27. The parts that move most between the scenarios
+are the puzzles (up to ten minutes if a player searches for both keys), the looks at the menus and walking. The
+player's 20 minutes lies between the typical and the high case; the guesses were not refitted to it, since it is one
+figure and they are nine.
 
-**No number can close the gap**, and none was tried. The 24 plain fights of the way together last under half a minute,
-so doubling the Health of every monster would add about a minute to the typical estimate; a hero half as fast would add
-about five minutes of walking and cost the feel of the controls. At about three minutes an area for the typical
-player, 45 minutes is an adventure of roughly fifteen areas of this size, or five areas about three times as long,
-with more to meet and more to find (see "Proposals"). The estimate is the answer of a model, and the manual playtest is
+**Which numbers move the play time.** The 24 plain fights of the way together last under half a minute, so doubling the
+Health of every monster would add about a minute to the typical estimate; a hero half as fast would add about five
+minutes of walking and cost the feel of the controls. The estimate is the answer of a model, and the manual playtest is
 its test: the playtest checklist asks for the clock time from the title to the credits.
 
 ## What these numbers rest on
@@ -403,11 +404,6 @@ its test: the playtest checklist asks for the clock time from the title to the c
 
 These are not things a number can solve; each would be a new ticket.
 
-- **The adventure is about a third of the length that the spec asks for** (see "Play time": a typical first playthrough
-  of 14 minutes against 45 to 60, and 36.5 minutes for a slow player who does everything). A content ticket could add
-  areas, lengthen the trails, put more encounters or optional content along them (and then this balance pass would
-  need to run again), or the target could be revised to the length that the adventure has. That is a decision for the
-  user, and the playtest's clock time is the evidence for it.
 - **The weapon upgrades are not near the route.** The ticket asks for upgrades "on or near the route". The Steel Sword
   lies eleven tiles off a 35-step coast, and the Katana is behind a puzzle, so the main-route hero fights the whole game
   with the Basic Sword: the armor comes to it, the sword and the bow do not (the Long Bow is behind the door of the

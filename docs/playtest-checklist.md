@@ -228,12 +228,12 @@ the pause" and "Saving, Continue and the title").
 
 The estimate (`docs/balance.md`, "Play time") is about **14 minutes** for a first playthrough that follows the trail
 and does a little of everything: 5.6 at best, 36.5 for a slow player who does every side find and puzzle. The spec
-asks for **45 to 60**. The estimate is a model with nine guesses, so criterion 4 of ticket 26 stays open until your
-clock says.
+asks for about **20**, the time that your own playthroughs took (2026-10-14, story 117). The estimate is a model with
+nine guesses, so your clock is its test.
 
 - [ ] Time from the Enter of New Game to the end of the credits (leave out the time the tab was away): ______ minutes.
-- [ ] Too short, about right or too long? If it is far under 45 minutes, the choice is yours: a content ticket (more
-      areas, longer trails, more encounters or optional content, then the balance pass again) or a shorter target.
+- [ ] Too short, about right or too long? If it is far from 20 minutes, the choice is yours: a content ticket (more
+      areas, longer trails, more encounters or optional content, then the balance pass again) or a different target.
 
 ## What to report afterwards
 

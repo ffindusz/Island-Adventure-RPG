@@ -375,8 +375,11 @@ export function guessesFor(scenario: Scenario): Guesses {
   };
 }
 
-/** The play time of a first playthrough that the spec gives, in minutes (spec.md: the aims and user story 20). */
-export const TARGET_MINUTES = { from: 45, to: 60 } as const;
+/**
+ * The play time of a first playthrough that the spec gives, in minutes (spec.md: the aims and story 117): about 20,
+ * read as a quarter either way.
+ */
+export const TARGET_MINUTES = { from: 15, to: 25 } as const;
 
 /** What a play time in minutes makes of the target of the spec. */
 export function verdict(minutes: number): 'under' | 'within' | 'over' {
