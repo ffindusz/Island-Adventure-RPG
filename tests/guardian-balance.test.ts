@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { expectInBalanceDoc } from './balance-doc';
 import { DRINK_AT_SHARE, fightTheGuardian, type FightResult } from './dodging-bot';
 import { GUARDIAN_HEROES, guardianTable, PLAYS, renderGuardianTable } from './guardian-table';
 import {
@@ -111,7 +112,7 @@ describe('the Guardian against a hero well below the intended Level', () => {
 });
 
 describe('the table of docs/balance.md', () => {
-  it('has a line for every hero and every way of playing, each fought to its end: run this file with --silent=false to print it', () => {
+  it('has a line for every hero and every way of playing, each fought to its end, as the doc has it: run this file with --silent=false to print it', () => {
     const table = guardianTable();
     expect(table).toHaveLength(GUARDIAN_HEROES.length * PLAYS.length);
     for (const row of table) {
@@ -120,5 +121,6 @@ describe('the table of docs/balance.md', () => {
     const rendered = renderGuardianTable(table);
     console.log(rendered);
     expect(rendered.split('\n')).toHaveLength(table.length + 2);
+    expectInBalanceDoc(rendered);
   }, 60_000);
 });

@@ -289,6 +289,59 @@ export function renderArrowLedger(): string {
   );
 }
 
+/** The numbers of one build along the route, a cell of the summary tables: the areas from the coast to the castle, a shortage in bold. */
+function perArea(values: readonly number[]): string {
+  return values.map((value) => (value < 0 ? `**${value}**` : `${value}`)).join(', ');
+}
+
+/**
+ * The potion ledgers as docs/balance.md sums them up: a line to a build, each cell listing the areas, with the potions
+ * near the route and then with every potion that lies without a door.
+ */
+export function renderPotionSummary(): string {
+  const rows = SPENDS.map((spend) => {
+    const near = potionLedger(spend);
+    const everywhere = potionLedger(spend, Infinity);
+    return [
+      spend,
+      perArea(near.map((row) => row.maxHealth)),
+      perArea(near.map((row) => row.healthIn)),
+      perArea(near.map((row) => row.damage)),
+      perArea(near.map((row) => row.needed)),
+      perArea(near.map((row) => row.healthOut)),
+      perArea(near.map((row) => row.left)),
+      perArea(everywhere.map((row) => row.left)),
+    ];
+  });
+  return markdownTable(
+    [
+      'Build',
+      'Max Health',
+      'Health walked in with',
+      'Damage',
+      'Needed',
+      'Health on leaving',
+      'Left on leaving, with the potions near the route',
+      'Left, with every potion that lies without a door',
+    ],
+    rows,
+  );
+}
+
+/** The arrow ledgers as docs/balance.md sums them up: a line to a build, each cell listing the areas. */
+export function renderArrowSummary(): string {
+  const rows = SPENDS.map((spend) => {
+    const ledger = arrowLedger(spend);
+    return [
+      spend,
+      perArea(ledger.map((row) => row.attack)),
+      perArea(ledger.map((row) => row.needed)),
+      perArea(ledger.map((row) => row.found)),
+    ];
+  });
+  return markdownTable(['Build', 'Arrow Attack', 'Arrows needed', 'Arrows near the route'], rows);
+}
+
 /** What the monsters of the route of each area drop in the long run, as a Markdown table. */
 export function renderDrops(): string {
   return markdownTable(

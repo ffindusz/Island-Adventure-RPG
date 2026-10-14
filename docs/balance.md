@@ -3,18 +3,19 @@
 Every number of the game lives in `src/content`. The tests pin the *relations* that the adventure is meant to have
 (a few demanding fights, noticeable steps of Gear, enough supplies, a Guardian that can be beaten and is no pushover);
 the numbers that the measurements give are written here, with how they were measured and what they rest on. A tuning
-that moves them a little breaks no test; one that breaks a relation does.
+that breaks a relation turns its test red.
 
-The tables below are a snapshot of what those tests printed when the balance pass was made. No test compares them with
-the numbers of the content, so after a tuning they stay as they were until someone prints them again and writes them
-in.
+The tables below are the ones that those tests print, and each of those tests holds this doc to its tables, line for
+line (`tests/balance-doc.ts`): a tuning that moves a number turns the test red, with the table that the doc is to have,
+until it is written in. The prose between the tables is not compared, so read it again after a tuning. Two tables are
+not printed: the Experience of the route, whose numbers `tests/route-experience.test.ts` pins, and the record of what
+was tuned, which is history.
 
-To print the tables again after a tuning:
+To print the tables after a tuning:
 
-- `npx vitest run tests/fights.test.ts --silent=false`: the fight table, the Gear steps and the supplies.
+- `npx vitest run tests/fights.test.ts --silent=false`: the fight tables, the Gear steps, the supplies and the drops.
 - `npx vitest run tests/guardian-balance.test.ts --silent=false`: the Guardian's table.
 - `npx vitest run tests/play-time.test.ts --silent=false`: the basis, the guesses and the estimates of the play time.
-- The Experience of the route is pinned in `tests/route-experience.test.ts`.
 
 ## Experience along the route
 
@@ -44,28 +45,31 @@ a split (Attack, Health, Defense in turn). The hero has the Level it has on comi
 found near the route in the areas before. A fight is **demanding** when the worst build loses half its Health or more
 without a potion.
 
-| Monster | Area | Level | Worst build | Health lost | Potions to win | Fight |
-| --- | --- | ---: | --- | ---: | ---: | --- |
-| crab | shipwreck-coast | 1 | all in Health | 3 of 10 | 0 | approachable |
-| wolf | woods | 2 | all in Health | 0 of 12 | 0 | approachable |
-| slime | woods | 2 | all in Attack | 2 of 10 | 0 | approachable |
-| boar | woods | 2 | all in Health | 5 of 12 | 0 | approachable |
-| spitter | woods | 2 | all in Health | 0 of 12 | 0 | approachable |
-| raider | mountain | 3 | split | 4 of 12 | 0 | approachable |
-| raider-charger | mountain | 3 | split | 5 of 12 | 0 | approachable |
-| raider-archer | mountain | 3 | all in Health | 0 of 14 | 0 | approachable |
-| raider-veteran | mountain | 3 | all in Health | defeated | 3 | **demanding** |
-| cave-bat | cave | 4 | all in Health | 0 of 16 | 0 | approachable |
-| cave-lizard | cave | 4 | all in Health | 6 of 16 | 0 | approachable |
-| cave-eye | cave | 4 | all in Health | 2 of 16 | 0 | approachable |
-| cave-bear | cave | 4 | all in Health | defeated | 3 | **demanding** |
-| castle-skeleton | castle | 5 | all in Health | 3 of 18 | 0 | approachable |
-| castle-ghoul | castle | 5 | all in Health | 8 of 18 | 0 | approachable |
-| castle-wraith | castle | 5 | all in Health | 3 of 18 | 0 | approachable |
-| castle-knight | castle | 5 | all in Health | defeated | 4 | **demanding** |
+| Monster | Area | Level | Gear | Health | Hit | Worst build | Attack | Defense | Max Health | Blows to kill | Hit after Defense | Hits to die | Health lost | Potions | Fight | XP |
+| --- | --- | ---: | --- | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | ---: |
+| crab | shipwreck-coast | 1 | Basic Sword + Basic Armor | 3 | 4 | all in Health | 1 | 1 | 10 | 3 | 3 | 4 | 3 of 10 | 0 | approachable | 5 |
+| wolf | woods | 2 | Basic Sword + Basic Armor | 2 | 4 | all in Health | 1 | 1 | 12 | 2 | 3 | 4 | 0 of 12 | 0 | approachable | 3 |
+| slime | woods | 2 | Basic Sword + Basic Armor | 6 | 3 | all in Attack | 2 | 1 | 10 | 3 | 2 | 5 | 2 of 10 | 0 | approachable | 2 |
+| boar | woods | 2 | Basic Sword + Basic Armor | 4 | 6 | all in Health | 1 | 1 | 12 | 4 | 5 | 3 | 5 of 12 | 0 | approachable | 5 |
+| spitter | woods | 2 | Basic Sword + Basic Armor | 2 | 4 | all in Health | 1 | 1 | 12 | 2 | 3 | 4 | 0 of 12 | 0 | approachable | 3 |
+| raider | mountain | 3 | Basic Sword + Basic Armor | 5 | 5 | split | 2 | 1 | 12 | 3 | 4 | 3 | 4 of 12 | 0 | approachable | 3 |
+| raider-charger | mountain | 3 | Basic Sword + Basic Armor | 5 | 6 | split | 2 | 1 | 12 | 3 | 5 | 3 | 5 of 12 | 0 | approachable | 4 |
+| raider-archer | mountain | 3 | Basic Sword + Basic Armor | 3 | 5 | all in Health | 1 | 1 | 14 | 3 | 4 | 4 | 0 of 14 | 0 | approachable | 3 |
+| raider-veteran | mountain | 3 | Basic Sword + Basic Armor | 12 | 8 | all in Health | 1 | 1 | 14 | 12 | 7 | 2 | defeated | 3 | demanding | 6 |
+| cave-bat | cave | 4 | Basic Sword + Plate Armor | 2 | 3 | all in Health | 1 | 3 | 16 | 2 | 1 | 16 | 0 of 16 | 0 | approachable | 2 |
+| cave-lizard | cave | 4 | Basic Sword + Plate Armor | 6 | 6 | all in Health | 1 | 3 | 16 | 6 | 3 | 6 | 6 of 16 | 0 | approachable | 4 |
+| cave-eye | cave | 4 | Basic Sword + Plate Armor | 3 | 5 | all in Health | 1 | 3 | 16 | 3 | 2 | 8 | 2 of 16 | 0 | approachable | 3 |
+| cave-bear | cave | 4 | Basic Sword + Plate Armor | 14 | 9 | all in Health | 1 | 3 | 16 | 14 | 6 | 3 | defeated | 3 | demanding | 6 |
+| castle-skeleton | castle | 5 | Basic Sword + Plate Armor | 4 | 6 | all in Health | 1 | 3 | 18 | 4 | 3 | 6 | 3 of 18 | 0 | approachable | 2 |
+| castle-ghoul | castle | 5 | Basic Sword + Plate Armor | 8 | 7 | all in Health | 1 | 3 | 18 | 8 | 4 | 5 | 8 of 18 | 0 | approachable | 5 |
+| castle-wraith | castle | 5 | Basic Sword + Plate Armor | 4 | 6 | all in Health | 1 | 3 | 18 | 4 | 3 | 6 | 3 of 18 | 0 | approachable | 3 |
+| castle-knight | castle | 5 | Basic Sword + Plate Armor | 20 | 10 | all in Health | 1 | 3 | 18 | 20 | 7 | 3 | defeated | 4 | demanding | 7 |
 
-"Potions to win" is what the worst build drinks with twenty in hand. The demanding fights are the tougher variant of
-each of the last three areas (the Guardian has its own fight, below). What they cost each build:
+Each row is the fight of the worst build, the one it costs most: *Attack*, *Defense* and *Max Health* are that hero's,
+*Hit* is what one hit of the monster does before Defense and *Hit after Defense* what it takes from the hero, *Blows to
+kill* and *Hits to die* count the blows the hero needs and the hits its Health takes, *Health lost* is what the fight
+takes with no potion to drink, and *Potions* what the hero drinks with twenty in hand. The demanding fights are the
+tougher variant of each of the last three areas (the Guardian has its own fight, below). What they cost each build:
 
 | Monster | all in Health | all in Attack | split |
 | --- | --- | --- | --- |
@@ -98,7 +102,7 @@ Level the hero has where the piece lies (the numbers are the Game core's own, `s
 Each piece is compared with the piece below it in its slot.
 
 | Piece | Over | Found in | Level | all in Health | all in Attack | split |
-| --- | --- | --- | ---: | --- | --- | --- |
+| --- | --- | --- | --- | --- | --- | --- |
 | steel-sword | basic-sword | shipwreck-coast | 1 | 1 to 2 (+100%) | 1 to 2 (+100%) | 1 to 2 (+100%) |
 | katana | steel-sword | cave | 4 | 2 to 3 (+50%) | 5 to 6 (+20%) | 3 to 4 (+33%) |
 | chain-mail | basic-armor | woods | 2 | 1 to 2 (+100%) | 1 to 2 (+100%) | 1 to 2 (+100%) |
@@ -151,7 +155,15 @@ summary, each cell listing the five areas from the coast to the castle.
 | split | 10, 10, 12, 12, 12 | 10, 4, 4, 4, 1 | 6, 2, 20, 8, 9 | 0, 0, 4, 1, 2 | 4, 2, 4, 1, 2 | 3, 4, 2, 3, 4 | 3, 6, 7, 11, 17 |
 
 Potions found by area: 3, 1, 2, 2, 3 near the route (eleven), and 3, 3, 5, 5, 8 in all behind no door (twenty-four).
-Drops add, on average, 0.3, 0, 0.5, 0.5 and 0.5 potions per area.
+The drops of the monsters of the route add, on average, this to an area:
+
+| Area | Potions | Arrows |
+| --- | --- | --- |
+| shipwreck-coast | 0.30 | 0.00 |
+| woods | 0.00 | 0.50 |
+| mountain | 0.50 | 0.75 |
+| cave | 0.50 | 0.75 |
+| castle | 0.50 | 1.50 |
 
 - Held: a hero that spends its points on Attack or on a split and never dodges is never short of a potion with the
   ones near the route (the fewest it has left on leaving an area is 3 for Attack and 2 for a split), and a hero that
@@ -179,13 +191,14 @@ Drops add, on average, 0.3, 0, 0.5, 0.5 and 0.5 potions per area.
 Arrows: a ranged monster takes `ceil(Health / arrow Attack)` shots, and the ledger counts two arrows to a shot that
 lands. The arrow's Attack is the hero's with the Long Bow, the only bow of the game, which the main route does not give:
 the hero takes it from the chest of the cabin, behind a door. The ledger is for a hero that did, with the bow in hand
-from the woods on; the hero of the main route has no bow and needs no arrow (see "What these numbers rest on").
+from the woods on, so its arrows have no Attack on the coast; the hero of the main route has no bow and needs no arrow
+(see "What these numbers rest on"). Each cell lists the five areas, from the coast to the castle.
 
-| Build | Arrow Attack, woods to castle | Arrows needed, coast to castle | Arrows near the route |
+| Build | Arrow Attack | Arrows needed | Arrows near the route |
 | --- | --- | --- | --- |
-| all in Health | 3, 3, 3, 3 | 0, 2, 2, 2, 8 | 0, 12, 12, 18, 18 |
-| all in Attack | 4, 5, 6, 7 | 0, 2, 2, 2, 4 | 0, 12, 12, 18, 18 |
-| split | 4, 4, 4, 5 | 0, 2, 2, 2, 4 | 0, 12, 12, 18, 18 |
+| all in Health | 0, 3, 3, 3, 3 | 0, 2, 2, 2, 8 | 0, 12, 12, 18, 18 |
+| all in Attack | 0, 4, 5, 6, 7 | 0, 2, 2, 2, 4 | 0, 12, 12, 18, 18 |
+| split | 0, 4, 4, 4, 5 | 0, 2, 2, 2, 4 | 0, 12, 12, 18, 18 |
 
 The arrows near the route are at least 2.25 times what the shots need, counted at two arrows to a shot that lands (the
 all-in-Health hero in the castle, who has the weakest arrows; elsewhere, four and a half times and more), so a hero that
@@ -229,13 +242,13 @@ brings: a Checkpoint gives no Health, so a hero that never dodges comes to this 
 | Level 6, balanced | never answers | 6 | won | 19 | 3 | 34 | 15 |
 | Level 6, all in Health | answers in 600 ms | 0 | won | 0 | 0 | 100 | 55 |
 | Level 6, all in Health | answers in 700 ms | 0 | won | 0 | 0 | 100 | 46 |
-| Level 6, all in Health | answers in 750 ms | 0 | won | 34 | 0 | 100 | 46 |
+| Level 6, all in Health | answers in 750 ms | 0 | defeated | 22 | 0 | 56 | 27 |
 | Level 6, all in Health | misses 1 in 3, answers in 250 ms | 6 | won | 28 | 4 | 100 | 58 |
 | Level 6, all in Health | misses 1 in 3, answers in 450 ms | 6 | won | 28 | 4 | 100 | 57 |
 | Level 6, all in Health | never answers | 6 | defeated | 52 | 6 | 67 | 28 |
 | Level 6, all in Defense | answers in 600 ms | 0 | won | 0 | 0 | 100 | 55 |
 | Level 6, all in Defense | answers in 700 ms | 0 | won | 0 | 0 | 100 | 46 |
-| Level 6, all in Defense | answers in 750 ms | 0 | won | 11 | 0 | 100 | 46 |
+| Level 6, all in Defense | answers in 750 ms | 0 | defeated | 10 | 0 | 86 | 40 |
 | Level 6, all in Defense | misses 1 in 3, answers in 250 ms | 6 | won | 7 | 1 | 100 | 58 |
 | Level 6, all in Defense | misses 1 in 3, answers in 450 ms | 6 | won | 7 | 1 | 100 | 57 |
 | Level 6, all in Defense | never answers | 6 | won | 22 | 4 | 100 | 41 |
@@ -247,7 +260,7 @@ brings: a Checkpoint gives no Health, so a hero that never dodges comes to this 
 | Level 6, balanced, Katana and Long Bow | never answers | 6 | won | 11 | 1 | 20 | 9 |
 | Level 3, 1/1/0 points | answers in 600 ms | 0 | won | 0 | 0 | 50 | 28 |
 | Level 3, 1/1/0 points | answers in 700 ms | 0 | won | 0 | 0 | 50 | 24 |
-| Level 3, 1/1/0 points | answers in 750 ms | 0 | won | 19 | 0 | 50 | 24 |
+| Level 3, 1/1/0 points | answers in 750 ms | 0 | defeated | 13 | 0 | 26 | 13 |
 | Level 3, 1/1/0 points | misses 1 in 3, answers in 250 ms | 6 | won | 12 | 2 | 50 | 29 |
 | Level 3, 1/1/0 points | misses 1 in 3, answers in 450 ms | 6 | won | 12 | 2 | 50 | 28 |
 | Level 3, 1/1/0 points | never answers | 6 | won | 38 | 6 | 50 | 21 |
@@ -259,16 +272,17 @@ the game's, not a player's.
 
 - **It can be beaten with the Gear of the main route.** Every build of the Level 6 hero wins when it answers within
   700 ms, and when it misses one telegraph in three with the six potions of the table. Even with no answer at all
-  and six potions every build wins but the all-in-Health one. (With no potion at all, a hero of 10 Health that is hit
-  at 750 ms is defeated: the all-in-Attack row.) All of it from full Health: how a hero fares that comes hurt, with
-  the 5 or 4 potions that the near ones leave it, is not in this table.
+  and six potions every build wins but the all-in-Health one. (With no potion at all and a hit at 750 ms, the
+  all-in-Attack, all-in-Health and all-in-Defense heroes are defeated, and so is the Level 3 hero; the mostly-Attack,
+  balanced and Katana heroes win, with 8 to 10 damage.) All of it from full Health: how a hero fares that comes hurt,
+  with the 5 or 4 potions that the near ones leave it, is not in this table.
 - **A hero that answers is not touched.** Within 700 ms of the telegraph's first moment the bot takes no damage at
   any build; the first hits come at 750 ms. 250 and 450 ms are the stand-ins for a person (see the assumptions).
 - **The Katana makes it easier**: 20 blows against 34 for the same split, a fight of 11 seconds instead of 19, and
   never more damage.
-- **It is not a pushover.** The Level 3 hero needs 50 blows and 24 to 29 seconds, takes 12 to 38 damage and, with the
-  potions it has, drinks two to six of them; with none and half the telegraphs missed it is defeated where the
-  Level 6 hero is not.
+- **It is not a pushover.** The Level 3 hero needs 50 blows and 21 to 29 seconds, takes 12 to 38 damage and, with the
+  potions it has, drinks two to six of them; with no potion and a hit at 750 ms it is defeated, where the mostly-Attack
+  and balanced Level 6 heroes are not.
 - **Build matters more than Level.** The Guardian's damage is fixed and only the hero's Defense lowers it; the length
   of the fight is set by Attack. All in Attack finishes in about ten seconds, all in Health or all in Defense take close
   to a minute. This is the loosest end of the design: see "Proposals".

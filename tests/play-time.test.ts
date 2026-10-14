@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
 import { STEP_MS } from '../src/core';
+import { expectInBalanceDoc } from './balance-doc';
 import { AREA_IDS, type AreaId, areaOf, monstersOnRoute, routeOf, wayInOf } from './main-route';
 import {
   COMPONENTS,
@@ -282,7 +283,7 @@ describe('the play-time tables of docs/balance.md', () => {
       .slice(1, -1)
       .map((cell) => cell.trim());
 
-  it('have a line for every area, guess and part of the estimate: run this file with --silent=false to print them', () => {
+  it('have a line for every area, guess and part of the estimate, as the doc has them: run this file with --silent=false to print them', () => {
     const [areas = '', rest = ''] = renderBasis().split('\n\n');
     const guesses = renderGuesses();
     const estimates = renderEstimates();
@@ -290,6 +291,9 @@ describe('the play-time tables of docs/balance.md', () => {
     expect(areas.split('\n')).toHaveLength(AREA_IDS.length + 3);
     expect(guesses.split('\n')).toHaveLength(Object.keys(GUESSES).length + 2);
     expect(estimates.split('\n')).toHaveLength(COMPONENTS.length + 4);
+    for (const table of [areas, rest, guesses, estimates]) {
+      expectInBalanceDoc(table);
+    }
   }, 60_000);
 
   it('show a basis whose areas add up to the figures that were measured', () => {

@@ -2,6 +2,7 @@ import { gameContent } from '../src/content';
 import type { GearSlot, StatId } from '../src/core';
 import { duel, type DuelResult, hitOf } from './duel';
 import { AREA_IDS, type AreaId, areaOf, experienceBefore, findsOf, MOST_NEARBY, monstersOnRoute } from './main-route';
+import { markdownTable } from './markdown-table';
 import { heroAt, levelOf, type HeroProfile, type Points } from './profile-heroes';
 import { damageOf } from './routes';
 
@@ -192,6 +193,11 @@ function gearNames(equipped: HeroProfile['equipped']): string {
     .join(' + ');
 }
 
+/** What a fight takes from a build with no potion to drink: the Health lost of its maximum, or that it was defeated. */
+function healthLostBy(build: Build): string {
+  return build.result.outcome === 'won' ? `${build.result.healthLost} of ${build.result.maxHealth}` : 'defeated';
+}
+
 /** The table as the balance document shows it. */
 export function renderFightTable(table: readonly FightRow[]): string {
   const head = [
@@ -200,7 +206,6 @@ export function renderFightTable(table: readonly FightRow[]): string {
   ];
   const body = table.map((row) => {
     const { worst } = row;
-    const lost = worst.result.outcome === 'won' ? `${worst.result.healthLost} of ${worst.result.maxHealth}` : 'defeated';
     return [
       row.type,
       `${row.area}${row.onRoute ? '' : ' (off the route)'}`,
@@ -215,11 +220,23 @@ export function renderFightTable(table: readonly FightRow[]): string {
       worst.hitsToKill,
       worst.damagePerHit,
       worst.hitsToDie,
-      lost,
+      healthLostBy(worst),
       worst.potionsDrunk,
       row.demanding ? 'demanding' : 'approachable',
       row.experience,
     ];
   });
   return [...head, ...body.map((cells) => `| ${cells.join(' | ')} |`)].join('\n');
+}
+
+/** What each demanding fight costs each build, as the balance document shows it: the Health lost, and the potions drunk. */
+export function renderDemandingFights(table: readonly FightRow[]): string {
+  const cost = (build: Build): string => {
+    const potions = build.potionsDrunk === 0 ? 'no potion' : `${build.potionsDrunk} ${build.potionsDrunk === 1 ? 'potion' : 'potions'}`;
+    return `${healthLostBy(build)}, ${potions}`;
+  };
+  return markdownTable(
+    ['Monster', ...SPENDS],
+    table.filter((row) => row.demanding).map((row) => [row.type, ...row.builds.map(cost)]),
+  );
 }

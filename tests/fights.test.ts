@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameContent } from '../src/content';
-import { fightTable, gearBefore, gearFrom, renderFightTable, SPENDS } from './fight-table';
+import { expectInBalanceDoc } from './balance-doc';
+import { fightTable, gearBefore, gearFrom, renderDemandingFights, renderFightTable, SPENDS } from './fight-table';
 import { AREA_IDS, findsOf, MOST_NEARBY } from './main-route';
 import { gameAtTheGuardian, type HeroProfile, MAIN_ROUTE_GEAR, mainRouteHero, POTIONS_SPARED, SPLITS } from './profile-heroes';
 import {
@@ -9,8 +10,10 @@ import {
   isNoticeable,
   potionLedger,
   renderArrowLedger,
+  renderArrowSummary,
   renderDrops,
   renderPotionLedger,
+  renderPotionSummary,
   renderSteps,
   steps,
 } from './route-supplies';
@@ -58,15 +61,18 @@ describe('the fights of the adventure', () => {
     expect(landed).toBeGreaterThan(0);
   }, 60_000);
 
-  it('are in the table, every ordinary monster type of the content once: run this file with --silent=false to print it', () => {
+  it('are in the tables of docs/balance.md, every ordinary monster type of the content once: run this file with --silent=false to print them', () => {
     const table = fightTable();
     const types = Object.entries(gameContent.monsterTypes)
       .filter(([, type]) => type.behavior !== 'guardian')
       .map(([id]) => id);
     expect(table.map((row) => row.type).sort()).toEqual(types.sort());
     const rendered = renderFightTable(table);
-    console.log(rendered);
+    const demanding = renderDemandingFights(table);
+    console.log(`${rendered}\n\n${demanding}`);
     expect(rendered.split('\n')).toHaveLength(types.length + 2);
+    expectInBalanceDoc(rendered);
+    expectInBalanceDoc(demanding);
   }, 60_000);
 });
 
@@ -153,12 +159,20 @@ describe('the supplies along the route', () => {
 });
 
 describe('the Gear and supplies tables of docs/balance.md', () => {
-  it('have a line for every piece of Gear in the world and for every build in every area: run this file with --silent=false to print them', () => {
-    const rendered = [renderSteps(), renderPotionLedger(), renderPotionLedger(Infinity), renderArrowLedger(), renderDrops()];
-    console.log(rendered.join('\n\n'));
+  it('have a line for every piece of Gear in the world and for every build in every area, and are in the doc as printed: run this file with --silent=false to print them', () => {
+    const gearSteps = renderSteps();
+    const ledgers = [renderPotionLedger(), renderPotionLedger(Infinity), renderArrowLedger()];
+    const drops = renderDrops();
+    const summaries = [renderPotionSummary(), renderArrowSummary()];
+    console.log([gearSteps, ...ledgers, ...summaries, drops].join('\n\n'));
     const piecesInTheWorld = Object.keys(gameContent.gear).filter((piece) => areaOfGear(piece) !== undefined).length;
-    const lines = rendered.map((text) => text.split('\n').length - 2);
+    const lines = [gearSteps, ...ledgers, drops].map((text) => text.split('\n').length - 2);
     const perBuild = SPENDS.length * AREA_IDS.length;
     expect(lines).toEqual([piecesInTheWorld, perBuild, perBuild, perBuild, AREA_IDS.length]);
+    expect(summaries.map((text) => text.split('\n').length - 2)).toEqual([SPENDS.length, SPENDS.length]);
+    // The doc holds the ledgers in the summaries, a line to a build; the per-area print is what they are made from.
+    for (const table of [gearSteps, ...summaries, drops]) {
+      expectInBalanceDoc(table);
+    }
   }, 60_000);
 });
