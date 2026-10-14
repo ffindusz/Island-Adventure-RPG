@@ -105,10 +105,10 @@ page names the keys that close it (C/TAB, I, M or H, then Esc) and is all on the
 
 ## Pausing with Esc
 
-Esc in play with nothing open puts the game away and shows the start screen as the paused screen (the README, "Pages and
+Esc in play with nothing open puts the game away and shows the title screen as the paused screen (the README, "Pages and
 the pause" and "Saving, Continue and the title").
 
-- [ ] Start a New Game, let the card go and press Esc: the start screen shows PAUSED over RESUME, NEW GAME, CONTINUE and
+- [ ] Start a New Game, let the card go and press Esc: the paused screen shows PAUSED over RESUME, NEW GAME, CONTINUE and
       CONTROLS, with the cursor on RESUME (with a saved game too), the hint ENTER TO SELECT   ESC TO RESUME, the music
       of the title and nothing moving behind it. Continue is greyed with no save.
 - [ ] Enter on RESUME, and also Esc (try both), brings the game back as it was: no card, the music of the place, the
@@ -266,7 +266,7 @@ Tick one when you accept it as it is; otherwise write what to change.
       the line long enough, or too long, and is the middle of the top row the right place for it? Is it enough, or should
       the HUD carry the key all the time? H pressed at the card does nothing, because the card takes only Enter: should
       it open the page?
-- [ ] **The Controls line on the title** is the third line of the menu, always choosable, and its list takes the whole
+- [ ] **The Controls entry on the title** is the third line of the menu, always choosable, and its list takes the whole
       screen and hides the name of the game while it shows. Esc and Enter both close it. To make room for the third
       line, the sound's hints share one row (N TO MUTE and - OR + FOR VOLUME) and a save from another version is told
       in two rows, SAVE IS FROM ANOTHER VERSION. and A NEW GAME WILL REPLACE IT.; the greyed Continue says the rest. Is
