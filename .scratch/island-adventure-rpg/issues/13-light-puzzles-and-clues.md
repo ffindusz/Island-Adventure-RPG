@@ -15,7 +15,7 @@
 - [x] The placeholder areas include a key-and-door side room and a lever-and-gate side room that demonstrate this.
 - [x] Device state is included in the snapshot and the round-trip test from ticket 11.
 - [x] Tests at the Game core's interface cover key and door use, lever toggling, persistence through defeat and a snapshot round trip, and each validation failure.
-- [ ] Reviewer play check (manual, in a browser): find a key and open its door, pull a lever, read a sign, then die, continue, and confirm the states remain.
+- [x] Reviewer play check (manual, in a browser): find a key and open its door, pull a lever, read a sign, then die, continue, and confirm the states remain.
 
 ## Comments
 
@@ -90,3 +90,5 @@ Merged at `07a42dd` in `3c7c96b`; the combination tests and the README came afte
 - **Glossary:** key (the item, as opposed to a keyboard key: the README's "held keys" in the saving sections are the keyboard's), door, gate, lever, sign and device (the five kinds).
 - **Limits of the checks, as follow-ups.** The optional check that a key cannot be reached without its own door is not built; the shipped rooms are covered by a test instead. A hand-edited save with a key consumed and its door shut is accepted, as a lever can shut a door again. The route check does not flag content that is unreachable even with everything open. The loader still does not refuse a chest, a pickup or a device on an entrance or in an exit zone: the shipped-content tests (`shipped-areas`, `shipped-puzzles`) cover the game's own content.
 - Proposed ADR (not created): "Light puzzles never gate the route": a device is an interactable whose solidity is read from its state in one place (`stopsWalkers`), and the loader proves that every exit and Checkpoint is reachable with every door and gate shut, with a key or a lever never counted as a way through. The consequence, which ticket 19 meets first, is that no door or gate may stand on the main route.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

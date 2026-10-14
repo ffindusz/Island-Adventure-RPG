@@ -18,7 +18,7 @@
 - [x] Saves: a snapshot with the Controls page open passes the saved-game checks, and a save made before this ticket still loads. `SNAPSHOT_VERSION` is raised only if the saved shape of the state changed (a page that is open is saved as its id, so a new id alone does not change the shape); the comments of the ticket say which was chosen.
 - [x] The README's controls table gets the H row and its text about the pages lists the Controls page; `docs/playtest-checklist.md` gets a line for it.
 - [x] The type check, the tests, and the build pass (`npm.cmd run check`).
-- [ ] Reviewer play check (manual, in a browser): during play press H, the page opens, the monsters stop and every line of the list is whole; press H again, it closes and they move again; open it and press Esc, it closes. With it open press I, M, C, and Tab (nothing opens). At a level-up choice press H (nothing opens). Press each key on the list and see that it does what the page says.
+- [x] Reviewer play check (manual, in a browser): during play press H, the page opens, the monsters stop and every line of the list is whole; press H again, it closes and they move again; open it and press Esc, it closes. With it open press I, M, C, and Tab (nothing opens). At a level-up choice press H (nothing opens). Press each key on the list and see that it does what the page says.
 
 ## Comments
 
@@ -66,3 +66,5 @@ For the implementer: `src/adapter/controls.ts` holds the tables and the labels (
 **Glossary.** "Controls page" (the page, opened with H, that lists every key of the game), and, with ticket 27's, "page" and "toggle", are used in the code and the README but are not in `GLOSSARY.md`; "page key" (a key that toggles a page) too. Proposed, not edited.
 
 Resolved on integration/island-adventure-rpg at bf8eaf7
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

@@ -16,7 +16,7 @@
 - [x] Each of the two placeholder areas has an entrance Checkpoint, and content validation rejects an area without one.
 - [x] Known open edge from the spec, left as is: a consumable dropped by a monster in a different area than the Checkpoint's is not restored, because that monster stays defeated.
 - [x] Tests at the Game core's interface are scenario tests in a two-area fixture with hand-worked expectations for each category (persist, roll back, reset), including a defeat in a different area than the Checkpoint's and a consumable collected after the Checkpoint becoming collectable again.
-- [ ] Reviewer play check (manual, in a browser): activate a Checkpoint, spend Ammunition and a potion, collect a cache, die, and confirm what returns and what persists.
+- [x] Reviewer play check (manual, in a browser): activate a Checkpoint, spend Ammunition and a potion, collect a cache, die, and confirm what returns and what persists.
 
 ## Comments
 
@@ -78,3 +78,5 @@ Resolved on integration/island-adventure-rpg at 9376d3a
 - Ticket 19: `recoverHero` resets every monster of the Checkpoint's area, defeated ones included. "A defeated Guardian stays defeated" needs that one line, `freshMonsters` at the end of `recoverHero`, to spare it.
 - GLOSSARY.md has Checkpoint but lacks: activate (a Checkpoint is activated by the hero coming onto it) and what a Checkpoint records (the Ammunition and Healing Potion counts and which consumable finds were taken: its snapshot). As tickets 06 and 07 said, it also lacks cache, drop, consumable and pickup.
 - ADR candidates, none written: (1) the roll back is by interactable id over every area, with the known edge for monster drops in other areas; (2) the start of the adventure is an implicit first Checkpoint, and activating means coming onto one, which records the snapshot again each time.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

@@ -16,7 +16,7 @@
 - [x] Experience is tuned (data only) so the hero reaches about Level 6 by the end of the route on the intended route, without grinding.
 - [x] Content validation passes, including that the main route is reachable without puzzles, and that the five Adventure Areas connect in order: coast, woods, mountain, cave, castle.
 - [x] Tests at the Game core's interface load the shipped castle content and confirm that validation passes, the five Adventure Areas connect in order, the main route is walkable from the entrance to the end of the route without any puzzle, and the Experience reachable on the intended route meets the Level 6 target.
-- [ ] Reviewer play check (manual, in a browser): arrive from the cave, clear the castle, collect the upgrade, and reach the end of the route.
+- [x] Reviewer play check (manual, in a browser): arrive from the cave, clear the castle, collect the upgrade, and reach the end of the route.
 
 ## Comments
 
@@ -94,3 +94,5 @@ Resolved on integration/island-adventure-rpg at c658103
 - The Game core's owner: monsters notice through rock by distance only (no line of sight), so a side path's guard can wake a hero on the other side of a wall; the castle's placements keep the guards out of the route's reach and a test pins it. A Gear name longer than 11 letters is cut off silently in the inventory page (`fitted()` in `overlay.ts`): a content-wide guard or a wider column would stop the next long name; I changed neither.
 - Glossary candidates: Entrance, Exit, Milestone, Chest, Cache, area text, route, side path, stub area, tougher variant, charger, narrow pass, courtyard, hall, gateway, last hall, end of the route, plain wall, undead. The glossary defines Checkpoint and Guardian among these.
 - Proposed ADR (not created): none.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

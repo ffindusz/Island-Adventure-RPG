@@ -17,7 +17,7 @@
 - [x] The set of areas and their connections is data-driven: adding an area to the route needs only content.
 - [x] Content validation runs when content loads and rejects, with a clear message, an exit that leads nowhere or lacks a matching return exit, and an area without an entrance. Later tickets add more rules.
 - [x] Tests at the Game core's interface cover transitions and arrival positions, state memory in both areas, area text appearing once, and each validation failure.
-- [ ] Reviewer play check (manual, in a browser): defeat a monster, open a chest, leave through the exit, come back, and confirm both are still done. Walk to the edges of the larger area and confirm the view stops at them while the HUD stays put.
+- [x] Reviewer play check (manual, in a browser): defeat a monster, open a chest, leave through the exit, come back, and confirm both are still done. Walk to the edges of the larger area and confirm the view stops at them while the HUD stays put.
 
 ## Comments
 
@@ -95,3 +95,5 @@ Criterion 3 ticked after ticket 07 merged (integration `429bccd`). Potion pickup
 - With the arrows dropped at a crossing, `ArrowState.areaId` is always the area the hero is in, and the branch of `flyArrows` that skips the arrows of other areas can only meet a snapshot made by hand. It is harmless; 06 or a cleanup can keep or remove either.
 - Real art for the exits (ticket 22). The adapter only fades in: a finished fade-out stays black in Phaser 4.2.1, so a fade out before the change would need care.
 - GLOSSARY.md lacks Exit, Entrance, Area text and camera.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

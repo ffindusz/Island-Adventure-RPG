@@ -16,7 +16,7 @@
 - [x] Tile size is a single configurable value (working assumption: 16 pixels, pending ticket 02) and the canvas scales with crisp pixels.
 - [x] Tests at the Game core's interface use fixed steps and hand-worked expected values, and cover movement, facing, collision, hit direction and range, cooldown, and defeat. They run headlessly and pass.
 - [x] A decision record states that the Game core's interface is the single automated test seam, and why. (The spec proposed this seam; the user has not yet confirmed it.)
-- [ ] Reviewer play check (manual, in a browser): start the dev server, walk to the monster, strike it until it is defeated, and confirm that walls block the hero.
+- [x] Reviewer play check (manual, in a browser): start the dev server, walk to the monster, strike it until it is defeated, and confirm that walls block the hero.
 
 ## Comments
 
@@ -72,3 +72,5 @@ Resolved on integration/island-adventure-rpg at 1a83fb0
 - The canvas is a fixed 20 by 12 tiles, so an area larger than that needs a camera.
 - There is no favicon, so browsers log a harmless 404.
 - Glossary terms missing: hero, monster, strike and strike zone, attack cooldown, Game core, content definition. Health is defined for the hero only.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

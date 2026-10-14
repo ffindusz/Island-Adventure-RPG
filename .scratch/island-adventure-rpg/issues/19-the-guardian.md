@@ -17,7 +17,7 @@
 - [x] Content validation requires exactly one Guardian, a Checkpoint immediately before its arena, and a harbor that is unreachable without defeating it.
 - [x] Note for tuning: per the defeat rules, a defeat at the Guardian returns the hero to the Checkpoint before it and resets the ordinary monsters across the whole castle area.
 - [x] Tests at the Game core's interface cover attack timing and avoidance, staying defeated, retry reset, the harbor gate, the autosave on victory, and each validation rule.
-- [ ] Reviewer play check (manual, in a browser): lose to the Guardian and confirm the return and reset, then win and confirm the harbor gate opens.
+- [x] Reviewer play check (manual, in a browser): lose to the Guardian and confirm the return and reset, then win and confirm the harbor gate opens.
 
 ## Comments
 
@@ -103,3 +103,5 @@ Every number of the Guardian is a **guess for ticket 26 to balance**, worked out
 - **Ticket 26 (balance)**: the tuning note; play the fight, measure its length, and look at the bow. The table `HEROES` and `STRIKES_TO_DEFEAT` in `the-guardian.test.ts` move with the numbers.
 - **Glossary**, terms this ticket needed that `GLOSSARY.md` lacks: *arena* (the room of the Guardian), *gateway* (the narrow way into it, with its Checkpoint), *Guardian gate* (a gate that only the Guardian's defeat opens), *harbor* and *harbor stub*, *pattern* (one telegraphed attack of the Guardian) with *sweep*, *charge* and *smite*, and *wind-up* and *recovery*.
 - **ADRs proposed** (none written): (1) a Guardian is fought once: reset at every defeat and exit in every area, never renewed once fallen, with the victory saved at once; (2) the place of the Guardian is checked when the content loads (`requireGuardian`): one Guardian, a Checkpoint immediately before it, a harbor that only its gate opens; (3) a gate has one opener, a lever or a defeat and not both (the loader refuses a lever that names a Guardian's gate).
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

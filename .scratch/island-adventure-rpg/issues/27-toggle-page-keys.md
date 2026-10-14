@@ -20,7 +20,7 @@
 - [x] Tab is registered with the keyboard and held back from the browser, so pressing it during play does not move the browser's focus away from the game. It is part of the controls table that the start-up key-clash check reads, so that no key of the audio can share it, and the test of that check gets a case for it.
 - [x] The README's controls table and its text about the pages say that I, M, and C or Tab toggle their page, and that each page's hint names its key.
 - [x] The type check, the tests, and the build pass (`npm.cmd run check`).
-- [ ] Reviewer play check (manual, in a browser): press M, the map opens and the monsters stop; press M again, it closes and they move again. Do the same with I, C, and Tab. Hold M down: the map opens once and stays open. With a page open press another page's key (nothing happens) and Esc (it closes). At a level-up choice press I, M, C, and Tab (nothing opens). Press Tab during play and confirm that the browser's focus does not leave the game. Read the hint at the foot of each page: it names the key that opens the page, and the whole of it is on the screen.
+- [x] Reviewer play check (manual, in a browser): press M, the map opens and the monsters stop; press M again, it closes and they move again. Do the same with I, C, and Tab. Hold M down: the map opens once and stays open. With a page open press another page's key (nothing happens) and Esc (it closes). At a level-up choice press I, M, C, and Tab (nothing opens). Press Tab during play and confirm that the browser's focus does not leave the game. Read the hint at the foot of each page: it names the key that opens the page, and the whole of it is on the screen.
 
 ## Comments
 
@@ -62,3 +62,5 @@ For the implementer: the hints are drawn in three places of the adapter (the Aut
 **Glossary.** "Page" (a screen shown over the game that pauses it: the stat page, the inventory, the Automap) and "toggle" (what a page key does: opens its page, and closes it when pressed again) are used in the code and the README but are not in `GLOSSARY.md`. Proposed, not edited.
 
 Resolved on integration/island-adventure-rpg at 6107fbd
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

@@ -15,7 +15,7 @@
 - [x] Music starts only after the player's first input, so the browser's autoplay policy never blocks it or raises errors, and sound works normally afterward.
 - [x] Every audio asset has an entry in the asset licence record (created by whichever of tickets 02 and 21 lands first) with a licence that allows public and commercial use, and each required attribution appears in the credits screen content.
 - [x] There is no voice acting.
-- [ ] Reviewer play check (manual, in a browser): play from the title screen to the ending with sound on and confirm the music changes per area and for the Guardian, each sound effect fires, mute and volume work, and the settings survive a page reload.
+- [x] Reviewer play check (manual, in a browser): play from the title screen to the ending with sound on and confirm the music changes per area and for the Guardian, each sound effect fires, mute and volume work, and the settings survive a page reload.
 
 ## Comments
 
@@ -159,3 +159,5 @@ The effects of the pack are all normalised to the same peak, so their volumes ar
 - `tests/shipped-audio.test.ts` reads `public/audio/` and `docs/assets/licences.md` from disk, like `tests/final-art.test.ts`, and is outside the three exceptions of ADR 0002. It is flagged for the user's veto, and it is proved by mutation.
 - `tests/audio-settings.test.ts` is the settings boundary, ADR 0002's exception 2 (like the parser of the saved game). `tests/audio-events.test.ts` is at the Game core's interface.
 - ADR 0002 may deserve a line on what the suite may test beyond its three exceptions (ticket 20 proposed the same).
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

@@ -16,7 +16,7 @@
 - [x] There is no carry limit.
 - [x] Gear (name, slot, bonus) is content data. The placeholder area has a chest with a better sword and a chest with better armor.
 - [x] Tests at the Game core's interface cover opening a chest once, equipping and swapping, derived Attack and Defense, and damage with hand-worked numbers.
-- [ ] Reviewer play check (manual, in a browser): open both chests, equip the upgrades from the inventory, and confirm the hero hits harder and takes less damage.
+- [x] Reviewer play check (manual, in a browser): open both chests, equip the upgrades from the inventory, and confirm the hero hits harder and takes less damage.
 
 ## Comments
 
@@ -66,3 +66,5 @@ Resolved on integration/island-adventure-rpg at c6eb656
 - Ticket 06: `gearBonus` adds every equipped piece to the stat of its slot. The bow must count for arrows only and the sword for strikes only, so `stats.ts` will need the active weapon.
 - Hold to scroll in long menu lists: the cursor moves once for each press, not for each auto-repeat.
 - GLOSSARY.md lacks chest, inventory, equip, Interact and interactable, pickup, and carried Gear.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

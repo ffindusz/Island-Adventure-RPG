@@ -14,7 +14,7 @@
 - [x] Marked Ammunition caches grant Ammunition once. Monsters can occasionally drop Ammunition through the injectable random source; drop tables are content data.
 - [x] The HUD shows the active weapon, Ammunition, and Health.
 - [x] Tests at the Game core's interface cover switching, the shared cooldown, one Ammunition per shot, firing at zero, projectile hits and terrain blocking, one-time caches, and deterministic drops from a seeded random source.
-- [ ] Reviewer play check (manual, in a browser): pick up the bow and a cache, switch with Q, shoot a monster from range, run out of Ammunition, and see the feedback.
+- [x] Reviewer play check (manual, in a browser): pick up the bow and a cache, switch with Q, shoot a monster from range, run out of Ammunition, and see the feedback.
 
 ## Comments
 
@@ -66,3 +66,5 @@ Resolved on integration/island-adventure-rpg at e06b7cd
 - An on-screen E prompt when the hero faces something it can interact with (still none).
 - A proposed ADR: the weapon in hand is state, and a weapon's bonus counts only for the attacks made with it.
 - GLOSSARY.md lacks weapon in hand, arrow (projectile), shot, cache, drop and consumable.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

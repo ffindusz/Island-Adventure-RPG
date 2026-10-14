@@ -14,7 +14,7 @@
 - [x] The save store is a thin adapter over browser-local storage and holds no rules; the snapshot carries a version marker.
 - [x] New Game over an existing save asks for confirmation; declining leaves the save untouched.
 - [x] An unreadable, corrupt, or version-mismatched save is treated as no save, the player sees a short message, and nothing crashes (tested at the save store's boundary with bad data).
-- [ ] Reviewer play check (manual, in a browser): play, activate a Checkpoint, reload the page, choose Continue, and confirm the same state.
+- [x] Reviewer play check (manual, in a browser): play, activate a Checkpoint, reload the page, choose Continue, and confirm the same state.
 
 ## Comments
 
@@ -76,3 +76,5 @@ Resolved on integration/island-adventure-rpg at b0a50b7
 - Polish: with no storage at all the COULD NOT SAVE THE GAME notice shows at each autosave attempt, after the title already said so. It could show once.
 - Glossary: save (the saved game), autosave, title screen and Continue are used in the code and the README and have no entry, nor do Page and Area Text (both are state fields).
 - Proposed ADR (not created): "Pure, Phaser-free adapter functions may be tested directly", as ticket 10 proposed (the camera, the banner and the Automap layout already are). `pressMenu` and `callsForSave` are two more such functions; today only the smoke tool covers them.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

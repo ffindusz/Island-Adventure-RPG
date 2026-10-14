@@ -14,7 +14,7 @@
 - [x] Discoveries persist through defeat and Checkpoint roll-back, and are part of the Game core's serializable state.
 - [x] The Automap is driven by area content, so areas added later appear without rule changes.
 - [x] Tests at the Game core's interface cover no reveal before exploring, reveal on exploring, hero position data, exits marked only once found, and persistence through defeat.
-- [ ] Reviewer play check (manual, in a browser): explore part of an area, open the map, leave and re-enter, die and return, and confirm the discoveries remain.
+- [x] Reviewer play check (manual, in a browser): explore part of an area, open the map, leave and re-enter, die and return, and confirm the discoveries remain.
 
 ## Comments
 
@@ -81,3 +81,5 @@ Resolved on integration/island-adventure-rpg at f773c63
 - Real terrain art should keep a colour per terrain kind for the Automap (`terrainColour`), or the page needs its own table.
 - Glossary: the words discovered, reveal distance, route and found (an exit) are used in the code and the README and have no entry yet.
 - Proposed ADR (not created): "Pure, Phaser-free adapter functions may be tested directly" (the camera, the banner and the Automap layout already are).
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

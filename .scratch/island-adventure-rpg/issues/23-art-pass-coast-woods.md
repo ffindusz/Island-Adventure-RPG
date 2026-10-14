@@ -14,7 +14,7 @@
 - [x] The shipwreck supplement (wreckage and the wrecked ship) exists, matches the base's style, and has a verified licence recorded. If it is composed from existing pieces, the record says so.
 - [x] Every new asset has an entry in the asset licence record, every art reference in these two areas resolves through the asset manifest, and content validation still passes.
 - [x] No rules, numbers, or map layouts change, and every existing test passes untouched.
-- [ ] Reviewer play check (manual, in a browser): play through the coast and the woods and confirm a consistent look, readable telegraphs, and nothing that looks like a wall but is not, or the reverse.
+- [x] Reviewer play check (manual, in a browser): play through the coast and the woods and confirm a consistent look, readable telegraphs, and nothing that looks like a wall but is not, or the reverse.
 
 ## Comments
 
@@ -109,3 +109,5 @@ Two limits. The "only inside the map" half of the whole-map test (a stamp for ev
 - **Glossary proposals:** Telegraph (the shape that shows where a monster's blow will land), Stand-in (a pack creature used for a monster type the pack lacks), Final art (an Adventure Area drawn from pictures, not colours).
 - **Follow-ups:** a direction for an exit that is not at an edge; thin the pond's bank if the play check asks; the 0x72 supplement (S4) only if the user finds the wreck weak and permits it; the gate and the lever (ticket 24); the Automap stays in flat colours.
 - **Merging ticket 16 (the mountain):** it adds a colour to `TERRAIN_COLOURS` and `MONSTER_COLOURS` in `art.ts`, a drawn armor icon (`drawn-icons.ts`, one `ARTWORK` line, one line in `licences.md`). Those are the places where the two branches can conflict; keep both sides. Its new kinds and types have only colours, which keeps working: its area is not in `FINAL_ART_AREAS`, and the on-disk check skips `drawn` entries. Its art comes with ticket 24's one line.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

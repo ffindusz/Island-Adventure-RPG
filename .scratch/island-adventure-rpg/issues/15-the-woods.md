@@ -16,7 +16,7 @@
 - [x] Experience is tuned (data only) so the hero reaches about Level 3 by the exit on the intended route, without grinding.
 - [x] Content validation passes, including that the main route is reachable without puzzles.
 - [x] Tests at the Game core's interface load the shipped woods content and confirm that validation passes, the main route is walkable from entrance to exit without using a key, the bow chest comes before the first Ammunition cache along that route, and the Experience reachable on the intended route to this exit meets the Level target.
-- [ ] Reviewer play check (manual, in a browser): arrive from the coast, find the bow, use it on a beast, take the side path, and leave through the forward exit.
+- [x] Reviewer play check (manual, in a browser): arrive from the coast, find the bow, use it on a beast, take the side path, and leave through the forward exit.
 
 ## Comments
 
@@ -86,3 +86,5 @@ Resolved on integration/island-adventure-rpg at 5fdf5f2
 - Whoever owns `notice.ts`: see the notice and the hero above.
 - Glossary candidates: forest beast, slime, side path, stub area (an area that only keeps the route connected, with an entrance, a Checkpoint and a way back), trail (the main route of an area).
 - Proposed ADR (not created): none. That a stub keeps the entrance and exit ids its neighbours name is already enforced by the content check.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

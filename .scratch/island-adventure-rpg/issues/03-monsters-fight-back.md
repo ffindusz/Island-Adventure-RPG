@@ -14,7 +14,7 @@
 - [x] At zero Health the hero is defeated: an event is emitted, the hero returns to the Adventure Area's entrance at full Health, and the area's monsters return to full Health and their starting positions.
 - [x] Hero base stats and monster Health, damage, speed, reach, wind-up, and noticing distance are content data. A monster's behavior is chosen from a named, reusable behavior so later tickets can add more.
 - [x] Tests at the Game core's interface cover telegraph timing, avoiding an attack by moving away, damage at several Defense values including the floor, defeat and return, monster reset, and no regeneration.
-- [ ] Reviewer play check (manual, in a browser): get hit (hit feedback and the HUD update), avoid a telegraphed attack by moving, die, and return to the entrance.
+- [x] Reviewer play check (manual, in a browser): get hit (hit feedback and the HUD update), avoid a telegraphed attack by moving, die, and return to the entrance.
 
 ## Comments
 
@@ -68,3 +68,5 @@ Resolved on integration/island-adventure-rpg at b67c0e2
 - A content check that no monster stands on or beside the start tile; the shipped-content test covers it by behavior only.
 - The HUD is already fixed to the screen (scroll factor 0), which ticket 08's camera criterion needs, and it covers the top-left corner of the map; ticket 22 gives it its final look.
 - Glossary terms missing: current Health, hit, telegraph, wind-up, recovery, noticing distance, reach, behavior, minimum damage, defeat (of the hero).
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

@@ -14,7 +14,7 @@
 - [x] Content validation passes, including that the exit is reachable from the entrance without puzzles.
 - [x] Experience is tuned (data only) so the hero reaches about Level 2 by the exit on the intended route, without grinding.
 - [x] Tests at the Game core's interface confirm that New Game emits the opening, places the hero at the entrance Checkpoint, and equips the starting Gear.
-- [ ] Reviewer play check (manual, in a browser): New Game, read the opening, walk the whole coast, defeat the monsters, open the chest, and take the exit.
+- [x] Reviewer play check (manual, in a browser): New Game, read the opening, walk the whole coast, defeat the monsters, open the chest, and take the exit.
 
 ## Comments
 
@@ -90,3 +90,5 @@ Resolved on integration/island-adventure-rpg at 5e1c568
 - Tickets 23 and 25 (art): the opening card is a plain window on black with placeholder text, and `wreckage` is a flat brown (`art.ts`, `TERRAIN_COLOURS`).
 - Glossary: save, autosave, title screen, Continue, Page and Area Text (as ticket 11 said), and now the opening (the card a new game begins with) and wreckage (a solid terrain kind).
 - Proposed ADR (not created): "The opening is an event, and the adapter holds the game": the core reports the opening and keeps no state for it, because a pause in the core would be saved state and would change the saved shape. Also, `layoutCard` and `startOfNewGame` are two more pure adapter functions tested directly, while ADR 0002 lists three exceptions only: the proposal of tickets 10 and 11 ("Pure, Phaser-free adapter functions may be tested directly") would cover them.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

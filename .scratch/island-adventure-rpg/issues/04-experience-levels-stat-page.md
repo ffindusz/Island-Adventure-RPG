@@ -16,7 +16,7 @@
 - [x] The stat page (C) shows Level, Experience progress toward the next Level, current and maximum Health, Attack, and Defense; Esc closes it. Pages are one-at-a-time and reusable by later tickets.
 - [x] While a page or the level-up choice is open, stepping the Game core with elapsed time advances nothing. The adapter also stops stepping the Game core while the tab is unfocused.
 - [x] Tests at the Game core's interface cover threshold crossing, the cap, one Stat Point per Level, queued level-ups, each assignment's effect, Experience for reset monsters, milestone-once, and pausing.
-- [ ] Reviewer play check (manual, in a browser): defeat monsters until a level-up, assign the point, open and close the stat page with C and Esc, and switch tabs to confirm the pause.
+- [x] Reviewer play check (manual, in a browser): defeat monsters until a level-up, assign the point, open and close the stat page with C and Esc, and switch tabs to confirm the pause.
 
 ## Comments
 
@@ -69,3 +69,5 @@ Resolved on integration/island-adventure-rpg at 89266be
 
 - A Level and Experience indicator on the HUD, once the look is restyled with art (ticket 22).
 - GLOSSARY.md lacks milestone, page, stat page and level-up choice.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

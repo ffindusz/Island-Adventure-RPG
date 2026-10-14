@@ -16,7 +16,7 @@
 - [x] Experience is tuned (data only) so the hero reaches about Level 5 by the exit on the intended route, without grinding.
 - [x] Content validation passes, including that the main route is reachable without puzzles.
 - [x] Tests at the Game core's interface load the shipped cave content and confirm that validation passes, the main route is walkable from entrance to exit without pulling the lever, the side path's gate opens only by its lever, and the Experience reachable on the intended route to this exit meets the Level target.
-- [ ] Reviewer play check (manual, in a browser): cross the cave using the Automap, pull the lever, claim the upgrade, and leave through the forward exit.
+- [x] Reviewer play check (manual, in a browser): cross the cave using the Automap, pull the lever, claim the upgrade, and leave through the forward exit.
 
 ## Comments
 
@@ -97,3 +97,5 @@ Resolved on integration/island-adventure-rpg at 2655339
 - Ticket 26: the numbers listed under the Experience decision are placeholders pinned by tests, so a change shows.
 - Glossary candidates: Entrance, Exit, Milestone, Lever, Gate, Sign, Chest, Cache, trail, side path, stub area, tougher variant, charger, narrow pass.
 - Proposed ADR (not created): none.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

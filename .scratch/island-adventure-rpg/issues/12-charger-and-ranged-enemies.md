@@ -15,7 +15,7 @@
 - [x] Adding a monster that reuses a behavior needs only content data (for example speed, wind-up, range, damage, Health, Experience). A tougher variant is a data change.
 - [x] The placeholder areas contain a monster of each behavior.
 - [x] Tests at the Game core's interface cover timing, the dash path and terrain stop, projectile travel, hit and block, avoidance, and recovery.
-- [ ] Reviewer play check (manual, in a browser): fight a charger and a ranged attacker, avoiding both by moving.
+- [x] Reviewer play check (manual, in a browser): fight a charger and a ranged attacker, avoiding both by moving.
 
 ## Comments
 
@@ -88,3 +88,5 @@ I built and served the page on port 5112 and drove it with `_tools\smoke.mjs` in
 - A stricter charger alignment (the hero's centre in the lane, not any overlap).
 - `continue` does no validation, so a snapshot holding a projectile whose monster type has since left the content would throw in `projectileOf` (`src\core\arrows.ts`). The same holds for a saved monster of a removed type, as before.
 - GLOSSARY.md lacks the terms telegraph, wind-up, recovery (in the monsters' sense), noticing distance, dash, lane, projectile, behavior, charger and ranged attacker. The code, the tests and the README use them as ticket 03 did.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

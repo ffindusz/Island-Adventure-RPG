@@ -16,7 +16,7 @@
 - [x] Experience is tuned (data only) so the hero reaches about Level 4 by the exit on the intended route, without grinding.
 - [x] Content validation passes, including that the main route is reachable without puzzles.
 - [x] Tests at the Game core's interface load the shipped mountain content and confirm that validation passes, the main route is walkable from entrance to exit without a key or lever, an armor upgrade is reachable on or near that route, and the Experience reachable on the intended route to this exit meets the Level target.
-- [ ] Reviewer play check (manual, in a browser): climb from the woods, beat the raiders and the tougher variant, collect the armor, and leave through the forward exit.
+- [x] Reviewer play check (manual, in a browser): climb from the woods, beat the raiders and the tougher variant, collect the armor, and leave through the forward exit.
 
 ## Comments
 
@@ -90,3 +90,5 @@ Resolved on integration/island-adventure-rpg at 7386a20
 - A shared helper: the woods test and the mountain test each derive "the trail" from the layout (the route over sand tiles). I left them apart, as they differ in their ends; a `trailThrough(area)` in `routes.ts` is a small follow-up.
 - Glossary candidates: Entrance, Exit, Milestone, area text, raider, tougher variant (the veteran), side path, stub area, trail, narrow pass.
 - Proposed ADR (not created): none.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.

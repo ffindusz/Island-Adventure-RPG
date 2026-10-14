@@ -13,7 +13,7 @@
 - [x] The HUD and the inventory page show the potion count.
 - [x] Health never regenerates on its own (covered by a test).
 - [x] Tests at the Game core's interface cover collection, use, the cap, refusal at full Health and with none, and seeded drops.
-- [ ] Reviewer play check (manual, in a browser): take damage, open the inventory, use a potion, and confirm the Health and the count.
+- [x] Reviewer play check (manual, in a browser): take damage, open the inventory, use a potion, and confirm the Health and the count.
 
 ## Comments
 
@@ -73,3 +73,5 @@ Resolved on integration/island-adventure-rpg at 429bccd
 - The page pauses the game, so a heal flash would be invisible: feedback for a potion used is for the audio ticket (21) or a short message on the page.
 - An on-screen E prompt when the hero faces a chest (still none).
 - GLOSSARY.md lacks pickup (a consumable lying on a tile that the hero takes by walking onto it), and, as ticket 06 said, cache, drop and consumable.
+
+Made by the player on 2026-10-14 (recorded on integration/island-adventure-rpg at 4259c95): the player said that their playthroughs of the game covered this check, and that all their comments have already been fixed with other tickets. There is no step-by-step log. The box above was ticked on that word.
