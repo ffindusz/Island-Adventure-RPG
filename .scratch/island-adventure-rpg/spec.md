@@ -1,6 +1,6 @@
 # Island Adventure RPG: a complete short game
 
-Status: ready-for-agent
+Status: resolved
 
 ## Problem Statement
 

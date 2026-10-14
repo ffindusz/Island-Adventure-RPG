@@ -4,3 +4,5 @@ coverage/
 .vite/
 *.log
 .worktrees/
+# Node's diagnostic report, written when a process crashes
+report.*.json
