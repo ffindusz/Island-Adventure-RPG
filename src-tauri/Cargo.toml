@@ -1,0 +1,17 @@
+[package]
+name = "island-adventure"
+version = "1.0.0"
+description = "Island Adventure as a Windows desktop app: the browser build of the game in a WebView2 window (ADR 0006)."
+authors = ["ffindusz"]
+edition = "2024"
+rust-version = "1.90"
+
+[lib]
+name = "island_adventure_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.1", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.1", features = [] }

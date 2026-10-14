@@ -19,6 +19,24 @@ To host the game, run `npm run build` and put the files of `dist/` on any static
 
 On Windows PowerShell, `npm` and `npx` can be blocked by the execution policy: use `npm.cmd` and `npx.cmd`.
 
+## Desktop build (Windows)
+
+The game also ships as a Windows program, to hand to friends (ADR 0006). Tauri (`src-tauri/`) wraps the build in `dist/` in a window of the system's WebView2. The game is the same, and so are its keys and its save, which lives in the app's own folder under `%LOCALAPPDATA%\io.github.ffindusz.islandadventure`.
+
+You need, besides Node: Rust stable (at least 1.90; `rustup update stable`) and the MSVC C++ build tools ("Desktop development with C++" in the Visual Studio Installer).
+
+| Command                 | What it does                                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------------------------ |
+| `npm run desktop:dev`   | Starts the Vite dev server and opens the game in a desktop window, with hot reload.              |
+| `npm run desktop:build` | Builds the game and then the program. The first build compiles Tauri and takes a few minutes.    |
+
+What `desktop:build` writes, under `src-tauri/target/release/`:
+
+- `bundle/nsis/Island Adventure_<version>_x64-setup.exe`: **the installer to send to friends.** It adds the game to the Start menu with an uninstaller, and fetches WebView2 on the rare PC that lacks it.
+- `island-adventure.exe`: the portable program, one file with the game inside. It runs without installing on any PC that has WebView2 (every Windows 11 PC and nearly every updated Windows 10 PC).
+
+Neither is signed, so on first run Windows SmartScreen says "Windows protected your PC": click **More info**, then **Run anyway**. The version is the `version` of `package.json`. The icon is the hero, made by `docs/assets/make-app-icon.py` (see the comment at its top to remake it).
+
 ## Controls
 
 | Key                    | Action                                                                          |
@@ -54,6 +72,7 @@ src/
 tests/       Vitest tests of the Game core's interface, of the adapter's pure functions and of the shipped files (docs/adr/0005), and fixtures.ts, a tiny arena to test in.
 public/art/  The art pack's picture files that the game shows, each one listed in docs/assets/licences.md.
 public/audio/ The audio pack's music (music/, .ogg) and effects (sfx/, .wav) that the game plays, each one listed in docs/assets/licences.md.
+src-tauri/   The Windows desktop app (ADR 0006): Tauri's config, the few lines of Rust that open the window, and the icons.
 docs/adr/    Decision records.
 docs/        balance.md, the balance of the adventure and how it was measured; playtest-checklist.md, the player's walk through
              the game with the assumptions that wait for their word; assets/, the licence record, the art inventory and the
