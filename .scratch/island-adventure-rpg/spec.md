@@ -199,6 +199,10 @@ Checkpoints at each Adventure Area entrance and just before the Guardian autosav
 
 116. As a player, I want Esc, when nothing is open, to pause the game and bring up the paused screen, the title screen with a PAUSED message and RESUME on top of its menu, and to take me back into the game exactly as it was when I choose RESUME or press Esc again, so that I can stop, read the controls, or leave for a new game or my saved game without losing the game I am in until I choose to.
 
+**Menus and pause (added after the release)**
+
+118. As a player of the desktop app, I want a QUIT line at the foot of the title menu and of the paused screen, that closes the app, at once from the title and after asking from the paused screen, since the game in play is lost, so that I can leave the game from the game itself. The browser build has no QUIT, since a page cannot close its tab.
+
 **Length (changed after playtesting)**
 
 117. (Supersedes story 20 where it says 45-60 minutes.) As a player, I want a complete first playthrough to take about 20 minutes, so that the adventure is whole but short; that is the length that the player's own playthroughs found.

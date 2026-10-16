@@ -4,7 +4,7 @@ Status: **Accepted** on 2026-10-14: the user chose Windows only and Tauri, so th
 
 ## Decision
 
-Ship the game also as a Windows desktop app, made with Tauri 2 (`src-tauri/`). The app is a window of the system's WebView2 that shows the build in `dist/`, embedded in the executable. It has no plugins and calls no Tauri API, and nothing in `src/` knows that it runs in it. `npm run desktop:build` makes two files: an NSIS installer, which is the one to hand out, and a portable executable. The browser build stays the primary target, and ADR 0001 still holds.
+Ship the game also as a Windows desktop app, made with Tauri 2 (`src-tauri/`). The app is a window of the system's WebView2 that shows the build in `dist/`, embedded in the executable. It has no plugins and calls one Tauri API, to close its window (see the amendment below); nothing in `src/adapter` or `src/core` knows that it runs in it. `npm run desktop:build` makes two files: an NSIS installer, which is the one to hand out, and a portable executable. The browser build stays the primary target, and ADR 0001 still holds.
 
 ## Why
 
@@ -19,3 +19,7 @@ Ship the game also as a Windows desktop app, made with Tauri 2 (`src-tauri/`). T
 - The executables are not signed. Windows SmartScreen warns on first run, and friends click "More info" and then "Run anyway". Signing would need a certificate and is out of scope.
 - Only Windows is built. macOS and Linux would need their own machines or a CI workflow, and macOS would also need signing.
 - The version of the app is the `version` of `package.json`.
+
+## Amendment, 2026-10-16: Quit
+
+The player asked for a way to quit the game. A browser page cannot close a tab it did not open, so Quit is the desktop app's alone: the menu of the title and of the paused screen ends with QUIT there, and nowhere else. `src/main.ts`, the composition root, asks `isTauri()` and hands the adapter a function that closes the window (`getCurrentWindow().close()` from `@tauri-apps/api`, allowed by `core:window:allow-close`), or null in a browser; the adapter offers Quit only when it is given one, and knows nothing of Tauri. `@tauri-apps/api` is the one runtime dependency besides Phaser, and in a browser it does nothing but answer `isTauri()`. The other ways were not taken: `withGlobalTauri` would put an untyped `window.__TAURI__` in the page for the same call, and a Rust command to exit would need the same API to invoke it.

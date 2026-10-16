@@ -13,15 +13,22 @@ import { PlayScene } from './play-scene';
 import { createSaveStore } from './save-store';
 import type { SaveStorage } from './save-store';
 import { TitleScene } from './title-scene';
+import type { QuitApp } from './title-scene';
 
 /**
  * Starts the Phaser game that shows and controls the given Game core, on the title screen. The saved game lives in the
  * storage, which is null when the browser gives none, and so do the sound settings, in a key of their own. This is the
  * only way into the adapter. It refuses to start, naming them, when the content needs pictures that the asset manifest
  * does not list or sounds that the audio manifest does not, when a key of the audio is also the key of something else,
- * or when the ending or credits have a character the pixel font cannot draw.
+ * or when the ending or credits have a character the pixel font cannot draw. `quit` closes the app, and is null where
+ * the game cannot close itself (a browser tab): the title and the paused screen offer Quit only when it is given.
  */
-export function startAdapter(core: Game, content: ContentDefinition, storage: SaveStorage | null): Phaser.Game {
+export function startAdapter(
+  core: Game,
+  content: ContentDefinition,
+  storage: SaveStorage | null,
+  quit: QuitApp | null = null,
+): Phaser.Game {
   requireArt(neededArt(content), manifestLookup(ARTWORK), 'The content needs pictures that the asset manifest lacks');
   requireArt(neededAudio(content), manifestLookup(AUDIO), 'The content needs sounds that the audio manifest lacks');
   requireDrawableEnding(content);
@@ -42,7 +49,7 @@ export function startAdapter(core: Game, content: ContentDefinition, storage: Sa
     // The first scene is the one that starts: the title, which starts the play screen; the play screen starts the ending
     // when the hero sails home, and both go back to the title.
     scene: [
-      new TitleScene(core, saves, audio),
+      new TitleScene(core, saves, audio, quit),
       new PlayScene(core, saves, audio, content.areas),
       new EndingScene(audio),
     ],

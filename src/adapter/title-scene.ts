@@ -32,14 +32,19 @@ import { INK, UiLayer } from './ui-layer';
 // It is also the paused screen: when the play screen puts a game away (pausing.ts) it starts this scene with a pause
 // (scene-keys.ts), and the menu then has Resume on top, which starts the play screen again from the Game core's view,
 // which the pause left as it was. Every start of this scene says whether it is paused, so that a pause is not carried
-// into the title that the ending or the sailing home leads to.
+// into the title that the ending or the sailing home leads to. In the desktop app both screens end their menu with Quit,
+// which hands the closing of the app to the function it was given (main.ts); the browser build is given none.
 
 const BACKDROP = 'backdrop-title' satisfies ArtName;
+
+/** Closes the app. Nothing is saved first: the game in play is lost, and the saved game stays as the last autosave left it. */
+export type QuitApp = () => void;
 
 /** The title screen. */
 export class TitleScene extends GameScene {
   private readonly core: Game;
   private readonly saves: SaveStore;
+  private readonly quit: QuitApp | null;
   private layer!: UiLayer;
   private saved: SavedGame = { status: 'none' };
   private menu: TitleMenu = openMenu(false);
@@ -47,10 +52,11 @@ export class TitleScene extends GameScene {
   private kept: KeptOfPlay | null = null;
   private readonly shown = new ChangeGuard();
 
-  constructor(core: Game, saves: SaveStore, audio: GameAudio) {
+  constructor(core: Game, saves: SaveStore, audio: GameAudio, quit: QuitApp | null) {
     super(SCENE_KEYS.title, audio);
     this.core = core;
     this.saves = saves;
+    this.quit = quit;
   }
 
   /** The first start of the game gives no data, and so does nothing else's: no data is the title, not the paused one. */
@@ -68,7 +74,7 @@ export class TitleScene extends GameScene {
     if (this.saved.status === 'unusable') {
       console.warn(`The saved game cannot be continued from (${this.saved.problem}): ${this.saved.detail}`);
     }
-    this.menu = openMenu(this.saved.status === 'usable', this.kept !== null);
+    this.menu = openMenu(this.saved.status === 'usable', this.kept !== null, this.quit !== null);
     this.shown.forget();
   }
 
@@ -90,6 +96,8 @@ export class TitleScene extends GameScene {
     if (choice === 'resume' && this.kept !== null) {
       // The game in play goes on from where the Game core holds it: nothing is sent to the core, and nothing is saved.
       this.scene.start(SCENE_KEYS.play, startOfResume(this.kept));
+    } else if (choice === 'quit' && this.quit !== null) {
+      this.quit();
     } else if (choice === 'new-game') {
       // The opening is among the events of a New Game; the play screen shows it and holds the game until Enter.
       this.scene.start(SCENE_KEYS.play, startOfNewGame(this.core.send({ type: 'new-game' })));

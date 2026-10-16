@@ -3,7 +3,8 @@ import type { Effect } from './audio-manifest';
 // The rules of the title screen's menu, apart from the scene that draws it: which line the cursor is on, whether the
 // screen asks the player to confirm a New Game, whether it shows the list of the controls, what a key press starts, and
 // what the player hears of it. The same menu serves the start screen of a game that was put away with Esc, the paused
-// screen, which has a line more, Resume, on top. No Phaser in here.
+// screen, which has a line more, Resume, on top. In the desktop app both menus end with Quit, which closes the app: a page
+// in a browser cannot close its own tab, so the browser build has no such line. No Phaser in here.
 
 /** The lines of the menu of the title, top to bottom. A line that is added here is a line of the title. */
 export const MENU_ENTRIES = ['new-game', 'continue', 'controls'] as const;
@@ -11,18 +12,23 @@ export const MENU_ENTRIES = ['new-game', 'continue', 'controls'] as const;
 /** The lines of the menu of the paused screen, top to bottom: those of the title, with Resume on top of them. */
 export const PAUSED_ENTRIES = ['resume', ...MENU_ENTRIES] as const;
 
-export type MenuEntry = (typeof PAUSED_ENTRIES)[number];
+/** The line that closes the app, under the others, on the title and the paused screen alike, where the app can be closed. */
+export const QUIT_ENTRY = 'quit';
+
+export type MenuEntry = (typeof PAUSED_ENTRIES)[number] | typeof QUIT_ENTRY;
 
 /**
- * Where the menu stands: the line the cursor is on, whether it asks the player to confirm a New Game, and whether it
- * shows the list of the controls. The question and the list are never both open. `paused` is there, and true, only on
- * the paused screen: the menu of the title has no such field.
+ * Where the menu stands: the line the cursor is on, whether it asks the player to confirm the line the cursor is on (New
+ * Game, or Quit on the paused screen), and whether it shows the list of the controls. The question and the list are never
+ * both open. `paused` is there, and true, only on the paused screen: the menu of the title has no such field. `canQuit`
+ * is there, and true, only where the app can be closed, which is in the desktop app.
  */
 export interface TitleMenu {
   readonly cursor: MenuEntry;
   readonly confirming: boolean;
   readonly showingControls: boolean;
   readonly paused?: true;
+  readonly canQuit?: true;
 }
 
 /** What the keys did since the last look: a step up or down the lines, whether Enter was pressed, and Esc. */
@@ -41,27 +47,35 @@ export type TitleChoice = Exclude<MenuEntry, 'controls'> | null;
 /**
  * The menu as the title opens: the cursor is on Continue when there is a saved game to continue from, so that Enter
  * goes on with it, and otherwise on New Game, so that Enter starts the adventure. The paused screen opens with the
- * cursor on Resume, with a saved game too, so that Enter brings the game in play back.
+ * cursor on Resume, with a saved game too, so that Enter brings the game in play back. Quit is never where it opens.
  */
-export function openMenu(canContinue: boolean, paused = false): TitleMenu {
+export function openMenu(canContinue: boolean, paused = false, canQuit = false): TitleMenu {
+  const quits = canQuit ? { canQuit: true as const } : {};
   if (paused) {
-    return { cursor: 'resume', confirming: false, showingControls: false, paused: true };
+    return { cursor: 'resume', confirming: false, showingControls: false, paused: true, ...quits };
   }
-  return { cursor: canContinue ? 'continue' : 'new-game', confirming: false, showingControls: false };
+  return { cursor: canContinue ? 'continue' : 'new-game', confirming: false, showingControls: false, ...quits };
+}
+
+/** The lines of a menu, top to bottom, whether the cursor can rest on them or not: Quit under the others where there is one. */
+export function menuEntries(paused = false, canQuit = false): readonly MenuEntry[] {
+  const entries: readonly MenuEntry[] = paused ? PAUSED_ENTRIES : MENU_ENTRIES;
+  return canQuit ? [...entries, QUIT_ENTRY] : entries;
 }
 
 /**
  * The lines the cursor can rest on: Continue is there only when there is a saved game to continue from, Controls
- * always is, and Resume is there on the paused screen only.
+ * always is, Resume is there on the paused screen only, and Quit only where the app can be closed.
  */
-export function selectableEntries(canContinue: boolean, paused = false): readonly MenuEntry[] {
-  return (paused ? PAUSED_ENTRIES : MENU_ENTRIES).filter((entry) => entry !== 'continue' || canContinue);
+export function selectableEntries(canContinue: boolean, paused = false, canQuit = false): readonly MenuEntry[] {
+  return menuEntries(paused, canQuit).filter((entry) => entry !== 'continue' || canContinue);
 }
 
 /**
  * What the keys do to the menu, and which line they start. New Game over a saved game that can be continued from asks
  * first, and on the paused screen it always asks, because the game in play is lost whether or not there is a saved
- * game: Enter replaces it and Esc keeps it. Esc wins when both are pressed together, because declining must leave the
+ * game: Enter replaces it and Esc keeps it. Quit asks on the paused screen only, for the same reason: on the title there
+ * is no game in play to lose, and the saved game stays where it is. Esc wins when both are pressed together, because declining must leave the
  * saved game as it was. Enter on Controls shows the list of the controls, which nothing but the keys that close it
  * answers. On the paused screen Esc at the menu, where the cursor is on any line, chooses Resume, and wins over an Enter
  * pressed with it, which could be a Continue that replaces the game in play.
@@ -79,17 +93,18 @@ export function pressMenu(
     if (keys.cancel) {
       return { menu: { ...menu, confirming: false }, choice: null };
     }
-    return { menu, choice: keys.confirm ? 'new-game' : null };
+    // The question is about the line the cursor is on, and Enter chooses it.
+    return { menu, choice: keys.confirm ? (menu.cursor === QUIT_ENTRY ? QUIT_ENTRY : 'new-game') : null };
   }
   const paused = menu.paused === true;
-  const entries = selectableEntries(canContinue, paused);
+  const entries = selectableEntries(canContinue, paused, menu.canQuit === true);
   // A cursor left on a line that can no longer be chosen, Continue once its saved game is gone, goes back to the top.
   const cursor = entries.includes(menu.cursor) ? menu.cursor : (entries[0] ?? menu.cursor);
   if (paused && keys.cancel) {
     return { menu: { ...menu, cursor }, choice: 'resume' };
   }
   if (keys.confirm) {
-    if (cursor === 'new-game' && (canContinue || paused)) {
+    if ((cursor === 'new-game' && (canContinue || paused)) || (cursor === QUIT_ENTRY && paused)) {
       return { menu: { ...menu, cursor, confirming: true, showingControls: false }, choice: null };
     }
     if (cursor === 'controls') {

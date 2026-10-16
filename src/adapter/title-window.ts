@@ -8,7 +8,7 @@ import { stackHeight, stackRows } from './row-stack';
 import type { RowRules } from './row-stack';
 import type { SavedGame } from './save-store';
 import { windowTop } from './title-layout';
-import { MENU_ENTRIES, PAUSED_ENTRIES, selectableEntries } from './title-menu';
+import { QUIT_ENTRY, menuEntries, selectableEntries } from './title-menu';
 import type { MenuEntry, TitleMenu } from './title-menu';
 import { INK, WINDOW_PADDING } from './ui-layer';
 
@@ -17,7 +17,8 @@ import { INK, WINDOW_PADDING } from './ui-layer';
 // game, in the middle of the room that is left (title-layout.ts); while the list of the controls shows, it takes the
 // middle of the whole screen and the name is left out. The same window serves the paused screen, the start screen of a
 // game that was put away with Esc: PAUSED and Resume on top of the lines of the title, its own question, and a window a
-// little wider. No Phaser in here.
+// little wider. In the desktop app both menus have Quit under their other lines, and their lines are a little lower, so that
+// the line more fits the room. No Phaser in here.
 
 const MENU_WINDOW_WIDTH = 200;
 /**
@@ -28,6 +29,12 @@ const PAUSED_WINDOW_WIDTH = 210;
 const ROW_GAP = 4;
 /** A line of the menu is as high as the button behind the line the cursor is on, which is as wide as the line. */
 const ENTRY_HEIGHT = 15;
+/**
+ * A line of a menu with Quit is 2 lower, so that the line more fits: the window of the title with a message, 147 high
+ * with lines of 15, and the paused menu, 147 too, are 139 and 137 with lines of 13, and the room above the line of the
+ * audio is 139. The button keeps 3 pixels above and below its text.
+ */
+const QUITTING_ENTRY_HEIGHT = 13;
 const ENTRY_WIDTH = 112;
 
 const ENTRY_LABELS: Readonly<Record<MenuEntry, string>> = {
@@ -35,6 +42,7 @@ const ENTRY_LABELS: Readonly<Record<MenuEntry, string>> = {
   'new-game': 'NEW GAME',
   continue: 'CONTINUE',
   controls: 'CONTROLS',
+  quit: 'QUIT',
 };
 
 /** A row of the window that has something to draw. */
@@ -42,7 +50,13 @@ export type TitleRow =
   /** Centred. */
   | { readonly kind: 'text'; readonly text: string; readonly colour: number }
   /** A line of the menu, centred. The button is behind it when the cursor is on it. */
-  | { readonly kind: 'entry'; readonly text: string; readonly colour: number; readonly highlighted: boolean }
+  | {
+      readonly kind: 'entry';
+      readonly text: string;
+      readonly colour: number;
+      readonly highlighted: boolean;
+      readonly height: number;
+    }
   /** The list of the controls, laid out by `layoutControlsList`, centred. */
   | { readonly kind: 'controls'; readonly layout: ControlsListLayout };
 
@@ -90,13 +104,22 @@ function messageRows(saved: SavedGame): Row[] {
 
 function entryRow(entry: MenuEntry, menu: TitleMenu, canContinue: boolean): Row {
   const highlighted = entry === menu.cursor;
-  const available = selectableEntries(canContinue, menu.paused === true).includes(entry);
+  const canQuit = menu.canQuit === true;
+  const available = selectableEntries(canContinue, menu.paused === true, canQuit).includes(entry);
   return {
     kind: 'entry',
     text: ENTRY_LABELS[entry],
     colour: highlighted ? INK.onButton : available ? INK.text : INK.dim,
     highlighted,
+    height: canQuit ? QUITTING_ENTRY_HEIGHT : ENTRY_HEIGHT,
   };
+}
+
+/** The rows of the lines of the menu, top to bottom. */
+function entryRows(menu: TitleMenu, saved: SavedGame): Row[] {
+  return menuEntries(menu.paused === true, menu.canQuit === true).map((entry) =>
+    entryRow(entry, menu, saved.status === 'usable'),
+  );
 }
 
 /** A hint: a row of text in the colour of hints. */
@@ -123,7 +146,7 @@ function holdsASavedGame(saved: SavedGame): boolean {
 function pausedMenuRows(menu: TitleMenu, saved: SavedGame): Row[] {
   return [
     { kind: 'text', text: 'PAUSED', colour: INK.title },
-    ...PAUSED_ENTRIES.map((entry) => entryRow(entry, menu, saved.status === 'usable')),
+    ...entryRows(menu, saved),
     { kind: 'space', height: 0 },
     hint(CHOOSE_HINT),
     hint(`${confirmKeyLabel()} TO SELECT   ${closePageKeyLabel()} TO RESUME`),
@@ -148,10 +171,30 @@ function pausedQuestionRows(saved: SavedGame): Row[] {
   ];
 }
 
+/**
+ * What the window holds for the question of Quit on the paused screen: that the game in play is lost, and, when there is
+ * a saved game to continue from, that it is kept; then the key that quits and the key that keeps the game.
+ */
+function quitQuestionRows(saved: SavedGame): Row[] {
+  return [
+    ...message(
+      'QUIT THE GAME?',
+      'THE GAME IN PLAY IS LOST.',
+      ...(saved.status === 'usable' ? ['THE SAVED GAME IS KEPT.'] : []),
+    ),
+    { kind: 'space', height: 0 },
+    { kind: 'text', text: `${confirmKeyLabel()} TO QUIT`, colour: INK.text },
+    { kind: 'text', text: `${closePageKeyLabel()} TO KEEP THE GAME`, colour: INK.text },
+  ];
+}
+
 /** What the window holds for the menu and the saved game as they stand, under the name of the game. */
 function menuRows(menu: TitleMenu, saved: SavedGame): Row[] {
   if (menu.paused === true) {
-    return menu.confirming ? pausedQuestionRows(saved) : pausedMenuRows(menu, saved);
+    if (!menu.confirming) {
+      return pausedMenuRows(menu, saved);
+    }
+    return menu.cursor === QUIT_ENTRY ? quitQuestionRows(saved) : pausedQuestionRows(saved);
   }
   if (menu.confirming) {
     return [
@@ -161,7 +204,7 @@ function menuRows(menu: TitleMenu, saved: SavedGame): Row[] {
       { kind: 'text', text: `${closePageKeyLabel()} TO KEEP IT`, colour: INK.text },
     ];
   }
-  const rows: Row[] = MENU_ENTRIES.map((entry) => entryRow(entry, menu, saved.status === 'usable'));
+  const rows: Row[] = entryRows(menu, saved);
   rows.push({ kind: 'space', height: 0 });
   const messages = messageRows(saved);
   if (messages.length > 0) {
@@ -187,7 +230,7 @@ function heightOf(row: Row): number {
     case 'text':
       return TEXT_HEIGHT;
     case 'entry':
-      return ENTRY_HEIGHT;
+      return row.height;
     case 'space':
       return row.height;
     case 'controls':
