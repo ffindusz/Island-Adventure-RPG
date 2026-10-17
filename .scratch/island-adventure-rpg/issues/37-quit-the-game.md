@@ -14,8 +14,12 @@
 - [x] `tests/quit-title.test.ts` pins the rules and the windows with Quit, with the numbers worked out by hand.
 - [x] The wiring: `startAdapter` takes a `quit` function or null and hands it to `TitleScene`, which offers Quit only when it has one and calls it when Quit is chosen. `src/main.ts` gives one when `isTauri()`, which closes the window with `getCurrentWindow().close()` from `@tauri-apps/api` 2.12.1; `src-tauri/capabilities/default.json` allows `core:window:allow-close`.
 - [x] ADR 0006 is amended, the README says it (Desktop build, Controls, Saving, Continue and the title), and spec story 118 is written.
-- [ ] Play check in the desktop app (`npm run desktop:dev`, or the built program): QUIT shows at the foot of the title and closes the app; Esc in play, QUIT asks, Esc keeps the game, Enter closes the app; the next start continues from the last autosave. In the browser (`npm run dev`) there is no QUIT.
+- [x] Play check in the desktop app (`npm run desktop:dev`, or the built program): QUIT shows at the foot of the title and closes the app; Esc in play, QUIT asks, Esc keeps the game, Enter closes the app; the next start continues from the last autosave. In the browser (`npm run dev`) there is no QUIT.
 
 ## Comments
 
 Added at the player's request after the Windows desktop build: "small thing: we should add a possibility to quit the game". Quit is the desktop app's alone because a page cannot close its browser tab.
+
+### Play check
+
+Made by the player on 2026-10-17 in the 1.1.0 desktop build: the player said "works!". There is no step-by-step log; the box above was ticked on the player's word.
