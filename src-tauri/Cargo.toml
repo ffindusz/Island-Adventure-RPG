@@ -1,6 +1,6 @@
 [package]
 name = "island-adventure"
-version = "1.0.0"
+version = "1.1.0"
 description = "Island Adventure as a Windows desktop app: the browser build of the game in a WebView2 window (ADR 0006)."
 authors = ["ffindusz"]
 edition = "2024"
